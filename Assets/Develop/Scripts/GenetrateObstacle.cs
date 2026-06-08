@@ -20,7 +20,7 @@ public class Genetrate : MonoBehaviour
     void TrySpawn()
     {
         // ƒ‰ƒ“ƒ_ƒ€‚ÈŒó•âÀ•W‚ğ”‰ñ‚·
-        for (int i = 0; i < 10; i++)
+        for (int i = 0; i < 100; i++)
         {
             float x = Random.Range(-rangeX, rangeX);
             Vector3 candidate = new Vector3(x, spawnY, 0f);
