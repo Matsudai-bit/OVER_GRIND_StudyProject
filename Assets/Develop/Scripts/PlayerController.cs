@@ -1,11 +1,11 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class PlayerController : MonoBehaviour
 {
     // Start is called once before the first execution of Update after the MonoBehaviour is created
 
     public GameObject bulletPrefab;
-    public Transform muzzle;
     public float bulletSpeed = 20f;
     public int maxAmmo = 10;
     public int currentAmmo = 0;
@@ -20,7 +20,7 @@ public class PlayerController : MonoBehaviour
     void Update()
     {
 
-        if (Input.GetKeyDown(KeyCode.Space))
+        if (Keyboard.current.spaceKey.wasPressedThisFrame)
         {
             Shoot();
         }
@@ -28,43 +28,38 @@ public class PlayerController : MonoBehaviour
 
     void Shoot()
     {
-
         if (currentAmmo == maxAmmo)
         {
             return;
         }
+
+        Vector2 mousePos = Mouse.current.position.ReadValue();
+
+        Ray ray = Camera.main.ScreenPointToRay(mousePos);
+
+        Vector3 targetPoint;
+
+        if (Physics.Raycast(ray, out RaycastHit hit, 1000f))
+        {
+            targetPoint = hit.point;
+        }
         else
         {
-            // マウス位置からRayを飛ばす
-            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-
-            Vector3 targetPoint;
-
-            if (Physics.Raycast(ray, out RaycastHit hit, 1000f))
-            {
-                // マウスが指している場所
-                targetPoint = hit.point;
-            }
-            else
-            {
-                // 何もない場合は遠くを狙う
-                targetPoint = ray.GetPoint(1000f);
-            }
-
-            // 銃口からターゲットへの方向
-            Vector3 direction = (targetPoint - muzzle.position).normalized;
-
-            // 弾生成
-            GameObject bullet = Instantiate(
-                bulletPrefab,
-                muzzle.position,
-                Quaternion.LookRotation(direction)
-            );
-
-            // 発射
-            Rigidbody rb = bullet.GetComponent<Rigidbody>();
-            rb.linearVelocity = direction * bulletSpeed;
-            currentAmmo++;
+            targetPoint = ray.GetPoint(1000f);
         }
-    }
+
+        Vector3 direction = (targetPoint - transform.position).normalized;
+
+        GameObject bullet = Instantiate(
+            bulletPrefab,
+            transform.position,
+            Quaternion.LookRotation(direction)
+        );
+
+        Rigidbody rb = bullet.GetComponent<Rigidbody>();
+        rb.linearVelocity = direction * bulletSpeed;
+
+        currentAmmo++;
+    
+}
 }
