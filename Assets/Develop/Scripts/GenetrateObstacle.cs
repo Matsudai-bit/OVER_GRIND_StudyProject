@@ -1,17 +1,46 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 
 public class Genetrate : MonoBehaviour
 {
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
+    public GameObject obstaclePrefab;   // InspectorでObstacleプレハブをセット
+    public float interval = 2f;         // 生成間隔（秒）
+    public float spawnY = 10f;          // 生成するY座標（画面上）
+    public float rangeX = 8f;           // X方向の生成範囲
+    public float minDistance = 2f;      // 障害物同士の最小距離
+
+    private List<Vector3> spawnedPositions = new List<Vector3>();
+
     void Start()
     {
-        
+        InvokeRepeating(nameof(TrySpawn), 0f, interval);
     }
 
-    // Update is called once per frame
-    void Update()
+    void TrySpawn()
     {
-        int rand = Random.Range(0, 10);
+        // ランダムな候補座標を数回試す
+        for (int i = 0; i < 10; i++)
+        {
+            float x = Random.Range(-rangeX, rangeX);
+            Vector3 candidate = new Vector3(x, spawnY, 0f);
+
+            if (IsFarEnough(candidate))
+            {
+                Instantiate(obstaclePrefab, candidate, Quaternion.identity);
+                spawnedPositions.Add(candidate);
+                break;
+            }
+        }
+    }
+
+    bool IsFarEnough(Vector3 candidate)
+    {
+        foreach (var pos in spawnedPositions)
+        {
+            if (Vector3.Distance(candidate, pos) < minDistance)
+                return false;
+        }
+        return true;
     }
 }
