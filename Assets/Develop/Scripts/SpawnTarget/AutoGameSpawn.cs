@@ -29,6 +29,7 @@ public class AutoGameSpawn : MonoBehaviour
         //リストの中身がない場合返す
         if (myExternalTargetList == null || myExternalTargetList.Count == 0) return;
         if (spawner == null) return;
+        Debug.Log("オブジェクトのスポーン");
 
         //新しくリストを作る
         List<GameObject> deployList = new List<GameObject>();

@@ -8,6 +8,8 @@ public class SpawnTarget : MonoBehaviour
     public float leftEdgeX = -10f;   //スポーンする左端
     public float minY = -4.5f;      //Y座標下
     public float maxY = 4.5f;       //Y座標上
+    public float minZ = 7.24f;       //Z座標
+    public float maxZ = 7.24f;       //Z座標
 
     public void SpawnTargets(List<GameObject> targetPrefabs)
     {
@@ -21,7 +23,7 @@ public class SpawnTarget : MonoBehaviour
             Vector3 spawnPosition = new Vector3(
                 leftEdgeX,
                 Random.Range(minY, maxY),
-                0f
+                Random.Range(minZ, maxZ)
             );
 
             // インスタンス化

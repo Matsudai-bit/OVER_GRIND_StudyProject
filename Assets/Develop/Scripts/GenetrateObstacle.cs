@@ -24,7 +24,7 @@ public class Genetrate : MonoBehaviour
         for (int i = 0; i < 3; i++)
         {
             float x = Random.Range(-rangeX, rangeX);
-            Vector3 candidate = new Vector3(x, spawnY, 0f);
+            Vector3 candidate = new Vector3(x, spawnY, Random.Range(5, 10.0f));
 
             if (IsFarEnough(candidate))
             {
