@@ -86,8 +86,19 @@ public class Target : MonoBehaviour
         //“–‚½‚Á‚ç‰ÁZ‚³‚ê‚é
         hitCount++;
 
+        HitEventManager.Instance.Notify(HitEventType.Hit);
+
         ////‰ñ‚éˆ—
         //StartCoroutine(FlipAnimation());
+    }
+
+    private void OnCollisionEnter(Collision collision)
+    {
+        if (collision.gameObject.CompareTag("Bullet"))
+        {
+            OnHitTarget();
+
+        }
     }
 
     ////‰ñ“]‚³‚¹‚éƒAƒjƒ[ƒVƒ‡ƒ“
@@ -103,7 +114,7 @@ public class Target : MonoBehaviour
     //    while (elapsed < duration)
     //    {
     //        elapsed += Time.deltaTime;
-            
+
     //        //‰ñ“]‚ğ‚³‚¹‚é‚½‚ß‚©‚¯‚é
     //        transform.rotation = Quaternion.Slerp(currentRot, targetRotation, elapsed / duration);
     //        yield return null;
