@@ -3,7 +3,7 @@ using System.Collections;
 using UnityEngine;
 using static UnityEngine.UI.ScrollRect;
 
-public class target : MonoBehaviour
+public class Target : MonoBehaviour
 {
 
     public enum MoveType { Static , Horizontal,Rotating}
@@ -21,8 +21,10 @@ public class target : MonoBehaviour
     private Vector3 startPosition;    //初期位置
     private Quaternion startRotation; //初期回転
 
+    [Header("当たったカウント")]
 
     public int hitCount = 0;//ゲームUIに渡すため
+
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
