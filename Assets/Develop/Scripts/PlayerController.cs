@@ -25,8 +25,15 @@ public class PlayerController : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        // スペースキーで発射
-        if (Keyboard.current.spaceKey.wasPressedThisFrame)
+        // スペースキーで発射 (キーボード)
+        if (Keyboard.current != null && Keyboard.current.spaceKey.wasPressedThisFrame)
+        {
+            Shoot();
+        }
+
+        // Aボタンで発射 (ゲームパッド)
+        // buttonSouth がXboxコントローラーのAボタン（PlayStationなら×ボタン）に該当します
+        if (Gamepad.current != null && Gamepad.current.buttonSouth.wasPressedThisFrame)
         {
             Shoot();
         }
