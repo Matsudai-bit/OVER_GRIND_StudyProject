@@ -1,4 +1,5 @@
-﻿using System;
+﻿using DG.Tweening;
+using System;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -39,7 +40,7 @@ public class AnyColorInTransitionEffect : SceneTransitionEffect
         m_whiteImage.color = new Color(m_color.r, m_color.g, m_color.b, 1.1f);
 
         // フェードアウトアニメーションの開始
-        m_whiteImage.DOFade( 0.0f, m_fadeDuration).SetEase(Ease.OutSine).OnComplete(() =>
+        m_whiteImage.DOFade(0.0f, m_fadeDuration).SetEase(Ease.OutSine).OnComplete(() =>
         {
             // エフェクト完了時にコールバックを呼び出す
             onComplete?.Invoke();

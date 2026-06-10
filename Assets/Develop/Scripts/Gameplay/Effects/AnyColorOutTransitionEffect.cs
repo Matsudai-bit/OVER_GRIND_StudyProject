@@ -1,4 +1,5 @@
-﻿using System;
+﻿using DG.Tweening;
+using System;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -21,11 +22,23 @@ public class AnyColorOutTransitionEffect : SceneTransitionEffect
     Image m_whiteImage;
 
     bool m_isTransitioning = false;
+
+    /// <summary>
+    /// トランジション中かどうか
+    /// </summary>
+    /// <returns>
+    /// true    トランジション中
+    /// false   トランジション中ではない
+    /// </returns>
     public override bool IsTransitioning()
     {
         return m_isTransitioning;
     }
 
+    /// <summary>
+    /// トランジションの開始する
+    /// </summary>
+    /// <param name="onComplete">トランジション終了時に呼ばれるデリゲート</param>
     public override void StartTransition(Action onComplete)
     {
         m_isTransitioning = true;
@@ -37,7 +50,7 @@ public class AnyColorOutTransitionEffect : SceneTransitionEffect
         m_whiteImage.color = new Color(m_color.r, m_color.g, m_color.b, 0);
 
         // フェードアウトアニメーションの開始
-        m_whiteImage.DOFade( 1.1f, m_fadeDuration).SetEase(Ease.OutSine).OnComplete(() =>
+        m_whiteImage.DOFade(1.1f, m_fadeDuration).SetEase(Ease.OutSine).OnComplete(() =>
         {
             // エフェクト完了時にコールバックを呼び出す
             onComplete?.Invoke();
