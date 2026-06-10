@@ -83,4 +83,9 @@ public class PlayerController : MonoBehaviour
         currentAmmo++;
     
 }
+
+    public int GetAmmo()
+    {
+        return maxAmmo - currentAmmo;
+    }
 }
