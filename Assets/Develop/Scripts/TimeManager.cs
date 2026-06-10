@@ -1,4 +1,6 @@
+using Unity.VectorGraphics;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class TimeManager : MonoBehaviour
 {
@@ -19,6 +21,12 @@ public class TimeManager : MonoBehaviour
         if (elapsedTime > 0)
         {
             elapsedTime -= Time.deltaTime;
+        }
+        // ˆê’èŠÔŒo‰ß‚µ‚½‚ç
+        else
+        {
+            // ƒV[ƒ“‘JˆÚ‚·‚é
+            SceneManager.LoadScene("ResultScene");
         }
 
         // •`‰æ
