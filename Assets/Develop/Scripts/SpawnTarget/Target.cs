@@ -6,7 +6,7 @@ using static UnityEngine.UI.ScrollRect;
 public class Target : MonoBehaviour
 {
 
-    public enum MoveType { Static , Horizontal,Rotating}
+    public enum MoveType { Horizontal}
 
     [Header("状態管理")]
 
@@ -19,18 +19,20 @@ public class Target : MonoBehaviour
     public float  moveDistance = 0f;  //移動幅
     public float rotateSpeed = 60.0f; //回転速度
     private Vector3 startPosition;    //初期位置
-    private Quaternion startRotation; //初期回転
+    //private Quaternion startRotation; //初期回転
 
     [Header("当たったカウント")]
 
     public int hitCount = 0;//ゲームUIに渡すため
 
+    [Header("消える位置を指定")]
+    public float rightEdgeX = 10f;//消えたら消失
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
         startPosition = transform.position;//開始位置
-        startRotation = transform.rotation;//開始回転
+        //startRotation = transform.rotation;//開始回転
 
         //初期に動きの挙動を決定させる
         Randommovement();
@@ -59,20 +61,15 @@ public class Target : MonoBehaviour
     {
         switch(currentmovement)
         {
-            //何もしない
-            case MoveType.Static:　
-                 break;
-
-            //上下移動
+   
+            //左右移動
             case MoveType.Horizontal:
-                float x = Mathf.Sin(Time.time * moveSpeed) * moveDistance;
-                transform.position = startPosition + new Vector3(x, 0,0);
-               　break;
+                transform.Translate(Vector3.right * moveSpeed * Time.deltaTime, Space.World);
 
-            // その場でクルクル回転
-            case MoveType.Rotating:
-                
-                transform.Rotate(Vector3.up * rotateSpeed * Time.deltaTime);
+                if (transform.position.x > rightEdgeX)
+                {
+                    Destroy(gameObject);
+                }
                 break;
         }
     }
@@ -89,32 +86,43 @@ public class Target : MonoBehaviour
         //当たっら加算される
         hitCount++;
 
-        //回る処理
-        StartCoroutine(FlipAnimation());
+        HitEventManager.Instance.Notify(HitEventType.Hit);
+
+        ////回る処理
+        //StartCoroutine(FlipAnimation());
     }
 
-    //回転させるアニメーション
-    IEnumerator FlipAnimation()
+    private void OnCollisionEnter(Collision collision)
     {
-        Quaternion targetRotation = startRotation * Quaternion.Euler(90.0f, 0f, 0f);
-
-        float elapsed = 0f;
-
-        float duration = 0.3f; // 0.3秒かけて倒れる
-        Quaternion currentRot = transform.rotation;
-
-        while (elapsed < duration)
+        if (collision.gameObject.CompareTag("Bullet"))
         {
-            elapsed += Time.deltaTime;
-            
-            //回転をさせるためかける
-            transform.rotation = Quaternion.Slerp(currentRot, targetRotation, elapsed / duration);
-            yield return null;
+            OnHitTarget();
+
         }
-
-        transform.rotation = targetRotation; // 完全に目標角度に固定
-
-        //消滅させるならコメントを消す
-        //Destroy(gameObject, 2f);
     }
+
+    ////回転させるアニメーション
+    //IEnumerator FlipAnimation()
+    //{
+    //    Quaternion targetRotation = startRotation * Quaternion.Euler(90.0f, 0f, 0f);
+
+    //    float elapsed = 0f;
+
+    //    float duration = 0.3f; // 0.3秒かけて倒れる
+    //    Quaternion currentRot = transform.rotation;
+
+    //    while (elapsed < duration)
+    //    {
+    //        elapsed += Time.deltaTime;
+
+    //        //回転をさせるためかける
+    //        transform.rotation = Quaternion.Slerp(currentRot, targetRotation, elapsed / duration);
+    //        yield return null;
+    //    }
+
+    //    transform.rotation = targetRotation; // 完全に目標角度に固定
+
+    //    //消滅させるならコメントを消す
+    //    //Destroy(gameObject, 2f);
+    //}
 }
