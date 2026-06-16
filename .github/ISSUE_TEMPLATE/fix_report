@@ -1,0 +1,45 @@
+name: ⚙️ 修正・調整依頼
+description: 既存機能の調整、UIの修正、コードのリファクタリングなどを依頼します
+labels: ["refactor", "tweak"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        既存機能のブラッシュアップ・修正依頼ありがとうございます。変更箇所がわかるように情報を入力してください。
+
+  - type: textarea
+    id: target
+    attributes:
+      label: 修正・調整の対象
+      description: どの機能、どの画面、どのコードを修正するか記述してください
+      placeholder: 例：ステージ1のボスのノックバック挙動、UIマネージャーのスクリプト
+    validations:
+      required: true
+
+  - type: textarea
+    id: current_behavior
+    attributes:
+      label: 現在の状態
+      description: 修正前の、現在の挙動や問題点を記述してください
+      placeholder: 例：ボスに攻撃を当てた際、ノックバックの距離が長すぎて画面外に出てしまうことがある。
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed_behavior
+    attributes:
+      label: 修正・調整後の理想の挙動
+      description: どのように変更したいか、具体的な数値やイメージを記述してください
+      placeholder: |
+        例：ノックバック距離を現在の半分（約2ユニット）に変更し、壁に当たった場合はそこで止まるようにしたい。
+    validations:
+      required: true
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: 備考・参考情報
+      description: 関連するIssue、参考にした他ゲームの挙動、関係するソースファイル名などがあれば記述してください
+      placeholder: 該当スクリプト：`BossController.cs` の `ApplyKnockback` メソッド付近
+    validations:
+      required: false
