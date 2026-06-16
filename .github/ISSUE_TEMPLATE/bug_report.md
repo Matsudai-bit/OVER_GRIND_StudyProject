@@ -1,49 +1,62 @@
-name: 🐛 バグ報告
-description: バグを報告する
+name: Hot Bug Report
+description: File a bug report
+title: "[Bug]: "
+labels: ["bug", "triage"]
+assignees:
+  - octocat
 body:
   - type: markdown
     attributes:
       value: |
-        バグ報告ありがとうございます。以下の情報を記入してください。
-
-  - type: textarea
-    id: description
+        Thanks for taking the time to fill out this bug report!
+  - type: input
+    id: contact
     attributes:
-      label: バグの説明
-      description: バグの内容を詳しく説明してください
-      placeholder: できるだけ具体的に記述してください
+      label: Contact Details
+      description: How can we get in touch with you if we need more info?
+      placeholder: ex. email@example.com
+    validations:
+      required: false
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Also tell us, what did you expect to happen?
+      placeholder: Tell us what you see!
+      value: "A bug happened!"
     validations:
       required: true
-
-  - type: textarea
-    id: reproduction
+  - type: dropdown
+    id: version
     attributes:
-      label: 再現手順
-      description: バグを再現するための手順を記述してください
-      placeholder: |
-        1. '...' に移動
-        2. '....' をクリック
-        3. '....' までスクロール
-        4. エラーが発生
+      label: Version
+      description: What version of our software are you running?
+      options:
+        - 1.0.2 (Default)
+        - 1.0.3 (Edge)
     validations:
       required: true
-
-  - type: textarea
-    id: expected
-    attributes:
-      label: 期待する動作
-      description: 本来期待される動作を記述してください
-    validations:
-      required: true
-
   - type: dropdown
     id: browsers
     attributes:
-      label: 発生したブラウザ
+      label: What browsers are you seeing the problem on?
       multiple: true
       options:
-        - Chrome
         - Firefox
+        - Chrome
         - Safari
-        - Edge
-        - その他
+        - Microsoft Edge
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log output
+      description: Please copy and paste any relevant log output. This will be automatically formatted into code, so no need for backticks.
+      render: shell
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Code of Conduct
+      description: By submitting this issue, you agree to follow our [Code of Conduct](https://example.com)
+      options:
+        - label: I agree to follow this project's Code of Conduct
+          required: true
