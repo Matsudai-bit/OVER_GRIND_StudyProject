@@ -1,0 +1,50 @@
+name: ✨ 追加機能実装依頼
+description: 新しい機能やコンテンツの追加を依頼します
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        新機能の提案・依頼ありがとうございます！開発をスムーズに進めるため、以下の情報を入力してください。
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: 機能の概要
+      description: どのような機能を追加したいか、簡潔に説明してください
+      placeholder: 例：プレイヤーのダッシュ機能の実装、リザルト画面にスコアアニメーションを追加 など
+    validations:
+      required: true
+
+  - type: textarea
+    id: background
+    attributes:
+      label: 導入の背景・目的
+      description: なぜこの機能が必要なのか、これによってゲーム体験がどう向上するのかを記述してください
+      placeholder: 例：現在の移動速度だけだとテンポが悪く感じるため、爽快感を向上させたい。
+    validations:
+      required: false
+
+  - type: textarea
+    id: specifications
+    attributes:
+      label: 具体的な仕様・要件
+      description: 満たすべき仕様をリスト形式などで記述してください（未定の部分はその旨を記載）
+      placeholder: |
+        - [ ] Shiftキーを押しっぱなしでダッシュ状態になる
+        - [ ] ダッシュ中はスタミナゲージを毎秒10消費する
+        - [ ] スタミナが0になったら強制的に通常移動に戻る
+        - [ ] ダッシュ用のエフェクト（パーティクル）を再生する
+    validations:
+      required: true
+
+  - type: textarea
+    id: assets
+    attributes:
+      label: 必要な素材（アセット）
+      description: 使用する画像、3Dモデル、UI、BGM/SEなどの準備状況やパスを記述してください
+      placeholder: |
+        - [ ] UI画像：`Assets/Textures/UI/dash_icon.png` (作成済み)
+        - [ ] SE：未作成（サウンド担当に別途依頼中）
+    validations:
+      required: false
