@@ -37,4 +37,14 @@ body:
     validations:
       required: true
 
- 
+  - type: dropdown
+    id: browsers
+    attributes:
+      label: 発生したブラウザ
+      multiple: true
+      options:
+        - Chrome
+        - Firefox
+        - Safari
+        - Edge
+        - その他
