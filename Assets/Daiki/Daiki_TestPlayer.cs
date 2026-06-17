@@ -5,6 +5,7 @@ namespace Daiki
 {
     using UnityEngine;
     using UnityEngine.InputSystem;
+    using UnityEngine.Splines;
 
     /// <summary>
     /// テスト用プレイヤーコントローラー (Input System対応)
@@ -48,6 +49,8 @@ namespace Daiki
         [Tooltip("カメラの向きに合わせて移動するか (falseならワールド軸で移動)")]
         [SerializeField] private bool moveRelativeToCamera = true;
 
+        private SplineAnimate splineAnimate;
+
         // --- 内部変数 ---
         private Rigidbody rb;
         private Camera mainCamera;
@@ -79,7 +82,7 @@ namespace Daiki
             // isGrounded は Collision コールバックで更新されるため、ここでは参照するだけ
             HandleMovement();
             HandleJump();
-            ApplyGravityModifier();
+            //ApplyGravityModifier();
         }
 
         // =========================================================
@@ -125,6 +128,13 @@ namespace Daiki
                 if (contact.normal.y >= groundNormalThreshold)
                 {
                     hasGroundNormal = true;
+
+                    if (collision.gameObject.CompareTag("Rail"))
+                    {
+                        splineAnimate.Container = collision.gameObject.GetComponent<SplineContainer>();
+                        //SplineUtility.GetNearestPoint()
+
+                    }
                     break;
                 }
             }
@@ -245,12 +255,12 @@ namespace Daiki
         // ユーティリティ
         // =========================================================
 
-        private void OnDrawGizmosSelected()
-        {
-            // 接地状態をギズモで確認 (プレイ中のみ)
-            if (!Application.isPlaying) return;
-            Gizmos.color = isGrounded ? Color.green : Color.red;
-            Gizmos.DrawWireSphere(transform.position, 0.15f);
-        }
+        //private void OnDrawGizmosSelected()
+        //{
+        //    // 接地状態をギズモで確認 (プレイ中のみ)
+        //    if (!Application.isPlaying) return;
+        //    Gizmos.color = isGrounded ? Color.green : Color.red;
+        //    Gizmos.DrawWireSphere(transform.position, 0.15f);
+        //}
     }
 }
