@@ -1,6 +1,5 @@
 using UnityEngine;
 using TMPro;
-using UnityEditor.Build.Content;
 
 public class ResultController : MonoBehaviour
 {
@@ -17,7 +16,7 @@ public class ResultController : MonoBehaviour
         // スコアの計算ロジックをここに実装
         int score = 0;
         // スコアを管理しているスクリプトから取得する（今後追加）
-        score = 100; // 仮のスコア値
+        score = CountManager.HitCount(); // 仮のスコア値
         return score;
     }
 }
