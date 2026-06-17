@@ -75,6 +75,8 @@ namespace Daiki
             rb = GetComponent<Rigidbody>();
             rb.freezeRotation = true;
             mainCamera = Camera.main;
+
+            splineAnimate = GetComponent<SplineAnimate>();
         }
 
         private void FixedUpdate()
@@ -83,6 +85,19 @@ namespace Daiki
             HandleMovement();
             HandleJump();
             //ApplyGravityModifier();
+
+            if (splineAnimate.IsPlaying)
+            {
+                
+                using var spline = new NativeSpline(splineAnimate.Container.Spline, splineAnimate.Container.transform.localToWorldMatrix);
+
+                SplineUtility.GetNearestPoint(spline, transform.position, out var nearPosition, out var nearT);
+                if (0.95f <= nearT)
+                {
+                    splineAnimate.Pause();
+                    rb.AddForce(-SplineUtility.EvaluateAcceleration(spline, nearT) * 1.5f, ForceMode.Impulse);
+                }
+            }
         }
 
         // =========================================================
@@ -131,8 +146,24 @@ namespace Daiki
 
                     if (collision.gameObject.CompareTag("Rail"))
                     {
-                        splineAnimate.Container = collision.gameObject.GetComponent<SplineContainer>();
-                        //SplineUtility.GetNearestPoint()
+                        if (!splineAnimate.IsPlaying)
+                        {
+                            splineAnimate.Container = collision.gameObject.GetComponent<SplineContainer>();
+
+                            using var spline = new NativeSpline(splineAnimate.Container.Spline, splineAnimate.Container.transform.localToWorldMatrix);
+
+
+
+                            SplineUtility.GetNearestPoint(spline, transform.position, out var nearPosition, out var nearT);
+
+                            splineAnimate.StartOffset = nearT;
+
+                            splineAnimate.Restart(true);
+                            Debug.Log("補間の開始");
+
+                        }
+                     
+                     
 
                     }
                     break;
@@ -146,6 +177,14 @@ namespace Daiki
             else if (delta == -1 && hasGroundNormal)
             {
                 groundContactCount = Mathf.Max(0, groundContactCount - 1);
+
+                if (collision.gameObject.CompareTag("Rail"))
+                {
+                
+
+                    splineAnimate.Pause();
+                    splineAnimate.Container = null;
+                }
             }
             // Stay の場合: カウンターは変更せず isGrounded を現状に合わせるだけ
 

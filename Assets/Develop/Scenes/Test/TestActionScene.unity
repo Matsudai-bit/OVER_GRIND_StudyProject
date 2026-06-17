@@ -207,7 +207,7 @@ Transform:
   m_GameObject: {fileID: 420027246}
   serializedVersion: 2
   m_LocalRotation: {x: 0.22290257, y: -3.403939e-15, z: 7.783289e-16, w: 0.97484076}
-  m_LocalPosition: {x: 49.59793, y: 1.60039, z: 110.27012}
+  m_LocalPosition: {x: 50.4, y: 1.8199999, z: 110.27012}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -543,6 +543,7 @@ GameObject:
   - component: {fileID: 1751694339}
   - component: {fileID: 1751694345}
   - component: {fileID: 1751694344}
+  - component: {fileID: 1751694346}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -664,7 +665,7 @@ Transform:
   m_GameObject: {fileID: 1751694337}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 49.59793, y: 0.08039, z: 113.42012}
+  m_LocalPosition: {x: 50.4, y: 0.3, z: 113.42012}
   m_LocalScale: {x: 0.5, y: 0.5, z: 0.5}
   m_ConstrainProportionsScale: 1
   m_Children: []
@@ -831,6 +832,29 @@ MonoBehaviour:
   m_DefaultActionMap: Player
   m_SplitScreenIndex: -1
   m_Camera: {fileID: 0}
+--- !u!114 &1751694346
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1751694337}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 29a074d529cf945029ef7cf40540c9df, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.Splines::UnityEngine.Splines.SplineAnimate
+  m_Target: {fileID: 0}
+  m_PlayOnAwake: 0
+  m_LoopMode: 0
+  m_Method: 0
+  m_Duration: 1
+  m_MaxSpeed: 10
+  m_EasingMode: 0
+  m_AlignmentMode: 1
+  m_ObjectForwardAxis: 2
+  m_ObjectUpAxis: 1
+  m_StartOffset: 0
 --- !u!1 &1880667663
 GameObject:
   m_ObjectHideFlags: 0
@@ -950,7 +974,7 @@ Transform:
   m_GameObject: {fileID: 1880667663}
   serializedVersion: 2
   m_LocalRotation: {x: 0.22290255, y: -3.379774e-15, z: 6.7264575e-16, w: 0.97484076}
-  m_LocalPosition: {x: 49.59793, y: 1.60039, z: 110.27012}
+  m_LocalPosition: {x: 50.4, y: 1.8199999, z: 110.27012}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -972,7 +996,7 @@ GameObject:
   - component: {fileID: 2098682494}
   m_Layer: 0
   m_Name: Rail
-  m_TagString: Untagged
+  m_TagString: Rail
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
