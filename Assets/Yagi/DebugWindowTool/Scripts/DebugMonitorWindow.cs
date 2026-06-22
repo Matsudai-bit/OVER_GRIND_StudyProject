@@ -277,55 +277,140 @@ public class DebugMonitorWindow : EditorWindow
 [InitializeOnLoad]
 public static class DebugMonitorHierarchyTooltip
 {
+    private static int _hoveredInstanceID = -1;
+    private static string _hoveredInfo = "";
+    // ホバー行のスクリーン座標Y（ウィンドウ外描画に使用）
+    private static Rect _hoveredScreenRect;
+
     static DebugMonitorHierarchyTooltip()
     {
         EditorApplication.hierarchyWindowItemOnGUI += OnHierarchyGUI;
+        // ウィンドウ外に描画するためSceneViewのOnGUIを借りる
+        SceneView.duringSceneGui += OnSceneGUI;
     }
 
     private static void OnHierarchyGUI(int instanceID, Rect selectionRect)
     {
-        // ヒエラルキー上の各行に対して、マウスホバーを明示的に判定する
         Event e = Event.current;
-        if (e.type != EventType.Repaint) return;
 
-        if (!selectionRect.Contains(e.mousePosition)) return;
+        if (selectionRect.Contains(e.mousePosition))
+        {
+            if (_hoveredInstanceID != instanceID)
+            {
+                _hoveredInstanceID = instanceID;
+                _hoveredInfo = BuildInfo(instanceID);
 
+                // selectionRect はウィンドウローカル座標なので
+                // GUIUtility.GUIToScreenPoint でスクリーン座標へ変換して保存
+                Vector2 screenPos = GUIUtility.GUIToScreenPoint(
+                    new Vector2(selectionRect.x, selectionRect.y));
+                _hoveredScreenRect = new Rect(screenPos.x, screenPos.y,
+                    selectionRect.width, selectionRect.height);
+
+                EditorApplication.RepaintHierarchyWindow();
+            }
+        }
+        else if (_hoveredInstanceID == instanceID)
+        {
+            _hoveredInstanceID = -1;
+            _hoveredInfo = "";
+            EditorApplication.RepaintHierarchyWindow();
+        }
+    }
+
+    // EditorWindowを継承した専用のオーバーレイウィンドウで描画
+    private static void OnSceneGUI(SceneView sv)
+    {
+        // SceneViewのOnGUIは借りない → 専用ウィンドウへ委譲
+    }
+
+    // ★ 専用のEditorWindowでオーバーレイを描画する
+    [InitializeOnLoad]
+    public class HierarchyOverlayWindow : EditorWindow
+    {
+        static HierarchyOverlayWindow()
+        {
+            EditorApplication.update += EnsureWindow;
+        }
+
+        private static HierarchyOverlayWindow _instance;
+
+        private static void EnsureWindow()
+        {
+            if (_instance != null) return;
+            _instance = CreateInstance<HierarchyOverlayWindow>();
+            // タイトルバーなし・フォーカス不要の透明ウィンドウ
+            _instance.ShowPopup();
+            _instance.minSize = Vector2.zero;
+        }
+
+        private void OnGUI()
+        {
+            if (string.IsNullOrEmpty(_hoveredInfo))
+            {
+                // 非表示時はウィンドウを0サイズに縮小
+                position = new Rect(-9999, -9999, 1, 1);
+                return;
+            }
+
+            GUIStyle style = new GUIStyle(EditorStyles.helpBox)
+            {
+                fontSize = 10,
+                alignment = TextAnchor.MiddleLeft,
+            };
+
+            GUIContent content = new GUIContent(_hoveredInfo);
+            Vector2 size = style.CalcSize(content);
+
+            // ヒエラルキ行の左側にポップアップ表示
+            float x = _hoveredScreenRect.x - size.x - 8f;
+            float y = _hoveredScreenRect.y;
+
+            position = new Rect(x, y, size.x + 4f, size.y);
+
+            EditorGUI.DrawRect(new Rect(0, 0, position.width, position.height),
+                new Color(0.1f, 0.1f, 0.1f, 0.95f));
+            GUI.Label(new Rect(0, 0, position.width, position.height),
+                content, style);
+
+            Repaint();
+        }
+    }
+
+    private static string BuildInfo(int instanceID)
+    {
 #pragma warning disable CS0618
         GameObject go = EditorUtility.InstanceIDToObject(instanceID) as GameObject;
 #pragma warning restore CS0618
 
-        if (go == null) return;
+        if (go == null) return "";
 
         var monos = go.GetComponents<MonoBehaviour>();
-        if (monos.Length == 0) return;
+        if (monos.Length == 0) return "";
 
-        string tooltip = "";
-        bool hasDebugField = false;
-
+        string result = "";
         foreach (var mono in monos)
         {
             if (mono == null) continue;
-            var fields = mono.GetType().GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+
+            var fields = mono.GetType().GetFields(
+                System.Reflection.BindingFlags.Instance |
+                System.Reflection.BindingFlags.Public |
+                System.Reflection.BindingFlags.NonPublic);
 
             foreach (var field in fields)
             {
-                if (field.GetCustomAttribute<DebugParameterFieldAttribute>() != null)
-                {
-                    if (!hasDebugField)
-                    {
-                        tooltip = $"【Debug Parameters】\n";
-                        hasDebugField = true;
-                    }
-                    tooltip += $"[{field.FieldType.Name}] {field.Name}\n";
-                }
+                if (field.GetCustomAttribute<DebugParameterFieldAttribute>() == null)
+                    continue;
+
+                string valueStr = Application.isPlaying
+                    ? (field.GetValue(mono)?.ToString() ?? "null")
+                    : "(停止中)";
+
+                result += $"[{field.FieldType.Name}] {field.Name} = {valueStr}\n";
             }
         }
 
-        if (hasDebugField)
-        {
-            // ラベルのツールチッププロパティを直接上書きする
-            // これにより、Play中でも強制的にツールチップ表示を試みます
-            GUI.Label(selectionRect, new GUIContent("", tooltip.TrimEnd()));
-        }
+        return result.TrimEnd();
     }
 }
