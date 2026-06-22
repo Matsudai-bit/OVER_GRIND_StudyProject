@@ -12,18 +12,17 @@ using System.Linq;
  * @date    2026/06/19
  *
  ******************************************************************************/
-
-
-
 public class DebugMonitorWindow : EditorWindow
 {
     private Vector2 scroll;
 
+    // オブジェクトごとのFoldout開閉状態を保持
     private Dictionary<Object, bool> foldouts = new();
 
-    // ピン留め管理
+    // ピン留めされたフィールドのUniqueKeyを管理
     private HashSet<string> pinnedKeys = new();
 
+    // 検索ボックスの入力文字列
     private string searchText = "";
 
     [MenuItem("Tools/Debug Monitor")]
@@ -34,6 +33,7 @@ public class DebugMonitorWindow : EditorWindow
 
     private void OnGUI()
     {
+        // Playモード中のみ利用可能
         if (!Application.isPlaying)
         {
             EditorGUILayout.HelpBox(
@@ -43,6 +43,7 @@ public class DebugMonitorWindow : EditorWindow
             return;
         }
 
+        // DebugMonitor属性付きフィールドを収集
         List<DebugParameterData> fields =
             DebugMonitorScanner.Scan();
 
@@ -58,13 +59,13 @@ public class DebugMonitorWindow : EditorWindow
         scroll =
             EditorGUILayout.BeginScrollView(scroll);
 
-        // ピン留め済みフィールドを先頭に並べる
+        // ピン留め項目を常に先頭へ表示
         var sortedFields = fields
             .OrderByDescending(f =>
                 pinnedKeys.Contains(f.UniqueKey))
             .ToList();
 
-        // ピン留めセクション
+        // ピン留め済み項目のみ抽出
         var pinnedFields = sortedFields
             .Where(f => pinnedKeys.Contains(f.UniqueKey))
             .ToList();
@@ -79,12 +80,13 @@ public class DebugMonitorWindow : EditorWindow
 
             foreach (var field in pinnedFields)
             {
-                // 検索フィルタ適用
+                // 名前検索フィルタ
                 if (!string.IsNullOrEmpty(searchText) &&
                     !field.Name.ToLower()
                         .Contains(searchText.ToLower()))
                     continue;
 
+                // ピン留め一覧では所属オブジェクト名も表示
                 DrawField(field, showObjectName: true);
             }
 
@@ -97,7 +99,7 @@ public class DebugMonitorWindow : EditorWindow
             EditorGUILayout.Space();
         }
 
-        // 通常セクション（Object別グループ）
+        // 対象オブジェクトごとにグループ化
         var groups =
             sortedFields.GroupBy(x => x.Target);
 
@@ -105,6 +107,7 @@ public class DebugMonitorWindow : EditorWindow
         {
             Object target = group.Key;
 
+            // 検索結果に一致する項目のみ残す
             var filteredGroup =
                 group.Where(field =>
                 {
@@ -120,6 +123,7 @@ public class DebugMonitorWindow : EditorWindow
             if (filteredGroup.Count == 0)
                 continue;
 
+            // 初回表示時は展開状態にする
             if (!foldouts.ContainsKey(target))
                 foldouts[target] = true;
 
@@ -144,6 +148,7 @@ public class DebugMonitorWindow : EditorWindow
 
         EditorGUILayout.EndScrollView();
 
+        // 値変化を即時反映するため毎フレーム再描画
         Repaint();
     }
 
