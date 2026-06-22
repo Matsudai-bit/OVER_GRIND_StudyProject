@@ -144,21 +144,30 @@ namespace Daiki
                 {
                     hasGroundNormal = true;
 
+                    // レールだった場合
                     if (collision.gameObject.CompareTag("Rail"))
                     {
+                        // スプラインアニメーションが動いていれば
                         if (!splineAnimate.IsPlaying)
                         {
                             splineAnimate.Container = collision.gameObject.GetComponent<SplineContainer>();
 
+                            // ネイティブスプラインに変換
                             using var spline = new NativeSpline(splineAnimate.Container.Spline, splineAnimate.Container.transform.localToWorldMatrix);
 
-
-
+                            // プレイヤー座標を元にスプライン座標（nearPosition)とノーマライズ座標（nearT)の取得
                             SplineUtility.GetNearestPoint(spline, transform.position, out var nearPosition, out var nearT);
 
+                            // 開始地点の設定
                             splineAnimate.StartOffset = nearT;
 
+                           
+
+                            // 再スタートする
                             splineAnimate.Restart(true);
+
+                            
+
                             Debug.Log("補間の開始");
 
                         }
