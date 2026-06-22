@@ -23,6 +23,7 @@ public class Genetrate : MonoBehaviour
         // ƒ‰ƒ“ƒ_ƒ€‚ÈŒó•âÀ•W‚ğ”‰ñ‚·
         for (int i = 0; i < 3; i++)
         {
+            DebugManager.Log("•Ç‚ÌoŒ»");
             float x = Random.Range(-rangeX, rangeX);
             Vector3 candidate = new Vector3(x, spawnY, Random.Range(5, 10.0f));
 

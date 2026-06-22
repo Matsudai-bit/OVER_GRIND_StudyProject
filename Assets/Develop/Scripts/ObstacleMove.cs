@@ -25,4 +25,20 @@ public class ObstMove : MonoBehaviour
             count++;
         }
     }
+    private void OnDrawGizmos()
+    {
+        // DebugManager‚ª‘¶İ‚µA‚©‚ÂGizmo•\¦‚ª—LŒø‚È‚Æ‚«‚¾‚¯•`‰æ‚·‚é
+        if (DebugManager.Instance == null || !DebugManager.Instance.GizmosActive)
+        {
+            return;
+        }
+
+        // õ“G”ÍˆÍ‚ğ”¼“§–¾‚ÌÔ‚¢‹…‘Ì‚Å•`‰æ
+        Gizmos.color = new Color(1f, 0f, 0f, 0.2f);
+        Gizmos.DrawCube(transform.position,transform.localScale);
+
+        // —ÖŠsü‚ğ•s“§–¾‚ÈÔ‚Å•`‰æ
+        Gizmos.color = Color.red;
+        Gizmos.DrawWireCube(transform.position, transform.localScale);
+    }
 }
