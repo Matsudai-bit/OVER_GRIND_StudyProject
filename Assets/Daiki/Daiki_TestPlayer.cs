@@ -53,6 +53,7 @@ namespace Daiki
 
         // --- 内部変数 ---
         private Rigidbody rb;
+        private SplineGrindController m_splineGrindController;
         private Camera mainCamera;
 
         private Vector2 moveInput;   // Input Systemから受け取る移動入力
@@ -76,7 +77,8 @@ namespace Daiki
             rb.freezeRotation = true;
             mainCamera = Camera.main;
 
-            splineAnimate = GetComponent<SplineAnimate>();
+            splineAnimate           = GetComponent<SplineAnimate>();
+            m_splineGrindController = GetComponent<SplineGrindController>();
         }
 
         private void FixedUpdate()
@@ -86,18 +88,7 @@ namespace Daiki
             HandleJump();
             //ApplyGravityModifier();
 
-            if (splineAnimate.IsPlaying)
-            {
-                
-                using var spline = new NativeSpline(splineAnimate.Container.Spline, splineAnimate.Container.transform.localToWorldMatrix);
-
-                SplineUtility.GetNearestPoint(spline, transform.position, out var nearPosition, out var nearT);
-                if (0.95f <= nearT)
-                {
-                    splineAnimate.Pause();
-                    rb.AddForce(-SplineUtility.EvaluateAcceleration(spline, nearT) * 1.5f, ForceMode.Impulse);
-                }
-            }
+          
         }
 
         // =========================================================
@@ -148,26 +139,9 @@ namespace Daiki
                     if (collision.gameObject.CompareTag("Rail"))
                     {
                         // スプラインアニメーションが動いていれば
-                        if (!splineAnimate.IsPlaying)
+                        if (m_splineGrindController && !m_splineGrindController.IsGrinding)
                         {
-                            splineAnimate.Container = collision.gameObject.GetComponent<SplineContainer>();
-
-                            // ネイティブスプラインに変換
-                            using var spline = new NativeSpline(splineAnimate.Container.Spline, splineAnimate.Container.transform.localToWorldMatrix);
-
-                            // プレイヤー座標を元にスプライン座標（nearPosition)とノーマライズ座標（nearT)の取得
-                            SplineUtility.GetNearestPoint(spline, transform.position, out var nearPosition, out var nearT);
-
-                            // 開始地点の設定
-                            splineAnimate.StartOffset = nearT;
-
-                           
-
-                            // 再スタートする
-                            splineAnimate.Restart(true);
-
-                            
-
+                            m_splineGrindController.StartGrind(collision.gameObject.GetComponent<SplineRailInfo>());
                             Debug.Log("補間の開始");
 
                         }
@@ -187,13 +161,7 @@ namespace Daiki
             {
                 groundContactCount = Mathf.Max(0, groundContactCount - 1);
 
-                if (collision.gameObject.CompareTag("Rail"))
-                {
-                
-
-                    splineAnimate.Pause();
-                    splineAnimate.Container = null;
-                }
+         
             }
             // Stay の場合: カウンターは変更せず isGrounded を現状に合わせるだけ
 

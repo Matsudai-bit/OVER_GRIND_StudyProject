@@ -684,7 +684,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 67d3694637aa5164d86351177c0d7192, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Daiki.PlayerController
-  moveSpeed: 5
+  moveSpeed: 2.5
   acceleration: 20
   jumpForce: 5
   fallGravityMultiplier: 2.5
@@ -842,20 +842,12 @@ MonoBehaviour:
   m_GameObject: {fileID: 1751694337}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 29a074d529cf945029ef7cf40540c9df, type: 3}
+  m_Script: {fileID: 11500000, guid: f454a4d0a1b9f26478316a9fca1909d0, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Unity.Splines::UnityEngine.Splines.SplineAnimate
-  m_Target: {fileID: 0}
-  m_PlayOnAwake: 0
-  m_LoopMode: 0
-  m_Method: 1
-  m_Duration: 1
-  m_MaxSpeed: 10
-  m_EasingMode: 0
-  m_AlignmentMode: 1
-  m_ObjectForwardAxis: 2
-  m_ObjectUpAxis: 1
-  m_StartOffset: 0
+  m_EditorClassIdentifier: Assembly-CSharp::SplineGrindController
+  baseGrindSpeed: 8.5
+  maxGrindSpeed: 40
+  exitSpeedScale: 3.5
 --- !u!1 &1880667663
 GameObject:
   m_ObjectHideFlags: 0
@@ -1109,6 +1101,7 @@ GameObject:
   - component: {fileID: 2098682490}
   - component: {fileID: 2098682489}
   - component: {fileID: 2098682494}
+  - component: {fileID: 2098682495}
   m_Layer: 0
   m_Name: Rail
   m_TagString: Rail
@@ -1294,20 +1287,20 @@ MonoBehaviour:
       TangentIn:
         x: -0
         y: -0
-        z: -0.86159414
+        z: -0.8625606
       TangentOut:
         x: 0
         y: 0
-        z: 0.97848386
+        z: 0.9824497
       Rotation:
         value:
-          x: -0.0000000015002192
-          y: -0.4781884
-          z: 2.367015e-11
-          w: 0.8782572
+          x: -0.032067023
+          y: -0.47903675
+          z: -0.017449174
+          w: 0.8770354
     - Position:
         x: -4.66317
-        y: 0
+        y: 0.46
         z: 3.9671707
       TangentIn:
         x: 0
@@ -1414,6 +1407,20 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: 0}
+--- !u!114 &2098682495
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2098682488}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d17dc73968f348e4dbc7cb46ce0fbc28, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SplineRailInfo
+  railSpeedMultiplier: 1
+  isBoostRail: 1
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

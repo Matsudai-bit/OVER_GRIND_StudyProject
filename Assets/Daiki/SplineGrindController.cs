@@ -3,20 +3,31 @@ using UnityEngine.Splines;
 using Unity.Mathematics;
 using System.Dynamic;
 
+[RequireComponent(typeof(Rigidbody))]
+
 public class SplineGrindController : MonoBehaviour
 {
     [Header("Movement Settings")]
     [SerializeField] private float baseGrindSpeed = 15f; // 基本速度
     [SerializeField] private float maxGrindSpeed = 40f;  // 最高速度
+    [SerializeField] private float exitSpeedScale = 1.0f;
 
     // 現在の状態管理
     public bool IsGrinding { get; private set; } = false;
 
+    private Rigidbody m_rb;
     private SplineRailInfo currentRail;
+
+
     private float currentT = 0f;       // 0.0 ~ 1.0 の進捗率
     private float splineLength = 0f;   // レールの総延長（メートル）
     private float currentSpeed = 0f;   // 現在のプレイヤーのリアルタイム速度
     private int directionFactor = 1;   // 1 = 順方向, -1 = 逆方向
+
+    private void Awake()
+    {
+        m_rb = GetComponent<Rigidbody>();
+    }
 
     void Update()
     {
@@ -79,18 +90,14 @@ public class SplineGrindController : MonoBehaviour
         Vector3 nextPosition = currentRail.Container.EvaluatePosition(currentT);
         Vector3 nextTangent = currentRail.Container.EvaluateTangent(currentT);
 
-        transform.position = nextPosition;
+        transform.position = nextPosition ;
         if (nextTangent != Vector3.zero)
         {
             // 逆走時は回転も180度反転させる
             transform.rotation = Quaternion.LookRotation(nextTangent * directionFactor);
         }
 
-        // プレイヤーのジャンプ入力で途中離脱
-        if (Input.GetButtonDown("Jump"))
-        {
-            ExitGrind(isEndOfRail: false);
-        }
+  
     }
 
     /// <summary>
@@ -99,9 +106,11 @@ public class SplineGrindController : MonoBehaviour
     private void ExitGrind(bool isEndOfRail)
     {
         IsGrinding = false;
-
+        var direction = (Vector3)currentRail.Container.EvaluateTangent(Mathf.Clamp(currentT, 0.0f, 0.99f));
+        
+        
         // 離脱時のベクトルの計算（レールの向き × 最終速度）
-        Vector3 exitVelocity = currentRail.Container.EvaluateTangent(currentT) * currentSpeed * directionFactor;
+        Vector3 exitVelocity = direction.normalized * currentSpeed * directionFactor * 0.5f;
 
         if (!isEndOfRail)
         {
@@ -110,6 +119,7 @@ public class SplineGrindController : MonoBehaviour
         }
 
         // ※ここでプレイヤーの元の物理挙動を有効化し、exitVelocity を Rigidbody.velocity 等にブチ込む！
+        m_rb.linearVelocity = exitVelocity * exitSpeedScale;
 
         currentRail = null;
         Debug.Log("グラインド終了！慣性速度: " + exitVelocity.magnitude);
