@@ -16,4 +16,7 @@ public class PlayerData : MonoBehaviour
 
     [DebugParameterField]
     private string playerName = "Hero";
+
+    [DebugParameterField]
+    Vector3 vectorrrrrr = Vector3.zero;
 }

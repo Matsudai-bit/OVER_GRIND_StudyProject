@@ -162,11 +162,11 @@ public class DebugMonitorWindow : EditorWindow
 
         if (isPinned)
         {
-            EditorGUILayout.LabelField(field.Target.name, GUILayout.Width(objectColumnWidth));
+            EditorGUILayout.LabelField($"{field.Name} ({field.TypeName})", GUILayout.Width(nameColumnWidth));
             DrawSplitter(ref objectColumnWidth);
         }
 
-        EditorGUILayout.LabelField(field.Name, GUILayout.Width(nameColumnWidth));
+        EditorGUILayout.LabelField($"{field.Name} ({field.TypeName})", GUILayout.Width(nameColumnWidth));
         DrawSplitter(ref nameColumnWidth);
 
         DrawValueField(field);
@@ -229,24 +229,63 @@ public class DebugMonitorWindow : EditorWindow
 
         if (type == typeof(int))
         {
-            int val = EditorGUILayout.IntField(GUIContent.none, (int)field.Value, GUILayout.ExpandWidth(true));
+            int val = EditorGUILayout.IntField(GUIContent.none, (int)field.Value);
             if (val != (int)field.Value) field.SetValue(val);
         }
         else if (type == typeof(float))
         {
-            float val = EditorGUILayout.FloatField(GUIContent.none, (float)field.Value, GUILayout.ExpandWidth(true));
+            float val = EditorGUILayout.FloatField(GUIContent.none, (float)field.Value);
             if (!Mathf.Approximately(val, (float)field.Value)) field.SetValue(val);
         }
         else if (type == typeof(bool))
         {
-            bool val = EditorGUILayout.Toggle(GUIContent.none, (bool)field.Value, GUILayout.ExpandWidth(true));
+            bool val = EditorGUILayout.Toggle(GUIContent.none, (bool)field.Value);
             if (val != (bool)field.Value) field.SetValue(val);
         }
         else if (type == typeof(string))
         {
-            string val = EditorGUILayout.TextField(GUIContent.none, (string)field.Value, GUILayout.ExpandWidth(true));
+            string val = EditorGUILayout.TextField(GUIContent.none, (string)field.Value);
             if (val != (string)field.Value) field.SetValue(val);
         }
+        // ↓ ここから追加
+        else if (type == typeof(Vector2))
+        {
+            Vector2 val = EditorGUILayout.Vector2Field(GUIContent.none, (Vector2)field.Value);
+            if (val != (Vector2)field.Value) field.SetValue(val);
+        }
+        else if (type == typeof(Vector3))
+        {
+            Vector3 val = EditorGUILayout.Vector3Field(GUIContent.none, (Vector3)field.Value);
+            if (val != (Vector3)field.Value) field.SetValue(val);
+        }
+        else if (type == typeof(Vector4))
+        {
+            Vector4 val = EditorGUILayout.Vector4Field(GUIContent.none, (Vector4)field.Value);
+            if (val != (Vector4)field.Value) field.SetValue(val);
+        }
+        else if (type == typeof(Color))
+        {
+            Color val = EditorGUILayout.ColorField(GUIContent.none, (Color)field.Value);
+            if (val != (Color)field.Value) field.SetValue(val);
+        }
+        else if (type == typeof(Quaternion))
+        {
+            // QuaternionはEuler角で表示・編集するほうが直感的
+            Quaternion current = (Quaternion)field.Value;
+            Vector3 euler = EditorGUILayout.Vector3Field(GUIContent.none, current.eulerAngles);
+            if (euler != current.eulerAngles) field.SetValue(Quaternion.Euler(euler));
+        }
+        else if (type == typeof(Rect))
+        {
+            Rect val = EditorGUILayout.RectField(GUIContent.none, (Rect)field.Value);
+            if (val != (Rect)field.Value) field.SetValue(val);
+        }
+        else if (type == typeof(Bounds))
+        {
+            Bounds val = EditorGUILayout.BoundsField(GUIContent.none, (Bounds)field.Value);
+            if (val != (Bounds)field.Value) field.SetValue(val);
+        }
+        // ↑ ここまで追加
         else
         {
             EditorGUILayout.LabelField(field.Value?.ToString() ?? "null", GUILayout.ExpandWidth(true));
