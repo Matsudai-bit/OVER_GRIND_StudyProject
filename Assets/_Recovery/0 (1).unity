@@ -369,8 +369,8 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 616335205}
-  - component: {fileID: 616335207}
-  - component: {fileID: 616335206}
+  - component: {fileID: 616335204}
+  - component: {fileID: 616335203}
   m_Layer: 0
   m_Name: Presenter
   m_TagString: Untagged
@@ -378,6 +378,37 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
+--- !u!114 &616335203
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 616335202}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1280eb05344107944b1092c2ebd13d7c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerHealthView
+  hpText: {fileID: 926177239}
+  mpText: {fileID: 530279724}
+  goldText: {fileID: 1291230428}
+--- !u!114 &616335204
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 616335202}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c4cbe827e5267f4bb054dadd06b1728, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Presenter
+  maxHp: 100
+  maxMp: 50
+  initialGold: 0
+  view: {fileID: 616335203}
 --- !u!4 &616335205
 Transform:
   m_ObjectHideFlags: 0
@@ -393,37 +424,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &616335206
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 616335202}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d064a134febbe924998a0f4c06b311e5, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PlayerHealthView
-  hpText: {fileID: 926177239}
-  mpText: {fileID: 530279724}
-  goldText: {fileID: 1291230428}
---- !u!114 &616335207
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 616335202}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 16ebf5fe5399cae4c9612a65d39706ce, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Presenter
-  maxHp: 100
-  maxMp: 50
-  initialGold: 0
-  view: {fileID: 616335206}
 --- !u!1 &926177237
 GameObject:
   m_ObjectHideFlags: 0
