@@ -90,7 +90,7 @@ public class SplineGrindController : MonoBehaviour
         Vector3 nextPosition = currentRail.Container.EvaluatePosition(currentT);
         Vector3 nextTangent = currentRail.Container.EvaluateTangent(currentT);
 
-        transform.position = nextPosition ;
+        transform.position = nextPosition + Vector3.up * 0.4f;
         if (nextTangent != Vector3.zero)
         {
             // ‹t‘–Žž‚Í‰ñ“]‚à180“x”½“]‚³‚¹‚é
