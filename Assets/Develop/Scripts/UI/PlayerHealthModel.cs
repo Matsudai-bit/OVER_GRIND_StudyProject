@@ -6,14 +6,14 @@ public class PlayerHealthModel
 {
     public ReactiveProperty<int> CurrentHp { get; private set; }　//体力
     public ReactiveProperty<int> CurrentMp { get; private set; }　//魔力
-    public ReactiveProperty<int> Gold { get; private set; }　//カネ
+    public ReactiveProperty<int> Gold { get; private set; }　     //カネ
 
     //挿入
     public PlayerHealthModel(int maxHp, int maxMp, int gold)
     {
         CurrentHp = new ReactiveProperty<int>(maxHp);   //体力
         CurrentMp = new ReactiveProperty<int>(maxMp);   //魔力
-        Gold = new ReactiveProperty<int>(gold);    //カネ
+        Gold      = new ReactiveProperty<int>(gold);    //カネ
     }
 
 
