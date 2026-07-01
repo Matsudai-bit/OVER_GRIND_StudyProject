@@ -28,8 +28,8 @@ public class PlayerIdling : StateBase<Player>
     /// <param name="deltaTime">前フレームからの経過時間</param>
     protected override void OnUpdate(float deltaTime)
     {
-        // Wキーが押されたら
-        if (Keyboard.current.wKey.isPressed)
+        // 移動キーが押されたら
+        if (Owner.IsPressedMoveInput())
         {
             // 移動状態になる
             Machine.ChangeState<PlayerWalking>();

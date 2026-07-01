@@ -27,12 +27,29 @@ public class PlayerWalking : StateBase<Player>
     /// <param name="deltaTime">前フレームからの経過時間</param>
     protected override void OnUpdate(float deltaTime) 
     {
-        // Wキーが放されたら
-        if (!Keyboard.current.wKey.isPressed)
+        // 移動キーが放されたら
+        if (!Owner.IsPressedMoveInput())
         {
             // 移動状態になる
             Machine.ChangeState<PlayerIdling>();
         }
+
+        // 移動方向を取得する
+        Vector2 moveInput = Owner.GetMoveInput();
+        Vector3 input = new Vector3(moveInput.x, 0.0f, moveInput.y);
+
+        // 2方向に入力されている場合
+        if(input.magnitude > 1.0f)
+        {
+            // 正規化
+            input.Normalize();
+        }
+
+        // 目標速度を計算
+        Vector3 targetVelocity = input * (5.0f * deltaTime);
+        // Rigitbodyに速度を設定
+        Rigidbody rigidbody = Owner.GetComponent<Rigidbody>();
+        rigidbody.linearVelocity = input;
     }
 
     /// <summary>
