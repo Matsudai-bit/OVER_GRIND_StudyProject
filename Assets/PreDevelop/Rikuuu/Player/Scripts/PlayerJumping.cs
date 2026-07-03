@@ -1,7 +1,10 @@
 using UnityEngine;
 
-public class PlayerIdling : StateBase<Player>
+public class PlayerJumping : StateBase<Player>
 {
+    // 物理ボディ
+    Rigidbody m_rigidbody;
+
     // ---------------------------------------------------------------
     // ステート共通処理
     // ---------------------------------------------------------------
@@ -11,6 +14,12 @@ public class PlayerIdling : StateBase<Player>
     /// </summary>
     protected override void OnStartState()
     {
+        // Rigitbodyコンポーネントを取得する
+        m_rigidbody = Owner.GetComponent<Rigidbody>();
+
+        // 上方向ベクトルを加算する
+        m_rigidbody.linearVelocity = new Vector3(m_rigidbody.linearVelocity.x, 0f, m_rigidbody.linearVelocity.z);
+        m_rigidbody.AddForce(Vector3.up * 5.0f, ForceMode.Impulse);
     }
 
     /// <summary>
@@ -26,17 +35,11 @@ public class PlayerIdling : StateBase<Player>
     /// <param name="deltaTime">前フレームからの経過時間</param>
     protected override void OnUpdate(float deltaTime)
     {
-        // 移動キーが押されたら
-        if (Owner.IsPressedMoveInput())
+        // 着地した場合
+        if(true)
         {
-            // 移動状態になる
-            Machine.ChangeState<PlayerWalking>();
-        }
-        // ジャンプキーが押されたら
-        if (Owner.IsPressedJumpInput())
-        {
-            // ジャンプ状態になる
-            Machine.ChangeState<PlayerJumping>();
+            // 待機状態になる
+            Machine.ChangeState<PlayerIdling>();
         }
     }
 
@@ -52,5 +55,7 @@ public class PlayerIdling : StateBase<Player>
     /// </summary>
     protected override void OnExitState()
     {
+        // ジャンプしていない状態にする
+        Owner.SetJumpPressed(false);
     }
 }
