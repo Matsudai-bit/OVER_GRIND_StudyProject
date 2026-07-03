@@ -3,6 +3,8 @@ using UnityEngine.InputSystem;
 
 public class PlayerWalking : StateBase<Player>
 {
+    Rigidbody m_rigidbody;
+
     // ---------------------------------------------------------------
     // ステート共通処理
     // ---------------------------------------------------------------
@@ -11,7 +13,9 @@ public class PlayerWalking : StateBase<Player>
     /// 状態開始時に呼ばれる
     /// </summary>
     protected override void OnStartState()
-    { 
+    {
+        // Rigitbodyコンポーネントを取得する
+        m_rigidbody = Owner.GetComponent<Rigidbody>();
     }
 
     /// <summary>
@@ -48,8 +52,7 @@ public class PlayerWalking : StateBase<Player>
         // 目標速度を計算
         Vector3 targetVelocity = input * (5.0f * deltaTime);
         // Rigitbodyに速度を設定
-        Rigidbody rigidbody = Owner.GetComponent<Rigidbody>();
-        rigidbody.linearVelocity = input;
+        m_rigidbody.linearVelocity = input;
     }
 
     /// <summary>
