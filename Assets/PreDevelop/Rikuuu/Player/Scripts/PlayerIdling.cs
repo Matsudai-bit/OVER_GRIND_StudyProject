@@ -38,6 +38,12 @@ public class PlayerIdling : StateBase<Player>
             // ジャンプ状態になる
             Machine.ChangeState<PlayerJumping>();
         }
+        // 攻撃キーが押されたら
+        if (Owner.IsPressedAttackInput())
+        {
+            // 攻撃状態になる
+            Machine.ChangeState<PlayerAttacking>();
+        }
     }
 
     /// <summary>

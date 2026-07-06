@@ -125,8 +125,6 @@ public class Player : MonoBehaviour
         if (context.started)
         {
             m_attackPressed = true;
-
-            Debug.Log("Attack");
         }
     }
 
@@ -155,6 +153,14 @@ public class Player : MonoBehaviour
         return m_jumpPressed;
     }
 
+    /// <summary>
+    /// 攻撃キーが押されているか
+    /// </summary>
+    public bool IsPressedAttackInput()
+    {
+        return m_attackPressed;
+    }
+
     // ---------------------------------------------------------------
     // 取得・設定
     // ---------------------------------------------------------------
@@ -175,10 +181,18 @@ public class Player : MonoBehaviour
     }
 
     /// <summary>
-    /// ジャンプしているかどうかの状態を設定する
+    /// ジャンプキーが押されたかどうかの状態を設定する
     /// </summary>
     public void SetJumpPressed(bool jumpPressed)
     {
         m_jumpPressed = jumpPressed;
+    }
+
+    /// <summary>
+    /// 攻撃キーが押されたかどうかの状態を設定する
+    /// </summary>
+    public void SetAttackPressed(bool attackPressed)
+    {
+        m_attackPressed = attackPressed;
     }
 }

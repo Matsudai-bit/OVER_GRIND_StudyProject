@@ -2,6 +2,11 @@ using UnityEngine;
 
 public class PlayerAttacking : StateBase<Player>
 {
+    // 入力受付時間定数
+    [DebugParameterField] const float INPUT_ACCEPT_TIME = 1.0f;
+    // 残り入力受付時間
+    float m_inputAcceptTimeLeft;
+
     // ---------------------------------------------------------------
     // ステート共通処理
     // ---------------------------------------------------------------
@@ -11,6 +16,9 @@ public class PlayerAttacking : StateBase<Player>
     /// </summary>
     protected override void OnStartState()
     {
+        // 残り入力受付時間の初期化
+        m_inputAcceptTimeLeft = INPUT_ACCEPT_TIME;
+
     }
 
     /// <summary>
@@ -26,8 +34,11 @@ public class PlayerAttacking : StateBase<Player>
     /// <param name="deltaTime">前フレームからの経過時間</param>
     protected override void OnUpdate(float deltaTime)
     {
-        // 攻撃モーションが終了したら
-        if (Owner.IsPressedMoveInput())
+        // 時間経過
+        m_inputAcceptTimeLeft -= deltaTime;
+
+        // 入力受付中に攻撃ボタンが押されなかったら
+        if (m_inputAcceptTimeLeft < 0.0f)
         {
             // 待機状態になる
             Machine.ChangeState<PlayerIdling>();
@@ -46,5 +57,7 @@ public class PlayerAttacking : StateBase<Player>
     /// </summary>
     protected override void OnExitState()
     {
+        // 攻撃キーを放された状態にする
+        Owner.SetAttackPressed(false);
     }
 }
