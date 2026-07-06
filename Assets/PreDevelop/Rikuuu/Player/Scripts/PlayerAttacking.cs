@@ -19,6 +19,8 @@ public class PlayerAttacking : StateBase<Player>
         // 残り入力受付時間の初期化
         m_inputAcceptTimeLeft = INPUT_ACCEPT_TIME;
 
+        // 攻撃判定コライダーの作成
+        generateAttackCollider();
     }
 
     /// <summary>
@@ -34,7 +36,7 @@ public class PlayerAttacking : StateBase<Player>
     /// <param name="deltaTime">前フレームからの経過時間</param>
     protected override void OnUpdate(float deltaTime)
     {
-        // 時間経過
+        // 時間経過計算
         m_inputAcceptTimeLeft -= deltaTime;
 
         // 入力受付中に攻撃ボタンが押されなかったら
@@ -59,5 +61,15 @@ public class PlayerAttacking : StateBase<Player>
     {
         // 攻撃キーを放された状態にする
         Owner.SetAttackPressed(false);
+    }
+
+    /// <summary>
+    /// 攻撃判定コライダーを作成する
+    /// </summary>
+    private void generateAttackCollider()
+    {
+        GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+
+        cube.transform.position = new Vector3(5,0,5);
     }
 }
