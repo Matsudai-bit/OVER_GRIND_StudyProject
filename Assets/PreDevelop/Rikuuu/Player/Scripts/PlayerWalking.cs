@@ -26,7 +26,7 @@ public class PlayerWalking : StateBase<Player>
         // 移動キーが放されたら
         if (!Owner.IsPressedMoveInput())
         {
-            // 移動状態になる
+            // 待機状態になる
             Machine.ChangeState<PlayerIdling>();
         }
         // ジャンプキーが押されたら

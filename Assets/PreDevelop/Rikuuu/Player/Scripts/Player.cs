@@ -32,8 +32,10 @@ public class Player : MonoBehaviour
     // Input Systemから受け取る移動入力
     private Vector2 m_moveInput;
     // ジャンプ入力バッファ
-    private bool m_jumpPressed;   // ジャンプボタンが押されたか
-    private bool m_jumpHeld;      // ジャンプボタンが長押しされているか
+    private bool m_jumpPressed;     // ジャンプボタンが押されたか
+    private bool m_jumpHeld;        // ジャンプボタンが長押しされているか
+    // 攻撃入力バッファs
+    private bool m_attackPressed;   // 攻撃ボタンが押されたか
 
     // ---------------------------------------------------------------
     // Unity ライフサイクル
@@ -111,6 +113,20 @@ public class Player : MonoBehaviour
         if(context.canceled)
         {
             m_jumpHeld = false;
+        }
+    }
+
+    /// <summary>
+    /// Input System から送られてきた攻撃入力を受け取る
+    /// </summary>
+    public void OnAttack(InputAction.CallbackContext context)
+    {
+        // 攻撃ボタンが押されたら
+        if (context.started)
+        {
+            m_attackPressed = true;
+
+            Debug.Log("Attack");
         }
     }
 
