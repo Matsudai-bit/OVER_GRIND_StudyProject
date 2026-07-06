@@ -30,6 +30,52 @@ public class DebugMonitorWindow : EditorWindow
     private string _presetInputName = "";                               // プリセット名入力欄の中身
     private const string PresetFilePath = "Assets/Editor/DebugMonitor/Presets.json";
 
+
+    // チェック中のプリセット名セット
+    private HashSet<string> _checkedPresets = new();
+    // プリセットプルダウンの開閉状態
+    private bool _presetFoldout = false;
+    // プリセットセクションの折りたたみ状態（文字列キー）
+    private Dictionary<string, bool> _presetFoldouts = new();
+
+    // プリセットごとの色（循環して使用）
+    private static readonly Color[] PresetColors = new Color[]
+    {
+    new Color(0.2f, 0.4f, 0.8f, 0.3f),  // 青
+    new Color(0.8f, 0.4f, 0.2f, 0.3f),  // 橙
+    new Color(0.4f, 0.7f, 0.2f, 0.3f),  // 緑
+    new Color(0.7f, 0.2f, 0.7f, 0.3f),  // 紫
+    new Color(0.8f, 0.7f, 0.1f, 0.3f),  // 黄
+    };
+
+    // ドロップダウンの開閉状態
+    private bool _presetDropdownOpen = false;
+    // Presetセクションの一括表示フラグ
+    private bool _presetsVisible = true;
+
+    // セクション背景色
+    private static readonly Color PresetSectionColor = new Color(0.15f, 0.20f, 0.30f, 0.6f); // 青みがかった暗色
+    private static readonly Color VariableSectionColor = new Color(0.20f, 0.15f, 0.15f, 0.6f); // 赤みがかった暗色
+
+    private GUIStyle presetSectionStyle;
+    private GUIStyle variableSectionStyle;
+
+    private void InitializeStyles()
+    {
+        if (presetSectionStyle != null) return;
+
+        presetSectionStyle = new GUIStyle(EditorStyles.helpBox);
+        presetSectionStyle.normal.background = Texture2D.whiteTexture;
+        presetSectionStyle.padding = new RectOffset(8, 8, 8, 8);
+        presetSectionStyle.margin = new RectOffset(0, 0, 4, 4);
+
+        variableSectionStyle = new GUIStyle(EditorStyles.helpBox);
+        variableSectionStyle.normal.background = Texture2D.whiteTexture;
+        variableSectionStyle.padding = new RectOffset(8, 8, 8, 8);
+        variableSectionStyle.margin = new RectOffset(0, 0, 4, 4);
+    }
+
+
     [MenuItem("Tools/Debug Monitor")]
     public static void Open()
     {
@@ -41,48 +87,77 @@ public class DebugMonitorWindow : EditorWindow
         LoadPresets();          // プリセットをロード
     }
 
-    private void OnGUI()        // 毎フレーム呼び出される
+    private void OnGUI()
     {
+        InitializeStyles();
+
         if (!Application.isPlaying)
         {
             EditorGUILayout.HelpBox("Play中のみ使用できます", MessageType.Info);
             return;
         }
 
-        List<DebugParameterData> fields = DebugMonitorScanner.Scan();   // 全てのオブジェクトにあるDebugParameterFieldをスキャン
-
-        // 検索欄の描画
-        EditorGUILayout.Space();
-        searchText = EditorGUILayout.TextField("Search", searchText);
-        EditorGUILayout.Space();
-        // プリセット欄の描画
-        DrawPresetSection(); // ← 追加
-        EditorGUILayout.Space();
+        List<DebugParameterData> allFields = DebugMonitorScanner.Scan();
 
         scroll = EditorGUILayout.BeginScrollView(scroll);
-        rowIndex = 0; // 行カウントリセット
 
-        // ピン留め済みのものを先頭にソート
-        var sortedFields = fields.OrderByDescending(f => pinnedKeys.Contains(f.UniqueKey)).ToList();
-        // ピン留め済みのフィールドを抽出
-        var pinnedFields = sortedFields.Where(f => pinnedKeys.Contains(f.UniqueKey)).ToList();
+        rowIndex = 0;
 
-        // ==========================================
-        // ピン留めセクション
-        // ==========================================
+        EditorGUILayout.Space();
+
+        searchText = EditorGUILayout.TextField("Search", searchText);
+
+        EditorGUILayout.Space();
+
+        //----------------------------------------------------------
+        // Preset
+        //----------------------------------------------------------
+
+        Color oldColor = GUI.color;
+
+        GUI.color = PresetSectionColor;
+        EditorGUILayout.BeginVertical(presetSectionStyle);
+        GUI.color = oldColor;
+
+        DrawPresetSection();
+
+        EditorGUILayout.EndVertical();
+
+        EditorGUILayout.Space(10);
+
+        //----------------------------------------------------------
+        // Variable
+        //----------------------------------------------------------
+
+        GUI.color = VariableSectionColor;
+        EditorGUILayout.BeginVertical(variableSectionStyle);
+        GUI.color = oldColor;
+
+        var sortedFields = allFields
+            .OrderByDescending(f => pinnedKeys.Contains(f.UniqueKey))
+            .ToList();
+
+        var pinnedFields = sortedFields
+            .Where(f => pinnedKeys.Contains(f.UniqueKey))
+            .ToList();
+
         if (pinnedFields.Count > 0)
         {
             EditorGUILayout.LabelField("★ Pinned", EditorStyles.boldLabel);
+
             DrawHeader(true);
 
             EditorGUI.indentLevel++;
+
             foreach (var field in pinnedFields)
             {
-                if (!string.IsNullOrEmpty(searchText) && !field.Name.ToLower().Contains(searchText.ToLower()))
+                if (!string.IsNullOrEmpty(searchText) &&
+                    !field.Name.ToLower().Contains(searchText.ToLower()))
                     continue;
 
-                DrawField(field, isPinned: true);
+                DrawField(field, true);
             }
+
             EditorGUI.indentLevel--;
 
             EditorGUILayout.Space();
@@ -90,62 +165,82 @@ public class DebugMonitorWindow : EditorWindow
             EditorGUILayout.Space();
         }
 
-        // ==========================================
-        // 通常セクション
-        // ==========================================
         DrawHeader(false);
 
         var groups = sortedFields.GroupBy(x => x.Target);
+
         foreach (var group in groups)
         {
             UnityEngine.Object target = group.Key;
-            var filteredGroup = group.Where(field =>
+
+            var filteredGroup = group.Where(f =>
             {
-                if (string.IsNullOrEmpty(searchText)) return true;
-                return field.Name.ToLower().Contains(searchText.ToLower());
+                if (string.IsNullOrEmpty(searchText))
+                    return true;
+
+                return f.Name.ToLower().Contains(searchText.ToLower());
             }).ToList();
 
-            if (filteredGroup.Count == 0) continue;
+            if (filteredGroup.Count == 0)
+                continue;
 
-            if (!foldouts.ContainsKey(target)) foldouts[target] = true;
+            if (!foldouts.ContainsKey(target))
+                foldouts[target] = true;
 
-            // Foldoutの背景も少し色を付ける
-            Rect foldoutRect = EditorGUILayout.GetControlRect(true, EditorGUIUtility.singleLineHeight);
-            EditorGUI.DrawRect(foldoutRect, new Color(0.2f, 0.2f, 0.2f, 0.5f));
+            Rect foldoutRect = EditorGUILayout.GetControlRect(
+                true,
+                EditorGUIUtility.singleLineHeight);
 
-            foldouts[target] = EditorGUI.Foldout(foldoutRect, foldouts[target], $"{target.GetType().Name} ({target.name})", true);
+            EditorGUI.DrawRect(
+                foldoutRect,
+                new Color(0.2f, 0.2f, 0.2f, 0.5f));
 
-            if (!foldouts[target]) continue;
+            foldouts[target] = EditorGUI.Foldout(
+                foldoutRect,
+                foldouts[target],
+                $"{target.GetType().Name} ({target.name})",
+                true);
+
+            if (!foldouts[target])
+                continue;
 
             EditorGUI.indentLevel++;
+
             foreach (var field in filteredGroup)
             {
-                DrawField(field, isPinned: false);
+                DrawField(field, false);
             }
+
             EditorGUI.indentLevel--;
         }
 
+        EditorGUILayout.EndVertical();
+
         EditorGUILayout.EndScrollView();
+
         Repaint();
     }
-
     /******************************************************************************
  * @fn      DrawPresetSection
  * @brief   プリセットUI描画
  ******************************************************************************/
     private void DrawPresetSection()
     {
-        EditorGUILayout.LabelField("Presets", EditorStyles.boldLabel);
+        // 第1段階：Presetsセクション全体の開閉
+        _presetFoldout = EditorGUILayout.Foldout(
+            _presetFoldout, "Presets", true, EditorStyles.boldLabel);
+        if (!_presetFoldout) return;
+
+        EditorGUI.indentLevel++;
 
         // 保存欄
         EditorGUILayout.BeginHorizontal();
         _presetInputName = EditorGUILayout.TextField(_presetInputName);
-
         EditorGUI.BeginDisabledGroup(string.IsNullOrEmpty(_presetInputName));
         if (GUILayout.Button("現在のピンを保存", GUILayout.Width(120)))
         {
             SavePreset(_presetInputName);
-            _presetInputName = "";      // 入力欄をクリア
+            _presetInputName = "";
             GUI.FocusControl(null);
         }
         EditorGUI.EndDisabledGroup();
@@ -153,40 +248,202 @@ public class DebugMonitorWindow : EditorWindow
 
         if (_presets.Count == 0)
         {
-            EditorGUILayout.LabelField("保存済みプリセットはありません",
-                EditorStyles.miniLabel);
+            EditorGUILayout.LabelField("保存済みプリセットはありません", EditorStyles.miniLabel);
+            EditorGUI.indentLevel--;
             return;
         }
 
-        // プリセット一覧
         EditorGUILayout.Space(2);
+
+        // ▼ プリセット選択ドロップダウンボタン
+        Rect dropdownRect = EditorGUILayout.GetControlRect(
+            false, EditorGUIUtility.singleLineHeight);
+
+        string buttonLabel = _checkedPresets.Count == 0
+            ? "▼ プリセットを選択"
+            : $"▼ {string.Join(", ", _checkedPresets)}";
+
+        if (GUI.Button(dropdownRect, buttonLabel, EditorStyles.popup))
+        {
+            GenericMenu menu = new GenericMenu();
+
+            foreach (var presetName in _presets.Keys.ToList())
+            {
+                string capturedName = presetName;
+                bool isChecked = _checkedPresets.Contains(capturedName);
+
+                menu.AddItem(
+                    new GUIContent(capturedName),
+                    isChecked,
+                    () =>
+                    {
+                        if (_checkedPresets.Contains(capturedName))
+                            _checkedPresets.Remove(capturedName);
+                        else
+                            _checkedPresets.Add(capturedName);
+                    });
+            }
+
+            menu.AddSeparator("");
+
+            foreach (var presetName in _presets.Keys.ToList())
+            {
+                string capturedName = presetName;
+                menu.AddItem(
+                    new GUIContent($"削除/{capturedName}"),
+                    false,
+                    () =>
+                    {
+                        if (EditorUtility.DisplayDialog(
+                            "プリセット削除",
+                            $"「{capturedName}」を削除しますか？",
+                            "削除", "キャンセル"))
+                        {
+                            _checkedPresets.Remove(capturedName);
+                            DeletePreset(capturedName);
+                        }
+                    });
+            }
+
+            menu.DropDown(dropdownRect);
+        }
+
+        EditorGUILayout.Space(2);
+
+        // チェック中プリセットが1つ以上あるときだけ一括バーを表示
+        if (_checkedPresets.Count > 0)
+        {
+            Rect allToggleRect = EditorGUILayout.GetControlRect(
+                false, EditorGUIUtility.singleLineHeight);
+            EditorGUI.DrawRect(allToggleRect, new Color(0.25f, 0.25f, 0.25f, 1f));
+
+            string allBarLabel = _presetsVisible ? "▼ Preset 一括非表示" : "▶ Preset 一括表示";
+            if (GUI.Button(allToggleRect, allBarLabel, EditorStyles.boldLabel))
+                _presetsVisible = !_presetsVisible;
+
+            EditorGUILayout.Space(2);
+        }
+
+        // 一括非表示中は何も描画しない
+        if (!_presetsVisible)
+        {
+            EditorGUI.indentLevel--;
+            return;
+        }
+
+        // チェック中プリセットの変数を展開
+        int displayColorIndex = 0;
         foreach (var presetName in _presets.Keys.ToList())
         {
-            EditorGUILayout.BeginHorizontal();
+            Color presetColor = PresetColors[displayColorIndex % PresetColors.Length];
+            displayColorIndex++;
 
-            EditorGUILayout.LabelField(presetName, GUILayout.ExpandWidth(true));
+            if (!_checkedPresets.Contains(presetName)) continue;
+            if (!_presets.TryGetValue(presetName, out var presetKeys)) continue;
 
-            if (GUILayout.Button("読込", GUILayout.Width(40)))
+            if (!_presetFoldouts.ContainsKey(presetName))
+                _presetFoldouts[presetName] = true;
+
+            // プリセット名行をFoldoutで描画
+            Rect labelRect = EditorGUILayout.GetControlRect(
+                false, EditorGUIUtility.singleLineHeight);
+            EditorGUI.DrawRect(labelRect, new Color(
+                presetColor.r, presetColor.g, presetColor.b, 0.4f));
+            _presetFoldouts[presetName] = EditorGUI.Foldout(
+                labelRect, _presetFoldouts[presetName],
+                $"★ {presetName}", true, EditorStyles.boldLabel);
+
+            if (!_presetFoldouts[presetName]) continue;
+
+            if (Application.isPlaying)
             {
-                LoadPreset(presetName);
-            }
+                var allFields = DebugMonitorScanner.Scan();
+                var presetFields = allFields
+                    .Where(f => presetKeys.Contains(f.UniqueKey))
+                    .Where(f => string.IsNullOrEmpty(searchText) ||
+                                f.Name.ToLower().Contains(searchText.ToLower()))
+                    .ToList();
 
-            // 削除は誤操作防止のため確認ダイアログを挟む
-            if (GUILayout.Button("削除", GUILayout.Width(40)))
-            {
-                if (EditorUtility.DisplayDialog(
-                    "プリセット削除",
-                    $"「{presetName}」を削除しますか？",
-                    "削除", "キャンセル"))
+                if (presetFields.Count > 0)
                 {
-                    DeletePreset(presetName);
+                    EditorGUI.indentLevel++;
+
+                    // ヘッダー行
+                    Rect headerRect = EditorGUILayout.GetControlRect(
+                        false, EditorGUIUtility.singleLineHeight);
+                    EditorGUI.DrawRect(headerRect, new Color(
+                        presetColor.r, presetColor.g, presetColor.b, 0.5f));
+                    float hx = headerRect.x + EditorGUI.indentLevel * 15f;
+                    EditorGUI.LabelField(
+                        new Rect(hx, headerRect.y, objectColumnWidth, headerRect.height),
+                        "Object", EditorStyles.boldLabel);
+                    EditorGUI.LabelField(
+                        new Rect(hx + objectColumnWidth + 2f, headerRect.y,
+                                 nameColumnWidth, headerRect.height),
+                        "Variable", EditorStyles.boldLabel);
+                    EditorGUI.LabelField(
+                        new Rect(hx + objectColumnWidth + nameColumnWidth + 4f, headerRect.y,
+                                 headerRect.width, headerRect.height),
+                        "Value", EditorStyles.boldLabel);
+
+                    // 変数行
+                    foreach (var field in presetFields)
+                    {
+                        Rect rowRect = EditorGUILayout.GetControlRect(
+                            false, EditorGUIUtility.singleLineHeight);
+                        EditorGUI.DrawRect(rowRect, new Color(
+                            presetColor.r, presetColor.g, presetColor.b,
+                            rowIndex % 2 == 0 ? 0.15f : 0.08f));
+                        rowIndex++;
+
+                        float rx = rowRect.x + EditorGUI.indentLevel * 15f;
+                        EditorGUI.LabelField(
+                            new Rect(rx, rowRect.y, objectColumnWidth, rowRect.height),
+                            field.Target.name);
+                        EditorGUI.LabelField(
+                            new Rect(rx + objectColumnWidth + 2f, rowRect.y,
+                                     nameColumnWidth, rowRect.height),
+                            $"{field.Name} ({field.TypeName})");
+
+                        float valueWidth = rowRect.xMax
+                            - (rx + objectColumnWidth + nameColumnWidth + 4f) - 30f;
+                        DrawValueFieldInRect(field,
+                            new Rect(rx + objectColumnWidth + nameColumnWidth + 4f,
+                                     rowRect.y, valueWidth, rowRect.height));
+
+                        if (GUI.Button(
+                            new Rect(rowRect.xMax - 28f, rowRect.y, 25f, rowRect.height),
+                            pinnedKeys.Contains(field.UniqueKey) ? "★" : "☆"))
+                        {
+                            if (pinnedKeys.Contains(field.UniqueKey))
+                                pinnedKeys.Remove(field.UniqueKey);
+                            else
+                                pinnedKeys.Add(field.UniqueKey);
+                        }
+                    }
+
+                    EditorGUI.indentLevel--;
+                    EditorGUILayout.Space(4);
+                }
+                else
+                {
+                    EditorGUI.indentLevel++;
+                    EditorGUILayout.LabelField("（対応する変数が見つかりません）",
+                        EditorStyles.miniLabel);
+                    EditorGUI.indentLevel--;
                 }
             }
-
-            EditorGUILayout.EndHorizontal();
+            else
+            {
+                EditorGUI.indentLevel++;
+                EditorGUILayout.LabelField("（Play中のみ表示されます）",
+                    EditorStyles.miniLabel);
+                EditorGUI.indentLevel--;
+            }
         }
-    }
 
+        EditorGUI.indentLevel--;
+    }
     /******************************************************************************
      * @fn      SavePreset
      * @brief   現在のピン留めをプリセットとして保存
@@ -278,6 +535,8 @@ public class DebugMonitorWindow : EditorWindow
         // Unityのアセットデータベースに反映・変更を通知
         AssetDatabase.Refresh();
     }
+
+
 
     /******************************************************************************
      * @fn      LoadPresets
@@ -498,6 +757,57 @@ public class DebugMonitorWindow : EditorWindow
         else
         {
             EditorGUILayout.LabelField(field.Value?.ToString() ?? "null", GUILayout.ExpandWidth(true));
+        }
+    }
+
+    private void DrawValueFieldInRect(DebugParameterData field, Rect rect)
+    {
+        System.Type type = field.Field.FieldType;
+
+        if (type == typeof(int))
+        {
+            int val = EditorGUI.IntField(rect, GUIContent.none, (int)field.Value);
+            if (val != (int)field.Value) field.SetValue(val);
+        }
+        else if (type == typeof(float))
+        {
+            float val = EditorGUI.FloatField(rect, GUIContent.none, (float)field.Value);
+            if (!Mathf.Approximately(val, (float)field.Value)) field.SetValue(val);
+        }
+        else if (type == typeof(bool))
+        {
+            bool val = EditorGUI.Toggle(rect, GUIContent.none, (bool)field.Value);
+            if (val != (bool)field.Value) field.SetValue(val);
+        }
+        else if (type == typeof(string))
+        {
+            string val = EditorGUI.TextField(rect, GUIContent.none, (string)field.Value);
+            if (val != (string)field.Value) field.SetValue(val);
+        }
+        else if (type == typeof(Vector2))
+        {
+            Vector2 val = EditorGUI.Vector2Field(rect, GUIContent.none, (Vector2)field.Value);
+            if (val != (Vector2)field.Value) field.SetValue(val);
+        }
+        else if (type == typeof(Vector3))
+        {
+            Vector3 val = EditorGUI.Vector3Field(rect, GUIContent.none, (Vector3)field.Value);
+            if (val != (Vector3)field.Value) field.SetValue(val);
+        }
+        else if (type == typeof(Color))
+        {
+            Color val = EditorGUI.ColorField(rect, GUIContent.none, (Color)field.Value);
+            if (val != (Color)field.Value) field.SetValue(val);
+        }
+        else if (type == typeof(Quaternion))
+        {
+            Quaternion current = (Quaternion)field.Value;
+            Vector3 euler = EditorGUI.Vector3Field(rect, GUIContent.none, current.eulerAngles);
+            if (euler != current.eulerAngles) field.SetValue(Quaternion.Euler(euler));
+        }
+        else
+        {
+            EditorGUI.LabelField(rect, field.Value?.ToString() ?? "null");
         }
     }
 
