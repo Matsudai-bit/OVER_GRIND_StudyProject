@@ -19,7 +19,7 @@ public class PlayerAttacking : StateBase<Player>
         // 残り入力受付時間の初期化
         m_inputAcceptTimeLeft = INPUT_ACCEPT_TIME;
 
-        // 攻撃判定コライダーの作成
+        // 攻撃判定コライダーの生成
         generateAttackCollider();
     }
 
@@ -64,7 +64,7 @@ public class PlayerAttacking : StateBase<Player>
     }
 
     /// <summary>
-    /// 攻撃判定コライダーを作成する
+    /// 攻撃判定コライダーを生成する
     /// </summary>
     private void generateAttackCollider()
     {

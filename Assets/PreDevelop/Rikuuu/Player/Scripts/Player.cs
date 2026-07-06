@@ -34,7 +34,7 @@ public class Player : MonoBehaviour
     // ジャンプ入力バッファ
     private bool m_jumpPressed;     // ジャンプボタンが押されたか
     private bool m_jumpHeld;        // ジャンプボタンが長押しされているか
-    // 攻撃入力バッファs
+    // 攻撃入力バッファ
     private bool m_attackPressed;   // 攻撃ボタンが押されたか
 
     // ---------------------------------------------------------------
@@ -61,6 +61,9 @@ public class Player : MonoBehaviour
         m_stateMachine = new StateMachine<Player>(this);
         // 待機状態にする
         m_stateMachine.ChangeState<PlayerIdling>();
+
+        // 地面についているかどうかの判定の初期化
+        m_isGround = false;
     }
 
     /// <summary>
@@ -150,7 +153,7 @@ public class Player : MonoBehaviour
     /// </summary>
     public bool IsPressedJumpInput()
     {
-        return m_jumpPressed;
+        return (m_jumpPressed && m_isGround);
     }
 
     /// <summary>
@@ -172,13 +175,6 @@ public class Player : MonoBehaviour
     {
         return m_moveInput;
     }
-    /// <summary>
-    /// 移動方向を設定する
-    /// </summary>
-    public void SetMoveInput(Vector2 moveInput)
-    {
-        m_moveInput = moveInput;
-    }
 
     /// <summary>
     /// ジャンプキーが押されたかどうかの状態を設定する
@@ -194,5 +190,50 @@ public class Player : MonoBehaviour
     public void SetAttackPressed(bool attackPressed)
     {
         m_attackPressed = attackPressed;
+    }
+
+    /// <summary>
+    /// 着地しているかどうかの判定を返す
+    /// </summary>
+    public bool IsGrounded()
+    {
+        return m_isGround;
+    }
+    /// <summary>
+    /// 着地しているかどうかの判定を設定する
+    /// </summary>
+    public void SetGrounded(bool isGround)
+    {
+        m_isGround = isGround;
+    }
+
+    // ---------------------------------------------------------------
+    // 衝突判定
+    // ---------------------------------------------------------------
+
+    /// <summary>
+    /// オブジェクトと衝突したら行う処理
+    /// </summary>
+    private void OnCollisionEnter(Collision collision)
+    {
+        Debug.Log("Hit");
+        if (collision.collider.CompareTag("Floor"))
+        {
+            Debug.Log("HitFloor");
+            m_isGround = true;
+        }
+    }
+
+    /// <summary>
+    /// オブジェクトから離れたら行う処理
+    /// </summary>
+    private void OnCollisionExit(Collision collision)
+    {
+        Debug.Log("Exit");
+        if (collision.collider.CompareTag("Floor"))
+        {
+            Debug.Log("ExitFloor");
+            m_isGround = false;
+        }
     }
 }

@@ -17,6 +17,9 @@ public class PlayerJumping : StateBase<Player>
         // Rigitbodyコンポーネントを取得する
         m_rigidbody = Owner.GetComponent<Rigidbody>();
 
+        // 接地状態を強制的に解除する（衝突判定の更新遅れ対策）
+        Owner.SetGrounded(false);
+
         // 上方向ベクトルを加算する
         m_rigidbody.linearVelocity = new Vector3(m_rigidbody.linearVelocity.x, 0f, m_rigidbody.linearVelocity.z);
         m_rigidbody.AddForce(Vector3.up * 5.0f, ForceMode.Impulse);
@@ -36,7 +39,7 @@ public class PlayerJumping : StateBase<Player>
     protected override void OnUpdate(float deltaTime)
     {
         // 着地した場合
-        if(true)
+        if(Owner.IsGrounded())
         {
             // 待機状態になる
             Machine.ChangeState<PlayerIdling>();

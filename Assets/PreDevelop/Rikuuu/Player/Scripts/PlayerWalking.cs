@@ -23,28 +23,6 @@ public class PlayerWalking : StateBase<Player>
     /// </summary>
     protected override void OnFixedUpdate() 
     {
-        // 移動キーが放されたら
-        if (!Owner.IsPressedMoveInput())
-        {
-            // 待機状態になる
-            Machine.ChangeState<PlayerIdling>();
-            return;
-        }
-        // ジャンプキーが押されたら
-        if (Owner.IsPressedJumpInput())
-        {
-            // ジャンプ状態になる
-            Machine.ChangeState<PlayerJumping>();
-            return;
-        }
-        // 攻撃キーが押されたら
-        if (Owner.IsPressedAttackInput())
-        {
-            // 攻撃状態になる
-            Machine.ChangeState<PlayerAttacking>();
-            return;
-        }
-
         // 移動方向を取得する
         Vector2 moveInput = Owner.GetMoveInput();
         Vector3 input = new Vector3(moveInput.x, 0.0f, moveInput.y);
@@ -70,6 +48,27 @@ public class PlayerWalking : StateBase<Player>
     /// <param name="deltaTime">前フレームからの経過時間</param>
     protected override void OnUpdate(float deltaTime) 
     {
+        // 移動キーが放されたら
+        if (!Owner.IsPressedMoveInput())
+        {
+            // 待機状態になる
+            Machine.ChangeState<PlayerIdling>();
+            return;
+        }
+        // ジャンプキーが押されたら
+        if (Owner.IsPressedJumpInput())
+        {
+            // ジャンプ状態になる
+            Machine.ChangeState<PlayerJumping>();
+            return;
+        }
+        // 攻撃キーが押されたら
+        if (Owner.IsPressedAttackInput())
+        {
+            // 攻撃状態になる
+            Machine.ChangeState<PlayerAttacking>();
+            return;
+        }
     }
 
     /// <summary>
