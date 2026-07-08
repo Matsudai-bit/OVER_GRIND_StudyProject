@@ -20,7 +20,7 @@ public class DebugMonitorWindow : EditorWindow
 
     // 各列の幅（ドラッグで可変）
     private float objectColumnWidth = 80f;                             // オブジェクト列の幅（初期値）
-    private float nameColumnWidth = 80f;                               // 変数名列の幅（初期値）
+    private float nameColumnWidth = 100f;                               // 変数名列の幅（初期値）
 
     // 描画用の行カウント（背景のストライプ描画用）
     private int rowIndex = 0;                                           // ストライプ描画用の行カウント
@@ -143,30 +143,49 @@ public class DebugMonitorWindow : EditorWindow
             .Where(f => pinnedKeys.Contains(f.UniqueKey))
             .ToList();
 
+        // ★ Pinned セクション
         if (pinnedFields.Count > 0)
         {
             EditorGUILayout.LabelField("★ Pinned", EditorStyles.boldLabel);
+            DrawHeader(false); // Object列なしのヘッダー
 
-            DrawHeader(true);
-
-            EditorGUI.indentLevel++;
-
-            foreach (var field in pinnedFields)
+            // ピン留め変数をオブジェクトごとにグループ化
+            var pinnedGroups = pinnedFields.GroupBy(f => f.Target);
+            foreach (var group in pinnedGroups)
             {
-                if (!string.IsNullOrEmpty(searchText) &&
-                    !field.Name.ToLower().Contains(searchText.ToLower()))
-                    continue;
+                UnityEngine.Object target = group.Key;
+                var groupList = group
+                    .Where(f => string.IsNullOrEmpty(searchText) ||
+                                f.Name.ToLower().Contains(searchText.ToLower()))
+                    .ToList();
 
-                DrawField(field, true);
+                if (groupList.Count == 0) continue;
+
+                // オブジェクトのFoldout（通常セクションと同じキーを共有）
+                if (!foldouts.ContainsKey(target)) foldouts[target] = true;
+
+                Rect foldoutRect = EditorGUILayout.GetControlRect(
+                    true, EditorGUIUtility.singleLineHeight);
+                EditorGUI.DrawRect(foldoutRect, new Color(0.2f, 0.2f, 0.2f, 0.5f));
+
+                foldouts[target] = EditorGUI.Foldout(
+                    foldoutRect, foldouts[target],
+                    $"{target.GetType().Name} ({target.name})", true);
+
+                if (!foldouts[target]) continue;
+
+                EditorGUI.indentLevel++;
+                foreach (var field in groupList)
+                {
+                    DrawField(field, isPinned: false); // Object列なしで描画
+                }
+                EditorGUI.indentLevel--;
             }
-
-            EditorGUI.indentLevel--;
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
             EditorGUILayout.Space();
         }
-
         DrawHeader(false);
 
         var groups = sortedFields.GroupBy(x => x.Target);
