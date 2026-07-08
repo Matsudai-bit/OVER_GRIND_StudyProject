@@ -19,8 +19,8 @@ public class DebugMonitorWindow : EditorWindow
     private string searchText = "";                                     // 検索ワード（検索欄）
 
     // 各列の幅（ドラッグで可変）
-    private float objectColumnWidth = 120f;                             // オブジェクト列の幅（初期値）
-    private float nameColumnWidth = 150f;                               // 変数名列の幅（初期値）
+    private float objectColumnWidth = 80f;                             // オブジェクト列の幅（初期値）
+    private float nameColumnWidth = 80f;                               // 変数名列の幅（初期値）
 
     // 描画用の行カウント（背景のストライプ描画用）
     private int rowIndex = 0;                                           // ストライプ描画用の行カウント
@@ -59,6 +59,8 @@ public class DebugMonitorWindow : EditorWindow
 
     private GUIStyle presetSectionStyle;
     private GUIStyle variableSectionStyle;
+
+    private float typeColumnWidth = 60f;   // 型名列の幅（初期値）
 
     private void InitializeStyles()
     {
@@ -368,9 +370,8 @@ public class DebugMonitorWindow : EditorWindow
                 {
                     EditorGUI.indentLevel++;
 
-                    // ヘッダー行
                     Rect headerRect = EditorGUILayout.GetControlRect(
-                        false, EditorGUIUtility.singleLineHeight);
+     false, EditorGUIUtility.singleLineHeight);
                     EditorGUI.DrawRect(headerRect, new Color(
                         presetColor.r, presetColor.g, presetColor.b, 0.5f));
                     float hx = headerRect.x + EditorGUI.indentLevel * 15f;
@@ -383,36 +384,51 @@ public class DebugMonitorWindow : EditorWindow
                         "Variable", EditorStyles.boldLabel);
                     EditorGUI.LabelField(
                         new Rect(hx + objectColumnWidth + nameColumnWidth + 4f, headerRect.y,
-                                 headerRect.width, headerRect.height),
+                                 typeColumnWidth, headerRect.height),
+                        "Type", EditorStyles.boldLabel);
+                    EditorGUI.LabelField(
+                        new Rect(hx + objectColumnWidth + nameColumnWidth + typeColumnWidth + 6f,
+                                 headerRect.y, headerRect.width, headerRect.height),
                         "Value", EditorStyles.boldLabel);
 
-                    // 変数行
                     foreach (var field in presetFields)
                     {
-                        Rect rowRect = EditorGUILayout.GetControlRect(
+                        Rect fieldRect = EditorGUILayout.GetControlRect(
                             false, EditorGUIUtility.singleLineHeight);
-                        EditorGUI.DrawRect(rowRect, new Color(
+                        EditorGUI.DrawRect(fieldRect, new Color(
                             presetColor.r, presetColor.g, presetColor.b,
                             rowIndex % 2 == 0 ? 0.15f : 0.08f));
                         rowIndex++;
 
-                        float rx = rowRect.x + EditorGUI.indentLevel * 15f;
+                        float rx = fieldRect.x + EditorGUI.indentLevel * 15f;
+
+                        // Object列
                         EditorGUI.LabelField(
-                            new Rect(rx, rowRect.y, objectColumnWidth, rowRect.height),
+                            new Rect(rx, fieldRect.y, objectColumnWidth, fieldRect.height),
                             field.Target.name);
+
+                        // Variable列（変数名のみ）
                         EditorGUI.LabelField(
-                            new Rect(rx + objectColumnWidth + 2f, rowRect.y,
-                                     nameColumnWidth, rowRect.height),
-                            $"{field.Name} ({field.TypeName})");
+                            new Rect(rx + objectColumnWidth + 2f, fieldRect.y,
+                                     nameColumnWidth, fieldRect.height),
+                            field.Name);
 
-                        float valueWidth = rowRect.xMax
-                            - (rx + objectColumnWidth + nameColumnWidth + 4f) - 30f;
+                        // Type列（型名のみ）
+                        EditorGUI.LabelField(
+                            new Rect(rx + objectColumnWidth + nameColumnWidth + 4f, fieldRect.y,
+                                     typeColumnWidth, fieldRect.height),
+                            field.TypeName);
+
+                        // Value列
+                        float valueWidth = fieldRect.xMax
+                            - (rx + objectColumnWidth + nameColumnWidth + typeColumnWidth + 6f) - 30f;
                         DrawValueFieldInRect(field,
-                            new Rect(rx + objectColumnWidth + nameColumnWidth + 4f,
-                                     rowRect.y, valueWidth, rowRect.height));
+                            new Rect(rx + objectColumnWidth + nameColumnWidth + typeColumnWidth + 6f,
+                                     fieldRect.y, valueWidth, fieldRect.height));
 
+                        // ピンボタン
                         if (GUI.Button(
-                            new Rect(rowRect.xMax - 28f, rowRect.y, 25f, rowRect.height),
+                            new Rect(fieldRect.xMax - 28f, fieldRect.y, 25f, fieldRect.height),
                             pinnedKeys.Contains(field.UniqueKey) ? "★" : "☆"))
                         {
                             if (pinnedKeys.Contains(field.UniqueKey))
@@ -584,30 +600,39 @@ public class DebugMonitorWindow : EditorWindow
      ******************************************************************************/
     private void DrawHeader(bool isPinnedSection)
     {
-        // 高さを1行分に固定
-        Rect headerRect = EditorGUILayout.BeginHorizontal(GUILayout.Height(EditorGUIUtility.singleLineHeight));
-
-        // ヘッダーの背景色
+        Rect headerRect = EditorGUILayout.BeginHorizontal(
+            GUILayout.Height(EditorGUIUtility.singleLineHeight));
         EditorGUI.DrawRect(headerRect, new Color(0.15f, 0.15f, 0.15f, 1f));
 
         float indentSpace = EditorGUI.indentLevel * 15f;
         GUILayout.Space(indentSpace);
 
-        // ピンされているものにはObject列を表示する
         if (isPinnedSection)
         {
-            EditorGUILayout.LabelField("Object", EditorStyles.boldLabel, GUILayout.Width(objectColumnWidth));
+            EditorGUILayout.LabelField("Object", EditorStyles.boldLabel,
+                GUILayout.Width(objectColumnWidth));
             DrawSplitter(ref objectColumnWidth);
         }
 
-        EditorGUILayout.LabelField("Variable", EditorStyles.boldLabel, GUILayout.Width(nameColumnWidth));
+        EditorGUILayout.LabelField("Variable", EditorStyles.boldLabel,
+            GUILayout.Width(nameColumnWidth));
         DrawSplitter(ref nameColumnWidth);
 
-        EditorGUILayout.LabelField("Value", EditorStyles.boldLabel);
+        // Type列を追加
+        EditorGUILayout.LabelField("Type", EditorStyles.boldLabel,
+            GUILayout.Width(typeColumnWidth));
+        DrawSplitter(ref typeColumnWidth);
+
+        EditorGUILayout.LabelField("Value", EditorStyles.boldLabel,
+            GUILayout.ExpandWidth(true));
+
+        // ピンボタン分のスペースを確保（常に右端に固定）
+        GUILayout.Space(29f);
+
         EditorGUILayout.EndHorizontal();
 
-        // ヘッダー下部のライン
-        Rect lineRect = new Rect(headerRect.x, headerRect.yMax - 1, headerRect.width, 1);
+        Rect lineRect = new Rect(headerRect.x, headerRect.yMax - 1,
+            headerRect.width, 1);
         EditorGUI.DrawRect(lineRect, Color.gray);
     }
 
@@ -617,29 +642,35 @@ public class DebugMonitorWindow : EditorWindow
      ******************************************************************************/
     private void DrawField(DebugParameterData field, bool isPinned)
     {
-        // 高さを1行分に固定
-        Rect rowRect = EditorGUILayout.BeginHorizontal(GUILayout.Height(EditorGUIUtility.singleLineHeight));
+        Rect rowRect = EditorGUILayout.BeginHorizontal(
+            GUILayout.Height(EditorGUIUtility.singleLineHeight));
 
-        // 奇数行・偶数行で背景色を変える（ストライプ表示）
         if (rowIndex % 2 == 0)
-        {
             EditorGUI.DrawRect(rowRect, new Color(0.3f, 0.3f, 0.3f, 0.2f));
-        }
         rowIndex++;
 
         if (isPinned)
         {
-            // Object列 → オブジェクト名を表示
-            EditorGUILayout.LabelField(field.Target.name, GUILayout.Width(objectColumnWidth));
+            EditorGUILayout.LabelField(field.Target.name,
+                GUILayout.Width(objectColumnWidth));
             DrawSplitter(ref objectColumnWidth);
         }
 
-        // Variable列 → 変数名（型名）を表示
-        EditorGUILayout.LabelField($"{field.Name} ({field.TypeName})", GUILayout.Width(nameColumnWidth));
+        // Variable列（変数名のみ）
+        EditorGUILayout.LabelField(field.Name,
+            GUILayout.Width(nameColumnWidth));
         DrawSplitter(ref nameColumnWidth);
 
-        DrawValueField(field);  // 値の描画と編集場所
-        DrawPinButton(field);   // ピン用の☆ボタン
+        // Type列（型名のみ）
+        EditorGUILayout.LabelField(field.TypeName,
+            GUILayout.Width(typeColumnWidth));
+        DrawSplitter(ref typeColumnWidth);
+
+        // Value列（残り幅いっぱいに広げる）
+        DrawValueField(field);
+
+        // ピンボタン（常に右端に固定・幅を明示）
+        DrawPinButton(field);
 
         EditorGUILayout.EndHorizontal();
     }
@@ -820,7 +851,9 @@ public class DebugMonitorWindow : EditorWindow
         bool isPinned = pinnedKeys.Contains(field.UniqueKey);
         string buttonText = isPinned ? "★" : "☆";
 
-        if (GUILayout.Button(buttonText, GUILayout.Width(25)))
+        if (GUILayout.Button(buttonText,
+            GUILayout.Width(25f),
+            GUILayout.ExpandWidth(false)))
         {
             if (isPinned) pinnedKeys.Remove(field.UniqueKey);
             else pinnedKeys.Add(field.UniqueKey);
