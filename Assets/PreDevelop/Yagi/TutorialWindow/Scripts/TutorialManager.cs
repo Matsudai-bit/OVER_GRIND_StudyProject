@@ -33,6 +33,10 @@ public class TutorialManager : MonoBehaviour
     [SerializeField]
     private Sprite normalDotSprite;
 
+    [SerializeField]
+    private RectTransform slideRoot;
+
+
     /// <summary>
     /// 生成したDot一覧
     /// </summary>
@@ -84,7 +88,7 @@ public class TutorialManager : MonoBehaviour
 
         currentSlideImage.sprite = tutorialData.slideImages[currentIndex];
 
-        slideWidth = currentRect.rect.width;
+        slideWidth = slideRoot.rect.width;
 
         nextSlideImage.gameObject.SetActive(false);
 
