@@ -7,6 +7,9 @@ public class PlayerAttacking : StateBase<Player>
     // 残り入力受付時間
     float m_inputAcceptTimeLeft;
 
+    // 生成した攻撃判定コライダー
+    GameObject m_attackCollider;
+
     // ---------------------------------------------------------------
     // ステート共通処理
     // ---------------------------------------------------------------
@@ -61,6 +64,12 @@ public class PlayerAttacking : StateBase<Player>
     {
         // 攻撃キーを放された状態にする
         Owner.SetAttackPressed(false);
+
+        // 攻撃コライダーを削除
+        if (m_attackCollider != null)
+        {
+            GameObject.Destroy(m_attackCollider);
+        }
     }
 
     /// <summary>
@@ -68,8 +77,16 @@ public class PlayerAttacking : StateBase<Player>
     /// </summary>
     private void generateAttackCollider()
     {
-        GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        // 攻撃判定コライダーを生成する
+        m_attackCollider = GameObject.CreatePrimitive(PrimitiveType.Cube);
 
-        cube.transform.position = new Vector3(5,0,5);
+        // 座標を決める
+        Vector3 initialPosition = Owner.transform.position + Owner.transform.forward;
+        m_attackCollider.transform.position = initialPosition;
+        // 回転情報を決める
+        m_attackCollider.transform.rotation = Owner.transform.rotation;
+
+        // レイヤーを設定する
+        m_attackCollider.layer = LayerMask.NameToLayer("Attack");
     }
 }

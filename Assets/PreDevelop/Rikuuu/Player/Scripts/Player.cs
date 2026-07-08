@@ -1,6 +1,7 @@
 using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.Rendering;
 
 public class Player : MonoBehaviour
 {
@@ -15,6 +16,8 @@ public class Player : MonoBehaviour
     [Header("ジャンプパラメータ")]
     [Tooltip("ジャンプ力")]
     [SerializeField] private float m_jumpForce = 5.0f;
+    [Tooltip("ジャンプ時にかかる移動速度の補正係数")]
+    [SerializeField] private float m_JumpHorizontalSpeedModifier = 10.0f;
 
     // ---------------------------------------------------------------
     // 内部変数
@@ -73,6 +76,13 @@ public class Player : MonoBehaviour
     {
         // 状態の更新を行う
         m_stateMachine.FixedUpdate();
+
+        // 速度の制限を行う
+        Vector3 limitVelocity;
+        limitVelocity.x = Mathf.Clamp(m_rigidbody.linearVelocity.x, -5.0f, 5.0f);
+        limitVelocity.y = m_rigidbody.linearVelocity.y;
+        limitVelocity.z = Mathf.Clamp(m_rigidbody.linearVelocity.z, -5.0f, 5.0f);
+        m_rigidbody.linearVelocity = limitVelocity;
     }
 
     /// <summary>
@@ -82,6 +92,17 @@ public class Player : MonoBehaviour
     {
         // 状態の更新を行う
         m_stateMachine.Update(Time.deltaTime);
+
+        // 速度がほぼ0でない場合
+        if(m_rigidbody.linearVelocity.sqrMagnitude > 0.001f)
+        {
+            // 上下方向への回転をなくす
+            Vector3 rotateVelocity = m_rigidbody.linearVelocity;
+            rotateVelocity.y = 0.0f;
+
+            // 進行方向に回転させる
+            transform.rotation = Quaternion.LookRotation(rotateVelocity);
+        }
     }
 
     // ---------------------------------------------------------------
@@ -169,12 +190,44 @@ public class Player : MonoBehaviour
     // ---------------------------------------------------------------
 
     /// <summary>
+    /// 移動速度を返す
+    /// </summary>
+    public float GetMoveSpeed()
+    {
+        return m_moveSpeed;
+    }
+
+    // ------------------------------------------------------------------------------
+
+    /// <summary>
+    /// ジャンプ力を返す
+    /// </summary>
+    public float GetJumpForce()
+    {
+        return m_jumpForce;
+    }
+
+    // ------------------------------------------------------------------------------
+
+    /// <summary>
+    /// ジャンプ時にかかる移動速度の補正係数を返す
+    /// </summary>
+    public float GetJumpHorizontalSpeedModifier()
+    {
+        return m_JumpHorizontalSpeedModifier;
+    }
+
+    // ------------------------------------------------------------------------------
+
+    /// <summary>
     /// 移動方向を返す
     /// </summary>
     public Vector2 GetMoveInput()
     {
         return m_moveInput;
     }
+
+    // ------------------------------------------------------------------------------
 
     /// <summary>
     /// ジャンプキーが押されたかどうかの状態を設定する
@@ -184,6 +237,8 @@ public class Player : MonoBehaviour
         m_jumpPressed = jumpPressed;
     }
 
+    // ------------------------------------------------------------------------------
+
     /// <summary>
     /// 攻撃キーが押されたかどうかの状態を設定する
     /// </summary>
@@ -191,6 +246,8 @@ public class Player : MonoBehaviour
     {
         m_attackPressed = attackPressed;
     }
+
+    // ------------------------------------------------------------------------------
 
     /// <summary>
     /// 着地しているかどうかの判定を返す
