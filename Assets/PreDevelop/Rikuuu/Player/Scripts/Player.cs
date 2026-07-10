@@ -93,16 +93,27 @@ public class Player : MonoBehaviour
         // 状態の更新を行う
         m_stateMachine.Update(Time.deltaTime);
 
+        // 入力方向を取得する
+        Vector3 rotateVelocity = new Vector3(m_moveInput.x, 0.0f, m_moveInput.y);
+        rotateVelocity.y = 0.0f;
         // 速度がほぼ0でない場合
-        if(m_rigidbody.linearVelocity.sqrMagnitude > 0.001f)
+        if (rotateVelocity.sqrMagnitude > 0.001f)
         {
-            // 上下方向への回転をなくす
-            Vector3 rotateVelocity = m_rigidbody.linearVelocity;
-            rotateVelocity.y = 0.0f;
-
             // 進行方向に回転させる
             transform.rotation = Quaternion.LookRotation(rotateVelocity);
         }
+    }
+
+    /// <summary>
+    /// キー判定のリセット
+    /// </summary>
+    public void ResetKeyPressed()
+    {
+        m_jumpPressed = false;
+
+        m_jumpHeld = false;
+
+        m_attackPressed = false;
     }
 
     // ---------------------------------------------------------------

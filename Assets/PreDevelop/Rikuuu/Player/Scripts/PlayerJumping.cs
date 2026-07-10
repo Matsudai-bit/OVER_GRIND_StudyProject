@@ -5,8 +5,6 @@ public class PlayerJumping : StateBase<Player>
 {
     // 物理ボディ
     Rigidbody m_rigidbody;
-    // ジャンプ開始時の進行方向
-    Vector3 m_initialVelocity;
 
     // 入力受付時間定数
     [DebugParameterField] const float INPUT_DELAY_TIME = 0.25f;
@@ -24,8 +22,6 @@ public class PlayerJumping : StateBase<Player>
     {
         // Rigitbodyコンポーネントを取得する
         m_rigidbody = Owner.GetComponent<Rigidbody>();
-        // 進行方向の初期化
-        m_initialVelocity = m_rigidbody.linearVelocity;
 
         // 接地状態を強制的に解除する（衝突判定の更新遅れ対策）
         Owner.SetGrounded(false);
@@ -56,19 +52,10 @@ public class PlayerJumping : StateBase<Player>
 
             // 目標速度を計算
             Vector3 targetVelocity = input * Owner.GetMoveSpeed();
-            if (IsOppositeDirection(m_initialVelocity.x, input.x))
-            {
-                targetVelocity.x *= Owner.GetJumpHorizontalSpeedModifier();
-            }
-            if (IsOppositeDirection(m_initialVelocity.z, input.z))
-            {
-                targetVelocity.z *= Owner.GetJumpHorizontalSpeedModifier();
-            }
-
             // Y速度(重力・ジャンプ)はそのまま維持
-            targetVelocity.y = 0.0f;
+            targetVelocity.y = m_rigidbody.linearVelocity.y;
             // Rigitbodyに速度を設定
-            m_rigidbody.linearVelocity += targetVelocity;
+            m_rigidbody.linearVelocity = targetVelocity;
         }
     }
 
@@ -105,6 +92,9 @@ public class PlayerJumping : StateBase<Player>
     {
         // ジャンプしていない状態にする
         Owner.SetJumpPressed(false);
+
+        // キー判定のリセット
+        Owner.ResetKeyPressed();
     }
 
     private bool IsOppositeDirection(float nowVelocity, float inputVelocity)

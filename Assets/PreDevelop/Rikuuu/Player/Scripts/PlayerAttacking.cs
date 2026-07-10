@@ -64,6 +64,8 @@ public class PlayerAttacking : StateBase<Player>
     {
         // 攻撃キーを放された状態にする
         Owner.SetAttackPressed(false);
+        // キー判定のリセット
+        Owner.ResetKeyPressed();
 
         // 攻撃コライダーを削除
         if (m_attackCollider != null)
