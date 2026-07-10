@@ -25,6 +25,7 @@ public class Obstacle_Presenter : IDisposable
             .AddTo(_disposables);
     }
 
+    //Modelクラスに変化を求める関数
     private void HandleDamage(int damage)
     {
         // 弾自体はHPを持つなら減らす（貫通弾なら複数回ヒットに耐える、など）
@@ -32,6 +33,7 @@ public class Obstacle_Presenter : IDisposable
         _model.TakeDamage(damage);
     }
 
+    //Viewクラスに変化を求める関数
     private void HandleHpChanged(int currentHp)
     {
         DebugManager.Log("[Presenter]HandleHpChangeが呼ばれた");

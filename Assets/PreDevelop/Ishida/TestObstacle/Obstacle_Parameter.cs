@@ -8,6 +8,7 @@ public class Obstacle_Parameter
     public int MaxHp { get; }
     public int Speed { get; }
 
+    
     public Obstacle_Parameter(int maxHp,   int speed)
     {
         MaxHp = maxHp;

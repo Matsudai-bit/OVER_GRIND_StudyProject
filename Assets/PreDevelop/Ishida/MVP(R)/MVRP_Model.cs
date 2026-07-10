@@ -1,23 +1,29 @@
 using UniRx;
 using UnityEngine;
 
-public class MVRP_Model : MonoBehaviour
+//パラメータの変更を行うクラス
+//: MonoBehaviourはいらない
+public class MVRP_Model 
 {
-    private readonly ReactiveProperty<int> _hp;
-    public IReadOnlyReactiveProperty<int> Hp => _hp; // 外部には読み取り専用で公開
 
-    public int MaxHp { get; private set; }
+    private readonly MVRP_Parameter _parameter;
 
-    public MVRP_Model(int maxHp)
+    // Presenterから読み取れるように公開（Parameterの値をそのまま橋渡し）
+    public IReadOnlyReactiveProperty<int> Hp => _parameter.Hp;
+    public int MaxHp => _parameter.MaxHp;
+
+    //コンストラクタ
+    public MVRP_Model(MVRP_Parameter parameter)
     {
-        MaxHp = maxHp;
-        _hp = new ReactiveProperty<int>(maxHp);
+        _parameter = parameter;
     }
 
-    // Presenterから呼ばれる「パラメータ更新」の窓口
+    //　このようにダメージを受けるなど何かが起きた場合にパラメータが変化する関数を作る↓
+    // ダメージを受けHpを減らす処理
     public void TakeDamage(int damage)
     {
-        var newHp = Mathf.Max(0, _hp.Value - damage);
-        _hp.Value = newHp; // ここで値が変わると自動的に購読者(Presenter)に通知される
+        int newHp = Mathf.Max(0, _parameter.Hp.Value - damage);
+        _parameter.Hp.Value = newHp;
+        DebugManager.Log("HPの変化：" + MaxHp + "→" + newHp);
     }
 }
