@@ -12,9 +12,9 @@ using UnityEngine.UI;
 public class TitleMenuManager : MonoBehaviour
 {
     [Header("Buttons")]
-    [SerializeField] private Button startButton;
-    [SerializeField] private Button tutorialButton;
-    [SerializeField] private Button exitButton;
+    [SerializeField] private Button playButton;
+    [SerializeField] private Button operationCheckButton;
+    [SerializeField] private Button quitButton;
 
     [Header("Menu")]
     // タイトルメニュー全体（ボタンをまとめた親オブジェクト）
@@ -37,9 +37,9 @@ public class TitleMenuManager : MonoBehaviour
         Cursor.lockState = CursorLockMode.Locked;
 
         // 各ボタンに処理を登録
-        startButton.onClick.AddListener(OnStartGame);
-        tutorialButton.onClick.AddListener(OnTutorial);
-        exitButton.onClick.AddListener(OnExit);
+        playButton.onClick.AddListener(OnStartGame);
+        operationCheckButton.onClick.AddListener(OnTutorial);
+        quitButton.onClick.AddListener(OnExit);
 
         // 操作説明は開始時は非表示
         tutorialPrefab.SetActive(false);

@@ -7,7 +7,7 @@ using UnityEngine.EventSystems;
 /// タイトル・リザルト・ポーズ画面など
 /// 共通で利用することを想定している。
 /// </summary>
-public class MenuSelector : MonoBehaviour
+public class MenuItemSelector : MonoBehaviour
 {
     [Header("Default Select")]
     // 初期選択するボタン
