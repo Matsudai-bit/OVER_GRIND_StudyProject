@@ -3,18 +3,18 @@ using UnityEngine;
 
 //値を保持するだけのクラス
 //: MonoBehaviourはいらない
-public class MVRP_Parameter 
+public class MVP_Parameter 
 {
     //Controllerで設定したパラメータを保持するための変数（読み取り専用{get;}で作成）
     //ReactiveProperty<int>変化を検知できる
-    public ReactiveProperty<int> Hp { get; }
-    public int MaxHp { get; }
+    //ここでの変数名はHpのようにすると使いやすくなるかも
 
-    //コンストラクタ
-    public MVRP_Parameter(int maxHp)
+
+    /// <summary>
+    /// コンストラクタ
+    /// </summary>
+    public MVP_Parameter(/*欲しいパラメータを引数にする*/)
     {
-        MaxHp = maxHp;
-        Hp = new ReactiveProperty<int>(maxHp);
 
     }
 }
