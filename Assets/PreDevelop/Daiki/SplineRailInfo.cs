@@ -14,6 +14,13 @@ public class SplineRailInfo : MonoBehaviour
     public float SpeedMultiplier => railSpeedMultiplier;
     public bool IsBoostRail => isBoostRail;
 
+    [SerializeField, Header("’·‚³")] float length;
+
+    private void Update()
+    {
+        length = Container.CalculateLength();
+    }
+
     private void Awake()
     {
         Container = GetComponent<SplineContainer>();
