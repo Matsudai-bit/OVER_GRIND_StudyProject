@@ -35,6 +35,11 @@ public class PauseMenuManager : MonoBehaviour
     [SerializeField]
     private MenuItemSelector m_menuItemSelector;
 
+
+    [Header("Pause Screen")]
+    [SerializeField]
+    private GameObject m_pauseScreen;
+
     /// <summary>
     /// 初期設定
     /// </summary>
@@ -60,7 +65,7 @@ public class PauseMenuManager : MonoBehaviour
     /// </summary>
     private void OnResume()
     {
-        gameObject.SetActive(false);
+        m_pauseScreen.SetActive(false);
     }
 
     /// <summary>
