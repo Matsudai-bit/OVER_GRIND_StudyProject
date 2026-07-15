@@ -284,6 +284,8 @@ public class TutorialManager : MonoBehaviour
         DOTween.Kill(nextRect);
 
         gameObject.SetActive(false);
+        FindFirstObjectByType<TitleMenuManager>()
+      ?.OnTutorialClosed();
 
         Debug.Log("Tutorial Close");
     
@@ -310,5 +312,13 @@ public class TutorialManager : MonoBehaviour
                 dots[i].sprite = normalDotSprite;
             }
         }
+    }
+
+    public void ResetTutorial()
+    {
+        DOTween.Kill(currentRect);
+        DOTween.Kill(nextRect);
+
+        Initialize();
     }
 }
