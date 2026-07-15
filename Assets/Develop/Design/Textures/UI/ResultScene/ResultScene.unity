@@ -167,7 +167,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0cd44c1031e13a943bb63640046fad76, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.CanvasScaler
-  m_UiScaleMode: 0
+  m_UiScaleMode: 1
   m_ReferencePixelsPerUnit: 100
   m_ScaleFactor: 1
   m_ReferenceResolution: {x: 800, y: 600}
@@ -357,6 +357,7 @@ GameObject:
   - component: {fileID: 751196437}
   - component: {fileID: 751196439}
   - component: {fileID: 751196438}
+  - component: {fileID: 751196440}
   m_Layer: 5
   m_Name: ClearTimeUI
   m_TagString: Untagged
@@ -483,6 +484,21 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 751196436}
   m_CullTransparentMesh: 1
+--- !u!114 &751196440
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 751196436}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f27df7532b7200c4c8c790e2ee6dcf11, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FloatingAnimation
+  m_moveDistance: 20
+  m_duration: 2
+  m_ease: 4
 --- !u!1 &932519222
 GameObject:
   m_ObjectHideFlags: 0
@@ -841,6 +857,7 @@ GameObject:
   - component: {fileID: 1226707216}
   - component: {fileID: 1226707218}
   - component: {fileID: 1226707217}
+  - component: {fileID: 1226707219}
   m_Layer: 5
   m_Name: ClearTimeText
   m_TagString: Untagged
@@ -967,6 +984,21 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1226707215}
   m_CullTransparentMesh: 1
+--- !u!114 &1226707219
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1226707215}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f27df7532b7200c4c8c790e2ee6dcf11, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FloatingAnimation
+  m_moveDistance: 20
+  m_duration: 2
+  m_ease: 4
 --- !u!1 &1246803558
 GameObject:
   m_ObjectHideFlags: 0
