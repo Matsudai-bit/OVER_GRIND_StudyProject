@@ -44,8 +44,7 @@ public class AnimatedTailSplineLinker : MonoBehaviour
             if (railKnotTransforms[i] == null) continue;
 
             Vector3 worldPos =
-                railKnotTransforms[i].position +
-                railKnotTransforms[i].right * 1.5f;
+                railKnotTransforms[i].position;
 
             Vector3 localPos = transform.InverseTransformPoint(worldPos);
 
