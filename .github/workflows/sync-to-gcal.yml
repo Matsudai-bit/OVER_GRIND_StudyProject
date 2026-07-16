@@ -3,7 +3,7 @@ name: sync-to-gcal
 on:
   schedule:
     # 6時間ごとに実行（UTC時間: 0時, 6時, 12時, 18時）
-    - cron: '0 */1 * * *'
+    - cron: '0 */3 * * *'
   # 手動実行を許可
   workflow_dispatch:
 
