@@ -1,5 +1,7 @@
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
+using DG.Tweening;
 
 /// <summary>
 /// コンフィグ項目を管理します。
@@ -26,6 +28,9 @@ public class ConfigItem : MonoBehaviour
     [SerializeField]
     private TMP_Text m_valueText;
 
+    [SerializeField]
+    private Slider m_slider;
+
     [Header("Number Setting")]
 
     [SerializeField]
@@ -44,11 +49,25 @@ public class ConfigItem : MonoBehaviour
     {
         "1280 × 720",
         "1600 × 900",
-        "1920 × 1080"
+        "1920 × 1080",
+        "FullScreen"
     };
 
     [SerializeField]
     private TMP_Text m_labelText;
+
+    [Header("Select Effect")]
+    [SerializeField]
+    private Color m_selectedColor = Color.red;
+    [SerializeField]
+    private Color m_normalColor = Color.white;
+    [SerializeField]
+    private float m_selectedScale = 1.1f;
+    [SerializeField]
+    private float m_normalScale = 1.0f;
+
+    [SerializeField]
+    private Image m_sliderFillImage;
 
     /// <summary>
     /// 現在の値
@@ -197,6 +216,14 @@ public class ConfigItem : MonoBehaviour
             case 2:
                 Screen.SetResolution(1920, 1080, FullScreenMode.Windowed);
                 break;
+
+            case 3:
+                Resolution resolution = Screen.currentResolution;
+                Screen.SetResolution(
+                    resolution.width,
+                    resolution.height,
+                    FullScreenMode.FullScreenWindow);
+                break;
         }
     }
 
@@ -212,17 +239,53 @@ public class ConfigItem : MonoBehaviour
         else
         {
             m_valueText.text = $"< {m_value} >";
+
+            m_slider.SetValueWithoutNotify(m_value);
         }
     }
 
     /// <summary>
     /// 選択状態を変更します。
     /// </summary>
+    /// <summary>
+    /// 選択状態を変更します。
+    /// </summary>
     public void SetSelected(bool selected)
     {
+        // 前回のTweenを止める
+        m_labelText.DOKill();
+
         Color color = selected ? Color.yellow : Color.white;
 
         m_labelText.color = color;
         m_valueText.color = color;
+
+        if (m_sliderFillImage != null)
+        {
+            m_sliderFillImage.color =
+                selected ? m_selectedColor : m_normalColor;
+        }
+
+        transform.DOScale(
+            selected ? m_selectedScale : m_normalScale,
+            0.15f);
+
+        // 選択中だけ点滅
+        if (selected)
+        {
+            Color target = color;
+            target.a = 0.35f;
+
+            m_labelText
+                .DOFade(target.a, 0.6f)
+                .SetLoops(-1, LoopType.Yoyo)
+                .SetEase(Ease.InOutSine);
+        }
+        else
+        {
+            Color reset = color;
+            reset.a = 1f;
+            m_labelText.color = reset;
+        }
     }
 }

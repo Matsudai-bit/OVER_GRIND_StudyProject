@@ -1,6 +1,8 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.UI;
 using TMPro;
+using DG.Tweening;
 
 /// <summary>
 /// コンフィグ画面の選択を管理します。
@@ -20,6 +22,9 @@ public class ConfigMenuSelector : MonoBehaviour
     [SerializeField]
     private ConfigMenuManager m_configMenuManager;
 
+    [SerializeField]
+    private Image m_backImage;
+
     /// <summary>
     /// 現在選択中
     /// </summary>
@@ -29,6 +34,16 @@ public class ConfigMenuSelector : MonoBehaviour
     /// 選択項目数
     /// </summary>
     private int ItemCount => m_items.Length + 1;
+
+    [SerializeField]
+    private float m_repeatStartTime = 0.4f;
+
+    [SerializeField]
+    private float m_repeatInterval = 0.08f;
+
+    private float m_holdTimer;
+    private float m_repeatTimer;
+    private int m_inputDirection;
 
     /// <summary>
     /// 初期化します。
@@ -56,28 +71,21 @@ public class ConfigMenuSelector : MonoBehaviour
     private void UpdateInput()
     {
         if (Keyboard.current.downArrowKey.wasPressedThisFrame ||
-            Gamepad.current?.dpad.down.wasPressedThisFrame == true)
+            Gamepad.current?.dpad.down.wasPressedThisFrame == true ||
+            Gamepad.current?.leftStick.down.wasPressedThisFrame == true)
         {
             MoveNext();
         }
 
         if (Keyboard.current.upArrowKey.wasPressedThisFrame ||
-            Gamepad.current?.dpad.up.wasPressedThisFrame == true)
+            Gamepad.current?.dpad.up.wasPressedThisFrame == true ||
+            Gamepad.current?.leftStick.up.wasPressedThisFrame == true)
         {
             MovePrevious();
         }
 
-        if (Keyboard.current.rightArrowKey.wasPressedThisFrame ||
-            Gamepad.current?.dpad.right.wasPressedThisFrame == true)
-        {
-            Increase();
-        }
-
-        if (Keyboard.current.leftArrowKey.wasPressedThisFrame ||
-            Gamepad.current?.dpad.left.wasPressedThisFrame == true)
-        {
-            Decrease();
-        }
+        // ←追加
+        UpdateHorizontalInput();
 
         if (Keyboard.current.escapeKey.wasPressedThisFrame ||
             Gamepad.current?.buttonEast.wasPressedThisFrame == true)
@@ -92,6 +100,70 @@ public class ConfigMenuSelector : MonoBehaviour
             {
                 m_configMenuManager.Close();
             }
+        }
+    }
+
+    private void UpdateHorizontalInput()
+    {
+        int direction = 0;
+
+        // 右入力
+        if (Keyboard.current.rightArrowKey.isPressed ||
+            Gamepad.current?.dpad.right.isPressed == true ||
+            (Gamepad.current != null &&
+             Gamepad.current.leftStick.ReadValue().x > 0.8f))
+        {
+            direction = 1;
+        }
+
+        // 左入力
+        else if (Keyboard.current.leftArrowKey.isPressed ||
+                 Gamepad.current?.dpad.left.isPressed == true ||
+                 (Gamepad.current != null &&
+                  Gamepad.current.leftStick.ReadValue().x < -0.8f))
+        {
+            direction = -1;
+        }
+
+        // 入力なし
+        if (direction == 0)
+        {
+            m_inputDirection = 0;
+            m_holdTimer = 0f;
+            m_repeatTimer = 0f;
+            return;
+        }
+
+        // 入力方向が変わった
+        if (direction != m_inputDirection)
+        {
+            m_inputDirection = direction;
+            m_holdTimer = 0f;
+            m_repeatTimer = 0f;
+
+            if (direction > 0)
+                Increase();
+            else
+                Decrease();
+
+            return;
+        }
+
+        m_holdTimer += Time.unscaledDeltaTime;
+
+        if (m_holdTimer < m_repeatStartTime)
+            return;
+
+        m_repeatTimer += Time.unscaledDeltaTime;
+
+        if (m_repeatTimer >= m_repeatInterval)
+        {
+            m_repeatTimer = 0f;
+
+            if (direction > 0)
+                Increase();
+            else
+                Decrease();
         }
     }
 
@@ -159,11 +231,27 @@ public class ConfigMenuSelector : MonoBehaviour
 
         bool backSelected = m_currentIndex == m_items.Length;
 
-        TMP_Text backText = m_backObject.GetComponent<TMP_Text>();
+        m_backImage.color = backSelected
+            ? Color.yellow
+            : Color.white;
 
-        if (backText != null)
+        m_backImage.DOKill();
+
+        if (backSelected)
         {
-            backText.color = backSelected ? Color.yellow : Color.white;
+            m_backImage.color = Color.yellow;
+
+            m_backImage
+                .DOFade(0.35f, 0.6f)
+                .SetLoops(-1, LoopType.Yoyo)
+                .SetEase(Ease.InOutSine);
+        }
+        else
+        {
+            Color c = Color.white;
+            c.a = 1f;
+
+            m_backImage.color = c;
         }
     }
 }
