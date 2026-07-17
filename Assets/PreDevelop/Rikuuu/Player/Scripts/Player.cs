@@ -19,6 +19,10 @@ public class Player : MonoBehaviour
     [Tooltip("ジャンプ時にかかる移動速度の補正係数")]
     [SerializeField] private float m_JumpHorizontalSpeedModifier = 10.0f;
 
+    [Header("カメラ")]
+    [Tooltip("プレイヤーに追従するカメラ")]
+    [SerializeField] private Camera m_camera;
+
     // ---------------------------------------------------------------
     // 内部変数
     // ---------------------------------------------------------------
@@ -94,7 +98,7 @@ public class Player : MonoBehaviour
         m_stateMachine.Update(Time.deltaTime);
 
         // 入力方向を取得する
-        Vector3 rotateVelocity = new Vector3(m_moveInput.x, 0.0f, m_moveInput.y);
+        Vector3 rotateVelocity = m_rigidbody.linearVelocity;
         rotateVelocity.y = 0.0f;
         // 速度がほぼ0でない場合
         if (rotateVelocity.sqrMagnitude > 0.001f)
@@ -226,6 +230,16 @@ public class Player : MonoBehaviour
     public float GetJumpHorizontalSpeedModifier()
     {
         return m_JumpHorizontalSpeedModifier;
+    }
+
+    // ------------------------------------------------------------------------------
+
+    /// <summary>
+    /// カメラを返す
+    /// </summary>
+    public Camera GetCamera()
+    {
+        return m_camera;
     }
 
     // ------------------------------------------------------------------------------

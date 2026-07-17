@@ -48,18 +48,28 @@ public class PlayerWalking : StateBase<Player>
         Vector2 moveInput = Owner.GetMoveInput();
         Vector3 input = new Vector3(moveInput.x, 0.0f, moveInput.y);
 
-        // 2方向に入力されている場合
+        // 2方向に入力されている場合は正規化
         if (input.magnitude > 1.0f)
         {
-            // 正規化
             input.Normalize();
         }
 
+        // カメラの前方・右方向を取得(Y成分を無視して水平面に投影)
+        Vector3 cameraForward = Owner.GetCamera().transform.forward;
+        Vector3 cameraRight = Owner.GetCamera().transform.right;
+        cameraForward.y = 0.0f;
+        cameraRight.y = 0.0f;
+        cameraForward.Normalize();
+        cameraRight.Normalize();
+
+        // カメラ基準の移動方向に変換
+        Vector3 moveDirection = (cameraForward * input.z) + (cameraRight * input.x);
+
         // 目標速度を計算
-        Vector3 targetVelocity = input * Owner.GetMoveSpeed();
+        Vector3 targetVelocity = moveDirection * Owner.GetMoveSpeed();
         // Y速度(重力・ジャンプ)はそのまま維持
-        targetVelocity.y = m_rigidbody.linearVelocity.y; 
-        // Rigitbodyに速度を設定
+        targetVelocity.y = m_rigidbody.linearVelocity.y;
+        // Rigidbodyに速度を設定
         m_rigidbody.linearVelocity = targetVelocity;
     }
 
