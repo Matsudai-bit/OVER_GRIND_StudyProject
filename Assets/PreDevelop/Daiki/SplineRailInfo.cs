@@ -14,11 +14,11 @@ public class SplineRailInfo : MonoBehaviour
     public float SpeedMultiplier => railSpeedMultiplier;
     public bool IsBoostRail => isBoostRail;
 
-    [SerializeField, Header("’·‚³")] float length;
+
+    public float Length { get { return Container.CalculateLength(); } }
 
     private void Update()
     {
-        length = Container.CalculateLength();
     }
 
     private void Awake()
