@@ -1,12 +1,13 @@
-using Unity.Behavior;
+using System;
+using System.Collections;
 using UnityEngine;
 
 
-public class P1BossController : MonoBehaviour
+public class P1BossController : MonoBehaviour ,IStateStatusProvider
 {
+    private StateExecutionStatus m_currentStatus;
     private Animator m_animator;
     private StateMachine<P1BossController> m_stateMachine ;
-    private  BehaviorGraphAgent m_agent;
     private Rigidbody m_rb;
 
     private const string MOVE_SPEED_PARAMETER_NAME = "MoveSpeed";
@@ -18,7 +19,6 @@ public class P1BossController : MonoBehaviour
     private static readonly int ATTACK_PARAMETER_ID =
         Animator.StringToHash(ATTACK_PARAMETER_NAME);
 
-    public BehaviorGraphAgent Agent { get { return m_agent; } }
     public StateMachine<P1BossController> StateMachine { get { return m_stateMachine; } }
     public Animator Animator { get { return m_animator; } }
 
@@ -34,7 +34,6 @@ public class P1BossController : MonoBehaviour
     {
         // ステートマシーンの初期化
         m_stateMachine = new(this);
-        m_agent = GetComponent<BehaviorGraphAgent>();
         m_animator = GetComponent<Animator>();
         m_rb = GetComponent<Rigidbody>();
     }
@@ -44,7 +43,7 @@ public class P1BossController : MonoBehaviour
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
-        
+        m_currentStatus = StateExecutionStatus.SUCCEEDED;
     }
 
     private void FixedUpdate()
@@ -56,5 +55,26 @@ public class P1BossController : MonoBehaviour
     void Update()
     {
         m_stateMachine.Update(Time.deltaTime);
+    }
+
+    public StateExecutionStatus GetStateExecutionStatus()
+    {
+        return m_currentStatus;
+    }
+    public void SetStateExecutionStatus(StateExecutionStatus status)
+    {
+        m_currentStatus = status;
+    }
+
+    public void StartDelayCoroutine(float seconds, Action action)
+    {
+        StartCoroutine(DelayCoroutine(seconds, action));
+    }
+
+    // 一定時間後に処理を呼び出すコルーチン
+    private IEnumerator DelayCoroutine(float seconds, Action action)
+    {
+        yield return new WaitForSeconds(seconds);
+        action?.Invoke();
     }
 }

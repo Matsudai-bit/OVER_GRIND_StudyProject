@@ -7,5 +7,5 @@ public enum P1BossStateID
 	IDLE,
 	WALK,
 	ATTACK,
-	ROTATE
+	TURN
 }

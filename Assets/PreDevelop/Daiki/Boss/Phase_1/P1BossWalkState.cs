@@ -1,12 +1,30 @@
-using Unity.Behavior;
+using System;
+using System.Collections;
 using UnityEngine;
 
 public class P1BossWalkState : StateBase<P1BossController>
 {
     protected override void OnStartState()
     {
+        Debug.Log("歩行状態の開始");
+
         Owner.Animator.SetBool("Walk", true);
+        Owner.SetStateExecutionStatus(StateExecutionStatus.RUNNING);
+
+        // コルーチンの起動
+       
+        Owner.StartDelayCoroutine(3, () =>
+        {
+            Debug.Log("歩行状態の成功");
+
+            // 3秒後にここの処理が実行される
+            Owner.SetStateExecutionStatus(StateExecutionStatus.SUCCEEDED);
+
+        });
+
     }
+
+
 
     protected override void OnFixedUpdate()
     {
@@ -16,6 +34,7 @@ public class P1BossWalkState : StateBase<P1BossController>
 
     protected override void OnExitState()
     {
+        
         Owner.Animator.SetBool("Walk", false);
     }
 
@@ -33,4 +52,5 @@ public class P1BossWalkState : StateBase<P1BossController>
 
      
     }
+ 
 }
