@@ -1,11 +1,14 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.ComponentModel;
 using UnityEngine;
 
 
 public class P1BossController : MonoBehaviour ,IStateStatusProvider
 {
+    
+    public SerializeDictionary<P1AttackType, AttackHitbox> attackHitBox;
 
     [SerializeField]
     private  AnimationEventReceiver m_animationEventReceiver;

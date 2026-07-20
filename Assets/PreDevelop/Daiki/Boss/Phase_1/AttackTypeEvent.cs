@@ -4,6 +4,7 @@
 public enum AttackEventType
 {
     ANIMATION_START,
-    INTERACT,
+    HITBOX_ENABLE,
+    HITBOX_DISABLE,
     ANIMATION_END
 }

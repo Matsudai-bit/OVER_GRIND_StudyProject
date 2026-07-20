@@ -8,7 +8,8 @@ public class P1BossAttackState : StateBase<P1BossController>
     private P1AttackType m_attackType;
 
     private Action<AttackEventData> m_animationEndedAction;
-    private Action<AttackEventData> m_animationAttackInteractAction;
+    private Action<AttackEventData> m_enableHitBox;
+    private Action<AttackEventData> m_disableHitBox;
 
     public P1BossAttackState(string attackAnimationTriggerName, P1AttackType attackType)
     {
@@ -20,10 +21,25 @@ public class P1BossAttackState : StateBase<P1BossController>
                 Owner.SetStateExecutionStatus(StateExecutionStatus.SUCCEEDED);
         };
 
-        m_animationAttackInteractAction = (AttackEventData data) =>
+        m_enableHitBox = (AttackEventData data) =>
         {
-            if (data.AttackType == attackType && data.AttackEventType == AttackEventType.INTERACT)
-                Debug.Log(m_attackAnimationTriggerName + "の攻撃インタラクト");
+            if (data.AttackType == attackType && data.AttackEventType == AttackEventType.HITBOX_ENABLE)
+            {
+                Debug.Log(m_attackAnimationTriggerName + "のヒットボックス有効化");
+                Owner.attackHitBox[m_attackType].EnableHitbox();
+
+            }
+                
+        };
+        m_disableHitBox = (AttackEventData data) =>
+        {
+            if (data.AttackType == attackType && data.AttackEventType == AttackEventType.HITBOX_DISABLE)
+            {
+                Debug.Log(m_attackAnimationTriggerName + "のヒットボックス無効か");
+                Owner.attackHitBox[m_attackType].DisableHitbox();
+
+            }
+
         };
 
     }
@@ -37,7 +53,8 @@ public class P1BossAttackState : StateBase<P1BossController>
         Owner.Animator.SetTrigger(m_attackAnimationTriggerName);
 
         Owner.AnimationEventReceiver.AttackEventReceived+= m_animationEndedAction;
-        Owner.AnimationEventReceiver.AttackEventReceived+= m_animationAttackInteractAction;
+        Owner.AnimationEventReceiver.AttackEventReceived+= m_enableHitBox;
+        Owner.AnimationEventReceiver.AttackEventReceived+= m_disableHitBox;
     }
 
 
@@ -51,7 +68,8 @@ public class P1BossAttackState : StateBase<P1BossController>
     protected override void OnExitState()
     {
         Owner.AnimationEventReceiver.AttackEventReceived -= m_animationEndedAction;
-        Owner.AnimationEventReceiver.AttackEventReceived -= m_animationAttackInteractAction;
+        Owner.AnimationEventReceiver.AttackEventReceived -= m_enableHitBox;
+        Owner.AnimationEventReceiver.AttackEventReceived -= m_disableHitBox;
 
         Debug.Log(m_attackAnimationTriggerName + "の終了");
     }
