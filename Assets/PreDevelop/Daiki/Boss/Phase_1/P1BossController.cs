@@ -1,10 +1,15 @@
 using System;
 using System.Collections;
+using System.ComponentModel;
 using UnityEngine;
 
 
 public class P1BossController : MonoBehaviour ,IStateStatusProvider
 {
+
+    [SerializeField]
+    private  AnimationEventReceiver m_animationEventReceiver;
+
     private StateExecutionStatus m_currentStatus;
     private Animator m_animator;
     private StateMachine<P1BossController> m_stateMachine ;
@@ -18,6 +23,8 @@ public class P1BossController : MonoBehaviour ,IStateStatusProvider
 
     private static readonly int ATTACK_PARAMETER_ID =
         Animator.StringToHash(ATTACK_PARAMETER_NAME);
+
+    public AnimationEventReceiver AnimationEventReceiver { get { return m_animationEventReceiver; } }
 
     public StateMachine<P1BossController> StateMachine { get { return m_stateMachine; } }
     public Animator Animator { get { return m_animator; } }

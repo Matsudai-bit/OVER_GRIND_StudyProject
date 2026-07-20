@@ -1316,6 +1316,7 @@ GameObject:
   - component: {fileID: 1655356174}
   - component: {fileID: 1655356175}
   - component: {fileID: 1655356176}
+  - component: {fileID: 1655356177}
   m_Layer: 0
   m_Name: Boss
   m_TagString: Untagged
@@ -1454,6 +1455,9 @@ MonoBehaviour:
   m_BlackboardVariableOverridesList:
   - rid: 7170653538222867018
   - rid: 7170653538222867310
+  - rid: 7170653561661948095
+  - rid: 7170653561661948096
+  - rid: 7170653561661948139
   m_OriginalGraph: {fileID: -4560753241107861451, guid: a56399a37b1146c45bd52091ed929c9f, type: 2}
   m_IsInitialised: 0
   m_IsStarted: 0
@@ -1476,6 +1480,30 @@ MonoBehaviour:
           m_Value1: 4707698930507024948
         Name: P1Boss Controller
         m_Value: {fileID: 1655356175}
+    - rid: 7170653561661948095
+      type: {class: 'BlackboardVariable`1[[UnityEngine.Transform, UnityEngine.CoreModule]]', ns: Unity.Behavior, asm: Unity.Behavior}
+      data:
+        GUID:
+          m_Value0: 8282979476056416389
+          m_Value1: 11378020406543136358
+        Name: LeftLeg
+        m_Value: {fileID: 372366221}
+    - rid: 7170653561661948096
+      type: {class: 'BlackboardVariable`1[[UnityEngine.Transform, UnityEngine.CoreModule]]', ns: Unity.Behavior, asm: Unity.Behavior}
+      data:
+        GUID:
+          m_Value0: 10474343029914390369
+          m_Value1: 3262569283363027365
+        Name: RightLeg
+        m_Value: {fileID: 1441758651}
+    - rid: 7170653561661948139
+      type: {class: 'BlackboardVariable`1[[UnityEngine.Transform, UnityEngine.CoreModule]]', ns: Unity.Behavior, asm: Unity.Behavior}
+      data:
+        GUID:
+          m_Value0: 4398999866236046289
+          m_Value1: 2422797385516325739
+        Name: PlayerTransform
+        m_Value: {fileID: 1751694343}
 --- !u!114 &1655356175
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1488,6 +1516,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1ccd7f699ec107b45bcb320450b000e2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::P1BossController
+  m_animationEventReceiver: {fileID: 1655356177}
 --- !u!54 &1655356176
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -1515,6 +1544,18 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 0
+--- !u!114 &1655356177
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1655356170}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 43bc7d6748fd5b947bbe4a53009046e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AnimationEventReceiver
 --- !u!4 &1688467026 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 3004985575923605501, guid: dc64d09240e31a14183d576d3ae45937, type: 3}

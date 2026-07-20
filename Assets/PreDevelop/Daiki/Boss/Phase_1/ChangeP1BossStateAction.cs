@@ -48,6 +48,12 @@ public partial class ChangeP1BossStateAction : Action
             case P1BossStateID.WALK:
                 enemyController.StateMachine.ChangeState<P1BossWalkState>();
                 break;
+            case P1BossStateID.ATTACK_LEFT:
+                enemyController.StateMachine.ChangeState<P1BossAttackState>("Attack_Left", P1AttackType.LEFT_LEG);
+                break;
+            case P1BossStateID.ATTACK_RIGHT:
+                enemyController.StateMachine.ChangeState<P1BossAttackState>("Attack_Right", P1AttackType.RIGHT_LEG);
+                break;
             case P1BossStateID.TURN:
                 enemyController.StateMachine.ChangeState<P1BossTurnState>();
                 break;

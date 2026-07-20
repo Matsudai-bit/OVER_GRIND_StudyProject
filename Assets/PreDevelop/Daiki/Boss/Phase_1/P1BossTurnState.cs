@@ -38,6 +38,8 @@ public class P1BossTurnState : StateBase<P1BossController>
             return;
         }
 
+        Owner.Animator.SetBool("Turn", true);
+
         // 実行状態を開始状態へ設定します。
         Owner.SetStateExecutionStatus(
             StateExecutionStatus.RUNNING);
@@ -96,6 +98,8 @@ public class P1BossTurnState : StateBase<P1BossController>
         {
             return;
         }
+
+        Owner.Animator.SetBool("Turn", false);
 
         // 実行中に終了した場合はキャンセルとして扱います。
         if (Owner.GetStateExecutionStatus() ==

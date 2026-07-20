@@ -6,6 +6,7 @@ public enum P1BossStateID
 {
 	IDLE,
 	WALK,
-	ATTACK,
+	ATTACK_RIGHT,
+	ATTACK_LEFT,
 	TURN
 }
