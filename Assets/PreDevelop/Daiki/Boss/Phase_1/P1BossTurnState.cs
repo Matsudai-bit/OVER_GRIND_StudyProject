@@ -33,6 +33,7 @@ public class P1BossTurnState : StateBase<P1BossController>
     /// </summary>
     protected override void OnStartState()
     {
+        Owner.stateText.text = "Turn";
         if (Owner == null)
         {
             return;

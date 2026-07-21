@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
+using TMPro;
 using UnityEngine;
 
 
@@ -9,6 +10,9 @@ public class P1BossController : MonoBehaviour ,IStateStatusProvider
 {
     
     public SerializeDictionary<P1AttackType, AttackHitbox> attackHitBox;
+
+    [SerializeField, Header("状態標示用テキスト")]
+    public TextMeshPro stateText;
 
     [SerializeField]
     private  AnimationEventReceiver m_animationEventReceiver;

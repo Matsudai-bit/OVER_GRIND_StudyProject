@@ -6,6 +6,7 @@ public class P1BossWalkState : StateBase<P1BossController>
 {
     protected override void OnStartState()
     {
+        Owner.stateText.text = "Walk";
         Debug.Log("•àsó‘Ô‚ÌŠJn");
 
         Owner.Animator.SetBool("Walk", true);

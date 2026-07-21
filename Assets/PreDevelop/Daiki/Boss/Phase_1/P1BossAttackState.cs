@@ -45,6 +45,8 @@ public class P1BossAttackState : StateBase<P1BossController>
     }
     protected override void OnStartState()
     {
+        Owner.stateText.text = "Attack_" + m_attackType.ToString();
+
         Debug.Log(m_attackAnimationTriggerName + "‚ÌŠJŽn");
  
         Owner.SetStateExecutionStatus(StateExecutionStatus.RUNNING);

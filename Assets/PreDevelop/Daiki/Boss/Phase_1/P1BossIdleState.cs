@@ -5,6 +5,7 @@ public class P1BossIdleState : StateBase<P1BossController>
 {
     protected override void OnStartState()
     {
+        Owner.stateText.text = "Idle";
         Debug.Log("‘Ò‹@ó‘Ô‚ÌŠJn");
         Owner.SetStateExecutionStatus(StateExecutionStatus.RUNNING);
 
