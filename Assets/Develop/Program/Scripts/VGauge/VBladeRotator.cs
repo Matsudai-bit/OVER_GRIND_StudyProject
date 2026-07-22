@@ -71,19 +71,6 @@ public class VBladeRotator : MonoBehaviour
 
         bool usingGauge = false;
 
-        // キーボード入力
-        if (Keyboard.current != null)
-        {
-            usingGauge |= Keyboard.current.spaceKey.isPressed;
-        }
-
-        // コントローラー入力
-        if (Gamepad.current != null)
-        {
-            // L1ボタンを押している間はVゲージ使用中とする
-            usingGauge |= Gamepad.current.leftShoulder.isPressed;
-        }
-
         // Vゲージ使用状態を更新する
         SetGaugeUsing(usingGauge);
     }

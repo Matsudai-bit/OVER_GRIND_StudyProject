@@ -85,42 +85,42 @@ public class VGaugeUI : MonoBehaviour
     /// </summary>
     private void DebugInput()
     {
-        // コントローラー未接続なら終了
-        if (Gamepad.current == null)
-            return;
+        //// コントローラー未接続なら終了
+        //if (Gamepad.current == null)
+        //    return;
 
-        // 十字キーまたは左スティック上入力
-        bool increase =
-            Gamepad.current.dpad.up.isPressed ||
-            Gamepad.current.leftStick.up.isPressed;
+        //// 十字キーまたは左スティック上入力
+        //bool increase =
+        //    Gamepad.current.dpad.up.isPressed ||
+        //    Gamepad.current.leftStick.up.isPressed;
 
-        // 十字キーまたは左スティック下入力
-        bool decrease =
-            Gamepad.current.dpad.down.isPressed ||
-            Gamepad.current.leftStick.down.isPressed;
+        //// 十字キーまたは左スティック下入力
+        //bool decrease =
+        //    Gamepad.current.dpad.down.isPressed ||
+        //    Gamepad.current.leftStick.down.isPressed;
 
-        if (increase)
-        {
-            // ゲージを増加させる
-            RepeatInput(debugGaugeStep);
-        }
-        else if (decrease)
-        {
-            // ゲージを減少させる
-            RepeatInput(-debugGaugeStep);
-        }
-        else
-        {
-            // 入力が無くなったら長押し状態を解除する
-            repeatTimer = 0f;
-            isRepeating = false;
+        //if (increase)
+        //{
+        //    // ゲージを増加させる
+        //    RepeatInput(debugGaugeStep);
+        //}
+        //else if (decrease)
+        //{
+        //    // ゲージを減少させる
+        //    RepeatInput(-debugGaugeStep);
+        //}
+        //else
+        //{
+        //    // 入力が無くなったら長押し状態を解除する
+        //    repeatTimer = 0f;
+        //    isRepeating = false;
 
-            // 刃を通常回転へ戻す
-            if (bladeRotator != null)
-            {
-                bladeRotator.SetGaugeUsing(false);
-            }
-        }
+        //    // 刃を通常回転へ戻す
+        //    if (bladeRotator != null)
+        //    {
+        //        bladeRotator.SetGaugeUsing(false);
+        //    }
+        //}
     }
 
     /// <summary>
