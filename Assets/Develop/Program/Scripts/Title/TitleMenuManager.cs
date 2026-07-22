@@ -58,6 +58,9 @@ public class TitleMenuManager : MonoBehaviour
     /// <summary>
     /// 操作説明を表示
     /// </summary>
+    /// <summary>
+    /// 操作説明を表示
+    /// </summary>
     private void OnTutorial()
     {
         // タイトルメニューを非表示
@@ -69,8 +72,14 @@ public class TitleMenuManager : MonoBehaviour
         // 最前面に表示
         tutorialPrefab.transform.SetAsLastSibling();
 
+        // TutorialManagerを取得
+        TutorialManager tutorialManager = tutorialPrefab.GetComponent<TutorialManager>();
+
+        // 操作説明を閉じた時のコールバックを登録
+        tutorialManager.OnTutorialClosed = OnTutorialClosed;
+
         // 毎回1ページ目から開始
-        tutorialPrefab.GetComponent<TutorialManager>().ResetTutorial();
+        tutorialManager.ResetTutorial();
     }
 
     /// <summary>
