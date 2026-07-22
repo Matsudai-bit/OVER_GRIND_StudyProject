@@ -4,7 +4,7 @@ using UnityEngine;
 /// <summary>
 /// コンフィグ画面を管理します。
 /// </summary>
-public class ConfigMenuManager : MonoBehaviour
+public class ConfigWindowMenuManager : MonoBehaviour
 {
     /// <summary>
     /// コンフィグを閉じた時の通知
@@ -13,7 +13,7 @@ public class ConfigMenuManager : MonoBehaviour
 
     [Header("Selector")]
     [SerializeField]
-    private ConfigMenuSelector m_selector;
+    private ConfigWindowMenuSelector m_selector;
 
     /// <summary>
     /// 初期化
@@ -40,7 +40,7 @@ public class ConfigMenuManager : MonoBehaviour
     /// </summary>
     public void Close()
     {
-        ConfigManager.Instance.Save();
+        ConfigWindowManager.Instance.Save();
 
         gameObject.SetActive(false);
 

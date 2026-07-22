@@ -7,12 +7,12 @@ using DG.Tweening;
 /// <summary>
 /// コンフィグ画面の選択を管理します。
 /// </summary>
-public class ConfigMenuSelector : MonoBehaviour
+public class ConfigWindowMenuSelector : MonoBehaviour
 {
     [Header("Config Item")]
 
     [SerializeField]
-    private ConfigItem[] m_items;
+    private ConfigWindowItem[] m_items;
 
     [Header("Back")]
 
@@ -20,7 +20,7 @@ public class ConfigMenuSelector : MonoBehaviour
     private GameObject m_backObject;
 
     [SerializeField]
-    private ConfigMenuManager m_configMenuManager;
+    private ConfigWindowMenuManager m_configMenuManager;
 
     [SerializeField]
     private Image m_backImage;
@@ -52,7 +52,7 @@ public class ConfigMenuSelector : MonoBehaviour
     {
         m_currentIndex = 0;
 
-        foreach (ConfigItem item in m_items)
+        foreach (ConfigWindowItem item in m_items)
         {
             item.Initialize();
         }

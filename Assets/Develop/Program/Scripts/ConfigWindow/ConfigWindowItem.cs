@@ -6,7 +6,7 @@ using DG.Tweening;
 /// <summary>
 /// コンフィグ項目を管理します。
 /// </summary>
-public class ConfigItem : MonoBehaviour
+public class ConfigWindowItem : MonoBehaviour
 {
     /// <summary>
     /// コンフィグの種類
@@ -82,23 +82,23 @@ public class ConfigItem : MonoBehaviour
         switch (m_type)
         {
             case ConfigType.MASTER_VOLUME:
-                m_value = Mathf.RoundToInt(ConfigManager.Instance.MasterVolume * 100);
+                m_value = Mathf.RoundToInt(ConfigWindowManager.Instance.MasterVolume * 100);
                 break;
 
             case ConfigType.BGM_VOLUME:
-                m_value = Mathf.RoundToInt(ConfigManager.Instance.BgmVolume * 100);
+                m_value = Mathf.RoundToInt(ConfigWindowManager.Instance.BgmVolume * 100);
                 break;
 
             case ConfigType.SE_VOLUME:
-                m_value = Mathf.RoundToInt(ConfigManager.Instance.SeVolume * 100);
+                m_value = Mathf.RoundToInt(ConfigWindowManager.Instance.SeVolume * 100);
                 break;
 
             case ConfigType.CAMERA_SENSITIVITY:
-                m_value = Mathf.RoundToInt(ConfigManager.Instance.CameraSensitivity * 10);
+                m_value = Mathf.RoundToInt(ConfigWindowManager.Instance.CameraSensitivity * 10);
                 break;
 
             case ConfigType.WINDOW_SIZE:
-                m_value = ConfigManager.Instance.WindowSizeIndex;
+                m_value = ConfigWindowManager.Instance.WindowSizeIndex;
                 break;
         }
 
@@ -118,7 +118,7 @@ public class ConfigItem : MonoBehaviour
                 {
                     m_value++;
 
-                    ConfigManager.Instance.SetWindowSize(m_value);
+                    ConfigWindowManager.Instance.SetWindowSize(m_value);
 
                     ApplyWindowSize();
                 }
@@ -151,7 +151,7 @@ public class ConfigItem : MonoBehaviour
                 {
                     m_value--;
 
-                    ConfigManager.Instance.SetWindowSize(m_value);
+                    ConfigWindowManager.Instance.SetWindowSize(m_value);
 
                     ApplyWindowSize();
                 }
@@ -181,19 +181,19 @@ public class ConfigItem : MonoBehaviour
         switch (m_type)
         {
             case ConfigType.MASTER_VOLUME:
-                ConfigManager.Instance.SetMasterVolume(value);
+                ConfigWindowManager.Instance.SetMasterVolume(value);
                 break;
 
             case ConfigType.BGM_VOLUME:
-                ConfigManager.Instance.SetBgmVolume(value);
+                ConfigWindowManager.Instance.SetBgmVolume(value);
                 break;
 
             case ConfigType.SE_VOLUME:
-                ConfigManager.Instance.SetSeVolume(value);
+                ConfigWindowManager.Instance.SetSeVolume(value);
                 break;
 
             case ConfigType.CAMERA_SENSITIVITY:
-                ConfigManager.Instance.SetCameraSensitivity(m_value / 10f);
+                ConfigWindowManager.Instance.SetCameraSensitivity(m_value / 10f);
                 break;
         }
     }

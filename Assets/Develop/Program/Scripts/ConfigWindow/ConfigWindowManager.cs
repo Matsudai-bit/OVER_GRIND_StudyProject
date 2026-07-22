@@ -3,12 +3,12 @@ using UnityEngine;
 /// <summary>
 /// ゲーム全体のコンフィグを管理します。
 /// </summary>
-public class ConfigManager : MonoBehaviour
+public class ConfigWindowManager : MonoBehaviour
 {
     /// <summary>
     /// シングルトン
     /// </summary>
-    public static ConfigManager Instance { get; private set; }
+    public static ConfigWindowManager Instance { get; private set; }
 
     #region PlayerPrefs Key
 
