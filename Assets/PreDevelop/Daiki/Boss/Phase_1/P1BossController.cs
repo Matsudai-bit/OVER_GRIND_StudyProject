@@ -6,8 +6,13 @@ using TMPro;
 using UnityEngine;
 
 
-public class P1BossController : MonoBehaviour ,IStateStatusProvider
+public class P1BossController 
+    : MonoBehaviour 
+    , IStateStatusProvider
+    , IAttackDamageReceiver
 {
+
+
     
     public SerializeDictionary<P1AttackType, AttackHitbox> attackHitBox;
 
@@ -90,5 +95,10 @@ public class P1BossController : MonoBehaviour ,IStateStatusProvider
     {
         yield return new WaitForSeconds(seconds);
         action?.Invoke();
+    }
+
+    public void ReceiveAttackDamage(int damage)
+    {
+        Debug.Log("çUåÇÇÇ≠ÇÁÇ¡ÇΩÅI");
     }
 }
