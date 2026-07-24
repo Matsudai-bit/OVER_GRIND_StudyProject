@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.InputSystem;
 using DG.Tweening;
+using System;
 
 public class TutorialManager : MonoBehaviour
 {
@@ -35,6 +36,8 @@ public class TutorialManager : MonoBehaviour
 
     [SerializeField]
     private RectTransform slideRoot;
+
+    public Action OnTutorialClosed;
 
 
     /// <summary>
@@ -284,11 +287,10 @@ public class TutorialManager : MonoBehaviour
         DOTween.Kill(nextRect);
 
         gameObject.SetActive(false);
-        FindFirstObjectByType<TitleMenuManager>()
-      ?.OnTutorialClosed();
+
+        OnTutorialClosed?.Invoke();
 
         Debug.Log("Tutorial Close");
-    
     }
     /// <summary>
     /// ページインジケーター更新

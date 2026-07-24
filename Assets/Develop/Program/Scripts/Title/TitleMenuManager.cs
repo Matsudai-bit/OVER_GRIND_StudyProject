@@ -1,4 +1,5 @@
 using System.Collections;
+
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -14,11 +15,15 @@ public class TitleMenuManager : MonoBehaviour
     [Header("Buttons")]
     [SerializeField] private Button playButton;
     [SerializeField] private Button operationCheckButton;
+    [SerializeField] private Button configButton;
     [SerializeField] private Button quitButton;
 
     [Header("Menu")]
     // タイトルメニュー全体（ボタンをまとめた親オブジェクト）
     [SerializeField] private GameObject menuRoot;
+
+    [Header("Config")]
+    [SerializeField] private GameObject configPrefab;
 
     [Header("Tutorial")]
     // 操作説明ウィンドウ
@@ -41,6 +46,10 @@ public class TitleMenuManager : MonoBehaviour
         operationCheckButton.onClick.AddListener(OnTutorial);
         quitButton.onClick.AddListener(OnExit);
 
+        configButton.onClick.AddListener(OnConfig);
+
+        configPrefab.SetActive(false);
+
         // 操作説明は開始時は非表示
         tutorialPrefab.SetActive(false);
     }
@@ -58,6 +67,9 @@ public class TitleMenuManager : MonoBehaviour
     /// <summary>
     /// 操作説明を表示
     /// </summary>
+    /// <summary>
+    /// 操作説明を表示
+    /// </summary>
     private void OnTutorial()
     {
         // タイトルメニューを非表示
@@ -69,9 +81,16 @@ public class TitleMenuManager : MonoBehaviour
         // 最前面に表示
         tutorialPrefab.transform.SetAsLastSibling();
 
+        // TutorialManagerを取得
+        TutorialManager tutorialManager = tutorialPrefab.GetComponent<TutorialManager>();
+
+        // 操作説明を閉じた時のコールバックを登録
+        tutorialManager.OnTutorialClosed = OnTutorialClosed;
+
         // 毎回1ページ目から開始
-        tutorialPrefab.GetComponent<TutorialManager>().ResetTutorial();
+        tutorialManager.ResetTutorial();
     }
+
 
     /// <summary>
     /// 操作説明終了時に呼ばれる
@@ -82,6 +101,32 @@ public class TitleMenuManager : MonoBehaviour
         tutorialPrefab.SetActive(false);
 
         // タイトルメニューを再表示
+        menuRoot.SetActive(true);
+    }
+
+    /// <summary>
+    /// コンフィグを表示します。
+    /// </summary>
+    private void OnConfig()
+    {
+        Debug.Log("Config Open");
+
+        menuRoot.SetActive(false);
+
+        ConfigMenuManager configMenu = configPrefab.GetComponent<ConfigMenuManager>();
+
+        configMenu.OnClosed = OnConfigClosed;
+
+        configMenu.Open();
+    }
+
+    /// <summary>
+    /// コンフィグを閉じます。
+    /// </summary>
+    public void OnConfigClosed()
+    {
+        configPrefab.SetActive(false);
+
         menuRoot.SetActive(true);
     }
 
