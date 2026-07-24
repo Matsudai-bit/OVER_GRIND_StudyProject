@@ -3,12 +3,9 @@ using UnityEngine;
 /// <summary>
 /// ゲーム全体のコンフィグを管理します。
 /// </summary>
-public class ConfigWindowManager : MonoBehaviour
+public class ConfigWindowManager : SingletonMonoBehaviour<ConfigWindowManager>
 {
-    /// <summary>
-    /// シングルトン
-    /// </summary>
-    public static ConfigWindowManager Instance { get; private set; }
+
 
     #region PlayerPrefs Key
 
@@ -55,24 +52,7 @@ public class ConfigWindowManager : MonoBehaviour
     /// </summary>
     public int WindowSizeIndex { get; private set; }
 
-    /// <summary>
-    /// 初期化
-    /// </summary>
-    private void Awake()
-    {
-        if (Instance != null)
-        {
-            Destroy(gameObject);
-            return;
-        }
-
-        Instance = this;
-
-        DontDestroyOnLoad(gameObject);
-
-        Load();
-    }
-
+  
     /// <summary>
     /// コンフィグを読み込みます。
     /// </summary>
