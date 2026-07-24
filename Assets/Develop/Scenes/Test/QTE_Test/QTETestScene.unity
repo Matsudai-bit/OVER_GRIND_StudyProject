@@ -599,11 +599,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::QTEEventManager
   m_slider: {fileID: 861336697}
-  m_QTEEvents:
-  - action: {fileID: 1001886555977818379, guid: 052faaac586de48259a63d0c4782560b, type: 3}
-    pushType: 1
-    limitTime: 10
-    successEvent:
+  m_qteEvents:
+  - m_action: {fileID: 1001886555977818379, guid: 052faaac586de48259a63d0c4782560b, type: 3}
+    m_pushType: 1
+    m_limitTime: 5
+    m_successEvent:
       m_PersistentCalls:
         m_Calls:
         - m_Target: {fileID: 477972097}
@@ -618,7 +618,7 @@ MonoBehaviour:
             m_StringArgument: 
             m_BoolArgument: 0
           m_CallState: 2
-    failureEvent:
+    m_failureEvent:
       m_PersistentCalls:
         m_Calls:
         - m_Target: {fileID: 477972097}
