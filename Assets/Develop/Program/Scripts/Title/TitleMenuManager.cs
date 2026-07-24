@@ -113,7 +113,7 @@ public class TitleMenuManager : MonoBehaviour
 
         menuRoot.SetActive(false);
 
-        ConfigMenuManager configMenu = configPrefab.GetComponent<ConfigMenuManager>();
+        ConfigWindowMenuManager configMenu = configPrefab.GetComponent<ConfigWindowMenuManager>();
 
         configMenu.OnClosed = OnConfigClosed;
 
