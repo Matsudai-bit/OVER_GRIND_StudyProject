@@ -21,6 +21,9 @@ public class PauseMenuManager : MonoBehaviour
     private Button m_tutorialButton;
 
     [SerializeField]
+    private Button m_configButton;
+
+    [SerializeField]
     private Button m_titleButton;
 
     [Header("Menu")]
@@ -31,14 +34,18 @@ public class PauseMenuManager : MonoBehaviour
     [SerializeField]
     private GameObject m_tutorialPrefab;
 
+    [Header("Config")]
+    [SerializeField]
+    private ConfigWindowMenuManager m_configMenuManager;
+
     [Header("Menu Selector")]
     [SerializeField]
     private MenuItemSelector m_menuItemSelector;
 
-
     [Header("Pause Screen")]
     [SerializeField]
     private GameObject m_pauseScreen;
+
 
     /// <summary>
     /// 初期設定
@@ -51,14 +58,28 @@ public class PauseMenuManager : MonoBehaviour
         // ボタンイベント登録
         m_resumeButton.onClick.AddListener(OnResume);
         m_tutorialButton.onClick.AddListener(OnTutorial);
+        m_configButton.onClick.AddListener(OnConfig);
         m_titleButton.onClick.AddListener(OnBackTitle);
+
+        // コンフィグを閉じた時のイベント登録
+        if (m_configMenuManager != null)
+        {
+            m_configMenuManager.OnClosed += OnConfigClosed;
+        }
 
         // 操作説明は閉じておく
         if (m_tutorialPrefab != null)
         {
             m_tutorialPrefab.SetActive(false);
         }
+
+        // コンフィグは閉じておく
+        if (m_configMenuManager != null)
+        {
+            m_configMenuManager.gameObject.SetActive(false);
+        }
     }
+
 
     /// <summary>
     /// ゲームへ戻ります。
@@ -67,6 +88,7 @@ public class PauseMenuManager : MonoBehaviour
     {
         m_pauseScreen.SetActive(false);
     }
+
 
     /// <summary>
     /// 操作説明を表示します。
@@ -85,16 +107,16 @@ public class PauseMenuManager : MonoBehaviour
         // 最前面へ表示
         m_tutorialPrefab.transform.SetAsLastSibling();
 
-        TutorialManager tutorialManager = m_tutorialPrefab.GetComponent<TutorialManager>();
-
-        tutorialManager.OnTutorialClosed = OnTutorialClosed;
-        tutorialManager.ResetTutorial();
+        TutorialManager tutorialManager =
+            m_tutorialPrefab.GetComponent<TutorialManager>();
 
         if (tutorialManager != null)
         {
+            tutorialManager.OnTutorialClosed = OnTutorialClosed;
             tutorialManager.ResetTutorial();
         }
     }
+
 
     /// <summary>
     /// 操作説明を閉じます。
@@ -112,11 +134,72 @@ public class PauseMenuManager : MonoBehaviour
         }
     }
 
+
+    /// <summary>
+    /// コンフィグを表示します。
+    /// </summary>
+    private void OnConfig()
+    {
+        if (m_menuItemSelector != null)
+        {
+            // ポーズメニューの入力を無効化
+            m_menuItemSelector.EnableInput(false);
+        }
+
+        // ポーズメニューを非表示
+        m_menuRoot.SetActive(false);
+
+        if (m_configMenuManager != null)
+        {
+            // コンフィグを表示
+            m_configMenuManager.Open();
+        }
+    }
+
+
+    /// <summary>
+    /// コンフィグを閉じた時の処理です。
+    /// </summary>
+    private void OnConfigClosed()
+    {
+        // コンフィグを閉じる
+        if (m_configMenuManager != null)
+        {
+            m_configMenuManager.gameObject.SetActive(false);
+        }
+
+        // ポーズメニューを表示
+        m_menuRoot.SetActive(true);
+
+        if (m_menuItemSelector != null)
+        {
+            // ポーズメニューの入力を再開
+            m_menuItemSelector.EnableInput(true);
+
+            // コンフィグボタンを選択状態にする
+            m_menuItemSelector.Select(m_configButton);
+        }
+    }
+
+
     /// <summary>
     /// タイトルへ戻ります。
     /// </summary>
     private void OnBackTitle()
     {
         SceneManager.LoadScene(TITLE_SCENE_NAME);
+    }
+
+
+    /// <summary>
+    /// オブジェクト破棄時の処理
+    /// </summary>
+    private void OnDestroy()
+    {
+        // コンフィグのイベント登録を解除
+        if (m_configMenuManager != null)
+        {
+            m_configMenuManager.OnClosed -= OnConfigClosed;
+        }
     }
 }
