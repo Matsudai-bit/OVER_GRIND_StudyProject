@@ -961,7 +961,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 52f98baeb1bcaf1419a26f76dbbfca09, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LegController
-  m_isBreaking: 0
   m_legObject: {fileID: 971941969}
   m_hitMaterial: {fileID: 2100000, guid: fbb7c7f17bf9195429d4f8249af9019a, type: 2}
   m_breakMaterial: {fileID: 2100000, guid: c3cc9f9be3db6b345b56a4f2ff7e4d7e, type: 2}
@@ -1447,7 +1446,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5f5aff569039e8548877f4db68be6404, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BillboardText
-  m_gameCamera: {fileID: 0}
+  m_gameCamera: {fileID: 420027248}
   m_cameraMode: 1
   m_billboardMode: 0
   m_reverseDirection: 1
@@ -2337,14 +2336,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1ccd7f699ec107b45bcb320450b000e2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::P1BossController
+  stateText: {fileID: 1158698392}
+  m_animationEventReceiver: {fileID: 1655356177}
   attackHitBox:
     m_dictionaryElements:
     - m_key: 0
       m_value: {fileID: 1978711490}
     - m_key: 1
       m_value: {fileID: 1321791161}
-  stateText: {fileID: 1158698392}
-  m_animationEventReceiver: {fileID: 1655356177}
+  m_legController: {fileID: 849538300}
 --- !u!4 &1688467026 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 3004985575923605501, guid: dc64d09240e31a14183d576d3ae45937, type: 3}
@@ -3987,7 +3987,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 52f98baeb1bcaf1419a26f76dbbfca09, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LegController
-  m_isBreaking: 0
   m_legObject: {fileID: 884686700}
   m_hitMaterial: {fileID: 2100000, guid: fbb7c7f17bf9195429d4f8249af9019a, type: 2}
   m_breakMaterial: {fileID: 2100000, guid: c3cc9f9be3db6b345b56a4f2ff7e4d7e, type: 2}

@@ -56,6 +56,9 @@ public partial class ChangeP1BossStateAction : Action
                 break;
             case P1BossStateID.TURN:
                 enemyController.StateMachine.ChangeState<P1BossTurnState>();
+                break;           
+            case P1BossStateID.LEG_COLLAP:
+                enemyController.StateMachine.ChangeState<P1BossLegsCollapsingState>();
                 break;
         }
 

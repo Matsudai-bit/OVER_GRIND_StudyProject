@@ -1,8 +1,8 @@
 using System;
 using System.Collections;
-using System.Collections.Generic;
-using System.ComponentModel;
+
 using TMPro;
+using Unity.VisualScripting;
 using UnityEngine;
 
 
@@ -14,14 +14,19 @@ public class P1BossController
 
 
     
-    public SerializeDictionary<P1AttackType, AttackHitbox> attackHitBox;
 
-    [SerializeField, Header("状態標示用テキスト")]
+    [DebugParameterField, Header("状態標示用テキスト")]
     public TextMeshPro stateText;
 
     [SerializeField]
     private  AnimationEventReceiver m_animationEventReceiver;
 
+    public SerializeDictionary<P1AttackType, AttackHitbox> attackHitBox;
+
+    [SerializeField]
+    private P1LegController m_legController;
+
+    [DebugParameterField]
     private StateExecutionStatus m_currentStatus;
     private Animator m_animator;
     private StateMachine<P1BossController> m_stateMachine ;
@@ -40,6 +45,8 @@ public class P1BossController
 
     public StateMachine<P1BossController> StateMachine { get { return m_stateMachine; } }
     public Animator Animator { get { return m_animator; } }
+
+    public P1LegController LegController => m_legController;
 
     public Rigidbody Rigidbody { get { return m_rb; } }
     enum P1BossStateID
@@ -101,4 +108,10 @@ public class P1BossController
     {
         Debug.Log("攻撃をくらった！");
     }
+
+    /// <summary>
+    /// 足が壊されたかどうか
+    /// </summary>
+    public bool AreBothLegsBroken=> m_legController.AreBothLegsBroken();
+    
 }

@@ -8,5 +8,6 @@ public enum P1BossStateID
 	WALK,
 	ATTACK_RIGHT,
 	ATTACK_LEFT,
+	LEG_COLLAP,	// •ö‰ó
 	TURN
 }

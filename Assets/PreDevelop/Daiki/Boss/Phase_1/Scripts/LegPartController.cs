@@ -1,12 +1,24 @@
 using System;
 using UnityEngine;
 
+[Serializable]
+public enum P1BossLegPartState
+{
+    NORMAL,     // í èÌ
+    BROKEN,     // ëπèù
+    DESTROYED   // îjâÛ
+}
+
 public class LegPartController 
     : MonoBehaviour 
     , IAttackDamageReceiver
 {
-    [SerializeField]
-    private bool m_isBreaking;
+
+ 
+
+    [DebugParameterField]
+    P1BossLegPartState m_state;
+
 
     [SerializeField]
     private GameObject m_legObject;
@@ -20,9 +32,9 @@ public class LegPartController
     private SkinnedMeshRenderer m_renderer;
     private Material m_initialMaterial;
 
-    public Action<LegPartController> OnBreak; 
+    public Action<LegPartController> OnBroken; 
 
-    public  bool IsBreaking => m_isBreaking;
+    public P1BossLegPartState CurrentState => m_state;
 
     public GameObject LegModelObject => m_legObject;
 
@@ -36,7 +48,7 @@ public class LegPartController
 
     void Start()
     {
-        m_isBreaking = false;
+        m_state = P1BossLegPartState.NORMAL;
     }
     public void ReceiveAttackDamage(int damage)
     {
@@ -60,9 +72,10 @@ public class LegPartController
     {
 
         m_renderer.material = m_breakMaterial;
-        m_isBreaking = true;
+        m_state = P1BossLegPartState.BROKEN;
 
-        OnBreak?.Invoke(this);
+
+        OnBroken?.Invoke(this);
     }
  
     
