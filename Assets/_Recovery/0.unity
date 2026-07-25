@@ -544,7 +544,7 @@ Transform:
   m_GameObject: {fileID: 420027246}
   serializedVersion: 2
   m_LocalRotation: {x: 0.22290257, y: -3.403939e-15, z: 7.783289e-16, w: 0.97484076}
-  m_LocalPosition: {x: 51.518, y: 2.8379998, z: 114.6}
+  m_LocalPosition: {x: 51.518, y: 2.8379998, z: 104.07}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -943,7 +943,7 @@ GameObject:
   - component: {fileID: 521678417}
   - component: {fileID: 521678416}
   m_Layer: 6
-  m_Name: R_LegPartController
+  m_Name: R_LegController
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -961,7 +961,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 52f98baeb1bcaf1419a26f76dbbfca09, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LegController
-  m_isBreaking: 0
   m_legObject: {fileID: 971941969}
   m_hitMaterial: {fileID: 2100000, guid: fbb7c7f17bf9195429d4f8249af9019a, type: 2}
   m_breakMaterial: {fileID: 2100000, guid: c3cc9f9be3db6b345b56a4f2ff7e4d7e, type: 2}
@@ -1002,7 +1001,7 @@ GameObject:
   - component: {fileID: 739936700}
   - component: {fileID: 739936699}
   - component: {fileID: 739936698}
-  m_Layer: 7
+  m_Layer: 0
   m_Name: Plane
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1305,53 +1304,6 @@ MonoBehaviour:
   m_damageReceiverComponent: {fileID: 2038559653}
   m_damageMultiplier: 1
   m_canReceiveDamage: 1
---- !u!1 &849538298
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 849538299}
-  - component: {fileID: 849538300}
-  m_Layer: 6
-  m_Name: LegController
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &849538299
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 849538298}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1655356171}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &849538300
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 849538298}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0880cedf02b018543a6195c01859953d, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::P1LegController
-  m_legParts:
-  - {fileID: 521678416}
-  - {fileID: 2038559653}
 --- !u!4 &878176085 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8837216497222891456, guid: dc64d09240e31a14183d576d3ae45937, type: 3}
@@ -2119,7 +2071,6 @@ Transform:
   - {fileID: 521678417}
   - {fileID: 2038559654}
   - {fileID: 1835131593}
-  - {fileID: 849538299}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!95 &1655356172
@@ -2311,7 +2262,7 @@ Rigidbody:
   m_UseGravity: 1
   m_IsKinematic: 0
   m_Interpolate: 0
-  m_Constraints: 0
+  m_Constraints: 4
   m_CollisionDetection: 0
 --- !u!114 &1655356177
 MonoBehaviour:
@@ -2492,7 +2443,7 @@ Transform:
   m_GameObject: {fileID: 1751694337}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 51.518, y: 1.318, z: 117.75}
+  m_LocalPosition: {x: 51.518, y: 1.318, z: 107.22}
   m_LocalScale: {x: 0.5, y: 0.5, z: 0.5}
   m_ConstrainProportionsScale: 1
   m_Children:
@@ -2768,7 +2719,7 @@ GameObject:
   - component: {fileID: 1835131596}
   - component: {fileID: 1835131595}
   - component: {fileID: 1835131594}
-  m_Layer: 7
+  m_Layer: 6
   m_Name: GroundCollision
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2997,7 +2948,7 @@ Transform:
   m_GameObject: {fileID: 1880667663}
   serializedVersion: 2
   m_LocalRotation: {x: 0.22290255, y: -3.379774e-15, z: 6.7264575e-16, w: 0.97484076}
-  m_LocalPosition: {x: 51.518, y: 2.8379998, z: 114.6}
+  m_LocalPosition: {x: 51.518, y: 2.8379998, z: 104.07}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -3851,7 +3802,7 @@ CapsuleCollider:
   m_LayerOverridePriority: 0
   m_IsTrigger: 1
   m_ProvidesContacts: 0
-  m_Enabled: 0
+  m_Enabled: 1
   serializedVersion: 2
   m_Radius: 0.5000001
   m_Height: 2
@@ -3969,7 +3920,7 @@ GameObject:
   - component: {fileID: 2038559654}
   - component: {fileID: 2038559653}
   m_Layer: 6
-  m_Name: L_LegPartController
+  m_Name: L_LegController
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -3987,7 +3938,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 52f98baeb1bcaf1419a26f76dbbfca09, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LegController
-  m_isBreaking: 0
   m_legObject: {fileID: 884686700}
   m_hitMaterial: {fileID: 2100000, guid: fbb7c7f17bf9195429d4f8249af9019a, type: 2}
   m_breakMaterial: {fileID: 2100000, guid: c3cc9f9be3db6b345b56a4f2ff7e4d7e, type: 2}
