@@ -32,6 +32,13 @@ public class P1BossController
     private StateMachine<P1BossController> m_stateMachine ;
     private Rigidbody m_rb;
 
+    [SerializeField]
+    public GameObject P2_boss;
+    [SerializeField]
+    public GameObject P1_boss;
+    [SerializeField]
+    public GameObject GroundCollider;
+
     private const string MOVE_SPEED_PARAMETER_NAME = "MoveSpeed";
     private const string ATTACK_PARAMETER_NAME = "Attack";
 
