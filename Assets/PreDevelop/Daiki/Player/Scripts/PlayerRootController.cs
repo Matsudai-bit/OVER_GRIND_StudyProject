@@ -10,6 +10,7 @@ using UnityEngine;
 [RequireComponent(typeof(PlayerMotor))]
 [RequireComponent(typeof(PlayerAnimationPresenter))]
 [RequireComponent(typeof(PlayerStateMachineComponent))]
+[RequireComponent(typeof(PlayerAttackController))]
 public sealed class PlayerRootController : MonoBehaviour
 {
     // プレイヤーの物理ボディ
@@ -35,6 +36,10 @@ public sealed class PlayerRootController : MonoBehaviour
     // プレイヤーのステートマシン
     [SerializeField]
     private PlayerStateMachineComponent m_stateMachineComponent;
+
+    // プレイヤーの攻撃コントローラ
+    [SerializeField]
+    private PlayerAttackController m_playerAttackController;
 
     // 初期化されているか
     private bool m_isInitialized;
@@ -159,6 +164,11 @@ public sealed class PlayerRootController : MonoBehaviour
         {
             m_stateMachineComponent =
                 GetComponent<PlayerStateMachineComponent>();
+        }
+        if (m_playerAttackController == null)
+        {
+            m_playerAttackController =
+                GetComponent<PlayerAttackController>();
         }
     }
 
