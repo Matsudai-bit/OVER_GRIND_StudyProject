@@ -8,6 +8,7 @@ using UnityEngine;
 [RequireComponent(typeof(PlayerInputReader))]
 [RequireComponent(typeof(PlayerMonitor))]
 [RequireComponent(typeof(PlayerMotor))]
+[RequireComponent(typeof(PlayerAnimationPresenter))]
 [RequireComponent(typeof(PlayerStateMachineComponent))]
 public sealed class PlayerRootController : MonoBehaviour
 {
@@ -26,6 +27,10 @@ public sealed class PlayerRootController : MonoBehaviour
     // プレイヤー移動機能
     [SerializeField]
     private PlayerMotor m_motor;
+
+    // プレイヤーアニメーション表示機能
+    [SerializeField]
+    private PlayerAnimationPresenter m_animationPresenter;
 
     // プレイヤーのステートマシン
     [SerializeField]
@@ -48,16 +53,23 @@ public sealed class PlayerRootController : MonoBehaviour
             return;
         }
 
+        // 依存関係の下位から順番に初期化
         m_monitor.Initialize(m_playerRigidbody);
         m_motor.Initialize(m_playerRigidbody);
+
+        m_animationPresenter.Initialize(
+            m_monitor,
+            m_motor);
 
         m_stateMachineComponent.Initialize(
             m_inputReader,
             m_monitor,
-            m_motor);
+            m_motor,
+            m_animationPresenter);
 
         m_isInitialized =
-            m_stateMachineComponent.IsInitialized;
+            m_stateMachineComponent.IsInitialized &&
+            m_animationPresenter.IsInitialized;
     }
 
     /// <summary>
@@ -137,6 +149,12 @@ public sealed class PlayerRootController : MonoBehaviour
             m_motor = GetComponent<PlayerMotor>();
         }
 
+        if (m_animationPresenter == null)
+        {
+            m_animationPresenter =
+                GetComponent<PlayerAnimationPresenter>();
+        }
+
         if (m_stateMachineComponent == null)
         {
             m_stateMachineComponent =
@@ -158,7 +176,8 @@ public sealed class PlayerRootController : MonoBehaviour
         if (m_playerRigidbody == null)
         {
             Debug.LogError(
-                $"[{nameof(PlayerRootController)}] Rigidbodyが見つかりません。",
+                $"[{nameof(PlayerRootController)}] " +
+                "Rigidbodyが見つかりません。",
                 this);
 
             isValid = false;
@@ -167,7 +186,8 @@ public sealed class PlayerRootController : MonoBehaviour
         if (m_inputReader == null)
         {
             Debug.LogError(
-                $"[{nameof(PlayerRootController)}] PlayerInputReaderが見つかりません。",
+                $"[{nameof(PlayerRootController)}] " +
+                "PlayerInputReaderが見つかりません。",
                 this);
 
             isValid = false;
@@ -176,7 +196,8 @@ public sealed class PlayerRootController : MonoBehaviour
         if (m_monitor == null)
         {
             Debug.LogError(
-                $"[{nameof(PlayerRootController)}] PlayerMonitorが見つかりません。",
+                $"[{nameof(PlayerRootController)}] " +
+                "PlayerMonitorが見つかりません。",
                 this);
 
             isValid = false;
@@ -185,7 +206,18 @@ public sealed class PlayerRootController : MonoBehaviour
         if (m_motor == null)
         {
             Debug.LogError(
-                $"[{nameof(PlayerRootController)}] PlayerMotorが見つかりません。",
+                $"[{nameof(PlayerRootController)}] " +
+                "PlayerMotorが見つかりません。",
+                this);
+
+            isValid = false;
+        }
+
+        if (m_animationPresenter == null)
+        {
+            Debug.LogError(
+                $"[{nameof(PlayerRootController)}] " +
+                "PlayerAnimationPresenterが見つかりません。",
                 this);
 
             isValid = false;
@@ -194,7 +226,8 @@ public sealed class PlayerRootController : MonoBehaviour
         if (m_stateMachineComponent == null)
         {
             Debug.LogError(
-                $"[{nameof(PlayerRootController)}] PlayerStateMachineComponentが見つかりません。",
+                $"[{nameof(PlayerRootController)}] " +
+                "PlayerStateMachineComponentが見つかりません。",
                 this);
 
             isValid = false;

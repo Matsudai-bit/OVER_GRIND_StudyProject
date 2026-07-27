@@ -15,6 +15,9 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
     // プレイヤー移動機能
     private PlayerMotor m_motor;
 
+    // プレイヤーアニメーション表示機能
+    private PlayerAnimationPresenter m_animationPresenter;
+
     // プレイヤー用ステートマシン
     private StateMachine<PlayerStateMachineComponent> m_stateMachine;
 
@@ -37,6 +40,12 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
     public PlayerMotor Motor => m_motor;
 
     /// <summary>
+    /// プレイヤーアニメーション表示機能を取得します。
+    /// </summary>
+    public PlayerAnimationPresenter AnimationPresenter =>
+        m_animationPresenter;
+
+    /// <summary>
     /// 初期化されているかを取得します。
     /// </summary>
     /// <returns>
@@ -51,17 +60,23 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
     /// <param name="inputReader">プレイヤー入力。</param>
     /// <param name="monitor">プレイヤー監視機能。</param>
     /// <param name="motor">プレイヤー移動機能。</param>
+    /// <param name="animationPresenter">
+    /// プレイヤーアニメーション表示機能。
+    /// </param>
     public void Initialize(
         PlayerInputReader inputReader,
         PlayerMonitor monitor,
-        PlayerMotor motor)
+        PlayerMotor motor,
+        PlayerAnimationPresenter animationPresenter)
     {
         if (inputReader == null ||
             monitor == null ||
-            motor == null)
+            motor == null ||
+            animationPresenter == null)
         {
             Debug.LogError(
-                $"[{nameof(PlayerStateMachineComponent)}] 初期化に必要な参照が不足しています。",
+                $"[{nameof(PlayerStateMachineComponent)}] " +
+                "初期化に必要な参照が不足しています。",
                 this);
 
             m_isInitialized = false;
@@ -74,6 +89,7 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
         m_inputReader = inputReader;
         m_monitor = monitor;
         m_motor = motor;
+        m_animationPresenter = animationPresenter;
 
         m_stateMachine =
             new StateMachine<PlayerStateMachineComponent>(this);
@@ -85,7 +101,7 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
     }
 
     /// <summary>
-    /// 現在のステートが指定された型かを確認します。
+    /// 現在のステートが指定された型か確認します。
     /// </summary>
     /// <typeparam name="TState">確認するステート型。</typeparam>
     /// <returns>
@@ -138,6 +154,7 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
     private void OnDestroy()
     {
         m_stateMachine?.Dispose();
+
         m_stateMachine = null;
         m_isInitialized = false;
     }
