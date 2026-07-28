@@ -108,7 +108,19 @@ public sealed class PlayerAnimationPresenter : MonoBehaviour
             return;
         }
 
-        m_animator.SetTrigger(JUMP_HASH);
+        m_animator.SetBool(JUMP_HASH, true);
+    }
+    /// <summary>
+    /// ジャンプアニメーションを要求します。
+    /// </summary>
+    public void StopJumpAnimation()
+    {
+        if (!CanControlAnimator() || !m_hasJumpParameter)
+        {
+            return;
+        }
+
+        m_animator.SetBool(JUMP_HASH, false);
     }
 
     /// <summary>
@@ -184,11 +196,6 @@ public sealed class PlayerAnimationPresenter : MonoBehaviour
         if (!CanControlAnimator())
         {
             return;
-        }
-
-        if (m_hasJumpParameter)
-        {
-            m_animator.ResetTrigger(JUMP_HASH);
         }
 
         if (m_hasAttackParameter)
@@ -294,7 +301,7 @@ public sealed class PlayerAnimationPresenter : MonoBehaviour
 
         m_hasJumpParameter = HasAnimatorParameter(
             JUMP_HASH,
-            AnimatorControllerParameterType.Trigger);
+            AnimatorControllerParameterType.Bool);
 
         m_hasAttackParameter = HasAnimatorParameter(
             ATTACK_HASH,
@@ -355,7 +362,7 @@ public sealed class PlayerAnimationPresenter : MonoBehaviour
         LogMissingParameter(
             m_hasJumpParameter,
             JUMP_PARAMETER_NAME,
-            AnimatorControllerParameterType.Trigger);
+            AnimatorControllerParameterType.Bool);
 
         LogMissingParameter(
             m_hasAttackParameter,

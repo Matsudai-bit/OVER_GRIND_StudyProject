@@ -48,17 +48,21 @@ public sealed class PlayerAttackingState
             }
             else if (!m_isNextAttackRequested || m_currentComboStage >= 4)
             {
-                Owner.AnimationPresenter.StopAttackAnimation();
                 Machine.ChangeState<PlayerIdlingState>();
             }
+
+            if (Owner.Monitor.IsGrounded && Owner.InputReader.HasJumpInput)
+            {
+                Machine.ChangeState<PlayerJumpingState>();
+                return;
+            }
         }
+
     }
 
-    /// <summary>
-    /// 一定間隔の更新処理を行います。
-    /// </summary>
-    protected override void OnFixedUpdate()
+    protected override void OnExitState()
     {
-        
+        Owner.AnimationPresenter.StopAttackAnimation();
+
     }
 }

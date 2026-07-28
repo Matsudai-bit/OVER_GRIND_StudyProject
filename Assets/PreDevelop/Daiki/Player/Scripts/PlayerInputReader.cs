@@ -16,11 +16,15 @@ public sealed class PlayerInputReader : MonoBehaviour
     // 攻撃入力アクション
     [SerializeField, Header("攻撃入力アクション")]
     private InputActionReference m_attackActionReference;
+    // ジャンプ入力アクション
+    [SerializeField, Header("ジャンプ入力アクション")]
+    private InputActionReference m_jumpActionReference;
 
     // 現在の移動入力
     private Vector2 m_moveInput;
     // 攻撃入力をしたかどうか
     private bool m_hasAttackInput = false;
+    private bool m_hasJumpInput = false;
 
     // 入力が有効か
     private bool m_isInputEnabled;
@@ -49,6 +53,7 @@ public sealed class PlayerInputReader : MonoBehaviour
     /// </returns>
     public bool IsInputEnabled => m_isInputEnabled;
 
+    public bool HasJumpInput => m_hasJumpInput;
 
     /// <summary>
     /// 攻撃入力を取得して消費します。
@@ -95,8 +100,13 @@ public sealed class PlayerInputReader : MonoBehaviour
             attackAction.canceled += HandleAttackCanceled;
             attackAction.Enable();
 
-            // 現在入力されている値を取得
-            m_moveInput = moveAction.ReadValue<Vector2>();
+        }
+        if (TryGetAction(m_jumpActionReference, out InputAction jumpAction))
+        {
+            // 入力イベントを登録
+            jumpAction.performed += HandleJumpPerformed;
+            jumpAction.canceled += HandleJumpCanceled;
+            jumpAction.Enable();
         }
 
 
@@ -129,10 +139,18 @@ public sealed class PlayerInputReader : MonoBehaviour
             attackAction.canceled -= HandleAttackCanceled;
             attackAction.Disable();
         }
+        if (TryGetAction(m_jumpActionReference, out InputAction jumpAction))
+        {
+            // 入力イベントを解除
+            jumpAction.performed -= HandleJumpPerformed;
+            jumpAction.canceled -= HandleJumpCanceled;
+            jumpAction.Disable();
+        }
 
         m_moveInput = Vector2.zero;
         m_hasAttackInput = false;
         m_isInputEnabled = false;
+        m_hasJumpInput = false;
     }
 
     /// <summary>
@@ -178,6 +196,26 @@ public sealed class PlayerInputReader : MonoBehaviour
     {
         m_hasAttackInput = false;
     }
+
+    /// <summary>
+    /// ジャンプ入力を更新します。
+    /// </summary>
+    /// <param name="context">入力情報。</param>
+    private void HandleJumpPerformed(InputAction.CallbackContext context)
+    {
+         m_hasJumpInput = true;
+        Debug.Log("ジャンプ入力");
+    }
+
+    /// <summary>
+    /// ジャンプ入力をリセットします。
+    /// </summary>
+    /// <param name="context">入力情報。</param>
+    private void HandleJumpCanceled(InputAction.CallbackContext context)
+    {
+        m_hasJumpInput = false;
+    }
+
 
 
 

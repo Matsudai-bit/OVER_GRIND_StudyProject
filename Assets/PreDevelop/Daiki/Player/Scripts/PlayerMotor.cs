@@ -20,6 +20,10 @@ public sealed class PlayerMotor : MonoBehaviour
     [SerializeField, Min(0.0f)]
     private float m_maxMoveSpeed = 6.0f;
 
+    // ジャンプ力
+    [SerializeField, Min(1.0f)]
+    private float m_jumpPower = 6.0f;
+
     // 最高速度に到達するまでの時間
     [SerializeField, Min(MIN_TIME)]
     private float m_timeToMaxSpeed = 2.0f;
@@ -70,6 +74,20 @@ public sealed class PlayerMotor : MonoBehaviour
         }
     }
 
+    public void Jump(float deltaTime)
+    {
+
+        float acceleration = m_jumpPower;
+
+        Vector3 velocity = m_playerRigidbody.transform.up * acceleration * deltaTime;
+
+        Vector3 nextVelocity = velocity;
+
+        nextVelocity.x = m_playerRigidbody.linearVelocity.x;
+        nextVelocity.z = m_playerRigidbody.linearVelocity.z;
+
+        m_playerRigidbody.linearVelocity = nextVelocity;
+    }
     /// <summary>
     /// 入力方向へプレイヤーを加速させます。
     /// </summary>

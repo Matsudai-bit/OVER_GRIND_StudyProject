@@ -39,6 +39,12 @@ public sealed class PlayerWalkingState
             return;
         }
 
+        if (Owner.Monitor.IsGrounded && Owner.InputReader.HasJumpInput)
+        {
+            Machine.ChangeState<PlayerJumpingState>();
+            return;
+        }
+
         // “ü—Í•ûŒü‚ÖƒvƒŒƒCƒ„[‚ğˆÚ“®
         Owner.Motor.Move(
             Owner.InputReader.MoveInput,

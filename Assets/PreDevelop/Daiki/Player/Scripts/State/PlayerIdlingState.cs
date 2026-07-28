@@ -24,6 +24,12 @@ public sealed class PlayerIdlingState
             return;
         }
 
+        if (Owner.Monitor.IsGrounded && Owner.InputReader.HasJumpInput)
+        {
+            Machine.ChangeState<PlayerJumpingState>();
+            return;
+        }
+
         // “ü—Í‚ª‚È‚¢ŠÔ‚Í…•½‘¬“x‚ğŒ¸‘¬
         Owner.Motor.Decelerate(Time.fixedDeltaTime);
     }
