@@ -971,7 +971,94 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 2c60ad4d59dc06041bf2a1d331f4d7c1, type: 3}
       insertIndex: -1
       addedObject: {fileID: 2140339310}
+    - targetCorrespondingSourceObject: {fileID: 7211473927389733614, guid: 2c60ad4d59dc06041bf2a1d331f4d7c1, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 592276438}
+    - targetCorrespondingSourceObject: {fileID: -4053851483729948961, guid: 2c60ad4d59dc06041bf2a1d331f4d7c1, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 592276441}
+    - targetCorrespondingSourceObject: {fileID: -6359759336184402867, guid: 2c60ad4d59dc06041bf2a1d331f4d7c1, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 592276442}
   m_SourcePrefab: {fileID: 100100000, guid: 2c60ad4d59dc06041bf2a1d331f4d7c1, type: 3}
+--- !u!1 &592276437 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 7211473927389733614, guid: 2c60ad4d59dc06041bf2a1d331f4d7c1, type: 3}
+  m_PrefabInstance: {fileID: 592276436}
+  m_PrefabAsset: {fileID: 0}
+--- !u!65 &592276438
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 592276437}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 1, y: 1, z: 8.8}
+  m_Center: {x: 0, y: 1.33, z: -1.06}
+--- !u!1 &592276439 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: -4053851483729948961, guid: 2c60ad4d59dc06041bf2a1d331f4d7c1, type: 3}
+  m_PrefabInstance: {fileID: 592276436}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &592276440 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: -6359759336184402867, guid: 2c60ad4d59dc06041bf2a1d331f4d7c1, type: 3}
+  m_PrefabInstance: {fileID: 592276436}
+  m_PrefabAsset: {fileID: 0}
+--- !u!65 &592276441
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 592276439}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 1, y: 1, z: 8.8}
+  m_Center: {x: 0, y: 1.33, z: -1.06}
+--- !u!65 &592276442
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 592276440}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 1, y: 1, z: 1}
+  m_Center: {x: 0, y: 0, z: 0}
 --- !u!1 &739936697
 GameObject:
   m_ObjectHideFlags: 0
@@ -3290,6 +3377,10 @@ MonoBehaviour:
       m_Calls: []
     m_ActionId: 9caa3d8a-6b2f-4e8e-8bad-6ede561bd9be
     m_ActionName: UI/TrackedDeviceOrientation
+  - m_PersistentCalls:
+      m_Calls: []
+    m_ActionId: a05a368d-8eaa-47f8-b243-36f13442a49a
+    m_ActionName: 'QTE/EscapeAction[/Keyboard/space]'
   m_NeverAutoSwitchControlSchemes: 0
   m_DefaultControlScheme: 
   m_DefaultActionMap: Player
@@ -3310,9 +3401,9 @@ BoxCollider:
     serializedVersion: 2
     m_Bits: 0
   m_LayerOverridePriority: 0
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_ProvidesContacts: 0
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 3
   m_Size: {x: 1.71, y: 2.7, z: 0.64}
   m_Center: {x: 0, y: -0.9, z: -0.36}
