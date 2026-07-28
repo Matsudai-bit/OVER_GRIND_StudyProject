@@ -6,11 +6,32 @@ using UnityEngine;
 public sealed class PlayerWalkingState
     : StateBase<PlayerStateMachineComponent>
 {
+    protected override void OnStartState()
+    {
+        Owner.AnimationPresenter.PlayWalkAnimation();
+    }
+    protected override void OnUpdate(float deltaTime)
+    {
+        if (Owner.InputReader.ConsumeAttackInput())
+        {
+            Machine.ChangeState<PlayerAttackingState>();
+
+        }
+
+    }
+
+    protected override void OnExitState()
+    {
+        Owner.AnimationPresenter.StopWalkAnimation();
+
+    }
+
     /// <summary>
     /// 一定間隔の更新処理を行います。
     /// </summary>
     protected override void OnFixedUpdate()
     {
+
         // 移動入力がなくなったら待機状態へ遷移
         if (!Owner.InputReader.HasMoveInput)
         {

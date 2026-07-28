@@ -11,11 +11,16 @@ public sealed class PlayerInputReader : MonoBehaviour
     private const float MOVE_INPUT_SQR_THRESHOLD = 0.0001f;
 
     // 移動入力アクション
-    [SerializeField]
+    [SerializeField, Header("移動入力アクション")]
     private InputActionReference m_moveActionReference;
+    // 攻撃入力アクション
+    [SerializeField, Header("攻撃入力アクション")]
+    private InputActionReference m_attackActionReference;
 
     // 現在の移動入力
     private Vector2 m_moveInput;
+    // 攻撃入力をしたかどうか
+    private bool m_hasAttackInput = false;
 
     // 入力が有効か
     private bool m_isInputEnabled;
@@ -44,6 +49,25 @@ public sealed class PlayerInputReader : MonoBehaviour
     /// </returns>
     public bool IsInputEnabled => m_isInputEnabled;
 
+
+    /// <summary>
+    /// 攻撃入力を取得して消費します。
+    /// </summary>
+    /// <returns>
+    /// true：攻撃入力がありました。
+    /// false：攻撃入力がありません。
+    /// </returns>
+    public bool ConsumeAttackInput()
+    {
+        if (!m_hasAttackInput)
+        {
+            return false;
+        }
+
+        m_hasAttackInput = false;
+        return true;
+    }
+
     /// <summary>
     /// プレイヤー入力を有効化します。
     /// </summary>
@@ -54,18 +78,28 @@ public sealed class PlayerInputReader : MonoBehaviour
             return;
         }
 
-        if (!TryGetMoveAction(out InputAction moveAction))
+        if (TryGetAction(m_moveActionReference, out InputAction moveAction))
         {
-            return;
+            // 入力イベントを登録
+            moveAction.performed += HandleMovePerformed;
+            moveAction.canceled += HandleMoveCanceled;
+            moveAction.Enable();
+
+            // 現在入力されている値を取得
+            m_moveInput = moveAction.ReadValue<Vector2>();
+        }
+        if (TryGetAction(m_attackActionReference, out InputAction attackAction))
+        {
+            // 入力イベントを登録
+            attackAction.performed += HandleAttackPerformed;
+            attackAction.canceled += HandleAttackCanceled;
+            attackAction.Enable();
+
+            // 現在入力されている値を取得
+            m_moveInput = moveAction.ReadValue<Vector2>();
         }
 
-        // 入力イベントを登録
-        moveAction.performed += HandleMovePerformed;
-        moveAction.canceled += HandleMoveCanceled;
-        moveAction.Enable();
 
-        // 現在入力されている値を取得
-        m_moveInput = moveAction.ReadValue<Vector2>();
         m_isInputEnabled = true;
     }
 
@@ -80,7 +114,7 @@ public sealed class PlayerInputReader : MonoBehaviour
             return;
         }
 
-        if (TryGetMoveAction(out InputAction moveAction))
+        if (TryGetAction(m_moveActionReference, out InputAction moveAction))
         {
             // 入力イベントを解除
             moveAction.performed -= HandleMovePerformed;
@@ -88,7 +122,16 @@ public sealed class PlayerInputReader : MonoBehaviour
             moveAction.Disable();
         }
 
+        if (TryGetAction(m_attackActionReference, out InputAction attackAction))
+        {
+            // 入力イベントを解除
+            attackAction.performed -= HandleAttackPerformed;
+            attackAction.canceled -= HandleAttackCanceled;
+            attackAction.Disable();
+        }
+
         m_moveInput = Vector2.zero;
+        m_hasAttackInput = false;
         m_isInputEnabled = false;
     }
 
@@ -119,18 +162,38 @@ public sealed class PlayerInputReader : MonoBehaviour
     }
 
     /// <summary>
-    /// 移動アクションを取得します。
+    /// 攻撃入力を更新します。
+    /// </summary>
+    /// <param name="context">入力情報。</param>
+    private void HandleAttackPerformed(InputAction.CallbackContext context)
+    {
+        m_hasAttackInput = true;
+    }
+
+    /// <summary>
+    /// 攻撃入力をリセットします。
+    /// </summary>
+    /// <param name="context">入力情報。</param>
+    private void HandleAttackCanceled(InputAction.CallbackContext context)
+    {
+        m_hasAttackInput = false;
+    }
+
+
+
+    /// <summary>
+    /// アクションを取得します。
     /// </summary>
     /// <param name="moveAction">取得した移動アクション。</param>
     /// <returns>
     /// true：移動アクションを取得しました。
     /// false：移動アクションを取得できませんでした。
     /// </returns>
-    private bool TryGetMoveAction(out InputAction moveAction)
+    private bool TryGetAction(InputActionReference actionReference, out InputAction action)
     {
-        moveAction = null;
+        action = null;
 
-        if (m_moveActionReference == null)
+        if (actionReference == null)
         {
             Debug.LogError(
                 $"[{nameof(PlayerInputReader)}] Move Action Referenceが設定されていません。",
@@ -139,9 +202,9 @@ public sealed class PlayerInputReader : MonoBehaviour
             return false;
         }
 
-        moveAction = m_moveActionReference.action;
+        action = actionReference.action;
 
-        if (moveAction == null)
+        if (action == null)
         {
             Debug.LogError(
                 $"[{nameof(PlayerInputReader)}] Move Actionを取得できませんでした。",

@@ -39,7 +39,7 @@ public sealed class PlayerRootController : MonoBehaviour
 
     // プレイヤーの攻撃コントローラ
     [SerializeField]
-    private PlayerAttackController m_playerAttackController;
+    private PlayerAttackController m_attackController;
 
     // 初期化されているか
     private bool m_isInitialized;
@@ -70,7 +70,8 @@ public sealed class PlayerRootController : MonoBehaviour
             m_inputReader,
             m_monitor,
             m_motor,
-            m_animationPresenter);
+            m_animationPresenter, 
+            m_attackController);
 
         m_isInitialized =
             m_stateMachineComponent.IsInitialized &&
@@ -88,6 +89,7 @@ public sealed class PlayerRootController : MonoBehaviour
         }
 
         m_inputReader.EnableInput();
+        
     }
 
     /// <summary>
@@ -165,9 +167,9 @@ public sealed class PlayerRootController : MonoBehaviour
             m_stateMachineComponent =
                 GetComponent<PlayerStateMachineComponent>();
         }
-        if (m_playerAttackController == null)
+        if (m_attackController == null)
         {
-            m_playerAttackController =
+            m_attackController =
                 GetComponent<PlayerAttackController>();
         }
     }

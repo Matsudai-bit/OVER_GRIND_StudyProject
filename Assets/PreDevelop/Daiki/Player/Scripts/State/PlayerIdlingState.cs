@@ -18,6 +18,12 @@ public sealed class PlayerIdlingState
             return;
         }
 
+        if (Owner.InputReader.ConsumeAttackInput())
+        {
+            Machine.ChangeState<PlayerAttackingState>();
+            return;
+        }
+
         // “ü—Í‚ª‚È‚¢ŠÔ‚Í…•½‘¬“x‚ğŒ¸‘¬
         Owner.Motor.Decelerate(Time.fixedDeltaTime);
     }

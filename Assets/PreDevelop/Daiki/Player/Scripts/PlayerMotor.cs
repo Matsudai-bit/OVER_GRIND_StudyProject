@@ -28,6 +28,10 @@ public sealed class PlayerMotor : MonoBehaviour
     [SerializeField, Min(MIN_TIME)]
     private float m_timeToStop = 0.25f;
 
+    // 1秒間に回転できる最大角度
+    [SerializeField, Min(0.0f)]
+    private float m_rotationSpeed = 540.0f;
+
     // プレイヤーの物理ボディ
     private Rigidbody m_playerRigidbody;
 
@@ -78,7 +82,8 @@ public sealed class PlayerMotor : MonoBehaviour
             return;
         }
 
-        Vector2 normalizedInput = Vector2.ClampMagnitude(moveInput, 1.0f);
+        Vector2 normalizedInput =
+            Vector2.ClampMagnitude(moveInput, 1.0f);
 
         // 入力をカメラ基準のワールド方向へ変換
         Vector3 moveDirection =
@@ -103,6 +108,11 @@ public sealed class PlayerMotor : MonoBehaviour
             acceleration * deltaTime);
 
         ApplyHorizontalVelocity(nextHorizontalVelocity);
+
+        // 入力された移動方向へ徐々に回転
+        RotateTowardsMoveDirection(
+            moveDirection,
+            deltaTime);
     }
 
     /// <summary>
@@ -169,7 +179,10 @@ public sealed class PlayerMotor : MonoBehaviour
         forward.Normalize();
 
         // 水平面上の右方向を生成
-        Vector3 right = Vector3.Cross(Vector3.up, forward);
+        Vector3 right = Vector3.Cross(
+            Vector3.up,
+            forward);
+
         right.Normalize();
 
         Vector3 moveDirection =
@@ -182,6 +195,37 @@ public sealed class PlayerMotor : MonoBehaviour
         }
 
         return moveDirection;
+    }
+
+    /// <summary>
+    /// 移動方向へプレイヤーを徐々に回転させます。
+    /// </summary>
+    /// <param name="moveDirection">移動方向。</param>
+    /// <param name="deltaTime">物理更新の経過時間。</param>
+    private void RotateTowardsMoveDirection(
+        Vector3 moveDirection,
+        float deltaTime)
+    {
+        if (moveDirection.sqrMagnitude <=
+            DIRECTION_SQR_THRESHOLD)
+        {
+            return;
+        }
+
+        // 垂直方向の回転を除外
+        moveDirection.y = 0.0f;
+        moveDirection.Normalize();
+
+        Quaternion targetRotation = Quaternion.LookRotation(
+            moveDirection,
+            Vector3.up);
+
+        Quaternion nextRotation = Quaternion.RotateTowards(
+            m_playerRigidbody.rotation,
+            targetRotation,
+            m_rotationSpeed * deltaTime);
+
+        m_playerRigidbody.MoveRotation(nextRotation);
     }
 
     /// <summary>
@@ -222,7 +266,10 @@ public sealed class PlayerMotor : MonoBehaviour
         float targetSpeed,
         float requiredTime)
     {
-        float safeTime = Mathf.Max(requiredTime, MIN_TIME);
+        float safeTime = Mathf.Max(
+            requiredTime,
+            MIN_TIME);
+
         return targetSpeed / safeTime;
     }
 }

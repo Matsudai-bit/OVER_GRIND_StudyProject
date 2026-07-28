@@ -14,6 +14,7 @@ public sealed class PlayerAnimationPresenter : MonoBehaviour
     private const string IS_GROUNDED_PARAMETER_NAME = "IsGrounded";
     private const string JUMP_PARAMETER_NAME = "Jump";
     private const string ATTACK_PARAMETER_NAME = "Attack";
+    private const string WALK_PARAMETER_NAME = "Walk";
     private const string HIT_PARAMETER_NAME = "Hit";
 
     // Animatorパラメーターのハッシュ値
@@ -30,7 +31,10 @@ public sealed class PlayerAnimationPresenter : MonoBehaviour
         Animator.StringToHash(ATTACK_PARAMETER_NAME);
 
     private static readonly int HIT_HASH =
-        Animator.StringToHash(HIT_PARAMETER_NAME);
+        Animator.StringToHash(HIT_PARAMETER_NAME);    
+
+    private static readonly int WALK_HASH =
+        Animator.StringToHash(WALK_PARAMETER_NAME);
 
     // プレイヤーのAnimator
     [SerializeField]
@@ -52,6 +56,7 @@ public sealed class PlayerAnimationPresenter : MonoBehaviour
     private bool m_hasJumpParameter;
     private bool m_hasAttackParameter;
     private bool m_hasHitParameter;
+    private bool m_hasWalkParameter;
 
     // 初期化されているか
     private bool m_isInitialized;
@@ -116,7 +121,19 @@ public sealed class PlayerAnimationPresenter : MonoBehaviour
             return;
         }
 
-        m_animator.SetTrigger(ATTACK_HASH);
+        m_animator.SetBool(ATTACK_HASH,true);
+    }
+    /// <summary>
+    /// 攻撃アニメーション停止を要求します。
+    /// </summary>
+    public void StopAttackAnimation()
+    {
+        if (!CanControlAnimator() || !m_hasAttackParameter)
+        {
+            return;
+        }
+
+        m_animator.SetBool(ATTACK_HASH, false);
     }
 
     /// <summary>
@@ -131,6 +148,33 @@ public sealed class PlayerAnimationPresenter : MonoBehaviour
 
         m_animator.SetTrigger(HIT_HASH);
     }
+
+    /// <summary>
+    /// 歩くアニメーションを要求します。
+    /// </summary>
+    public void PlayWalkAnimation()
+    {
+        if (!CanControlAnimator() || !m_hasWalkParameter)
+        {
+            return;
+        }
+
+        m_animator.SetBool(WALK_HASH, true);
+    }
+
+    /// <summary>
+    /// 歩くアニメーション停止を要求します。
+    /// </summary>
+    public void StopWalkAnimation()
+    {
+        if (!CanControlAnimator() || !m_hasWalkParameter)
+        {
+            return;
+        }
+
+        m_animator.SetBool(WALK_HASH, false);
+    }
+
 
     /// <summary>
     /// アクション用Triggerをリセットします。
@@ -254,11 +298,15 @@ public sealed class PlayerAnimationPresenter : MonoBehaviour
 
         m_hasAttackParameter = HasAnimatorParameter(
             ATTACK_HASH,
-            AnimatorControllerParameterType.Trigger);
+            AnimatorControllerParameterType.Bool);
 
         m_hasHitParameter = HasAnimatorParameter(
             HIT_HASH,
             AnimatorControllerParameterType.Trigger);
+
+        m_hasWalkParameter = HasAnimatorParameter(
+            WALK_HASH,
+            AnimatorControllerParameterType.Bool);
 
         LogMissingParameters();
     }

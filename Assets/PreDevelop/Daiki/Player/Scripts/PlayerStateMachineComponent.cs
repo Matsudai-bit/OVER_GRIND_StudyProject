@@ -18,6 +18,9 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
     // プレイヤーアニメーション表示機能
     private PlayerAnimationPresenter m_animationPresenter;
 
+    // プレイヤーアタックコントローラ
+    private PlayerAttackController m_attackController;
+
     // プレイヤー用ステートマシン
     private StateMachine<PlayerStateMachineComponent> m_stateMachine;
 
@@ -38,6 +41,10 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
     /// プレイヤー移動機能を取得します。
     /// </summary>
     public PlayerMotor Motor => m_motor;
+    /// <summary>
+    /// プレイヤーの攻撃コントローラ
+    /// </summary>
+    public PlayerAttackController AttackController => m_attackController;
 
     /// <summary>
     /// プレイヤーアニメーション表示機能を取得します。
@@ -67,12 +74,14 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
         PlayerInputReader inputReader,
         PlayerMonitor monitor,
         PlayerMotor motor,
-        PlayerAnimationPresenter animationPresenter)
+        PlayerAnimationPresenter animationPresenter,
+        PlayerAttackController playerAttackController)
     {
         if (inputReader == null ||
             monitor == null ||
             motor == null ||
-            animationPresenter == null)
+            animationPresenter == null ||
+            playerAttackController == null)
         {
             Debug.LogError(
                 $"[{nameof(PlayerStateMachineComponent)}] " +
@@ -90,6 +99,7 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
         m_monitor = monitor;
         m_motor = motor;
         m_animationPresenter = animationPresenter;
+        m_attackController = playerAttackController;
 
         m_stateMachine =
             new StateMachine<PlayerStateMachineComponent>(this);
