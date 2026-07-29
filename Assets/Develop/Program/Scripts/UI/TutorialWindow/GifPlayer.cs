@@ -29,10 +29,11 @@ public class GifPlayer : MonoBehaviour
     {
         Stop();
 
+        Debug.Log($"[GifPlayer] Play呼び出し frames={(frames == null ? "null" : frames.Count.ToString())}");
+
         if (frames == null || frames.Count == 0)
             return;
 
-        // アニメーション開始までの空白を防ぐため、最初のフレームを即座に表示
         rawImage.texture = frames[0].m_texture2d;
 
         playRoutine = StartCoroutine(PlayRoutine(frames));
