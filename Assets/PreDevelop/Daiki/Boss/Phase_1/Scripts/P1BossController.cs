@@ -9,7 +9,7 @@ using UnityEngine;
 public class P1BossController 
     : MonoBehaviour 
     , IStateStatusProvider
-    , IAttackDamageReceiver
+    , IDamageable
 {
 
 
@@ -111,7 +111,7 @@ public class P1BossController
         action?.Invoke();
     }
 
-    public void ReceiveAttackDamage(int damage)
+    public void TakeDamage(int damage)
     {
         Debug.Log("çUåÇÇÇ≠ÇÁÇ¡ÇΩÅI");
     }

@@ -12,7 +12,7 @@ public sealed class AttackHitbox : MonoBehaviour
     /// <summary>
     /// 攻撃が対象に命中したときに通知されます。
     /// </summary>
-    public event Action<IAttackDamageReceiver> AttackHit;
+    public event Action<IDamageable> AttackHit;
 
     /// <summary>
     /// 攻撃判定に使用するCollider。
@@ -131,8 +131,8 @@ public sealed class AttackHitbox : MonoBehaviour
         }
 
         // Colliderの親階層からダメージ受付コンポーネントを探します。
-        IAttackDamageReceiver damageReceiver =
-            other.GetComponentInParent<IAttackDamageReceiver>();
+        IDamageable damageReceiver =
+            other.GetComponentInParent<IDamageable>();
 
         if (damageReceiver == null)
         {
@@ -154,7 +154,7 @@ public sealed class AttackHitbox : MonoBehaviour
             return;
         }
 
-        damageReceiver.ReceiveAttackDamage(m_currentDamage);
+        damageReceiver.TakeDamage(m_currentDamage);
         AttackHit?.Invoke(damageReceiver);
     }
 

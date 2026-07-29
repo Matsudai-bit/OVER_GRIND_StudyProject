@@ -4,7 +4,7 @@ using UnityEngine;
 /// 被攻撃判定を管理します。
 /// </summary>
 [DisallowMultipleComponent]
-public sealed class Hurtbox : MonoBehaviour, IAttackDamageReceiver
+public sealed class Hurtbox : MonoBehaviour, IDamageable
 {
     /// <summary>
     /// 実際にダメージを処理するコンポーネント。
@@ -28,7 +28,7 @@ public sealed class Hurtbox : MonoBehaviour, IAttackDamageReceiver
     /// <summary>
     /// 実際にダメージを処理する対象。
     /// </summary>
-    private IAttackDamageReceiver m_damageReceiver;
+    private IDamageable m_damageReceiver;
 
     /// <summary>
     /// ダメージを受け付けるか取得します。
@@ -52,7 +52,7 @@ public sealed class Hurtbox : MonoBehaviour, IAttackDamageReceiver
     /// 攻撃ダメージを受け取ります。
     /// </summary>
     /// <param name="damage">受けるダメージ量。</param>
-    public void ReceiveAttackDamage(int damage)
+    public void TakeDamage(int damage)
     {
         if (!m_canReceiveDamage)
         {
@@ -81,7 +81,7 @@ public sealed class Hurtbox : MonoBehaviour, IAttackDamageReceiver
             return;
         }
 
-        m_damageReceiver.ReceiveAttackDamage(adjustedDamage);
+        m_damageReceiver.TakeDamage(adjustedDamage);
     }
 
     /// <summary>
@@ -134,7 +134,7 @@ public sealed class Hurtbox : MonoBehaviour, IAttackDamageReceiver
         if (m_damageReceiverComponent == null)
         {
             Debug.LogError(
-                $"{nameof(IAttackDamageReceiver)}を実装したコンポーネントが見つかりません。",
+                $"{nameof(IDamageable)}を実装したコンポーネントが見つかりません。",
                 this);
 
             m_damageReceiver = null;
@@ -152,13 +152,13 @@ public sealed class Hurtbox : MonoBehaviour, IAttackDamageReceiver
         }
 
         m_damageReceiver =
-            m_damageReceiverComponent as IAttackDamageReceiver;
+            m_damageReceiverComponent as IDamageable;
 
         if (m_damageReceiver == null)
         {
             Debug.LogError(
                 $"{m_damageReceiverComponent.GetType().Name}は" +
-                $"{nameof(IAttackDamageReceiver)}を実装していません。",
+                $"{nameof(IDamageable)}を実装していません。",
                 m_damageReceiverComponent);
 
             return false;
@@ -189,7 +189,7 @@ public sealed class Hurtbox : MonoBehaviour, IAttackDamageReceiver
                 continue;
             }
 
-            if (component is IAttackDamageReceiver)
+            if (component is IDamageable)
             {
                 return component;
             }
@@ -218,11 +218,11 @@ public sealed class Hurtbox : MonoBehaviour, IAttackDamageReceiver
         }
 
         if (m_damageReceiverComponent != null &&
-            m_damageReceiverComponent is not IAttackDamageReceiver)
+            m_damageReceiverComponent is not IDamageable)
         {
             Debug.LogWarning(
                 $"{m_damageReceiverComponent.GetType().Name}は" +
-                $"{nameof(IAttackDamageReceiver)}を実装していません。",
+                $"{nameof(IDamageable)}を実装していません。",
                 m_damageReceiverComponent);
         }
     }
