@@ -57,7 +57,11 @@ public class LegPartController
     }
     public void TakeDamage(int damage)
     {
-        OnDamage(damage);
+        if (!m_health.IsDead)
+        {
+            OnDamage(damage);
+
+        }
     }
 
     private void OnDamage(int damage)

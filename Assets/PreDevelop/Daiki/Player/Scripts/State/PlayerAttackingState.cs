@@ -9,7 +9,6 @@ public sealed class PlayerAttackingState
     int m_currentComboStage = 0; // 攻撃の段数
     bool m_isNextAttackRequested;
 
-    bool m_isFirstFrame;
 
     protected override void OnStartState()
     {
@@ -19,22 +18,21 @@ public sealed class PlayerAttackingState
         Owner.AnimationPresenter.PlayAttackAnimation();
         Debug.Log("アタックアニメーションの有効化");
 
-        m_isFirstFrame = true;
-
        
     }
 
     protected override void OnUpdate(float deltaTime)
     {
-        if (m_isFirstFrame) 
-        { 
-            m_isFirstFrame = false;
-            return;
-        }
-
+ 
         if (Owner.InputReader.ConsumeAttackInput())
         {
             m_isNextAttackRequested = true;
+        }
+
+        if (Owner.AttackController.HasReceivedEvent(m_currentComboStage, PlayerAttackController.AttackAnimationEventType.ENABLE_HITBOX))
+        {
+            Owner.AttackController.EnableAttackHitboxes();
+            Owner.AttackController.ClearEventHistory(m_currentComboStage, PlayerAttackController.AttackAnimationEventType.ENABLE_HITBOX) ;
         }
 
         if (Owner.AttackController.HasReceivedEvent(m_currentComboStage, PlayerAttackController.AttackAnimationEventType.FINISH_ANIMATION))
@@ -43,6 +41,10 @@ public sealed class PlayerAttackingState
        
             if (m_isNextAttackRequested && Owner.AttackController.HasReceivedEvent(m_currentComboStage + 1, PlayerAttackController.AttackAnimationEventType.START_ANIMATION))
             {
+                if (Owner.AttackController.HasReceivedEvent(m_currentComboStage, PlayerAttackController.AttackAnimationEventType.DISABLE_HITBOX))
+                {
+                    Owner.AttackController.DisableAttackHitboxes();
+                }
                 m_currentComboStage++;
                 m_isNextAttackRequested = false;
             }
@@ -63,6 +65,7 @@ public sealed class PlayerAttackingState
     protected override void OnExitState()
     {
         Owner.AnimationPresenter.StopAttackAnimation();
+        Owner.AttackController.DisableAttackHitboxes();
 
     }
 }
