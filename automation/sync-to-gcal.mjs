@@ -79,21 +79,21 @@ function parseProjectItem(item) {
     startDate: null,
     targetDate: null,
     status: null,
-    priority: null,
   };
 
-  for (const field of item.fieldValues.nodes) {
-    if (!field.field) continue;
-    const fieldName = field.field.name;
+  for (const fieldValue of item.fieldValues?.nodes || []) {
+    const fieldName = fieldValue.field?.name;
 
-    if (fieldName === '開始日' && field.date) {
-      result.startDate = field.date;
-    } else if (fieldName === '終了期日' && field.date) {
-      result.targetDate = field.date;
-    } else if (fieldName === 'Status' && field.name) {
-      result.status = field.name;
-    } else if (fieldName === '優先度' && field.name) {
-      result.priority = field.name;
+    if (fieldName === '開始日' && fieldValue.date) {
+      result.startDate = fieldValue.date;
+    }
+
+    if (fieldName === '終了期日' && fieldValue.date) {
+      result.targetDate = fieldValue.date;
+    }
+
+    if (fieldName === 'Status' && fieldValue.name) {
+      result.status = fieldValue.name;
     }
   }
 
