@@ -2,40 +2,43 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.InputSystem;
 using DG.Tweening;
+using System;
+using System.Collections;
+using System.Collections.Generic;
 
 public class TutorialManager : MonoBehaviour
 {
     [Header("チュートリアルデータ")]
     [SerializeField] private TutorialData tutorialData;
 
-    [Header("画像")]
-    [SerializeField] private Image currentSlideImage;
-    [SerializeField] private Image nextSlideImage;
+    [Header("GIF再生スロット")]
+    [SerializeField] private GifPlayer currentGifPlayer;
+    [SerializeField] private GifPlayer nextGifPlayer;
+
+    [Header("挿絵(左上に斜めに配置するもの)")]
+    [SerializeField] private Image currentOverlayImage;
+    [SerializeField] private Image nextOverlayImage;
+
+    [Header("フェード用CanvasGroup")]
+    [SerializeField] private CanvasGroup currentCanvasGroup;
+    [SerializeField] private CanvasGroup nextCanvasGroup;
 
     [Header("RectTransform")]
     [SerializeField] private RectTransform currentRect;
     [SerializeField] private RectTransform nextRect;
+    [SerializeField] private RectTransform slideRoot;
 
-    [Header("設定")]
+    [Header("スライド設定")]
     [SerializeField] private float slideTime = 0.4f;
     [SerializeField] private Ease ease = Ease.OutCubic;
 
     [Header("ページインジケーター")]
-    [SerializeField]
-    private Transform dotRoot;
+    [SerializeField] private Transform dotRoot;
+    [SerializeField] private GameObject dotPrefab;
+    [SerializeField] private Sprite currentDotSprite;
+    [SerializeField] private Sprite normalDotSprite;
 
-    [SerializeField]
-    private GameObject dotPrefab;
-
-    [SerializeField]
-    private Sprite currentDotSprite;
-
-    [SerializeField]
-    private Sprite normalDotSprite;
-
-    [SerializeField]
-    private RectTransform slideRoot;
-
+    public Action OnTutorialClosed;
 
     /// <summary>
     /// 生成したDot一覧
@@ -56,6 +59,11 @@ public class TutorialManager : MonoBehaviour
     /// スライド幅
     /// </summary>
     private float slideWidth;
+
+    /// <summary>
+    /// スライドごとにデコード済みのGIFフレームをキャッシュしておく
+    /// </summary>
+    private List<UniGif.GifTexture>[] slideFramesCache;
 
     private void Start()
     {
@@ -78,24 +86,111 @@ public class TutorialManager : MonoBehaviour
             return;
         }
 
-        if (tutorialData.slideImages.Length == 0)
+        if (tutorialData.Slides == null || tutorialData.Slides.Length == 0)
         {
-            Debug.LogError("画像がありません");
+            Debug.LogError("スライドがありません");
             return;
         }
 
         currentIndex = 0;
 
-        currentSlideImage.sprite = tutorialData.slideImages[currentIndex];
+        slideWidth = slideRoot.rect.width + currentRect.rect.width;
 
-        slideWidth = slideRoot.rect.width;
-
-        nextSlideImage.gameObject.SetActive(false);
-
+        currentRect.gameObject.SetActive(true);
         currentRect.anchoredPosition = Vector2.zero;
+        currentRect.localScale = Vector3.one;
+        currentCanvasGroup.alpha = 1f;
+
         nextRect.anchoredPosition = new Vector2(slideWidth, 0);
+        nextRect.localScale = Vector3.one;
+        nextCanvasGroup.alpha = 1f;
+        nextRect.gameObject.SetActive(false);
+
+        // すでにデコード済みならそのまま再生、未デコードなら全スライドを順にデコードする
+        if (slideFramesCache == null || slideFramesCache.Length != tutorialData.Slides.Length)
+        {
+            slideFramesCache = new List<UniGif.GifTexture>[tutorialData.Slides.Length];
+            StartCoroutine(DecodeAllSlidesRoutine());
+        }
+        else
+        {
+            SetSlide(currentGifPlayer, currentOverlayImage, currentIndex);
+        }
 
         CreateDots();
+    }
+
+    /// <summary>
+    /// 全スライドのGIFを順番にデコードしてキャッシュする
+    /// </summary>
+    private IEnumerator DecodeAllSlidesRoutine()
+    {
+        for (int i = 0; i < tutorialData.Slides.Length; i++)
+        {
+            byte[] gifBytes = tutorialData.Slides[i].GifBytes;
+
+            if (gifBytes == null)
+            {
+                Debug.LogError($"{i}番目のスライドにGIFファイルが設定されていません");
+                continue;
+            }
+
+            List<UniGif.GifTexture> frames = null;
+
+            yield return StartCoroutine(
+                UniGif.GetTextureListCoroutine(gifBytes, (gifTexList, loopCount, width, height) =>
+                {
+                    frames = gifTexList;
+                })
+            );
+
+            slideFramesCache[i] = frames;
+
+            // 表示中のスライドのデコードが終わったタイミングで再生を始める
+            if (i == currentIndex)
+            {
+                SetSlide(currentGifPlayer, currentOverlayImage, currentIndex);
+            }
+        }
+    }
+
+    /// <summary>
+    /// 指定したスロット(GifPlayerと挿絵)に、指定インデックスのスライドを反映する。
+    /// GIFはデコードが終わっていなければ完了を待つ。
+    /// </summary>
+    private void SetSlide(GifPlayer player, Image overlayImage, int index)
+    {
+        PlaySlide(player, index);
+
+        Sprite sprite = tutorialData.Slides[index].OverlayImage;
+        overlayImage.sprite = sprite;
+        overlayImage.gameObject.SetActive(sprite != null);
+    }
+
+    /// <summary>
+    /// 指定したGifPlayerに、指定インデックスのGIFを再生させる。
+    /// デコードがまだ終わっていない場合は完了を待つ。
+    /// </summary>
+    private void PlaySlide(GifPlayer player, int index)
+    {
+        if (slideFramesCache[index] != null)
+        {
+            player.Play(slideFramesCache[index]);
+        }
+        else
+        {
+            StartCoroutine(WaitAndPlaySlide(player, index));
+        }
+    }
+
+    private IEnumerator WaitAndPlaySlide(GifPlayer player, int index)
+    {
+        while (slideFramesCache[index] == null)
+        {
+            yield return null;
+        }
+
+        player.Play(slideFramesCache[index]);
     }
 
     /// <summary>
@@ -109,9 +204,9 @@ public class TutorialManager : MonoBehaviour
             Destroy(child.gameObject);
         }
 
-        dots = new Image[tutorialData.slideImages.Length];
+        dots = new Image[tutorialData.Slides.Length];
 
-        for (int i = 0; i < tutorialData.slideImages.Length; i++)
+        for (int i = 0; i < tutorialData.Slides.Length; i++)
         {
             GameObject dot = Instantiate(dotPrefab, dotRoot);
 
@@ -170,58 +265,13 @@ public class TutorialManager : MonoBehaviour
 
     private void NextPage()
     {
-        if (currentIndex >= tutorialData.slideImages.Length - 1)
+        if (currentIndex >= tutorialData.Slides.Length - 1)
         {
             CloseTutorial();
             return;
         }
 
-        isAnimating = true;
-
-        nextSlideImage.gameObject.SetActive(true);
-
-        nextSlideImage.sprite =
-            tutorialData.slideImages[currentIndex + 1];
-
-        currentRect.anchoredPosition = Vector2.zero;
-        nextRect.anchoredPosition = new Vector2(slideWidth, 0);
-
-        Sequence sequence = DOTween.Sequence();
-
-        sequence.Join(
-            currentRect.DOAnchorPosX(-slideWidth, slideTime)
-        );
-
-        sequence.Join(
-            nextRect.DOAnchorPosX(0, slideTime)
-        );
-
-        sequence.SetEase(ease);
-
-        sequence.OnComplete(() =>
-        {
-            currentIndex++;
-
-            // CurrentとNextを入れ替える
-            Image tempImage = currentSlideImage;
-            currentSlideImage = nextSlideImage;
-            nextSlideImage = tempImage;
-
-            RectTransform tempRect = currentRect;
-            currentRect = nextRect;
-            nextRect = tempRect;
-
-            // 次のスライドを右側へ戻して待機
-            nextRect.anchoredPosition = new Vector2(slideWidth, 0);
-            nextSlideImage.gameObject.SetActive(false);
-
-            // ページインジケーター更新
-            UpdateDots();
-
-            isAnimating = false;
-
-            Debug.Log($"現在ページ : {currentIndex + 1}");
-        });
+        PlayTransition(currentIndex + 1, slideWidth);
     }
 
     private void PreviousPage()
@@ -229,45 +279,45 @@ public class TutorialManager : MonoBehaviour
         if (currentIndex <= 0)
             return;
 
+        PlayTransition(currentIndex - 1, -slideWidth);
+    }
+
+    /// <summary>
+    /// 横スライドによるページ送りアニメーション。
+    /// enterFromXが正なら次へ(右から登場)、負なら前へ(左から登場)。
+    /// </summary>
+    private void PlayTransition(int targetIndex, float enterFromX)
+    {
         isAnimating = true;
 
-        nextSlideImage.gameObject.SetActive(true);
+        nextRect.gameObject.SetActive(true);
+        nextRect.anchoredPosition = new Vector2(enterFromX, 0);
+        nextRect.localScale = Vector3.one;
+        nextCanvasGroup.alpha = 1f;
 
-        nextSlideImage.sprite =
-            tutorialData.slideImages[currentIndex - 1];
-
-        currentRect.anchoredPosition = Vector2.zero;
-        nextRect.anchoredPosition = new Vector2(-slideWidth, 0);
+        SetSlide(nextGifPlayer, nextOverlayImage, targetIndex);
 
         Sequence sequence = DOTween.Sequence();
 
-        sequence.Join(
-            currentRect.DOAnchorPosX(slideWidth, slideTime)
-        );
-
-        sequence.Join(
-            nextRect.DOAnchorPosX(0, slideTime)
-        );
+        sequence.Join(currentRect.DOAnchorPosX(-enterFromX, slideTime));
+        sequence.Join(nextRect.DOAnchorPosX(0, slideTime));
 
         sequence.SetEase(ease);
 
         sequence.OnComplete(() =>
         {
-            // ★ここは--が正しい
-            currentIndex--;
+            currentIndex = targetIndex;
 
-            // CurrentとNextを入れ替える
-            Image tempImage = currentSlideImage;
-            currentSlideImage = nextSlideImage;
-            nextSlideImage = tempImage;
+            // Current と Next のスロット一式を入れ替える
+            (currentGifPlayer, nextGifPlayer) = (nextGifPlayer, currentGifPlayer);
+            (currentOverlayImage, nextOverlayImage) = (nextOverlayImage, currentOverlayImage);
+            (currentCanvasGroup, nextCanvasGroup) = (nextCanvasGroup, currentCanvasGroup);
+            (currentRect, nextRect) = (nextRect, currentRect);
 
-            RectTransform tempRect = currentRect;
-            currentRect = nextRect;
-            nextRect = tempRect;
-
-            // 左側へ戻して待機
-            nextRect.anchoredPosition = new Vector2(-slideWidth, 0);
-            nextSlideImage.gameObject.SetActive(false);
+            // 新しいNext(=元Current)を画面外へ戻して待機
+            nextGifPlayer.Stop();
+            nextRect.anchoredPosition = new Vector2(enterFromX, 0);
+            nextRect.gameObject.SetActive(false);
 
             // ページインジケーター更新
             UpdateDots();
@@ -283,13 +333,16 @@ public class TutorialManager : MonoBehaviour
         DOTween.Kill(currentRect);
         DOTween.Kill(nextRect);
 
+        currentGifPlayer.Stop();
+        nextGifPlayer.Stop();
+
         gameObject.SetActive(false);
-        FindFirstObjectByType<TitleMenuManager>()
-      ?.OnTutorialClosed();
+
+        OnTutorialClosed?.Invoke();
 
         Debug.Log("Tutorial Close");
-    
     }
+
     /// <summary>
     /// ページインジケーター更新
     /// </summary>
@@ -318,6 +371,9 @@ public class TutorialManager : MonoBehaviour
     {
         DOTween.Kill(currentRect);
         DOTween.Kill(nextRect);
+
+        currentGifPlayer.Stop();
+        nextGifPlayer.Stop();
 
         Initialize();
     }
