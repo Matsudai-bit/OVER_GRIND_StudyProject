@@ -86,13 +86,13 @@ function parseProjectItem(item) {
     if (!field.field) continue;
     const fieldName = field.field.name;
 
-    if (fieldName === 'Start date' && field.date) {
+    if (fieldName === '開始日' && field.date) {
       result.startDate = field.date;
-    } else if (fieldName === 'Target date' && field.date) {
+    } else if (fieldName === '終了期日' && field.date) {
       result.targetDate = field.date;
     } else if (fieldName === 'Status' && field.name) {
       result.status = field.name;
-    } else if (fieldName === 'Priority' && field.name) {
+    } else if (fieldName === '優先度' && field.name) {
       result.priority = field.name;
     }
   }
