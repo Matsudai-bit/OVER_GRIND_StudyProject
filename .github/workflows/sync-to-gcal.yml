@@ -2,57 +2,23 @@ name: sync-to-gcal
 
 on:
   schedule:
-    # 6時間ごと
-    - cron: "0 */6 * * *"
-
-  # Actions画面から手動実行
+    # 6時間ごとに実行（UTC時間: 0時, 6時, 12時, 18時）
+    - cron: '0 */6 * * *'
+  # 手動実行を許可
   workflow_dispatch:
-
-permissions:
-  contents: read
 
 jobs:
   sync:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
+      - uses: actions/setup-node@v4
         with:
-          node-version: "24"
-          package-manager-cache: false
+          node-version: 20
 
       - name: Install dependencies
         run: npm install googleapis
-
-      - name: Validate secrets
-        env:
-          PROJECT_READ_TOKEN: ${{ secrets.PROJECT_READ_TOKEN }}
-          GOOGLE_SERVICE_ACCOUNT_KEY: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}
-          GOOGLE_CALENDAR_ID: ${{ secrets.GOOGLE_CALENDAR_ID }}
-        run: |
-          test -n "$PROJECT_READ_TOKEN" || {
-            echo "::error::PROJECT_READ_TOKEN is not configured"
-            exit 1
-          }
-
-          test -n "$GOOGLE_SERVICE_ACCOUNT_KEY" || {
-            echo "::error::GOOGLE_SERVICE_ACCOUNT_KEY is not configured"
-            exit 1
-          }
-
-          test -n "$GOOGLE_CALENDAR_ID" || {
-            echo "::error::GOOGLE_CALENDAR_ID is not configured"
-            exit 1
-          }
-
-          node -e "
-            JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_KEY);
-            console.log('Google service account JSON: OK');
-          "
 
       - name: Sync to Google Calendar
         env:
