@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class P1BossLegsCollapsingState : StateBase<P1BossController>
 {
@@ -15,6 +16,15 @@ public class P1BossLegsCollapsingState : StateBase<P1BossController>
         Owner.P1_boss.gameObject.SetActive(false);
         Owner.P2_boss.gameObject.SetActive(true);
 
+        Owner.StartDelayCoroutine(5.0f, () =>
+        {
+            SceneManager.LoadScene("Prot_Stage1_Phase2");
+
+        });
+    }
+
+    void ChangeScene()
+    {
     }
 
     // Update is called once per frame

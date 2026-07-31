@@ -30,6 +30,12 @@ public sealed class PlayerIdlingState
             return;
         }
 
+        if (Owner.Monitor.IsRailed)
+        {
+            Machine.ChangeState<PlayerGrindingState>();
+            return;
+        }
+
         // “ü—Í‚ª‚È‚¢ŠÔ‚Í…•½‘¬“x‚ğŒ¸‘¬
         Owner.Motor.Decelerate(Time.fixedDeltaTime);
     }

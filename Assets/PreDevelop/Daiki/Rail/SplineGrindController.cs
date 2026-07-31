@@ -100,7 +100,8 @@ public class SplineGrindController : MonoBehaviour
         Vector3 nextPosition = currentRail.Container.EvaluatePosition(currentT);
         Vector3 nextTangent = currentRail.Container.EvaluateTangent(currentT);
 
-        transform.position = nextPosition + Vector3.up * 0.4f;
+
+        transform.position = nextPosition + Vector3.up * 2.4f;
         if (nextTangent != Vector3.zero)
         {
             // 逆走時は回転も180度反転させる
@@ -122,13 +123,12 @@ public class SplineGrindController : MonoBehaviour
         // 離脱時のベクトルの計算（レールの向き × 最終速度）
         Vector3 exitVelocity = direction.normalized * currentSpeed * new float3(directionFactor, 1.0f, directionFactor) ;
 
-        if (!isEndOfRail)
+        if (currentRail.IsBoostRail)
         {
-            // 途中ジャンプなら、上方向へのベクトルの足し算などを行う
+            // ※ここでプレイヤーの元の物理挙動を有効化し、exitVelocity を Rigidbody.velocity 等にブチ込む！
+            m_rb.linearVelocity = exitVelocity * exitSpeedScale;
         }
-
-        // ※ここでプレイヤーの元の物理挙動を有効化し、exitVelocity を Rigidbody.velocity 等にブチ込む！
-        m_rb.linearVelocity = exitVelocity * exitSpeedScale;
+        m_rb.linearVelocity = exitVelocity;
 
         currentRail = null;
         Debug.Log("グラインド終了！飛び出し速度" + exitVelocity * exitSpeedScale);

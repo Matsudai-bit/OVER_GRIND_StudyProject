@@ -24,6 +24,9 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
     // プレイヤー用ステートマシン
     private StateMachine<PlayerStateMachineComponent> m_stateMachine;
 
+    // スプライングラインドコントローラ
+    private SplineGrindController m_splineGrindController;
+
     // 初期化されているか
     private bool m_isInitialized;
 
@@ -52,6 +55,8 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
     public PlayerAnimationPresenter AnimationPresenter =>
         m_animationPresenter;
 
+    public SplineGrindController GrindController => m_splineGrindController;
+
     /// <summary>
     /// 初期化されているかを取得します。
     /// </summary>
@@ -75,13 +80,15 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
         PlayerMonitor monitor,
         PlayerMotor motor,
         PlayerAnimationPresenter animationPresenter,
-        PlayerAttackController playerAttackController)
+        PlayerAttackController playerAttackController,
+        SplineGrindController splineGrindController)
     {
         if (inputReader == null ||
             monitor == null ||
             motor == null ||
             animationPresenter == null ||
-            playerAttackController == null)
+            playerAttackController == null ||
+            splineGrindController == null)
         {
             Debug.LogError(
                 $"[{nameof(PlayerStateMachineComponent)}] " +
@@ -100,6 +107,7 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
         m_motor = motor;
         m_animationPresenter = animationPresenter;
         m_attackController = playerAttackController;
+        m_splineGrindController = splineGrindController;
 
         m_stateMachine =
             new StateMachine<PlayerStateMachineComponent>(this);

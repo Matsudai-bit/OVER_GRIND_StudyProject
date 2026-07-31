@@ -19,6 +19,7 @@ GameObject:
   - component: {fileID: 1124378536144250085}
   - component: {fileID: 8750208665281270308}
   - component: {fileID: 9160839420330344807}
+  - component: {fileID: 1489765847358067932}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -265,10 +266,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerMonitor
   m_groundCheckOrigin: {fileID: 1047974328123020390}
-  m_groundCheckRadius: 0.25
+  m_groundCheckRadius: 0.5
   m_groundLayerMask:
     serializedVersion: 2
-    m_Bits: 16
+    m_Bits: 24
+  m_railLayerMask:
+    serializedVersion: 2
+    m_Bits: 512
 --- !u!114 &5248580973540662360
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -318,6 +322,7 @@ MonoBehaviour:
   m_animationPresenter: {fileID: 0}
   m_stateMachineComponent: {fileID: 0}
   m_attackController: {fileID: 0}
+  m_splineGrindController: {fileID: 0}
 --- !u!114 &8750208665281270308
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -348,6 +353,21 @@ MonoBehaviour:
   m_attackHitboxes:
   - {fileID: 2249295833881654871}
   - {fileID: 4077423791391777195}
+--- !u!114 &1489765847358067932
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 870422966550336116}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f454a4d0a1b9f26478316a9fca1909d0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SplineGrindController
+  baseGrindSpeed: 15
+  maxGrindSpeed: 40
+  exitSpeedScale: 1
 --- !u!1 &4605358658254337890
 GameObject:
   m_ObjectHideFlags: 0

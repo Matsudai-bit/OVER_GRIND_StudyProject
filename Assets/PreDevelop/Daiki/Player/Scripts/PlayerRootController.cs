@@ -11,6 +11,7 @@ using UnityEngine;
 [RequireComponent(typeof(PlayerAnimationPresenter))]
 [RequireComponent(typeof(PlayerStateMachineComponent))]
 [RequireComponent(typeof(PlayerAttackController))]
+[RequireComponent(typeof(SplineGrindController))]
 public sealed class PlayerRootController : MonoBehaviour
 {
     // プレイヤーの物理ボディ
@@ -39,7 +40,11 @@ public sealed class PlayerRootController : MonoBehaviour
 
     // プレイヤーの攻撃コントローラ
     [SerializeField]
-    private PlayerAttackController m_attackController;
+    private PlayerAttackController m_attackController;   
+
+    // スプライングラインドコントローラ
+    [SerializeField]
+    private SplineGrindController m_splineGrindController;
 
     // 初期化されているか
     private bool m_isInitialized;
@@ -71,7 +76,8 @@ public sealed class PlayerRootController : MonoBehaviour
             m_monitor,
             m_motor,
             m_animationPresenter, 
-            m_attackController);
+            m_attackController,
+            m_splineGrindController);
 
         m_isInitialized =
             m_stateMachineComponent.IsInitialized &&
@@ -171,6 +177,11 @@ public sealed class PlayerRootController : MonoBehaviour
         {
             m_attackController =
                 GetComponent<PlayerAttackController>();
+        }
+        if (m_splineGrindController == null)
+        {
+            m_splineGrindController =
+                GetComponent<SplineGrindController>();
         }
     }
 
