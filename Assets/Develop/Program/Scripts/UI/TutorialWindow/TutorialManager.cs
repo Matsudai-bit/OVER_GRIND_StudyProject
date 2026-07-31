@@ -26,16 +26,11 @@ public class TutorialManager : MonoBehaviour
     [Header("RectTransform")]
     [SerializeField] private RectTransform currentRect;
     [SerializeField] private RectTransform nextRect;
+    [SerializeField] private RectTransform slideRoot;
 
-    [Header("紙芝居アニメーション設定")]
+    [Header("スライド設定")]
     [SerializeField] private float slideTime = 0.4f;
     [SerializeField] private Ease ease = Ease.OutCubic;
-    [Tooltip("後ろで待機しているカードの位置ズレ")]
-    [SerializeField] private Vector2 backOffset = new Vector2(0f, -60f);
-    [Tooltip("後ろで待機しているカードの縮小率")]
-    [SerializeField] private float backScale = 0.85f;
-    [Tooltip("後ろで待機しているカードの不透明度")]
-    [SerializeField] private float backAlpha = 0.6f;
 
     [Header("ページインジケーター")]
     [SerializeField] private Transform dotRoot;
@@ -59,6 +54,11 @@ public class TutorialManager : MonoBehaviour
     /// アニメーション中か
     /// </summary>
     private bool isAnimating = false;
+
+    /// <summary>
+    /// スライド幅
+    /// </summary>
+    private float slideWidth;
 
     /// <summary>
     /// スライドごとにデコード済みのGIFフレームをキャッシュしておく
@@ -94,14 +94,16 @@ public class TutorialManager : MonoBehaviour
 
         currentIndex = 0;
 
+        slideWidth = slideRoot.rect.width + currentRect.rect.width;
+
         currentRect.gameObject.SetActive(true);
         currentRect.anchoredPosition = Vector2.zero;
         currentRect.localScale = Vector3.one;
         currentCanvasGroup.alpha = 1f;
 
-        nextRect.anchoredPosition = backOffset;
-        nextRect.localScale = Vector3.one * backScale;
-        nextCanvasGroup.alpha = backAlpha;
+        nextRect.anchoredPosition = new Vector2(slideWidth, 0);
+        nextRect.localScale = Vector3.one;
+        nextCanvasGroup.alpha = 1f;
         nextRect.gameObject.SetActive(false);
 
         // すでにデコード済みならそのまま再生、未デコードなら全スライドを順にデコードする
@@ -127,8 +129,6 @@ public class TutorialManager : MonoBehaviour
         {
             byte[] gifBytes = tutorialData.Slides[i].GifBytes;
 
-            Debug.Log($"[TutorialManager] Slide{i} GifBytes={(gifBytes == null ? "null" : gifBytes.Length + "byte")}");
-
             if (gifBytes == null)
             {
                 Debug.LogError($"{i}番目のスライドにGIFファイルが設定されていません");
@@ -141,12 +141,12 @@ public class TutorialManager : MonoBehaviour
                 UniGif.GetTextureListCoroutine(gifBytes, (gifTexList, loopCount, width, height) =>
                 {
                     frames = gifTexList;
-                    Debug.Log($"[TutorialManager] Slide{i} デコード完了 frames={(gifTexList == null ? "null" : gifTexList.Count.ToString())}");
                 })
             );
 
             slideFramesCache[i] = frames;
 
+            // 表示中のスライドのデコードが終わったタイミングで再生を始める
             if (i == currentIndex)
             {
                 SetSlide(currentGifPlayer, currentOverlayImage, currentIndex);
@@ -271,7 +271,7 @@ public class TutorialManager : MonoBehaviour
             return;
         }
 
-        PlayTransition(currentIndex + 1);
+        PlayTransition(currentIndex + 1, slideWidth);
     }
 
     private void PreviousPage()
@@ -279,36 +279,28 @@ public class TutorialManager : MonoBehaviour
         if (currentIndex <= 0)
             return;
 
-        PlayTransition(currentIndex - 1);
+        PlayTransition(currentIndex - 1, -slideWidth);
     }
 
     /// <summary>
-    /// 紙芝居風の前後移動アニメーション。
-    /// 表のカードを奥へ、奥で待機していたカードを表へ動かす。
-    /// 進む/戻るは同じロジックの向き違いなだけなので共通化している。
+    /// 横スライドによるページ送りアニメーション。
+    /// enterFromXが正なら次へ(右から登場)、負なら前へ(左から登場)。
     /// </summary>
-    private void PlayTransition(int targetIndex)
+    private void PlayTransition(int targetIndex, float enterFromX)
     {
         isAnimating = true;
 
         nextRect.gameObject.SetActive(true);
-        nextRect.anchoredPosition = backOffset;
-        nextRect.localScale = Vector3.one * backScale;
-        nextCanvasGroup.alpha = backAlpha;
+        nextRect.anchoredPosition = new Vector2(enterFromX, 0);
+        nextRect.localScale = Vector3.one;
+        nextCanvasGroup.alpha = 1f;
 
         SetSlide(nextGifPlayer, nextOverlayImage, targetIndex);
 
         Sequence sequence = DOTween.Sequence();
 
-        // 表 → 奥(後ろへ下がる)
-        sequence.Join(currentRect.DOAnchorPos(backOffset, slideTime));
-        sequence.Join(currentRect.DOScale(backScale, slideTime));
-        sequence.Join(currentCanvasGroup.DOFade(backAlpha, slideTime));
-
-        // 奥 → 表(手前に迫り出す)
-        sequence.Join(nextRect.DOAnchorPos(Vector2.zero, slideTime));
-        sequence.Join(nextRect.DOScale(1f, slideTime));
-        sequence.Join(nextCanvasGroup.DOFade(1f, slideTime));
+        sequence.Join(currentRect.DOAnchorPosX(-enterFromX, slideTime));
+        sequence.Join(nextRect.DOAnchorPosX(0, slideTime));
 
         sequence.SetEase(ease);
 
@@ -322,11 +314,9 @@ public class TutorialManager : MonoBehaviour
             (currentCanvasGroup, nextCanvasGroup) = (nextCanvasGroup, currentCanvasGroup);
             (currentRect, nextRect) = (nextRect, currentRect);
 
-            // 新しいNext(=元Current)を奥の待機状態に戻して隠す
+            // 新しいNext(=元Current)を画面外へ戻して待機
             nextGifPlayer.Stop();
-            nextRect.anchoredPosition = backOffset;
-            nextRect.localScale = Vector3.one * backScale;
-            nextCanvasGroup.alpha = backAlpha;
+            nextRect.anchoredPosition = new Vector2(enterFromX, 0);
             nextRect.gameObject.SetActive(false);
 
             // ページインジケーター更新
