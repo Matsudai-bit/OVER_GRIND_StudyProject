@@ -18,10 +18,13 @@ public class SplineGrindController : MonoBehaviour
     private Rigidbody m_rb;
     private SplineRailInfo currentRail;
 
-
+    [DebugParameterField]
     private float currentT = 0f;       // 0.0 ~ 1.0 の進捗率
+    [DebugParameterField]
     private float splineLength = 0f;   // レールの総延長（メートル）
+    [DebugParameterField]
     private float currentSpeed = 0f;   // 現在のプレイヤーのリアルタイム速度
+    [DebugParameterField]
     private int directionFactor = 1;   // 1 = 順方向, -1 = 逆方向
 
     private void Awake()
@@ -42,6 +45,8 @@ public class SplineGrindController : MonoBehaviour
     /// </summary>
     public void StartGrind(SplineRailInfo rail)
     {
+        Debug.Log("グラインドの開始");
+
         currentRail = rail;
         splineLength = rail.Container.CalculateLength();
 
@@ -71,6 +76,11 @@ public class SplineGrindController : MonoBehaviour
     {
         if (currentRail == null) return;
 
+        if (splineLength < 1.0f)
+        {
+            Debug.LogError("距離が短すぎます");
+        }
+
         // 【ここがポイント！】速度ベースでT値を進める（逆走時はマイナスされる）
         float deltaT = (currentSpeed / splineLength) * Time.deltaTime;
         currentT += deltaT * directionFactor;
@@ -90,7 +100,8 @@ public class SplineGrindController : MonoBehaviour
         Vector3 nextPosition = currentRail.Container.EvaluatePosition(currentT);
         Vector3 nextTangent = currentRail.Container.EvaluateTangent(currentT);
 
-        transform.position = nextPosition + Vector3.up * 0.4f;
+
+        transform.position = nextPosition + Vector3.up * 2.4f;
         if (nextTangent != Vector3.zero)
         {
             // 逆走時は回転も180度反転させる
@@ -106,22 +117,20 @@ public class SplineGrindController : MonoBehaviour
     private void ExitGrind(bool isEndOfRail)
     {
         IsGrinding = false;
-        var direction = (Vector3)currentRail.Container.EvaluateTangent(Mathf.Clamp(currentT, 0.0f, 0.99f));
-        
-        
+        var direction = (Vector3)currentRail.Container.EvaluateTangent(Mathf.Clamp(currentT, 0.1f, 0.99f));
+      
+       
         // 離脱時のベクトルの計算（レールの向き × 最終速度）
-        Vector3 exitVelocity = direction.normalized * currentSpeed * directionFactor * 0.5f;
+        Vector3 exitVelocity = direction.normalized * currentSpeed * new float3(directionFactor, 1.0f, directionFactor) ;
 
-        if (!isEndOfRail)
+        if (currentRail.IsBoostRail)
         {
-            // 途中ジャンプなら、上方向へのベクトルの足し算などを行う
-            exitVelocity += Vector3.up * 10f;
+            // ※ここでプレイヤーの元の物理挙動を有効化し、exitVelocity を Rigidbody.velocity 等にブチ込む！
+            m_rb.linearVelocity = exitVelocity * exitSpeedScale;
         }
-
-        // ※ここでプレイヤーの元の物理挙動を有効化し、exitVelocity を Rigidbody.velocity 等にブチ込む！
-        m_rb.linearVelocity = exitVelocity * exitSpeedScale;
+        m_rb.linearVelocity = exitVelocity;
 
         currentRail = null;
-        Debug.Log("グラインド終了！慣性速度: " + exitVelocity.magnitude);
+        Debug.Log("グラインド終了！飛び出し速度" + exitVelocity * exitSpeedScale);
     }
 }
