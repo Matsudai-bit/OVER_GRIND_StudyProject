@@ -3,6 +3,8 @@ using UnityEngine.InputSystem;
 
 namespace Daiki
 {
+    using System;
+    using System.Collections;
     using UnityEngine;
     using UnityEngine.InputSystem;
     using UnityEngine.Splines;
@@ -55,9 +57,11 @@ namespace Daiki
         private Rigidbody rb;
         private SplineGrindController m_splineGrindController;
         private Camera mainCamera;
+        private bool m_previousGrind;
 
         private Vector2 moveInput;   // Input Systemから受け取る移動入力
         private bool isGrounded;
+        private bool noneRailCollision = false;
 
         // 接地しているオブジェクト数のカウンター
         // OnCollisionEnter/Exit は同フレームに複数発生しうるためカウント方式を採用
@@ -83,6 +87,17 @@ namespace Daiki
 
         private void FixedUpdate()
         {
+            if (m_previousGrind == true && m_splineGrindController.IsGrinding == false)
+            {
+                noneRailCollision = true;
+                StartCoroutine(DelayCoroutine(3.0f, () =>
+                {
+                    noneRailCollision = false;
+                }));
+            }
+            // 前フレームグラインドしていたかどうかの取得
+            m_previousGrind = m_splineGrindController.IsGrinding;
+
             // isGrounded は Collision コールバックで更新されるため、ここでは参照するだけ
             HandleMovement();
             HandleJump();
@@ -90,7 +105,12 @@ namespace Daiki
 
           
         }
-
+        // 一定時間後に処理を呼び出すコルーチン
+        private IEnumerator DelayCoroutine(float seconds, Action action)
+        {
+            yield return new WaitForSeconds(seconds);
+            action?.Invoke();
+        }
         // =========================================================
         // 衝突コールバック による接地判定
         // =========================================================
@@ -136,7 +156,7 @@ namespace Daiki
                     hasGroundNormal = true;
 
                     // レールだった場合
-                    if (collision.gameObject.CompareTag("Rail"))
+                    if (!noneRailCollision && collision.gameObject.CompareTag("Rail"))
                     {
                         // スプラインアニメーションが動いていれば
                         if (m_splineGrindController && !m_splineGrindController.IsGrinding)
