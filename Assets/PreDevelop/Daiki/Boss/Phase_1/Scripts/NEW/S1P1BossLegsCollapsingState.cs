@@ -60,12 +60,12 @@ public sealed class S1P1BossLegsCollapsingState : StateBase<BossController>
             return;
         }
 
-        m_elapsedTime += deltaTime;
+        //m_elapsedTime += deltaTime;
 
-        if (m_elapsedTime < m_transitionDuration)
-        {
-            return;
-        }
+        //if (m_elapsedTime < m_transitionDuration)
+        //{
+        //    return;
+        //}
 
         Owner.SetStateExecutionStatus(
             StateExecutionStatus.SUCCEEDED);

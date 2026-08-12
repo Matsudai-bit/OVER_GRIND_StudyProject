@@ -4,6 +4,11 @@ using UnityEngine;
 /// ボス全体の状態実行を管理します。
 /// </summary>
 [DisallowMultipleComponent]
+[RequireComponent(typeof(BossPhaseController))]
+[RequireComponent(typeof(BossAnimationController))]
+[RequireComponent(typeof(BossMotor))]
+[RequireComponent(typeof(AttackHitboxRegistry))]
+[RequireComponent(typeof(BossNavigation))]
 public sealed class BossController : MonoBehaviour, IStateStatusProvider
 {
     // フェーズ管理
@@ -22,12 +27,17 @@ public sealed class BossController : MonoBehaviour, IStateStatusProvider
     [SerializeField]
     private AttackHitboxRegistry m_attackHitboxRegistry;
 
+    // 移動ナビゲーション
+    [SerializeField]
+    private BossNavigation m_bossNavigation;
+
     // 現在のステート実行状態
     [SerializeField, Header("デバッグ")]
     private StateExecutionStatus m_currentStatus = StateExecutionStatus.SUCCEEDED;
 
     // ボス全体で使用するステートマシン
     private StateMachine<BossController> m_stateMachine;
+
 
     /// <summary>
     /// ステートマシンを取得します。
@@ -53,6 +63,11 @@ public sealed class BossController : MonoBehaviour, IStateStatusProvider
     /// 攻撃判定管理を取得します。
     /// </summary>
     public AttackHitboxRegistry AttackHitboxRegistry => m_attackHitboxRegistry;
+
+    /// <summary>
+    /// ボスナビゲーションを取得する
+    /// </summary>
+    public BossNavigation Navigation => m_bossNavigation;
 
     /// <summary>
     /// 初期化します。
@@ -120,6 +135,11 @@ public sealed class BossController : MonoBehaviour, IStateStatusProvider
         if (m_attackHitboxRegistry == null)
         {
             m_attackHitboxRegistry = GetComponent<AttackHitboxRegistry>();
+        }
+
+        if (m_bossNavigation == null)
+        {
+            m_bossNavigation = GetComponent<BossNavigation>();
         }
     }
 }

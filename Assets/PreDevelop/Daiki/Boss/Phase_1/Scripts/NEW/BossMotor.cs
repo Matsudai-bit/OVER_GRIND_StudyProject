@@ -14,10 +14,18 @@ public sealed class BossMotor : MonoBehaviour
     [SerializeField, Header("物理移動")]
     private Rigidbody m_rigidbody;
 
+    // 通常移動の最高速度
+    [SerializeField, Header("移動パラメータ"), Min(0.0f)]
+    private float m_moveSpeed = 10.0f;
+
+    // 通常移動の加速度
+    [SerializeField, Min(0.0f)]
+    private float m_acceleration = 10.0f;
+
     /// <summary>
-    /// Rigidbodyを取得します。
+    /// 通常移動の最高速度を取得します。
     /// </summary>
-    public Rigidbody Rigidbody => m_rigidbody;
+    public float MoveSpeed => m_moveSpeed;
 
     /// <summary>
     /// 初期化します。
@@ -33,10 +41,25 @@ public sealed class BossMotor : MonoBehaviour
     /// <summary>
     /// ボスを前方向へ移動します。
     /// </summary>
+    /// <param name="deltaTime">物理フレームの経過時間。</param>
+    public void MoveForward(float deltaTime)
+    {
+        MoveDirection(
+            transform.forward,
+            m_moveSpeed,
+            m_acceleration,
+            deltaTime);
+    }
+
+    /// <summary>
+    /// 指定方向へ移動します。
+    /// </summary>
+    /// <param name="direction">移動方向。</param>
     /// <param name="targetSpeed">目標速度。</param>
     /// <param name="acceleration">加速度。</param>
     /// <param name="deltaTime">物理フレームの経過時間。</param>
-    public void MoveForward(
+    public void MoveDirection(
+        Vector3 direction,
         float targetSpeed,
         float acceleration,
         float deltaTime)
@@ -46,21 +69,33 @@ public sealed class BossMotor : MonoBehaviour
             return;
         }
 
-        float safeTargetSpeed = Mathf.Max(0.0f, targetSpeed);
-        float safeAcceleration = Mathf.Max(0.0f, acceleration);
+        Vector3 horizontalDirection = new Vector3(
+            direction.x,
+            0.0f,
+            direction.z);
+
+        if (horizontalDirection.sqrMagnitude <= Mathf.Epsilon)
+        {
+            return;
+        }
+
+        horizontalDirection.Normalize();
 
         Vector3 targetVelocity =
-            transform.forward * safeTargetSpeed;
+            horizontalDirection *
+            Mathf.Max(0.0f, targetSpeed);
 
         Vector3 currentHorizontalVelocity = new Vector3(
             m_rigidbody.linearVelocity.x,
             0.0f,
             m_rigidbody.linearVelocity.z);
 
-        Vector3 newHorizontalVelocity = Vector3.MoveTowards(
-            currentHorizontalVelocity,
-            targetVelocity,
-            safeAcceleration * deltaTime);
+        Vector3 newHorizontalVelocity =
+            Vector3.MoveTowards(
+                currentHorizontalVelocity,
+                targetVelocity,
+                Mathf.Max(0.0f, acceleration) *
+                deltaTime);
 
         m_rigidbody.linearVelocity = new Vector3(
             newHorizontalVelocity.x,
@@ -98,16 +133,19 @@ public sealed class BossMotor : MonoBehaviour
             return true;
         }
 
-        Quaternion nextRotation = Quaternion.RotateTowards(
-            m_rigidbody.rotation,
-            targetRotation,
-            Mathf.Max(0.0f, rotateSpeed) * deltaTime);
+        Quaternion nextRotation =
+            Quaternion.RotateTowards(
+                m_rigidbody.rotation,
+                targetRotation,
+                Mathf.Max(0.0f, rotateSpeed) *
+                deltaTime);
 
         m_rigidbody.MoveRotation(nextRotation);
 
         return Quaternion.Angle(
             nextRotation,
-            targetRotation) <= ROTATION_ANGLE_THRESHOLD;
+            targetRotation) <=
+            ROTATION_ANGLE_THRESHOLD;
     }
 
     /// <summary>
