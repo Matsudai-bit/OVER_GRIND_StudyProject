@@ -1,28 +1,14 @@
 using UnityEngine;
-using TMPro; // TextMeshProを使用
+using TMPro;
 
-public class ParameterView : MonoBehaviour
+public class ValueTextView : MonoBehaviour
 {
-    [SerializeField] private TextMeshProUGUI hpText;
-    [SerializeField] private TextMeshProUGUI vGaugeText;
+    [SerializeField] private TextMeshProUGUI paramNameText;
+    [SerializeField] private TextMeshProUGUI valueText;
 
-    // HPの表示を更新する
-    public void RenderHP(int hpValue)
+    public void Render(string paramName, string valueString)
     {
-        if (hpText != null)
-        {
-            // hpTextだけを更新する
-            hpText.text = $"HP: {hpValue}";
-        }
-    }
-
-    // Vゲージの表示を更新する
-    public void RenderVGauge(int vGaugeValue)
-    {
-        if (vGaugeText != null)
-        {
-            // "Gauge: " にし、受け取った数値(vGaugeValue)を入れる
-            vGaugeText.text = $"Gauge: {vGaugeValue}";
-        }
+        if (paramNameText != null) paramNameText.text = paramName;
+        if (valueText != null) valueText.text = valueString;
     }
 }
