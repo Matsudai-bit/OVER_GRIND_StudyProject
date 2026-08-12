@@ -9,10 +9,10 @@ public sealed class S1P1BossWalkState : StateBase<BossController>
     private const float WALK_DURATION = 3.0f;
 
     // 目標速度
-    private const float TARGET_SPEED = 100.0f;
+    private const float TARGET_SPEED = 20.0f;
 
     // 加速度
-    private const float ACCELERATION = 100.0f;
+    private const float ACCELERATION = 15.0f;
 
     // Animatorパラメータ名
     private const string WALK_PARAMETER_NAME = "Walk";
