@@ -13,34 +13,34 @@ public class P1BossAttackState : StateBase<P1BossController>
 
     public P1BossAttackState(string attackAnimationTriggerName, P1AttackType attackType)
     {
-        m_attackAnimationTriggerName = attackAnimationTriggerName;
-        m_attackType = attackType;
-        m_animationEndedAction = (AttackEventData data) =>
-        {
-            if (data.AttackType== attackType && data.AttackEventType == AttackEventType.ANIMATION_END)
-                Owner.SetStateExecutionStatus(StateExecutionStatus.SUCCEEDED);
-        };
+        //m_attackAnimationTriggerName = attackAnimationTriggerName;
+        //m_attackType = attackType;
+        //m_animationEndedAction = (AttackEventData data) =>
+        //{
+        //    if (data.AttackType== attackType && data.AttackEventType == AttackEventType.ANIMATION_END)
+        //        Owner.SetStateExecutionStatus(StateExecutionStatus.SUCCEEDED);
+        //};
 
-        m_enableHitBox = (AttackEventData data) =>
-        {
-            if (data.AttackType == attackType && data.AttackEventType == AttackEventType.HITBOX_ENABLE)
-            {
-                Debug.Log(m_attackAnimationTriggerName + "のヒットボックス有効化");
-                Owner.attackHitBox[m_attackType].EnableHitbox();
+        //m_enableHitBox = (AttackEventData data) =>
+        //{
+        //    if (data.AttackType == attackType && data.AttackEventType == AttackEventType.HITBOX_ENABLE)
+        //    {
+        //        Debug.Log(m_attackAnimationTriggerName + "のヒットボックス有効化");
+        //        Owner.attackHitBox[m_attackType].EnableHitbox();
 
-            }
+        //    }
                 
-        };
-        m_disableHitBox = (AttackEventData data) =>
-        {
-            if (data.AttackType == attackType && data.AttackEventType == AttackEventType.HITBOX_DISABLE)
-            {
-                Debug.Log(m_attackAnimationTriggerName + "のヒットボックス無効か");
-                Owner.attackHitBox[m_attackType].DisableHitbox();
+        //};
+        //m_disableHitBox = (AttackEventData data) =>
+        //{
+        //    if (data.AttackType == attackType && data.AttackEventType == AttackEventType.HITBOX_DISABLE)
+        //    {
+        //        Debug.Log(m_attackAnimationTriggerName + "のヒットボックス無効か");
+        //        Owner.attackHitBox[m_attackType].DisableHitbox();
 
-            }
+        //    }
 
-        };
+        //};
 
     }
     protected override void OnStartState()

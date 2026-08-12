@@ -3,47 +3,37 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// UŒ‚—pCollider‚ÌÕ“Ë”»’è‚ğŠÇ—‚µ‚Ü‚·B
+/// æ”»æ’ƒç”¨Colliderã®è¡çªåˆ¤å®šã‚’ç®¡ç†ã—ã¾ã™ã€‚
 /// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(Collider))]
 public sealed class AttackHitbox : MonoBehaviour
 {
     /// <summary>
-    /// UŒ‚‚ª‘ÎÛ‚É–½’†‚µ‚½‚Æ‚«‚É’Ê’m‚³‚ê‚Ü‚·B
+    /// æ”»æ’ƒãŒå¯¾è±¡ã«å‘½ä¸­ã—ãŸã¨ãã«é€šçŸ¥ã•ã‚Œã¾ã™ã€‚
     /// </summary>
     public event Action<IDamageable> AttackHit;
 
-    /// <summary>
-    /// UŒ‚”»’è‚Ég—p‚·‚éColliderB
-    /// </summary>
-    [SerializeField]
+    // æ”»æ’ƒåˆ¤å®šã«ä½¿ç”¨ã™ã‚‹Collider
+    [SerializeField, Header("æ”»æ’ƒåˆ¤å®š")]
     private Collider m_hitboxCollider;
 
-    /// <summary>
-    /// UŒ‚‘ÎÛ‚ÌƒŒƒCƒ„[B
-    /// </summary>
+    // æ”»æ’ƒå¯¾è±¡ã®ãƒ¬ã‚¤ãƒ¤ãƒ¼
     [SerializeField]
     private LayerMask m_targetLayerMask;
 
-    /// <summary>
-    /// Šî–{ƒ_ƒ[ƒW—ÊB
-    /// </summary>
+    // åŸºæœ¬ãƒ€ãƒ¡ãƒ¼ã‚¸é‡
     [SerializeField]
     private int m_defaultDamage = 10;
 
-    /// <summary>
-    /// Œ»İ‚ÌUŒ‚‚Åg—p‚·‚éƒ_ƒ[ƒW—ÊB
-    /// </summary>
+    // ç¾åœ¨ã®æ”»æ’ƒã§ä½¿ç”¨ã™ã‚‹ãƒ€ãƒ¡ãƒ¼ã‚¸é‡
     private int m_currentDamage;
 
-    /// <summary>
-    /// Œ»İ‚ÌUŒ‚‚Å–½’†Ï‚İ‚Ì‘ÎÛIDB
-    /// </summary>
+    // ç¾åœ¨ã®æ”»æ’ƒã§å‘½ä¸­æ¸ˆã¿ã®å¯¾è±¡ID
     private readonly HashSet<int> m_hitTargetIds = new();
 
     /// <summary>
-    /// ‰Šú‰»‚µ‚Ü‚·B
+    /// åˆæœŸåŒ–ã—ã¾ã™ã€‚
     /// </summary>
     private void Awake()
     {
@@ -55,22 +45,20 @@ public sealed class AttackHitbox : MonoBehaviour
         if (m_hitboxCollider == null)
         {
             Debug.LogError(
-                $"{nameof(Collider)}‚ªŒ©‚Â‚©‚è‚Ü‚¹‚ñB",
+                $"{nameof(Collider)}ãŒè¦‹ã¤ã‹ã‚Šã¾ã›ã‚“ã€‚",
                 this);
 
             enabled = false;
             return;
         }
 
-        // UŒ‚”»’è‚ğTrigger‚Æ‚µ‚Äg—p‚µ‚Ü‚·B
         m_hitboxCollider.isTrigger = true;
         m_hitboxCollider.enabled = false;
-
         m_currentDamage = m_defaultDamage;
     }
 
     /// <summary>
-    /// UŒ‚”»’è‚ğ—LŒø‚É‚µ‚Ü‚·B
+    /// æ”»æ’ƒåˆ¤å®šã‚’æœ‰åŠ¹ã«ã—ã¾ã™ã€‚
     /// </summary>
     public void EnableHitbox()
     {
@@ -78,29 +66,25 @@ public sealed class AttackHitbox : MonoBehaviour
     }
 
     /// <summary>
-    /// ƒ_ƒ[ƒW—Ê‚ğw’è‚µ‚ÄUŒ‚”»’è‚ğ—LŒø‚É‚µ‚Ü‚·B
+    /// ãƒ€ãƒ¡ãƒ¼ã‚¸é‡ã‚’æŒ‡å®šã—ã¦æ”»æ’ƒåˆ¤å®šã‚’æœ‰åŠ¹ã«ã—ã¾ã™ã€‚
     /// </summary>
-    /// <param name="damage">—^‚¦‚éƒ_ƒ[ƒW—ÊB</param>
+    /// <param name="damage">ä¸ãˆã‚‹ãƒ€ãƒ¡ãƒ¼ã‚¸é‡ã€‚</param>
     public void EnableHitbox(int damage)
     {
         if (m_hitboxCollider == null)
         {
-            Debug.LogWarning(
-                $"{nameof(Collider)}‚ªİ’è‚³‚ê‚Ä‚¢‚Ü‚¹‚ñB",
-                this);
-
             return;
         }
 
-        // V‚µ‚¢UŒ‚‚Æ‚µ‚Ä–½’†—š—ğ‚ğ‰Šú‰»‚µ‚Ü‚·B
         m_hitTargetIds.Clear();
         m_currentDamage = Mathf.Max(0, damage);
-        m_hitboxCollider.enabled = true;
+
         gameObject.SetActive(true);
+        m_hitboxCollider.enabled = true;
     }
 
     /// <summary>
-    /// UŒ‚”»’è‚ğ–³Œø‚É‚µ‚Ü‚·B
+    /// æ”»æ’ƒåˆ¤å®šã‚’ç„¡åŠ¹ã«ã—ã¾ã™ã€‚
     /// </summary>
     public void DisableHitbox()
     {
@@ -111,26 +95,20 @@ public sealed class AttackHitbox : MonoBehaviour
 
         m_hitboxCollider.enabled = false;
         gameObject.SetActive(false);
-
     }
 
     /// <summary>
-    /// Trigger‚ÉN“ü‚µ‚½‘ÎÛ‚ğˆ—‚µ‚Ü‚·B
+    /// Triggerã«ä¾µå…¥ã—ãŸå¯¾è±¡ã‚’å‡¦ç†ã—ã¾ã™ã€‚
     /// </summary>
-    /// <param name="other">N“ü‚µ‚½ColliderB</param>
+    /// <param name="other">ä¾µå…¥ã—ãŸColliderã€‚</param>
     private void OnTriggerEnter(Collider other)
     {
-        if (other == null)
+        if (other == null ||
+            !IsTargetLayer(other.gameObject.layer))
         {
             return;
         }
 
-        if (!IsTargetLayer(other.gameObject.layer))
-        {
-            return;
-        }
-
-        // Collider‚ÌeŠK‘w‚©‚çƒ_ƒ[ƒWó•tƒRƒ“ƒ|[ƒlƒ“ƒg‚ğ’T‚µ‚Ü‚·B
         IDamageable damageReceiver =
             other.GetComponentInParent<IDamageable>();
 
@@ -139,17 +117,10 @@ public sealed class AttackHitbox : MonoBehaviour
             return;
         }
 
-        Component receiverComponent = damageReceiver as Component;
+        int targetID = GetDamageReceiverID(damageReceiver);
 
-        if (receiverComponent == null)
-        {
-            return;
-        }
-
-        int targetId = receiverComponent.GetInstanceID();
-
-        // “¯‚¶UŒ‚’†‚É“¯ˆê‘ÎÛ‚Ö•¡”‰ñ–½’†‚·‚é‚±‚Æ‚ğ–h‚¬‚Ü‚·B
-        if (!m_hitTargetIds.Add(targetId))
+        if (targetID == 0 ||
+            !m_hitTargetIds.Add(targetID))
         {
             return;
         }
@@ -159,12 +130,32 @@ public sealed class AttackHitbox : MonoBehaviour
     }
 
     /// <summary>
-    /// ‘ÎÛƒŒƒCƒ„[‚©Šm”F‚µ‚Ü‚·B
+    /// ãƒ€ãƒ¡ãƒ¼ã‚¸å—ä»˜å¯¾è±¡ã‚’è­˜åˆ¥ã™ã‚‹IDã‚’å–å¾—ã—ã¾ã™ã€‚
     /// </summary>
-    /// <param name="layer">Šm”F‚·‚éƒŒƒCƒ„[B</param>
+    /// <param name="damageReceiver">ãƒ€ãƒ¡ãƒ¼ã‚¸å—ä»˜å¯¾è±¡ã€‚</param>
+    /// <returns>å¯¾è±¡ã®Instance IDã€‚</returns>
+    private int GetDamageReceiverID(IDamageable damageReceiver)
+    {
+        if (damageReceiver is Hurtbox hurtbox)
+        {
+            return hurtbox.GetDamageReceiverInstanceId();
+        }
+
+        if (damageReceiver is Component component)
+        {
+            return component.GetInstanceID();
+        }
+
+        return 0;
+    }
+
+    /// <summary>
+    /// å¯¾è±¡ãƒ¬ã‚¤ãƒ¤ãƒ¼ã‹ç¢ºèªã—ã¾ã™ã€‚
+    /// </summary>
+    /// <param name="layer">ç¢ºèªã™ã‚‹ãƒ¬ã‚¤ãƒ¤ãƒ¼ã€‚</param>
     /// <returns>
-    /// trueFUŒ‚‘ÎÛ‚ÌƒŒƒCƒ„[‚Å‚·B
-    /// falseFUŒ‚‘ÎÛ‚ÌƒŒƒCƒ„[‚Å‚Í‚ ‚è‚Ü‚¹‚ñB
+    /// trueï¼šæ”»æ’ƒå¯¾è±¡ã®ãƒ¬ã‚¤ãƒ¤ãƒ¼ã§ã™ã€‚
+    /// falseï¼šæ”»æ’ƒå¯¾è±¡ã®ãƒ¬ã‚¤ãƒ¤ãƒ¼ã§ã¯ã‚ã‚Šã¾ã›ã‚“ã€‚
     /// </returns>
     private bool IsTargetLayer(int layer)
     {
@@ -173,7 +164,7 @@ public sealed class AttackHitbox : MonoBehaviour
     }
 
     /// <summary>
-    /// Inspectorİ’è‚ÉCollider‚ğ©“®æ“¾‚µ‚Ü‚·B
+    /// Inspectorè¨­å®šæ™‚ã«Colliderã‚’è‡ªå‹•å–å¾—ã—ã¾ã™ã€‚
     /// </summary>
     private void Reset()
     {
