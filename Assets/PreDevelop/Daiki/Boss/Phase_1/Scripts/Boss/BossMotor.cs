@@ -163,4 +163,19 @@ public sealed class BossMotor : MonoBehaviour
             m_rigidbody.linearVelocity.y,
             0.0f);
     }
+
+    /// <summary>
+    /// 指定位置へ物理移動します。
+    /// </summary>
+    /// <param name="targetPosition">移動先座標。</param>
+    public void MovePosition(Vector3 targetPosition)
+    {
+        if (m_rigidbody == null)
+        {
+            return;
+        }
+
+        m_rigidbody.MovePosition(targetPosition);
+    }
+
 }

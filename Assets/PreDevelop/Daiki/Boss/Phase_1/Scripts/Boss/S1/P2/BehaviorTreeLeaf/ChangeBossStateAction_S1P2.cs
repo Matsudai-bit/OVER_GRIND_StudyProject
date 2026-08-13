@@ -9,11 +9,11 @@ using Action = Unity.Behavior.Action;
 /// </summary>
 [Serializable, GeneratePropertyBag]
 [NodeDescription(
-    name: "ChangeBossStateAction_S1P1",
-    story: "Change Stage1Phase1 [ControllerObject] state to [NextStateID]",
+    name: "ChangeBossStateAction_S1P2",
+    story: "Change Stage1Phase2 [ControllerObject] state to [NextStateID]",
     category: "Action",
-    id: "c73c1654d29147498f5092237f8631c1")]
-public partial class ChangeBossStateAction_S1P1 : Action
+    id: "f8f0be769590a5c1ead3ce45dfd3bbea")]
+public partial class ChangeBossStateAction_S1P2 : Action
 {
     // 待機時間
     private const float IDLE_DURATION = 3.0f;
@@ -54,22 +54,8 @@ public partial class ChangeBossStateAction_S1P1 : Action
                     IDLE_DURATION);
                 break;
 
-            case S1BossStateID.P1_WALK:
-                bossController.StateMachine.ChangeState<S1P1BossWalkState>();
-                break;
-
-            case S1BossStateID.P1_ATTACK_RIGHT:
-                return ChangeS1P1AttackState(
-                    bossController,
-                    S1P1BossAttackType.RIGHT_LEG);
-
-            case S1BossStateID.P1_ATTACK_LEFT:
-                return ChangeS1P1AttackState(
-                    bossController,
-                    S1P1BossAttackType.LEFT_LEG);
-
-            case S1BossStateID.P1_TURN:
-                bossController.StateMachine.ChangeState<S1P1BossTurnState>();
+            case S1BossStateID.P2_ATTACK_CHARGING:
+                ChangeS1P2AttackState(bossController, S1P2BossAttackType.CHARGING);
                 break;
 
             default:
@@ -86,18 +72,18 @@ public partial class ChangeBossStateAction_S1P1 : Action
     /// <param name="bossController">対象ボス。</param>
     /// <param name="attackType">攻撃種類。</param>
     /// <returns>Actionノードの実行結果。</returns>
-    private Status ChangeS1P1AttackState(
+    private Status ChangeS1P2AttackState(
         BossController bossController,
-        S1P1BossAttackType attackType)
+        S1P2BossAttackType attackType)
     {
-        S1P1BossAttackSettings attackSettings =
+        S1P2BossAttackSettings attackSettings =
             bossController.GetComponentInChildren<
-                S1P1BossAttackSettings>(true);
+                S1P2BossAttackSettings>(true);
 
         if (attackSettings == null)
         {
             LogFailure(
-                $"{nameof(S1P1BossAttackSettings)}が見つかりません。");
+                $"{nameof(S1P2BossAttackSettings)}が見つかりません。");
 
             return Status.Failure;
         }
@@ -113,9 +99,9 @@ public partial class ChangeBossStateAction_S1P1 : Action
             return Status.Failure;
         }
 
-        bossController.StateMachine.ChangeState<S1P1BossAttackState>(
+        bossController.StateMachine.ChangeState<S1P2BossChargingAttackState>(
             animationTriggerName,
-            attackIdentifier);
+            attackIdentifier,null);
 
         return Status.Success;
     }
