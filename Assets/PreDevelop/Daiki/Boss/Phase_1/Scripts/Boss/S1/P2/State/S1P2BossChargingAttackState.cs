@@ -20,10 +20,10 @@ public sealed class S1P2BossChargingAttackState :
     private const float DIRECTION_SQR_THRESHOLD = 0.0001f;
 
     // プレイヤーを追尾して回転する時間
-    private const float ROTATION_DURATION = 2.0f;
+    private const float ROTATION_DURATION = 5.0f;
 
     // 回転速度
-    private const float ROTATION_SPEED = 50.0f;
+    private const float ROTATION_SPEED = 70.0f;
 
     // 最大突進距離
     private const float MAX_CHARGE_DISTANCE = 30.0f;
