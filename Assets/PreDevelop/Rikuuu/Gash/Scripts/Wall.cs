@@ -4,26 +4,32 @@ using UnityEngine;
 public class Wall : MonoBehaviour
 {
     // Decal Projector を含むプレハブ
-    public GameObject decalPrefab; 
+    public GameObject decalPrefab;
+
+    // 接地面からのオフセット距離
+    public float surfaceOffset = 0.01f;
 
     void OnTriggerEnter(Collider other)
     {
         Debug.Log("Hit");
 
-        // 衝突位置を取得
         Vector3 hitPoint = other.ClosestPoint(transform.position);
-
-        // 壁の法線（向き）を取得
         Vector3 hitNormal = transform.forward;
 
-        // デカール生成
-        var decal = Instantiate(
-            decalPrefab,
-            hitPoint,
-            Quaternion.LookRotation(hitNormal)
-        );
+        // ★法線方向に少し手前にずらす
+        Vector3 spawnPosition = hitPoint + hitNormal * surfaceOffset;
 
-        // 壁に追従させる
+        Vector3 swingDirection = Vector3.right;
+        Vector3 projectedSwing = Vector3.ProjectOnPlane(swingDirection, hitNormal).normalized;
+
+        if (projectedSwing.sqrMagnitude < 0.001f)
+        {
+            projectedSwing = Vector3.up;
+        }
+
+        Quaternion decalRotation = Quaternion.LookRotation(hitNormal, projectedSwing);
+
+        var decal = Instantiate(decalPrefab, spawnPosition, decalRotation);
         decal.transform.SetParent(transform);
     }
 }
