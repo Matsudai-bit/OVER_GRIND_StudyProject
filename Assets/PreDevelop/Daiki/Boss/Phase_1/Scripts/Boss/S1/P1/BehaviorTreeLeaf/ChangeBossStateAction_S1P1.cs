@@ -9,11 +9,11 @@ using Action = Unity.Behavior.Action;
 /// </summary>
 [Serializable, GeneratePropertyBag]
 [NodeDescription(
-    name: "ChangeS1BossStateAction",
-    story: "Change [ControllerObject] state to [NextStateID]",
+    name: "ChangeBossStateAction_S1P1",
+    story: "Change Stage1Phase1 [ControllerObject] state to [NextStateID]",
     category: "Action",
     id: "c73c1654d29147498f5092237f8631c1")]
-public partial class ChangeS1BossStateAction : Action
+public partial class ChangeBossStateAction_S1P1 : Action
 {
     // 待機時間
     private const float IDLE_DURATION = 3.0f;
