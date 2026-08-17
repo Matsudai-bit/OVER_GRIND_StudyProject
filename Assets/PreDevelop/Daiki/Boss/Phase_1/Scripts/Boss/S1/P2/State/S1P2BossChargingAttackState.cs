@@ -333,6 +333,15 @@ public sealed class S1P2BossChargingAttackState :
             ChargePhase.FINISHED;
 
         Owner.Motor.StopHorizontalMovement();
+        Owner.SetStateExecutionStatus(
+                    StateExecutionStatus.SUCCEEDED);
+
+        if (Owner.AttackHitboxRegistry .TryGetHitbox(m_attackIdentifier, out AttackHitbox outHitBox) && outHitBox.enabled)
+        {
+            Owner.AttackHitboxRegistry?.DisableHitbox(
+            m_attackIdentifier);
+        }
+ 
     }
 
     /// <summary>
