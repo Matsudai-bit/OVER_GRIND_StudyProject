@@ -16,7 +16,7 @@ using Action = Unity.Behavior.Action;
 public partial class ChangeBossStateAction_S1P2 : Action
 {
     // 待機時間
-    private const float IDLE_DURATION = 3.0f;
+    private const float IDLE_DURATION = 10.0f;
 
     // 操作対象のボス
     [SerializeReference]
