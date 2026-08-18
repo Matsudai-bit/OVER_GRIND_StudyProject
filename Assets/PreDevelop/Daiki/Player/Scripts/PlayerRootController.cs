@@ -11,10 +11,21 @@ using UnityEngine;
 [RequireComponent(typeof(PlayerAnimationPresenter))]
 [RequireComponent(typeof(PlayerStateMachineComponent))]
 [RequireComponent(typeof(PlayerAttackController))]
+[RequireComponent(typeof(SplineGrindController))]
 public sealed class PlayerRootController : MonoBehaviour
 {
-    // プレイヤーの物理ボディ
+    // 通常移動パラメータ
+    [SerializeField, Header("パラメータ")]
+    private PlayerMovementParameterAsset
+        m_movementParameterAsset;
+
+    // Vブースト移動パラメータ
     [SerializeField]
+    private PlayerVBoostMovementParameterAsset
+        m_vBoostMovementParameterAsset;
+
+    // プレイヤーの物理ボディ
+    [SerializeField, Header("コンポーネント")]
     private Rigidbody m_playerRigidbody;
 
     // プレイヤー入力
@@ -33,19 +44,24 @@ public sealed class PlayerRootController : MonoBehaviour
     [SerializeField]
     private PlayerAnimationPresenter m_animationPresenter;
 
-    // プレイヤーのステートマシン
+    // プレイヤーステートマシン
     [SerializeField]
-    private PlayerStateMachineComponent m_stateMachineComponent;
+    private PlayerStateMachineComponent
+        m_stateMachineComponent;
 
-    // プレイヤーの攻撃コントローラ
+    // プレイヤー攻撃機能
     [SerializeField]
     private PlayerAttackController m_attackController;
+
+    // スプライングラインド機能
+    [SerializeField]
+    private SplineGrindController m_splineGrindController;
 
     // 初期化されているか
     private bool m_isInitialized;
 
     /// <summary>
-    /// プレイヤーを構成するコンポーネントを初期化します。
+    /// プレイヤーを初期化します。
     /// </summary>
     private void Awake()
     {
@@ -58,9 +74,19 @@ public sealed class PlayerRootController : MonoBehaviour
             return;
         }
 
-        // 依存関係の下位から順番に初期化
-        m_monitor.Initialize(m_playerRigidbody);
-        m_motor.Initialize(m_playerRigidbody);
+        m_monitor.Initialize(
+            m_playerRigidbody);
+
+        // MotorにはRigidbodyだけを渡す
+        m_motor.Initialize(
+            m_playerRigidbody);
+
+        if (!m_motor.IsInitialized)
+        {
+            m_isInitialized = false;
+            enabled = false;
+            return;
+        }
 
         m_animationPresenter.Initialize(
             m_monitor,
@@ -70,10 +96,14 @@ public sealed class PlayerRootController : MonoBehaviour
             m_inputReader,
             m_monitor,
             m_motor,
-            m_animationPresenter, 
-            m_attackController);
+            m_animationPresenter,
+            m_attackController,
+            m_splineGrindController,
+            m_movementParameterAsset,
+            m_vBoostMovementParameterAsset);
 
         m_isInitialized =
+            m_motor.IsInitialized &&
             m_stateMachineComponent.IsInitialized &&
             m_animationPresenter.IsInitialized;
     }
@@ -89,7 +119,6 @@ public sealed class PlayerRootController : MonoBehaviour
         }
 
         m_inputReader.EnableInput();
-        
     }
 
     /// <summary>
@@ -132,28 +161,32 @@ public sealed class PlayerRootController : MonoBehaviour
     }
 
     /// <summary>
-    /// 同一GameObjectから必要なコンポーネントを取得します。
+    /// 必要なコンポーネント参照を取得します。
     /// </summary>
     private void ResolveReferences()
     {
         if (m_playerRigidbody == null)
         {
-            m_playerRigidbody = GetComponent<Rigidbody>();
+            m_playerRigidbody =
+                GetComponent<Rigidbody>();
         }
 
         if (m_inputReader == null)
         {
-            m_inputReader = GetComponent<PlayerInputReader>();
+            m_inputReader =
+                GetComponent<PlayerInputReader>();
         }
 
         if (m_monitor == null)
         {
-            m_monitor = GetComponent<PlayerMonitor>();
+            m_monitor =
+                GetComponent<PlayerMonitor>();
         }
 
         if (m_motor == null)
         {
-            m_motor = GetComponent<PlayerMotor>();
+            m_motor =
+                GetComponent<PlayerMotor>();
         }
 
         if (m_animationPresenter == null)
@@ -167,23 +200,52 @@ public sealed class PlayerRootController : MonoBehaviour
             m_stateMachineComponent =
                 GetComponent<PlayerStateMachineComponent>();
         }
+
         if (m_attackController == null)
         {
             m_attackController =
                 GetComponent<PlayerAttackController>();
         }
+
+        if (m_splineGrindController == null)
+        {
+            m_splineGrindController =
+                GetComponent<SplineGrindController>();
+        }
     }
 
     /// <summary>
-    /// 必要なコンポーネントが設定されているか確認します。
+    /// 初期化に必要な参照を確認します。
     /// </summary>
     /// <returns>
-    /// true：必要な参照が設定されています。
+    /// true：必要な参照があります。
     /// false：必要な参照が不足しています。
     /// </returns>
     private bool ValidateReferences()
     {
         bool isValid = true;
+
+        if (m_movementParameterAsset == null)
+        {
+            Debug.LogError(
+                $"[{nameof(PlayerRootController)}] " +
+                $"{nameof(PlayerMovementParameterAsset)}" +
+                "が設定されていません。",
+                this);
+
+            isValid = false;
+        }
+
+        if (m_vBoostMovementParameterAsset == null)
+        {
+            Debug.LogError(
+                $"[{nameof(PlayerRootController)}] " +
+                $"{nameof(PlayerVBoostMovementParameterAsset)}" +
+                "が設定されていません。",
+                this);
+
+            isValid = false;
+        }
 
         if (m_playerRigidbody == null)
         {
@@ -240,6 +302,26 @@ public sealed class PlayerRootController : MonoBehaviour
             Debug.LogError(
                 $"[{nameof(PlayerRootController)}] " +
                 "PlayerStateMachineComponentが見つかりません。",
+                this);
+
+            isValid = false;
+        }
+
+        if (m_attackController == null)
+        {
+            Debug.LogError(
+                $"[{nameof(PlayerRootController)}] " +
+                "PlayerAttackControllerが見つかりません。",
+                this);
+
+            isValid = false;
+        }
+
+        if (m_splineGrindController == null)
+        {
+            Debug.LogError(
+                $"[{nameof(PlayerRootController)}] " +
+                "SplineGrindControllerが見つかりません。",
                 this);
 
             isValid = false;

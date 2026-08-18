@@ -109,6 +109,17 @@ public class PlayerAttackController : MonoBehaviour
     {
         m_eventMap.Remove(comboStage);
     }
+    /// <summary>
+    /// 指定したコンボ段階の種類イベント履歴を削除します。
+    /// </summary>
+    /// <param name="comboStage">削除するコンボ段階。</param>
+    public void ClearEventHistory(int comboStage, AttackAnimationEventType eventType)
+    {
+        if (HasReceivedEvent(comboStage, eventType))
+        {
+            m_eventMap[comboStage].Remove(eventType);
+        }
+    }
 
     /// <summary>
     /// すべてのイベント履歴を削除します。
@@ -167,8 +178,6 @@ public class PlayerAttackController : MonoBehaviour
             comboStage,
             AttackAnimationEventType.ENABLE_HITBOX);
 
-        EnableAttackHitboxes();
-
         Debug.Log(
             $"{nameof(PlayerAttackController)}: " +
             $"攻撃判定開始通知を受信しました。ComboStage={comboStage}",
@@ -186,8 +195,6 @@ public class PlayerAttackController : MonoBehaviour
         RecordAnimationEvent(
             comboStage,
             AttackAnimationEventType.DISABLE_HITBOX);
-
-        DisableAttackHitboxes();
 
         Debug.Log(
             $"{nameof(PlayerAttackController)}: " +

@@ -18,11 +18,23 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
     // プレイヤーアニメーション表示機能
     private PlayerAnimationPresenter m_animationPresenter;
 
-    // プレイヤーアタックコントローラ
+    // プレイヤー攻撃機能
     private PlayerAttackController m_attackController;
 
+    // スプライングラインド機能
+    private SplineGrindController m_splineGrindController;
+
+    // 通常移動パラメータ
+    private PlayerMovementParameterAsset
+        m_movementParameterAsset;
+
+    // Vブースト移動パラメータ
+    private PlayerVBoostMovementParameterAsset
+        m_vBoostMovementParameterAsset;
+
     // プレイヤー用ステートマシン
-    private StateMachine<PlayerStateMachineComponent> m_stateMachine;
+    private StateMachine<PlayerStateMachineComponent>
+        m_stateMachine;
 
     // 初期化されているか
     private bool m_isInitialized;
@@ -30,21 +42,26 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
     /// <summary>
     /// プレイヤー入力を取得します。
     /// </summary>
-    public PlayerInputReader InputReader => m_inputReader;
+    public PlayerInputReader InputReader =>
+        m_inputReader;
 
     /// <summary>
     /// プレイヤー監視機能を取得します。
     /// </summary>
-    public PlayerMonitor Monitor => m_monitor;
+    public PlayerMonitor Monitor =>
+        m_monitor;
 
     /// <summary>
     /// プレイヤー移動機能を取得します。
     /// </summary>
-    public PlayerMotor Motor => m_motor;
+    public PlayerMotor Motor =>
+        m_motor;
+
     /// <summary>
-    /// プレイヤーの攻撃コントローラ
+    /// プレイヤー攻撃機能を取得します。
     /// </summary>
-    public PlayerAttackController AttackController => m_attackController;
+    public PlayerAttackController AttackController =>
+        m_attackController;
 
     /// <summary>
     /// プレイヤーアニメーション表示機能を取得します。
@@ -53,35 +70,52 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
         m_animationPresenter;
 
     /// <summary>
+    /// スプライングラインド機能を取得します。
+    /// </summary>
+    public SplineGrindController GrindController =>
+        m_splineGrindController;
+
+    /// <summary>
+    /// 通常移動パラメータを取得します。
+    /// </summary>
+    public PlayerMovementParameterAsset MovementParameterAsset =>
+        m_movementParameterAsset;
+
+    /// <summary>
+    /// Vブースト移動パラメータを取得します。
+    /// </summary>
+    public PlayerVBoostMovementParameterAsset
+        VBoostMovementParameterAsset =>
+            m_vBoostMovementParameterAsset;
+
+    /// <summary>
     /// 初期化されているかを取得します。
     /// </summary>
-    /// <returns>
-    /// true：初期化されています。
-    /// false：初期化されていません。
-    /// </returns>
-    public bool IsInitialized => m_isInitialized;
+    public bool IsInitialized =>
+        m_isInitialized;
 
     /// <summary>
     /// プレイヤー用ステートマシンを初期化します。
     /// </summary>
-    /// <param name="inputReader">プレイヤー入力。</param>
-    /// <param name="monitor">プレイヤー監視機能。</param>
-    /// <param name="motor">プレイヤー移動機能。</param>
-    /// <param name="animationPresenter">
-    /// プレイヤーアニメーション表示機能。
-    /// </param>
     public void Initialize(
         PlayerInputReader inputReader,
         PlayerMonitor monitor,
         PlayerMotor motor,
         PlayerAnimationPresenter animationPresenter,
-        PlayerAttackController playerAttackController)
+        PlayerAttackController attackController,
+        SplineGrindController splineGrindController,
+        PlayerMovementParameterAsset movementParameterAsset,
+        PlayerVBoostMovementParameterAsset
+            vBoostMovementParameterAsset)
     {
         if (inputReader == null ||
             monitor == null ||
             motor == null ||
             animationPresenter == null ||
-            playerAttackController == null)
+            attackController == null ||
+            splineGrindController == null ||
+            movementParameterAsset == null ||
+            vBoostMovementParameterAsset == null)
         {
             Debug.LogError(
                 $"[{nameof(PlayerStateMachineComponent)}] " +
@@ -92,34 +126,41 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
             return;
         }
 
-        // 再初期化時は既存のステートを破棄
         m_stateMachine?.Dispose();
 
         m_inputReader = inputReader;
         m_monitor = monitor;
         m_motor = motor;
-        m_animationPresenter = animationPresenter;
-        m_attackController = playerAttackController;
+        m_animationPresenter =
+            animationPresenter;
+
+        m_attackController =
+            attackController;
+
+        m_splineGrindController =
+            splineGrindController;
+
+        m_movementParameterAsset =
+            movementParameterAsset;
+
+        m_vBoostMovementParameterAsset =
+            vBoostMovementParameterAsset;
 
         m_stateMachine =
-            new StateMachine<PlayerStateMachineComponent>(this);
+            new StateMachine<PlayerStateMachineComponent>(
+                this);
 
         m_isInitialized = true;
 
-        // 初期状態として待機状態を予約
         m_stateMachine.ChangeState<PlayerIdlingState>();
     }
 
     /// <summary>
     /// 現在のステートが指定された型か確認します。
     /// </summary>
-    /// <typeparam name="TState">確認するステート型。</typeparam>
-    /// <returns>
-    /// true：指定されたステートです。
-    /// false：指定されたステートではありません。
-    /// </returns>
     public bool IsCurrentState<TState>()
-        where TState : StateBase<PlayerStateMachineComponent>
+        where TState :
+            StateBase<PlayerStateMachineComponent>
     {
         if (!m_isInitialized)
         {
@@ -143,7 +184,7 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
     }
 
     /// <summary>
-    /// 物理状態とステートを一定間隔で更新します。
+    /// 物理状態とステートを更新します。
     /// </summary>
     private void FixedUpdate()
     {
@@ -152,7 +193,6 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
             return;
         }
 
-        // Stateから参照する前に監視情報を更新
         m_monitor.Refresh();
 
         m_stateMachine.FixedUpdate();

@@ -18,15 +18,22 @@ public sealed class PlayerMonitor : MonoBehaviour
     [SerializeField]
     private LayerMask m_groundLayerMask = ~0;
 
+    // 接地対象のレイヤー
+    [SerializeField]
+    private LayerMask m_railLayerMask = ~0;
+
     // プレイヤーの物理ボディ
     private Rigidbody m_playerRigidbody;
 
     // 接地しているか
     private bool m_isGrounded;
 
+    private bool m_isRailed;
+
     // 初期化されているか
     private bool m_isInitialized;
 
+    private SplineRailInfo m_hitRailInfo;
     /// <summary>
     /// プレイヤーが接地しているかを取得します。
     /// </summary>
@@ -35,6 +42,9 @@ public sealed class PlayerMonitor : MonoBehaviour
     /// false：接地していません。
     /// </returns>
     public bool IsGrounded => m_isGrounded;
+    public bool IsRailed => m_isRailed;
+
+    public SplineRailInfo HitRailInfo => m_hitRailInfo;
 
     /// <summary>
     /// プレイヤーの現在速度を取得します。
@@ -104,6 +114,29 @@ public sealed class PlayerMonitor : MonoBehaviour
             m_groundCheckRadius,
             m_groundLayerMask,
             QueryTriggerInteraction.Ignore);
+
+        Collider[] hitColliders = Physics.OverlapSphere(
+                   checkPosition,
+                   m_groundCheckRadius,
+                   m_railLayerMask,
+                   QueryTriggerInteraction.Ignore
+               );
+
+        m_isRailed = hitColliders.Length > 0;
+
+        if (m_isRailed)
+        {
+
+            foreach (var collider in hitColliders)
+            {
+                if (collider.gameObject.TryGetComponent<SplineRailInfo>(out m_hitRailInfo))
+                {
+                    break;
+                }
+
+            }
+
+        }
     }
 
     /// <summary>
