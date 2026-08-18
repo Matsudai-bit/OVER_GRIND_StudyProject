@@ -1888,6 +1888,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Health
   m_maxHealth: 100
   m_currentHealth: 0
+--- !u!4 &443965369 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 5260446927991776623, guid: d2c23b41b320e924b833205787a21ddc, type: 3}
+  m_PrefabInstance: {fileID: 741512075}
+  m_PrefabAsset: {fileID: 0}
 --- !u!4 &445182144 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 1414049131724113847, guid: b86529a8a64a158458a53bc47b35b11b, type: 3}
@@ -4640,6 +4645,7 @@ GameObject:
   - component: {fileID: 1328045895}
   - component: {fileID: 1328045896}
   - component: {fileID: 1328045897}
+  - component: {fileID: 1328045898}
   m_Layer: 0
   m_Name: Phase2_Root
   m_TagString: Untagged
@@ -4761,6 +4767,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 43bc7d6748fd5b947bbe4a53009046e9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AnimationEventReceiver
+--- !u!114 &1328045898
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1328045892}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cd98ec454139116498117068330fff57, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BossPhaseReferences
+  m_groundCollider: {fileID: 12290998}
+  m_navMeshSurface: {fileID: 1690830706}
 --- !u!1 &1334131663
 GameObject:
   m_ObjectHideFlags: 0
@@ -7407,6 +7427,7 @@ GameObject:
   - component: {fileID: 2106195339}
   - component: {fileID: 2106195338}
   - component: {fileID: 2106195337}
+  - component: {fileID: 2106195340}
   m_Layer: 0
   m_Name: Phase1_Root
   m_TagString: Untagged
@@ -7510,14 +7531,59 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f0038c16c34866b4f9e25c9c0dc0f7e6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Behavior::Unity.Behavior.BehaviorGraphAgent
-  m_Graph: {fileID: 0}
-  m_BlackboardVariableOverridesList: []
-  m_OriginalGraph: {fileID: 0}
+  m_Graph: {fileID: -4560753241107861451, guid: 364c430831fbf0b4c968da46a47a4dfd, type: 2}
+  m_BlackboardVariableOverridesList:
+  - rid: 6739893442097447814
+  - rid: 6739893442097447815
+  - rid: 6739893442097447816
+  - rid: 6739893442097447817
+  - rid: 6739893442097447818
+  m_OriginalGraph: {fileID: -4560753241107861451, guid: 364c430831fbf0b4c968da46a47a4dfd, type: 2}
   m_IsInitialised: 0
   m_IsStarted: 0
   references:
     version: 2
-    RefIds: []
+    RefIds:
+    - rid: 6739893442097447814
+      type: {class: 'BlackboardVariable`1[[UnityEngine.GameObject, UnityEngine.CoreModule]]', ns: Unity.Behavior, asm: Unity.Behavior}
+      data:
+        GUID:
+          m_Value0: 1
+          m_Value1: 0
+        Name: Self
+        m_Value: {fileID: 2106195331}
+    - rid: 6739893442097447815
+      type: {class: 'BlackboardVariable`1[[UnityEngine.Transform, UnityEngine.CoreModule]]', ns: Unity.Behavior, asm: Unity.Behavior}
+      data:
+        GUID:
+          m_Value0: 3229527383645787454
+          m_Value1: 7238155984280205319
+        Name: RightLeg
+        m_Value: {fileID: 7436866910439319762}
+    - rid: 6739893442097447816
+      type: {class: 'BlackboardVariable`1[[UnityEngine.Transform, UnityEngine.CoreModule]]', ns: Unity.Behavior, asm: Unity.Behavior}
+      data:
+        GUID:
+          m_Value0: 8156249398130554221
+          m_Value1: 3772460373170586980
+        Name: LeftLeg
+        m_Value: {fileID: 2329314875051463907}
+    - rid: 6739893442097447817
+      type: {class: 'BlackboardVariable`1[[UnityEngine.Transform, UnityEngine.CoreModule]]', ns: Unity.Behavior, asm: Unity.Behavior}
+      data:
+        GUID:
+          m_Value0: 4398999866236046289
+          m_Value1: 2422797385516325739
+        Name: PlayerTransform
+        m_Value: {fileID: 443965369}
+    - rid: 6739893442097447818
+      type: {class: 'BlackboardVariable`1[[BossController, Assembly-CSharp]]', ns: Unity.Behavior, asm: Unity.Behavior}
+      data:
+        GUID:
+          m_Value0: 9245148467856697635
+          m_Value1: 14559022983523531562
+        Name: S1P1_BossController
+        m_Value: {fileID: 4921220546604968351}
 --- !u!95 &2106195339
 Animator:
   serializedVersion: 7
@@ -7540,6 +7606,20 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &2106195340
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2106195331}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cd98ec454139116498117068330fff57, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BossPhaseReferences
+  m_groundCollider: {fileID: 2826763879727857671}
+  m_navMeshSurface: {fileID: 1690830706}
 --- !u!4 &2116936479 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -7355749260738064291, guid: b86529a8a64a158458a53bc47b35b11b, type: 3}
@@ -13989,7 +14069,7 @@ MonoBehaviour:
   - m_phaseID: 0
     m_behaviorObject: {fileID: 2106195331}
   - m_phaseID: 1
-    m_behaviorObject: {fileID: 0}
+    m_behaviorObject: {fileID: 1328045892}
   - m_phaseID: 2
     m_behaviorObject: {fileID: 0}
 --- !u!114 &4921220546604968349
@@ -14004,17 +14084,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ac89aa99baa547944a6deb0c0b7f7216, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BossPhaseController
-  m_initialPhase: 1
+  m_initialPhase: 0
   m_phaseDefinitions:
   - m_phaseID: 0
     m_phaseRoot: {fileID: 2106195331}
     m_objective: {fileID: 2106195332}
+    m_bossPhaseReferences: {fileID: 2106195340}
   - m_phaseID: 1
     m_phaseRoot: {fileID: 1328045892}
     m_objective: {fileID: 0}
+    m_bossPhaseReferences: {fileID: 1328045898}
   - m_phaseID: 2
     m_phaseRoot: {fileID: 0}
     m_objective: {fileID: 0}
+    m_bossPhaseReferences: {fileID: 0}
   m_behaviorController: {fileID: 0}
   m_animationController: {fileID: 0}
 --- !u!114 &4921220546604968350

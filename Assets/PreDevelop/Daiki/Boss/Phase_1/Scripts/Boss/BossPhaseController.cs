@@ -26,6 +26,9 @@ public sealed class BossPhaseController : MonoBehaviour
         [SerializeField]
         private BossPhaseObjective m_objective;
 
+        [SerializeField]
+        private BossPhaseReferences m_bossPhaseReferences;
+
         /// <summary>
         /// フェーズIDを取得します。
         /// </summary>
@@ -40,6 +43,7 @@ public sealed class BossPhaseController : MonoBehaviour
         /// フェーズ終了条件を取得します。
         /// </summary>
         public BossPhaseObjective Objective => m_objective;
+        public BossPhaseReferences PhaseReferences => m_bossPhaseReferences;
     }
 
     // 初期フェーズ
@@ -169,6 +173,7 @@ public sealed class BossPhaseController : MonoBehaviour
 
         ApplyCurrentPhase();
         PhaseChanged?.Invoke(CurrentPhase);
+
         return true;
     }
 
@@ -223,6 +228,10 @@ public sealed class BossPhaseController : MonoBehaviour
         BossPhaseID currentPhase = CurrentPhase;
         m_animationController?.SetPhase(currentPhase);
         m_behaviorController?.SetPhase(currentPhase);
+
+
+        GetComponent<BossNavigation>().SetNavMeshSurface(m_phaseDefinitions[m_currentPhaseIndex].PhaseReferences.NavMeshSurface);
+        GetComponent<BossNavigation>().SetNavigationOrigin(m_phaseDefinitions[m_currentPhaseIndex].PhaseReferences.GroundCollider.transform);
     }
 
     /// <summary>

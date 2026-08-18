@@ -23,6 +23,16 @@ public sealed class BossNavigation : MonoBehaviour
     [SerializeField, Min(MIN_SAMPLE_DISTANCE)]
     private float m_sampleDistance = 2.0f;
 
+    public void SetNavMeshSurface(NavMeshSurface navMesh)
+    {
+        m_navMeshSurface = navMesh;
+    }
+
+    public void SetNavigationOrigin(Transform origin)
+    {
+        m_navigationOrigin = origin;
+    }
+
     /// <summary>
     /// èâä˙âªÇµÇ‹Ç∑ÅB
     /// </summary>
