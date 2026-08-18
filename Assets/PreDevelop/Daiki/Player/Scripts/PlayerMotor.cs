@@ -9,35 +9,21 @@ public sealed class PlayerMotor : MonoBehaviour
     // 時間パラメータの最小値
     private const float MIN_TIME = 0.01f;
 
+    // ジャンプ力の最小値
+    private const float MIN_JUMP_POWER = 1.0f;
+
     // 方向ベクトルの有効判定に使用する閾値
     private const float DIRECTION_SQR_THRESHOLD = 0.0001f;
 
     // カメラ基準移動に使用するTransform
-    [SerializeField]
+    [SerializeField, Header("移動基準")]
     private Transform m_movementReference;
-
-    // 通常移動の最高速度
-    [SerializeField, Min(0.0f)]
-    private float m_maxMoveSpeed = 6.0f;
-
-    // ジャンプ力
-    [SerializeField, Min(1.0f)]
-    private float m_jumpPower = 6.0f;
-
-    // 最高速度に到達するまでの時間
-    [SerializeField, Min(MIN_TIME)]
-    private float m_timeToMaxSpeed = 2.0f;
-
-    // 停止するまでの時間
-    [SerializeField, Min(MIN_TIME)]
-    private float m_timeToStop = 0.25f;
-
-    // 1秒間に回転できる最大角度
-    [SerializeField, Min(0.0f)]
-    private float m_rotationSpeed = 540.0f;
 
     // プレイヤーの物理ボディ
     private Rigidbody m_playerRigidbody;
+
+    // 物理移動パラメータ
+    private PlayerMotorParameters m_parameters;
 
     // 初期化されているか
     private bool m_isInitialized;
@@ -45,49 +31,82 @@ public sealed class PlayerMotor : MonoBehaviour
     /// <summary>
     /// 通常移動の最高速度を取得します。
     /// </summary>
-    public float MaxMoveSpeed => m_maxMoveSpeed;
+    public float MaxMoveSpeed => m_parameters.MaxMoveSpeed;
+
+    /// <summary>
+    /// 初期化されているかを取得します。
+    /// </summary>
+    /// <returns>
+    /// true：初期化されています。
+    /// false：初期化されていません。
+    /// </returns>
+    public bool IsInitialized => m_isInitialized;
 
     /// <summary>
     /// PlayerMotorを初期化します。
     /// </summary>
     /// <param name="playerRigidbody">プレイヤーの物理ボディ。</param>
-    public void Initialize(Rigidbody playerRigidbody)
+    /// <param name="parameters">物理移動パラメータ。</param>
+    public void Initialize(
+        Rigidbody playerRigidbody,
+        PlayerMotorParameters parameters)
     {
         if (playerRigidbody == null)
         {
             Debug.LogError(
-                $"[{nameof(PlayerMotor)}] Rigidbodyが指定されていません。",
+                $"[{nameof(PlayerMotor)}] Rigidbodyが設定されていません。",
                 this);
 
             m_isInitialized = false;
             return;
         }
 
+        if (!ValidateParameters(parameters))
+        {
+            m_isInitialized = false;
+            return;
+        }
+
         m_playerRigidbody = playerRigidbody;
+        m_parameters = parameters;
         m_isInitialized = true;
 
         if (m_playerRigidbody.isKinematic)
         {
             Debug.LogWarning(
-                $"[{nameof(PlayerMotor)}] RigidbodyがIs Kinematicのため、速度を変更できません。",
+                $"[{nameof(PlayerMotor)}] " +
+                "RigidbodyがIs Kinematicのため、速度を変更できません。",
                 this);
         }
     }
 
+    /// <summary>
+    /// プレイヤーを上方向へ移動させます。
+    /// </summary>
+    /// <param name="deltaTime">物理更新の経過時間。</param>
     public void Jump(float deltaTime)
     {
+        if (!m_isInitialized)
+        {
+            return;
+        }
 
-        float acceleration = m_jumpPower;
+        float acceleration = m_parameters.JumpPower;
 
-        Vector3 velocity = m_playerRigidbody.transform.up * acceleration * deltaTime;
+        Vector3 velocity =
+            m_playerRigidbody.transform.up *
+            acceleration *
+            deltaTime;
 
         Vector3 nextVelocity = velocity;
 
+        // 水平方向の速度は維持
         nextVelocity.x = m_playerRigidbody.linearVelocity.x;
         nextVelocity.z = m_playerRigidbody.linearVelocity.z;
 
         m_playerRigidbody.linearVelocity = nextVelocity;
     }
+
     /// <summary>
     /// 入力方向へプレイヤーを加速させます。
     /// </summary>
@@ -111,14 +130,15 @@ public sealed class PlayerMotor : MonoBehaviour
 
         // アナログ入力の大きさを最高速度へ反映
         Vector3 targetHorizontalVelocity =
-            moveDirection * (m_maxMoveSpeed * inputMagnitude);
+            moveDirection *
+            (m_parameters.MaxMoveSpeed * inputMagnitude);
 
         Vector3 currentHorizontalVelocity =
             GetHorizontalVelocity();
 
         float acceleration = CalculateAcceleration(
-            m_maxMoveSpeed,
-            m_timeToMaxSpeed);
+            m_parameters.MaxMoveSpeed,
+            m_parameters.TimeToMaxSpeed);
 
         Vector3 nextHorizontalVelocity = Vector3.MoveTowards(
             currentHorizontalVelocity,
@@ -127,7 +147,7 @@ public sealed class PlayerMotor : MonoBehaviour
 
         ApplyHorizontalVelocity(nextHorizontalVelocity);
 
-        // 入力された移動方向へ徐々に回転
+        // 移動方向へ徐々に回転
         RotateTowardsMoveDirection(
             moveDirection,
             deltaTime);
@@ -148,8 +168,8 @@ public sealed class PlayerMotor : MonoBehaviour
             GetHorizontalVelocity();
 
         float deceleration = CalculateAcceleration(
-            m_maxMoveSpeed,
-            m_timeToStop);
+            m_parameters.MaxMoveSpeed,
+            m_parameters.TimeToStop);
 
         Vector3 nextHorizontalVelocity = Vector3.MoveTowards(
             currentHorizontalVelocity,
@@ -241,7 +261,7 @@ public sealed class PlayerMotor : MonoBehaviour
         Quaternion nextRotation = Quaternion.RotateTowards(
             m_playerRigidbody.rotation,
             targetRotation,
-            m_rotationSpeed * deltaTime);
+            m_parameters.RotationSpeed * deltaTime);
 
         m_playerRigidbody.MoveRotation(nextRotation);
     }
@@ -289,5 +309,60 @@ public sealed class PlayerMotor : MonoBehaviour
             MIN_TIME);
 
         return targetSpeed / safeTime;
+    }
+
+    /// <summary>
+    /// 物理移動パラメータが有効か確認します。
+    /// </summary>
+    /// <param name="parameters">確認するパラメータ。</param>
+    /// <returns>
+    /// true：有効なパラメータです。
+    /// false：無効なパラメータです。
+    /// </returns>
+    private bool ValidateParameters(
+        PlayerMotorParameters parameters)
+    {
+        if (parameters.MaxMoveSpeed < 0.0f)
+        {
+            Debug.LogError(
+                $"[{nameof(PlayerMotor)}] " +
+                "最高移動速度は0以上に設定してください。",
+                this);
+
+            return false;
+        }
+
+        if (parameters.JumpPower < MIN_JUMP_POWER)
+        {
+            Debug.LogError(
+                $"[{nameof(PlayerMotor)}] " +
+                $"ジャンプ力は{MIN_JUMP_POWER}以上に設定してください。",
+                this);
+
+            return false;
+        }
+
+        if (parameters.TimeToMaxSpeed < MIN_TIME ||
+            parameters.TimeToStop < MIN_TIME)
+        {
+            Debug.LogError(
+                $"[{nameof(PlayerMotor)}] " +
+                $"時間パラメータは{MIN_TIME}以上に設定してください。",
+                this);
+
+            return false;
+        }
+
+        if (parameters.RotationSpeed < 0.0f)
+        {
+            Debug.LogError(
+                $"[{nameof(PlayerMotor)}] " +
+                "回転速度は0以上に設定してください。",
+                this);
+
+            return false;
+        }
+
+        return true;
     }
 }

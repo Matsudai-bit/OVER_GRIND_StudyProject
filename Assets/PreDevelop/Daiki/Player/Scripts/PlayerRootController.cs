@@ -14,8 +14,12 @@ using UnityEngine;
 [RequireComponent(typeof(SplineGrindController))]
 public sealed class PlayerRootController : MonoBehaviour
 {
+    // プレイヤーの物理移動パラメータ
+    [SerializeField, Header("パラメータ")]
+    private PlayerMotorParameterAsset m_motorParameterAsset;
+
     // プレイヤーの物理ボディ
-    [SerializeField]
+    [SerializeField, Header("コンポーネント")]
     private Rigidbody m_playerRigidbody;
 
     // プレイヤー入力
@@ -40,7 +44,7 @@ public sealed class PlayerRootController : MonoBehaviour
 
     // プレイヤーの攻撃コントローラ
     [SerializeField]
-    private PlayerAttackController m_attackController;   
+    private PlayerAttackController m_attackController;
 
     // スプライングラインドコントローラ
     [SerializeField]
@@ -63,9 +67,23 @@ public sealed class PlayerRootController : MonoBehaviour
             return;
         }
 
+        // ScriptableObjectから実行時パラメータを生成
+        PlayerMotorParameters motorParameters =
+            m_motorParameterAsset.CreateParameters();
+
         // 依存関係の下位から順番に初期化
         m_monitor.Initialize(m_playerRigidbody);
-        m_motor.Initialize(m_playerRigidbody);
+
+        m_motor.Initialize(
+            m_playerRigidbody,
+            motorParameters);
+
+        if (!m_motor.IsInitialized)
+        {
+            m_isInitialized = false;
+            enabled = false;
+            return;
+        }
 
         m_animationPresenter.Initialize(
             m_monitor,
@@ -75,11 +93,12 @@ public sealed class PlayerRootController : MonoBehaviour
             m_inputReader,
             m_monitor,
             m_motor,
-            m_animationPresenter, 
+            m_animationPresenter,
             m_attackController,
             m_splineGrindController);
 
         m_isInitialized =
+            m_motor.IsInitialized &&
             m_stateMachineComponent.IsInitialized &&
             m_animationPresenter.IsInitialized;
     }
@@ -95,7 +114,6 @@ public sealed class PlayerRootController : MonoBehaviour
         }
 
         m_inputReader.EnableInput();
-        
     }
 
     /// <summary>
@@ -173,11 +191,13 @@ public sealed class PlayerRootController : MonoBehaviour
             m_stateMachineComponent =
                 GetComponent<PlayerStateMachineComponent>();
         }
+
         if (m_attackController == null)
         {
             m_attackController =
                 GetComponent<PlayerAttackController>();
         }
+
         if (m_splineGrindController == null)
         {
             m_splineGrindController =
@@ -186,7 +206,7 @@ public sealed class PlayerRootController : MonoBehaviour
     }
 
     /// <summary>
-    /// 必要なコンポーネントが設定されているか確認します。
+    /// 初期化に必要な参照が設定されているか確認します。
     /// </summary>
     /// <returns>
     /// true：必要な参照が設定されています。
@@ -195,6 +215,16 @@ public sealed class PlayerRootController : MonoBehaviour
     private bool ValidateReferences()
     {
         bool isValid = true;
+
+        if (m_motorParameterAsset == null)
+        {
+            Debug.LogError(
+                $"[{nameof(PlayerRootController)}] " +
+                $"{nameof(PlayerMotorParameterAsset)}が設定されていません。",
+                this);
+
+            isValid = false;
+        }
 
         if (m_playerRigidbody == null)
         {
@@ -251,6 +281,26 @@ public sealed class PlayerRootController : MonoBehaviour
             Debug.LogError(
                 $"[{nameof(PlayerRootController)}] " +
                 "PlayerStateMachineComponentが見つかりません。",
+                this);
+
+            isValid = false;
+        }
+
+        if (m_attackController == null)
+        {
+            Debug.LogError(
+                $"[{nameof(PlayerRootController)}] " +
+                "PlayerAttackControllerが見つかりません。",
+                this);
+
+            isValid = false;
+        }
+
+        if (m_splineGrindController == null)
+        {
+            Debug.LogError(
+                $"[{nameof(PlayerRootController)}] " +
+                "SplineGrindControllerが見つかりません。",
                 this);
 
             isValid = false;
