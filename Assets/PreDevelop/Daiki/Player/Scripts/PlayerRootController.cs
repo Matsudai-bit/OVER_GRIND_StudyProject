@@ -14,9 +14,15 @@ using UnityEngine;
 [RequireComponent(typeof(SplineGrindController))]
 public sealed class PlayerRootController : MonoBehaviour
 {
-    // プレイヤーの物理移動パラメータ
+    // 通常移動パラメータ
     [SerializeField, Header("パラメータ")]
-    private PlayerMotorParameterAsset m_motorParameterAsset;
+    private PlayerMovementParameterAsset
+        m_movementParameterAsset;
+
+    // Vブースト移動パラメータ
+    [SerializeField]
+    private PlayerVBoostMovementParameterAsset
+        m_vBoostMovementParameterAsset;
 
     // プレイヤーの物理ボディ
     [SerializeField, Header("コンポーネント")]
@@ -38,15 +44,16 @@ public sealed class PlayerRootController : MonoBehaviour
     [SerializeField]
     private PlayerAnimationPresenter m_animationPresenter;
 
-    // プレイヤーのステートマシン
+    // プレイヤーステートマシン
     [SerializeField]
-    private PlayerStateMachineComponent m_stateMachineComponent;
+    private PlayerStateMachineComponent
+        m_stateMachineComponent;
 
-    // プレイヤーの攻撃コントローラ
+    // プレイヤー攻撃機能
     [SerializeField]
     private PlayerAttackController m_attackController;
 
-    // スプライングラインドコントローラ
+    // スプライングラインド機能
     [SerializeField]
     private SplineGrindController m_splineGrindController;
 
@@ -54,7 +61,7 @@ public sealed class PlayerRootController : MonoBehaviour
     private bool m_isInitialized;
 
     /// <summary>
-    /// プレイヤーを構成するコンポーネントを初期化します。
+    /// プレイヤーを初期化します。
     /// </summary>
     private void Awake()
     {
@@ -67,16 +74,12 @@ public sealed class PlayerRootController : MonoBehaviour
             return;
         }
 
-        // ScriptableObjectから実行時パラメータを生成
-        PlayerMotorParameters motorParameters =
-            m_motorParameterAsset.CreateParameters();
+        m_monitor.Initialize(
+            m_playerRigidbody);
 
-        // 依存関係の下位から順番に初期化
-        m_monitor.Initialize(m_playerRigidbody);
-
+        // MotorにはRigidbodyだけを渡す
         m_motor.Initialize(
-            m_playerRigidbody,
-            motorParameters);
+            m_playerRigidbody);
 
         if (!m_motor.IsInitialized)
         {
@@ -95,7 +98,9 @@ public sealed class PlayerRootController : MonoBehaviour
             m_motor,
             m_animationPresenter,
             m_attackController,
-            m_splineGrindController);
+            m_splineGrindController,
+            m_movementParameterAsset,
+            m_vBoostMovementParameterAsset);
 
         m_isInitialized =
             m_motor.IsInitialized &&
@@ -156,28 +161,32 @@ public sealed class PlayerRootController : MonoBehaviour
     }
 
     /// <summary>
-    /// 同一GameObjectから必要なコンポーネントを取得します。
+    /// 必要なコンポーネント参照を取得します。
     /// </summary>
     private void ResolveReferences()
     {
         if (m_playerRigidbody == null)
         {
-            m_playerRigidbody = GetComponent<Rigidbody>();
+            m_playerRigidbody =
+                GetComponent<Rigidbody>();
         }
 
         if (m_inputReader == null)
         {
-            m_inputReader = GetComponent<PlayerInputReader>();
+            m_inputReader =
+                GetComponent<PlayerInputReader>();
         }
 
         if (m_monitor == null)
         {
-            m_monitor = GetComponent<PlayerMonitor>();
+            m_monitor =
+                GetComponent<PlayerMonitor>();
         }
 
         if (m_motor == null)
         {
-            m_motor = GetComponent<PlayerMotor>();
+            m_motor =
+                GetComponent<PlayerMotor>();
         }
 
         if (m_animationPresenter == null)
@@ -206,21 +215,33 @@ public sealed class PlayerRootController : MonoBehaviour
     }
 
     /// <summary>
-    /// 初期化に必要な参照が設定されているか確認します。
+    /// 初期化に必要な参照を確認します。
     /// </summary>
     /// <returns>
-    /// true：必要な参照が設定されています。
+    /// true：必要な参照があります。
     /// false：必要な参照が不足しています。
     /// </returns>
     private bool ValidateReferences()
     {
         bool isValid = true;
 
-        if (m_motorParameterAsset == null)
+        if (m_movementParameterAsset == null)
         {
             Debug.LogError(
                 $"[{nameof(PlayerRootController)}] " +
-                $"{nameof(PlayerMotorParameterAsset)}が設定されていません。",
+                $"{nameof(PlayerMovementParameterAsset)}" +
+                "が設定されていません。",
+                this);
+
+            isValid = false;
+        }
+
+        if (m_vBoostMovementParameterAsset == null)
+        {
+            Debug.LogError(
+                $"[{nameof(PlayerRootController)}] " +
+                $"{nameof(PlayerVBoostMovementParameterAsset)}" +
+                "が設定されていません。",
                 this);
 
             isValid = false;
