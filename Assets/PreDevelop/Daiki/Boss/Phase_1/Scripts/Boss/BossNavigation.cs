@@ -23,6 +23,16 @@ public sealed class BossNavigation : MonoBehaviour
     [SerializeField, Min(MIN_SAMPLE_DISTANCE)]
     private float m_sampleDistance = 2.0f;
 
+    public void SetNavMeshSurface(NavMeshSurface navMesh)
+    {
+        m_navMeshSurface = navMesh;
+    }
+
+    public void SetNavigationOrigin(Transform origin)
+    {
+        m_navigationOrigin = origin;
+    }
+
     /// <summary>
     /// 初期化します。
     /// </summary>
@@ -119,5 +129,87 @@ public sealed class BossNavigation : MonoBehaviour
             // 現時点ではすべてのAreaを通行可能とします。
             areaMask = NavMesh.AllAreas
         };
+    }
+
+    /// <summary>
+    /// 指定方向へ直進可能な最大距離を取得します。
+    /// </summary>
+    /// <param name="direction">確認する方向。</param>
+    /// <param name="maxDistance">確認する最大距離。</param>
+    /// <param name="stopMargin">境界から確保する停止余白。</param>
+    /// <returns>直進可能な最大距離。</returns>
+    public float GetMaxStraightMoveDistance(
+        Vector3 direction,
+        float maxDistance,
+        float stopMargin)
+    {
+        if (m_navMeshSurface == null ||
+            m_navigationOrigin == null ||
+            maxDistance <= 0.0f)
+        {
+            return 0.0f;
+        }
+
+        Vector3 horizontalDirection = new Vector3(
+            direction.x,
+            0.0f,
+            direction.z);
+
+        if (horizontalDirection.sqrMagnitude <= Mathf.Epsilon)
+        {
+            return 0.0f;
+        }
+
+        horizontalDirection.Normalize();
+
+        NavMeshQueryFilter queryFilter =
+            CreateQueryFilter();
+
+        // 現在位置に最も近いNavMesh上の位置を取得します。
+        if (!NavMesh.SamplePosition(
+                m_navigationOrigin.position,
+                out NavMeshHit startHit,
+                m_sampleDistance,
+                queryFilter))
+        {
+            Debug.LogWarning(
+                $"現在位置付近にNavMeshが見つかりません。" +
+                $" AgentTypeID: {m_navMeshSurface.agentTypeID}",
+                this);
+
+            return 0.0f;
+        }
+
+        Vector3 targetPosition =
+            startHit.position +
+            horizontalDirection * maxDistance;
+
+        // 最大距離までの直線上にNavMesh境界があるか確認します。
+        bool isBlocked = NavMesh.Raycast(
+            startHit.position,
+            targetPosition,
+            out NavMeshHit hit,
+            queryFilter);
+
+        // 最大距離まで直進できる場合はそのまま返します。
+        if (!isBlocked)
+        {
+            return maxDistance;
+        }
+
+        // 開始地点から衝突地点までの水平方向の距離を取得します。
+        Vector3 toHit =
+            hit.position - startHit.position;
+
+        float movableDistance =
+            Vector3.Dot(
+                toHit,
+                horizontalDirection);
+
+        // NavMesh境界ぎりぎりで停止しないように余白を確保します。
+        return Mathf.Clamp(
+            movableDistance - Mathf.Max(0.0f, stopMargin),
+            0.0f,
+            maxDistance);
     }
 }

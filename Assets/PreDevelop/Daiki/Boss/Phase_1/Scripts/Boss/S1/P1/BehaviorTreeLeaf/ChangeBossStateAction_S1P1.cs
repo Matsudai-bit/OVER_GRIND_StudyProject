@@ -54,21 +54,21 @@ public partial class ChangeBossStateAction_S1P1 : Action
                     IDLE_DURATION);
                 break;
 
-            case S1BossStateID.S1P1_WALK:
+            case S1BossStateID.P1_WALK:
                 bossController.StateMachine.ChangeState<S1P1BossWalkState>();
                 break;
 
-            case S1BossStateID.S1P1_ATTACK_RIGHT:
+            case S1BossStateID.P1_ATTACK_RIGHT:
                 return ChangeS1P1AttackState(
                     bossController,
                     S1P1BossAttackType.RIGHT_LEG);
 
-            case S1BossStateID.S1P1_ATTACK_LEFT:
+            case S1BossStateID.P1_ATTACK_LEFT:
                 return ChangeS1P1AttackState(
                     bossController,
                     S1P1BossAttackType.LEFT_LEG);
 
-            case S1BossStateID.S1P1_TURN:
+            case S1BossStateID.P1_TURN:
                 bossController.StateMachine.ChangeState<S1P1BossTurnState>();
                 break;
 

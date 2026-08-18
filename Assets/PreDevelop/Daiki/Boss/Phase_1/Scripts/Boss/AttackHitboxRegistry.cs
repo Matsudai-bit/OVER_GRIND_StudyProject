@@ -94,6 +94,7 @@ public sealed class AttackHitboxRegistry : MonoBehaviour
         }
 
         hitbox.DisableHitbox();
+        
     }
 
     /// <summary>

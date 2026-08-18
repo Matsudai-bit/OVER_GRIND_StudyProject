@@ -13,18 +13,30 @@ public sealed class PlayerInputReader : MonoBehaviour
     // 移動入力アクション
     [SerializeField, Header("移動入力アクション")]
     private InputActionReference m_moveActionReference;
+
     // 攻撃入力アクション
     [SerializeField, Header("攻撃入力アクション")]
     private InputActionReference m_attackActionReference;
+
     // ジャンプ入力アクション
     [SerializeField, Header("ジャンプ入力アクション")]
     private InputActionReference m_jumpActionReference;
 
+    // Vブースト入力アクション
+    [SerializeField, Header("Vブースト入力アクション")]
+    private InputActionReference m_vBoostActionReference;
+
     // 現在の移動入力
     private Vector2 m_moveInput;
-    // 攻撃入力をしたかどうか
-    private bool m_hasAttackInput = false;
-    private bool m_hasJumpInput = false;
+
+    // 攻撃入力があるか
+    private bool m_hasAttackInput;
+
+    // ジャンプ入力中か
+    private bool m_hasJumpInput;
+
+    // Vブースト入力があるか
+    private bool m_hasVBoostInput;
 
     // 入力が有効か
     private bool m_isInputEnabled;
@@ -37,23 +49,19 @@ public sealed class PlayerInputReader : MonoBehaviour
     /// <summary>
     /// 移動入力があるかを取得します。
     /// </summary>
-    /// <returns>
-    /// true：移動入力があります。
-    /// false：移動入力がありません。
-    /// </returns>
     public bool HasMoveInput =>
-        m_moveInput.sqrMagnitude > MOVE_INPUT_SQR_THRESHOLD;
+        m_moveInput.sqrMagnitude >
+        MOVE_INPUT_SQR_THRESHOLD;
+
+    /// <summary>
+    /// ジャンプ入力中かを取得します。
+    /// </summary>
+    public bool HasJumpInput => m_hasJumpInput;
 
     /// <summary>
     /// 入力が有効かを取得します。
     /// </summary>
-    /// <returns>
-    /// true：入力が有効です。
-    /// false：入力が無効です。
-    /// </returns>
     public bool IsInputEnabled => m_isInputEnabled;
-
-    public bool HasJumpInput => m_hasJumpInput;
 
     /// <summary>
     /// 攻撃入力を取得して消費します。
@@ -74,6 +82,24 @@ public sealed class PlayerInputReader : MonoBehaviour
     }
 
     /// <summary>
+    /// Vブースト入力を取得して消費します。
+    /// </summary>
+    /// <returns>
+    /// true：Vブースト入力がありました。
+    /// false：Vブースト入力がありません。
+    /// </returns>
+    public bool ConsumeVBoostInput()
+    {
+        if (!m_hasVBoostInput)
+        {
+            return false;
+        }
+
+        m_hasVBoostInput = false;
+        return true;
+    }
+
+    /// <summary>
     /// プレイヤー入力を有効化します。
     /// </summary>
     public void EnableInput()
@@ -83,32 +109,54 @@ public sealed class PlayerInputReader : MonoBehaviour
             return;
         }
 
-        if (TryGetAction(m_moveActionReference, out InputAction moveAction))
+        if (TryGetAction(
+            m_moveActionReference,
+            out InputAction moveAction))
         {
-            // 入力イベントを登録
-            moveAction.performed += HandleMovePerformed;
-            moveAction.canceled += HandleMoveCanceled;
+            moveAction.performed +=
+                HandleMovePerformed;
+
+            moveAction.canceled +=
+                HandleMoveCanceled;
+
             moveAction.Enable();
 
-            // 現在入力されている値を取得
-            m_moveInput = moveAction.ReadValue<Vector2>();
+            m_moveInput =
+                moveAction.ReadValue<Vector2>();
         }
-        if (TryGetAction(m_attackActionReference, out InputAction attackAction))
-        {
-            // 入力イベントを登録
-            attackAction.performed += HandleAttackPerformed;
-            attackAction.canceled += HandleAttackCanceled;
-            attackAction.Enable();
 
-        }
-        if (TryGetAction(m_jumpActionReference, out InputAction jumpAction))
+        if (TryGetAction(
+            m_attackActionReference,
+            out InputAction attackAction))
         {
-            // 入力イベントを登録
-            jumpAction.performed += HandleJumpPerformed;
-            jumpAction.canceled += HandleJumpCanceled;
+            attackAction.performed +=
+                HandleAttackPerformed;
+
+            attackAction.Enable();
+        }
+
+        if (TryGetAction(
+            m_jumpActionReference,
+            out InputAction jumpAction))
+        {
+            jumpAction.performed +=
+                HandleJumpPerformed;
+
+            jumpAction.canceled +=
+                HandleJumpCanceled;
+
             jumpAction.Enable();
         }
 
+        if (TryGetAction(
+            m_vBoostActionReference,
+            out InputAction vBoostAction))
+        {
+            vBoostAction.performed +=
+                HandleVBoostPerformed;
+
+            vBoostAction.Enable();
+        }
 
         m_isInputEnabled = true;
     }
@@ -120,37 +168,59 @@ public sealed class PlayerInputReader : MonoBehaviour
     {
         if (!m_isInputEnabled)
         {
-            m_moveInput = Vector2.zero;
+            ClearInput();
             return;
         }
 
-        if (TryGetAction(m_moveActionReference, out InputAction moveAction))
+        if (TryGetAction(
+            m_moveActionReference,
+            out InputAction moveAction))
         {
-            // 入力イベントを解除
-            moveAction.performed -= HandleMovePerformed;
-            moveAction.canceled -= HandleMoveCanceled;
+            moveAction.performed -=
+                HandleMovePerformed;
+
+            moveAction.canceled -=
+                HandleMoveCanceled;
+
             moveAction.Disable();
         }
 
-        if (TryGetAction(m_attackActionReference, out InputAction attackAction))
+        if (TryGetAction(
+            m_attackActionReference,
+            out InputAction attackAction))
         {
-            // 入力イベントを解除
-            attackAction.performed -= HandleAttackPerformed;
-            attackAction.canceled -= HandleAttackCanceled;
+            attackAction.performed -=
+                HandleAttackPerformed;
+
             attackAction.Disable();
         }
-        if (TryGetAction(m_jumpActionReference, out InputAction jumpAction))
+
+        if (TryGetAction(
+            m_jumpActionReference,
+            out InputAction jumpAction))
         {
-            // 入力イベントを解除
-            jumpAction.performed -= HandleJumpPerformed;
-            jumpAction.canceled -= HandleJumpCanceled;
+            jumpAction.performed -=
+                HandleJumpPerformed;
+
+            jumpAction.canceled -=
+                HandleJumpCanceled;
+
             jumpAction.Disable();
         }
 
-        m_moveInput = Vector2.zero;
-        m_hasAttackInput = false;
+        if (TryGetAction(
+            m_vBoostActionReference,
+            out InputAction vBoostAction))
+        {
+            vBoostAction.performed -=
+                HandleVBoostPerformed;
+
+            vBoostAction.Disable();
+        }
+
+        ClearInput();
+
         m_isInputEnabled = false;
-        m_hasJumpInput = false;
     }
 
     /// <summary>
@@ -165,76 +235,94 @@ public sealed class PlayerInputReader : MonoBehaviour
     /// 移動入力を更新します。
     /// </summary>
     /// <param name="context">入力情報。</param>
-    private void HandleMovePerformed(InputAction.CallbackContext context)
+    private void HandleMovePerformed(
+        InputAction.CallbackContext context)
     {
-        m_moveInput = context.ReadValue<Vector2>();
+        m_moveInput =
+            context.ReadValue<Vector2>();
     }
 
     /// <summary>
     /// 移動入力をリセットします。
     /// </summary>
     /// <param name="context">入力情報。</param>
-    private void HandleMoveCanceled(InputAction.CallbackContext context)
+    private void HandleMoveCanceled(
+        InputAction.CallbackContext context)
     {
         m_moveInput = Vector2.zero;
     }
 
     /// <summary>
-    /// 攻撃入力を更新します。
+    /// 攻撃入力を保存します。
     /// </summary>
     /// <param name="context">入力情報。</param>
-    private void HandleAttackPerformed(InputAction.CallbackContext context)
+    private void HandleAttackPerformed(
+        InputAction.CallbackContext context)
     {
         m_hasAttackInput = true;
     }
 
     /// <summary>
-    /// 攻撃入力をリセットします。
+    /// ジャンプ入力を開始します。
     /// </summary>
     /// <param name="context">入力情報。</param>
-    private void HandleAttackCanceled(InputAction.CallbackContext context)
+    private void HandleJumpPerformed(
+        InputAction.CallbackContext context)
     {
-        m_hasAttackInput = false;
+        m_hasJumpInput = true;
     }
 
     /// <summary>
-    /// ジャンプ入力を更新します。
+    /// ジャンプ入力を終了します。
     /// </summary>
     /// <param name="context">入力情報。</param>
-    private void HandleJumpPerformed(InputAction.CallbackContext context)
-    {
-         m_hasJumpInput = true;
-        Debug.Log("ジャンプ入力");
-    }
-
-    /// <summary>
-    /// ジャンプ入力をリセットします。
-    /// </summary>
-    /// <param name="context">入力情報。</param>
-    private void HandleJumpCanceled(InputAction.CallbackContext context)
+    private void HandleJumpCanceled(
+        InputAction.CallbackContext context)
     {
         m_hasJumpInput = false;
     }
 
-
-
+    /// <summary>
+    /// Vブースト入力を保存します。
+    /// </summary>
+    /// <param name="context">入力情報。</param>
+    private void HandleVBoostPerformed(
+        InputAction.CallbackContext context)
+    {
+        m_hasVBoostInput = true;
+    }
 
     /// <summary>
-    /// アクションを取得します。
+    /// 現在の入力状態をリセットします。
     /// </summary>
-    /// <param name="moveAction">取得した移動アクション。</param>
+    private void ClearInput()
+    {
+        m_moveInput = Vector2.zero;
+        m_hasAttackInput = false;
+        m_hasJumpInput = false;
+        m_hasVBoostInput = false;
+    }
+
+    /// <summary>
+    /// InputActionを取得します。
+    /// </summary>
+    /// <param name="actionReference">入力アクション参照。</param>
+    /// <param name="action">取得した入力アクション。</param>
     /// <returns>
-    /// true：移動アクションを取得しました。
-    /// false：移動アクションを取得できませんでした。
+    /// true：入力アクションを取得しました。
+    /// false：入力アクションを取得できませんでした。
     /// </returns>
-    private bool TryGetAction(InputActionReference actionReference, out InputAction action)
+    private bool TryGetAction(
+        InputActionReference actionReference,
+        out InputAction action)
     {
         action = null;
 
         if (actionReference == null)
         {
             Debug.LogError(
-                $"[{nameof(PlayerInputReader)}] Move Action Referenceが設定されていません。",
+                $"[{nameof(PlayerInputReader)}] " +
+                "InputActionReferenceが設定されていません。",
                 this);
 
             return false;
@@ -245,7 +333,8 @@ public sealed class PlayerInputReader : MonoBehaviour
         if (action == null)
         {
             Debug.LogError(
-                $"[{nameof(PlayerInputReader)}] Move Actionを取得できませんでした。",
+                $"[{nameof(PlayerInputReader)}] " +
+                "InputActionを取得できませんでした。",
                 this);
 
             return false;

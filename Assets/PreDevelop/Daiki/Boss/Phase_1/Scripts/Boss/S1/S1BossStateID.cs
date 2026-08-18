@@ -8,8 +8,9 @@ using Unity.Behavior;
 public enum S1BossStateID
 {
     IDLE,
-    S1P1_WALK,
-    S1P1_ATTACK_RIGHT,
-    S1P1_ATTACK_LEFT,
-    S1P1_TURN
+    P1_WALK,
+    P1_ATTACK_RIGHT,
+    P1_ATTACK_LEFT,
+    P1_TURN,
+    P2_ATTACK_CHARGING, // 突進攻撃
 }
