@@ -6,11 +6,16 @@ using UnityEngine;
 public sealed class PlayerJumpingState
     : StateBase<PlayerStateMachineComponent>
 {
+    // ジャンプ開始からの経過時間
+    private float m_elapsedTime;
 
-    float elapsedTime;
+    /// <summary>
+    /// 状態開始時に呼ばれます。
+    /// </summary>
     protected override void OnStartState()
     {
-        elapsedTime = 0.0f;
+        m_elapsedTime = 0.0f;
+
         Owner.AnimationPresenter.PlayJumpAnimation();
     }
 
@@ -19,19 +24,28 @@ public sealed class PlayerJumpingState
     /// </summary>
     protected override void OnFixedUpdate()
     {
-        elapsedTime += Time.fixedDeltaTime;
+        m_elapsedTime += Time.fixedDeltaTime;
 
-        if (elapsedTime < 0.5f && Owner.InputReader.HasJumpInput)
-        {
-             Owner.Motor.Jump(Time.fixedDeltaTime);
+        PlayerMovementParameterAsset parameterAsset =
+            Owner.MovementParameterAsset;
 
-        }
-        else
+        if (m_elapsedTime <
+                parameterAsset.JumpInputDuration &&
+            Owner.InputReader.HasJumpInput)
         {
-            Machine.ChangeState<PlayerIdlingState>();
+            Owner.Motor.Jump(
+                parameterAsset.JumpPower,
+                Time.fixedDeltaTime);
+
+            return;
         }
+
+        Machine.ChangeState<PlayerIdlingState>();
     }
 
+    /// <summary>
+    /// 状態終了時に呼ばれます。
+    /// </summary>
     protected override void OnExitState()
     {
         Owner.AnimationPresenter.StopJumpAnimation();
