@@ -71,9 +71,7 @@ public sealed class S1BossPhaseTransitionHandler : MonoBehaviour
                 break;
 
             case BossPhaseID.PHASE_2:
-                Debug.LogWarning(
-                    "S1P2のフェーズ移行は未実装です。",
-                    this);
+                StartS1P2Transition();
                 break;
 
             case BossPhaseID.PHASE_3:
@@ -101,5 +99,26 @@ public sealed class S1BossPhaseTransitionHandler : MonoBehaviour
             .ChangeState<S1P1BossLegsCollapsingState>(
                 m_s1P1BossLegsController,
                 m_s1P1TransitionDuration);
+    }
+
+    /// <summary>
+    /// ステージ1フェーズ2の遷移を開始します。
+    /// </summary>
+    private void StartS1P2Transition()
+    {
+        //if (m_s1P1BossLegsController == null)
+        //{
+        //    Debug.LogError(
+        //        $"{nameof(S1P1BossLegsController)}が設定されていません。",
+        //        this);
+        //    return;
+        //}
+
+        //m_bossController.StateMachine
+        //    .ChangeState<S1P1BossLegsCollapsingState>(
+        //        m_s1P1BossLegsController,
+        //        m_s1P1TransitionDuration);
+
+        m_phaseController.AdvancePhase();
     }
 }
