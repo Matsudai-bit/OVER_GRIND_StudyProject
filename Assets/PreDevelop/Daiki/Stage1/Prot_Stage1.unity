@@ -979,6 +979,8 @@ GameObject:
   - component: {fileID: 150509876}
   - component: {fileID: 150509878}
   - component: {fileID: 150509877}
+  - component: {fileID: 150509879}
+  - component: {fileID: 150509880}
   m_Layer: 0
   m_Name: Phase3_Root
   m_TagString: Untagged
@@ -1039,6 +1041,65 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &150509879
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 150509875}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f0038c16c34866b4f9e25c9c0dc0f7e6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.Behavior::Unity.Behavior.BehaviorGraphAgent
+  m_Graph: {fileID: -4560753241107861451, guid: d98d0b7f24d34464d926c25241170af9, type: 2}
+  m_BlackboardVariableOverridesList:
+  - rid: 6739893562365182113
+  - rid: 6739893562365182114
+  - rid: 6739893562365182115
+  m_OriginalGraph: {fileID: -4560753241107861451, guid: d98d0b7f24d34464d926c25241170af9, type: 2}
+  m_IsInitialised: 0
+  m_IsStarted: 0
+  references:
+    version: 2
+    RefIds:
+    - rid: 6739893562365182113
+      type: {class: 'BlackboardVariable`1[[UnityEngine.GameObject, UnityEngine.CoreModule]]', ns: Unity.Behavior, asm: Unity.Behavior}
+      data:
+        GUID:
+          m_Value0: 1
+          m_Value1: 0
+        Name: Self
+        m_Value: {fileID: 150509875}
+    - rid: 6739893562365182114
+      type: {class: 'BlackboardVariable`1[[BossController, Assembly-CSharp]]', ns: Unity.Behavior, asm: Unity.Behavior}
+      data:
+        GUID:
+          m_Value0: 9245148467856697635
+          m_Value1: 14559022983523531562
+        Name: S1P3_BossController
+        m_Value: {fileID: 4921220546604968351}
+    - rid: 6739893562365182115
+      type: {class: 'BlackboardVariable`1[[UnityEngine.Transform, UnityEngine.CoreModule]]', ns: Unity.Behavior, asm: Unity.Behavior}
+      data:
+        GUID:
+          m_Value0: 4398999866236046289
+          m_Value1: 2422797385516325739
+        Name: PlayerTransform
+        m_Value: {fileID: 443965369}
+--- !u!114 &150509880
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 150509875}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 43bc7d6748fd5b947bbe4a53009046e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AnimationEventReceiver
 --- !u!1 &164140459 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: -1744202796802222076, guid: 1df82618771219548a4a035cd72d7bb2, type: 3}
@@ -4842,7 +4903,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &1328045893
 Transform:
   m_ObjectHideFlags: 0
@@ -14491,7 +14552,7 @@ MonoBehaviour:
     m_animationEventReceiver: {fileID: 1328045897}
   - m_phaseID: 2
     m_animator: {fileID: 150509878}
-    m_animationEventReceiver: {fileID: 0}
+    m_animationEventReceiver: {fileID: 150509880}
 --- !u!114 &4921220546604968348
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -14510,7 +14571,7 @@ MonoBehaviour:
   - m_phaseID: 1
     m_behaviorObject: {fileID: 1328045892}
   - m_phaseID: 2
-    m_behaviorObject: {fileID: 0}
+    m_behaviorObject: {fileID: 150509875}
 --- !u!114 &4921220546604968349
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -14523,7 +14584,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ac89aa99baa547944a6deb0c0b7f7216, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BossPhaseController
-  m_initialPhase: 1
+  m_initialPhase: 2
   m_phaseDefinitions:
   - m_phaseID: 0
     m_phaseRoot: {fileID: 2106195331}
@@ -14536,7 +14597,7 @@ MonoBehaviour:
   - m_phaseID: 2
     m_phaseRoot: {fileID: 150509875}
     m_objective: {fileID: 0}
-    m_bossPhaseReferences: {fileID: 0}
+    m_bossPhaseReferences: {fileID: 150509877}
   m_behaviorController: {fileID: 0}
   m_animationController: {fileID: 0}
 --- !u!114 &4921220546604968350
