@@ -6,6 +6,8 @@ using UnityEngine;
 public sealed class S1P3BossChargingAttackState :
     StateBase<BossController>
 {
+    private S1P3BossReferences m_phaseReferences;
+
     /// <summary>
     /// 突進攻撃の実行フェーズ。
     /// </summary>
@@ -162,6 +164,11 @@ public sealed class S1P3BossChargingAttackState :
 
         Owner.AnimationController.SetTrigger(
             m_animationTriggerID);
+
+        if (!Owner.PhaseController.TryGetCurrentPhaseComponent<S1P3BossReferences>(out m_phaseReferences))
+        {
+            Debug.LogError("フェーズ2のリファレンスが取得できません");
+        }
     }
 
     /// <summary>
@@ -416,5 +423,10 @@ public sealed class S1P3BossChargingAttackState :
             Owner.SetStateExecutionStatus(
                 StateExecutionStatus.FAILED);
         }
+    }
+
+    private Vector3 GetChargingPosition()
+    {
+        return m_phaseReferences.ChargeDestinationPoints[(int)(Random.value) % 3].position;
     }
 }
