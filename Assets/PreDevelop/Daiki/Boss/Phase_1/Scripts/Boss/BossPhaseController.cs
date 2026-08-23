@@ -324,4 +324,30 @@ public sealed class BossPhaseController : MonoBehaviour
         return phaseIndex >= 0 &&
                phaseIndex < m_phaseDefinitions.Count;
     }
+
+    /// <summary>
+    /// 現在のフェーズから指定コンポーネントを取得します。
+    /// </summary>
+    /// <typeparam name="T">取得するコンポーネント型。</typeparam>
+    /// <param name="component">取得したコンポーネント。</param>
+    /// <returns>
+    /// true：取得できました。
+    /// false：取得できませんでした。
+    /// </returns>
+    public bool TryGetCurrentPhaseComponent<T>(
+        out T component)
+        where T : Component
+    {
+        component = null;
+        var phaseRoot = m_phaseDefinitions[m_currentPhaseIndex].PhaseRoot;
+        if (phaseRoot == null)
+        {
+            return false;
+        }
+
+        component =
+            phaseRoot.GetComponentInChildren<T>(true);
+
+        return component != null;
+    }
 }

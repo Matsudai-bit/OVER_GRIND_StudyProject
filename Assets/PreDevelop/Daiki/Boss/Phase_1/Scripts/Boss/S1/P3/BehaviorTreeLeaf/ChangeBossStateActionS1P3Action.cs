@@ -10,8 +10,8 @@ using Action = Unity.Behavior.Action;
 /// </summary>
 [Serializable, GeneratePropertyBag]
 [NodeDescription(
-    name: "ChangeBossStateAction_S1P2",
-    story: "Change Stage1Phase2 [ControllerObject] state to [NextStateID]",
+    name: "ChangeBossStateAction_S1P3",
+    story: "Change Stage1Phase3 [ControllerObject] state to [NextStateID]",
     category: "Action",
     id: "2237e4a77643119bfb0845d0a8026c52")]
 public partial class ChangeBossStateAction_S1P3 : Action
@@ -70,18 +70,18 @@ public partial class ChangeBossStateAction_S1P3 : Action
     /// <param name="bossController">対象ボス。</param>
     /// <param name="attackType">攻撃種類。</param>
     /// <returns>Actionノードの実行結果。</returns>
-    private Status ChangeS1P2AttackState(
+    private Status ChangeS1P3AttackState(
         BossController bossController,
-        S1P2BossAttackType attackType)
+        S1P3BossAttackType attackType)
     {
-        S1P2BossAttackSettings attackSettings =
+        S1P3BossAttackSettings attackSettings =
             bossController.GetComponentInChildren<
-                S1P2BossAttackSettings>(true);
+                S1P3BossAttackSettings>(true);
 
         if (attackSettings == null)
         {
             LogFailure(
-                $"{nameof(S1P2BossAttackSettings)}が見つかりません。");
+                $"{nameof(S1P3BossAttackSettings)}が見つかりません。");
 
             return Status.Failure;
         }

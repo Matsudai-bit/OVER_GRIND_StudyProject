@@ -142,4 +142,6 @@ public sealed class BossController : MonoBehaviour, IStateStatusProvider
             m_bossNavigation = GetComponent<BossNavigation>();
         }
     }
+
+   
 }
