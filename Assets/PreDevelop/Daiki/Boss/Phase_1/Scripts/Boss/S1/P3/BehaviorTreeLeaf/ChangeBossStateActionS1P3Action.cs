@@ -58,6 +58,10 @@ public partial class ChangeBossStateAction_S1P3 : Action
                 bossController.StateMachine.ChangeState<
                     S1P3BossChargingAttackState>();
                 break;
+            case S1BossStateID.STUN:
+                bossController.StateMachine.ChangeState<
+                    S1P3BossStunnedState>();
+                break;
 
             default:
                 LogFailure("ñ¢ëŒâûÇÃState IDÇ≈Ç∑ÅB");

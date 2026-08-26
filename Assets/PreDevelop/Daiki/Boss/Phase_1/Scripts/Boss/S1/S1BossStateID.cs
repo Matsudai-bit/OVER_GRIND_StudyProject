@@ -13,4 +13,5 @@ public enum S1BossStateID
     P1_ATTACK_LEFT,
     P1_TURN,
     P2_ATTACK_CHARGING, // 突進攻撃
+    STUN,   // ダウン状態
 }
