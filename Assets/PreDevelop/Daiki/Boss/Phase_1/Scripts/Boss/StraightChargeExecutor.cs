@@ -102,15 +102,20 @@ public sealed class StraightChargeExecutor
 
         m_settings = settings;
         m_targetPositionProvider = targetPositionProvider;
+
         m_elapsedTime = 0.0f;
         m_chargeDirection = Vector3.zero;
         m_chargeEndPosition = Vector3.zero;
 
         m_owner.Motor.StopHorizontalMovement();
 
-        PlayTrigger(m_settings.StartAnimationTriggerName);
+        // 予備動作アニメーションを開始します。
+        SetAnimationBool(
+            m_settings.PreparationAnimationBoolName,
+            true);
 
         m_executionPhase = ExecutionPhase.PREPARING;
+
         return true;
     }
 
@@ -145,13 +150,17 @@ public sealed class StraightChargeExecutor
         {
             m_owner.Motor?.StopHorizontalMovement();
             DisableHitbox();
+
+            ResetAnimationBools();
         }
 
         m_settings = null;
         m_targetPositionProvider = null;
+
         m_elapsedTime = 0.0f;
         m_chargeDirection = Vector3.zero;
         m_chargeEndPosition = Vector3.zero;
+
         m_executionPhase = ExecutionPhase.IDLE;
     }
 
@@ -167,9 +176,10 @@ public sealed class StraightChargeExecutor
             return;
         }
 
-        Quaternion targetRotation = Quaternion.LookRotation(
-            direction,
-            Vector3.up);
+        Quaternion targetRotation =
+            Quaternion.LookRotation(
+                direction,
+                Vector3.up);
 
         m_owner.Motor.RotateTowards(
             targetRotation,
@@ -178,7 +188,8 @@ public sealed class StraightChargeExecutor
 
         m_elapsedTime += deltaTime;
 
-        if (m_elapsedTime < m_settings.PreparationDuration)
+        if (m_elapsedTime <
+            m_settings.PreparationDuration)
         {
             return;
         }
@@ -191,7 +202,9 @@ public sealed class StraightChargeExecutor
     /// </summary>
     private void StartCharge()
     {
-        m_chargeDirection = m_owner.transform.forward;
+        m_chargeDirection =
+            m_owner.transform.forward;
+
         m_chargeDirection.y = 0.0f;
 
         if (m_chargeDirection.sqrMagnitude <=
@@ -209,7 +222,11 @@ public sealed class StraightChargeExecutor
                 m_settings.MaxChargeDistance,
                 m_settings.StopMargin);
 
-        // 開始地点ですでに進めない場合も、1回の突進終了として扱います。
+        // 予備動作を終了します。
+        SetAnimationBool(
+            m_settings.PreparationAnimationBoolName,
+            false);
+
         if (chargeDistance <= 0.0f)
         {
             StartEnding();
@@ -221,10 +238,16 @@ public sealed class StraightChargeExecutor
             m_chargeDirection * chargeDistance;
 
         m_elapsedTime = 0.0f;
-        m_executionPhase = ExecutionPhase.CHARGING;
 
-        PlayTrigger(m_settings.ChargeAnimationTriggerName);
+        // 突進アニメーションを開始します。
+        SetAnimationBool(
+            m_settings.ChargeAnimationBoolName,
+            true);
+
         EnableHitbox();
+
+        m_executionPhase =
+            ExecutionPhase.CHARGING;
     }
 
     /// <summary>
@@ -233,17 +256,20 @@ public sealed class StraightChargeExecutor
     /// <param name="deltaTime">物理フレームの経過時間。</param>
     private void UpdateCharge(float deltaTime)
     {
-        Vector3 currentPosition = m_owner.transform.position;
+        Vector3 currentPosition =
+            m_owner.transform.position;
 
-        Vector3 nextPosition = Vector3.MoveTowards(
-            currentPosition,
-            m_chargeEndPosition,
-            m_settings.ChargeSpeed * deltaTime);
+        Vector3 nextPosition =
+            Vector3.MoveTowards(
+                currentPosition,
+                m_chargeEndPosition,
+                m_settings.ChargeSpeed * deltaTime);
 
         m_owner.Motor.MovePosition(nextPosition);
 
         Vector3 difference =
             m_chargeEndPosition - nextPosition;
+
         difference.y = 0.0f;
 
         if (difference.sqrMagnitude >
@@ -252,7 +278,9 @@ public sealed class StraightChargeExecutor
             return;
         }
 
-        m_owner.Motor.MovePosition(m_chargeEndPosition);
+        m_owner.Motor.MovePosition(
+            m_chargeEndPosition);
+
         StartEnding();
     }
 
@@ -262,12 +290,23 @@ public sealed class StraightChargeExecutor
     private void StartEnding()
     {
         m_owner.Motor.StopHorizontalMovement();
+
         DisableHitbox();
 
-        PlayTrigger(m_settings.EndAnimationTriggerName);
+        // 突進アニメーションを終了します。
+        SetAnimationBool(
+            m_settings.ChargeAnimationBoolName,
+            false);
+
+        // 終了アニメーションを開始します。
+        SetAnimationBool(
+            m_settings.EndAnimationBoolName,
+            true);
 
         m_elapsedTime = 0.0f;
-        m_executionPhase = ExecutionPhase.ENDING;
+
+        m_executionPhase =
+            ExecutionPhase.ENDING;
 
         if (m_settings.EndDuration <= 0.0f)
         {
@@ -276,14 +315,15 @@ public sealed class StraightChargeExecutor
     }
 
     /// <summary>
-    /// 終了待機を更新します。
+    /// 終了状態を更新します。
     /// </summary>
     /// <param name="deltaTime">物理フレームの経過時間。</param>
     private void UpdateEnding(float deltaTime)
     {
         m_elapsedTime += deltaTime;
 
-        if (m_elapsedTime < m_settings.EndDuration)
+        if (m_elapsedTime <
+            m_settings.EndDuration)
         {
             return;
         }
@@ -299,7 +339,8 @@ public sealed class StraightChargeExecutor
     /// true：有効な方向を取得しました。
     /// false：方向を取得できませんでした。
     /// </returns>
-    private bool TryGetTargetDirection(out Vector3 direction)
+    private bool TryGetTargetDirection(
+        out Vector3 direction)
     {
         direction =
             m_targetPositionProvider.Invoke() -
@@ -315,22 +356,54 @@ public sealed class StraightChargeExecutor
         }
 
         direction.Normalize();
+
         return true;
     }
 
     /// <summary>
-    /// 指定Triggerを再生します。
+    /// AnimatorのBool値を設定します。
     /// </summary>
-    /// <param name="triggerName">Trigger名。</param>
-    private void PlayTrigger(string triggerName)
+    /// <param name="parameterName">Boolパラメータ名。</param>
+    /// <param name="value">設定する値。</param>
+    private void SetAnimationBool(
+        string parameterName,
+        bool value)
     {
-        if (string.IsNullOrEmpty(triggerName))
+        if (string.IsNullOrEmpty(parameterName) ||
+            m_owner?.AnimationController == null)
         {
             return;
         }
 
-        int triggerID = Animator.StringToHash(triggerName);
-        m_owner.AnimationController.SetTrigger(triggerID);
+        int parameterID =
+            Animator.StringToHash(parameterName);
+
+        m_owner.AnimationController.SetBool(
+            parameterID,
+            value);
+    }
+
+    /// <summary>
+    /// 突進用のAnimator Boolをすべて解除します。
+    /// </summary>
+    private void ResetAnimationBools()
+    {
+        if (m_settings == null)
+        {
+            return;
+        }
+
+        SetAnimationBool(
+            m_settings.PreparationAnimationBoolName,
+            false);
+
+        SetAnimationBool(
+            m_settings.ChargeAnimationBoolName,
+            false);
+
+        SetAnimationBool(
+            m_settings.EndAnimationBoolName,
+            false);
     }
 
     /// <summary>
@@ -366,7 +439,13 @@ public sealed class StraightChargeExecutor
     /// </summary>
     private void SetCompleted()
     {
-        m_executionPhase = ExecutionPhase.COMPLETED;
+        // 終了アニメーションも解除します。
+        SetAnimationBool(
+            m_settings.EndAnimationBoolName,
+            false);
+
+        m_executionPhase =
+            ExecutionPhase.COMPLETED;
     }
 
     /// <summary>
@@ -375,7 +454,11 @@ public sealed class StraightChargeExecutor
     private void SetFailed()
     {
         m_owner?.Motor?.StopHorizontalMovement();
+
         DisableHitbox();
-        m_executionPhase = ExecutionPhase.FAILED;
+        ResetAnimationBools();
+
+        m_executionPhase =
+            ExecutionPhase.FAILED;
     }
 }

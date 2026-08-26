@@ -54,7 +54,10 @@ public partial class ChangeBossStateAction_S1P3 : Action
                 bossController.StateMachine.ChangeState<BossIdleState>(
                     IDLE_DURATION);
                 break;
-
+            case S1BossStateID.P2_ATTACK_CHARGING:
+                bossController.StateMachine.ChangeState<
+                    S1P3BossChargingAttackState>();
+                break;
 
             default:
                 LogFailure("ñ¢ëŒâûÇÃState IDÇ≈Ç∑ÅB");

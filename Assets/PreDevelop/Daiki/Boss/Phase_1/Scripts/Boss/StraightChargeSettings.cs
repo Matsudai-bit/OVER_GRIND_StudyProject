@@ -29,22 +29,22 @@ public sealed class StraightChargeSettings
     [SerializeField, Min(0.0f)]
     private float m_stopMargin = 0.5f;
 
-    // 終了アニメーション待機時間
+    // 終了状態の継続時間
     [SerializeField, Header("終了")]
     [Min(0.0f)]
     private float m_endDuration = 0.0f;
 
-    // 開始アニメーションTrigger名
+    // 予備動作アニメーションBool名
     [SerializeField, Header("アニメーション")]
-    private string m_startAnimationTriggerName;
+    private string m_preparationAnimationBoolName;
 
-    // 突進中アニメーションTrigger名
+    // 突進中アニメーションBool名
     [SerializeField]
-    private string m_chargeAnimationTriggerName;
+    private string m_chargeAnimationBoolName;
 
-    // 終了アニメーションTrigger名
+    // 終了アニメーションBool名
     [SerializeField]
-    private string m_endAnimationTriggerName;
+    private string m_endAnimationBoolName;
 
     // 突進中に有効化する攻撃ID
     [SerializeField, Header("攻撃判定")]
@@ -76,27 +76,31 @@ public sealed class StraightChargeSettings
     public float StopMargin => m_stopMargin;
 
     /// <summary>
-    /// 終了待機時間を取得します。
+    /// 終了状態の継続時間を取得します。
     /// </summary>
     public float EndDuration => m_endDuration;
 
     /// <summary>
-    /// 開始アニメーションTrigger名を取得します。
+    /// 予備動作アニメーションBool名を取得します。
     /// </summary>
-    public string StartAnimationTriggerName => m_startAnimationTriggerName;
+    public string PreparationAnimationBoolName =>
+        m_preparationAnimationBoolName;
 
     /// <summary>
-    /// 突進中アニメーションTrigger名を取得します。
+    /// 突進中アニメーションBool名を取得します。
     /// </summary>
-    public string ChargeAnimationTriggerName => m_chargeAnimationTriggerName;
+    public string ChargeAnimationBoolName =>
+        m_chargeAnimationBoolName;
 
     /// <summary>
-    /// 終了アニメーションTrigger名を取得します。
+    /// 終了アニメーションBool名を取得します。
     /// </summary>
-    public string EndAnimationTriggerName => m_endAnimationTriggerName;
+    public string EndAnimationBoolName =>
+        m_endAnimationBoolName;
 
     /// <summary>
     /// 突進中に使用する攻撃IDを取得します。
     /// </summary>
-    public AttackIdentifier AttackIdentifier => m_attackIdentifier;
+    public AttackIdentifier AttackIdentifier =>
+        m_attackIdentifier;
 }
