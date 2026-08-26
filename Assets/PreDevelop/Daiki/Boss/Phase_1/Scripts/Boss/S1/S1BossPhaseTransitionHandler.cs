@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 /// <summary>
 /// ステージ1ボス固有のフェーズ移行ステートを開始します。
@@ -75,9 +76,7 @@ public sealed class S1BossPhaseTransitionHandler : MonoBehaviour
                 break;
 
             case BossPhaseID.PHASE_3:
-                Debug.LogWarning(
-                    "S1P3の撃破処理は未実装です。",
-                    this);
+                StartS1P3Transition();
                 break;
         }
     }
@@ -120,5 +119,13 @@ public sealed class S1BossPhaseTransitionHandler : MonoBehaviour
         //        m_s1P1TransitionDuration);
 
         m_phaseController.AdvancePhase();
+    }
+
+    /// <summary>
+    /// ステージ1フェーズ2の遷移を開始します。
+    /// </summary>
+    private void StartS1P3Transition()
+    {
+        SceneManager.LoadScene("TitleScene");
     }
 }
