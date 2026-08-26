@@ -4370,7 +4370,6 @@ GameObject:
   - component: {fileID: 1328045897}
   - component: {fileID: 1328045898}
   - component: {fileID: 1328045899}
-  - component: {fileID: 1328045900}
   m_Layer: 0
   m_Name: Phase2_Root
   m_TagString: Untagged
@@ -4521,29 +4520,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::S1P2NeckDestructionObjective
   m_weakPoints:
   - {fileID: 2049386882}
---- !u!114 &1328045900
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1328045892}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0f1daf7b871a2fc4da55a4f4477bd4e0, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::S1P2BossChargeSettings
-  m_chargeSettings:
-    m_preparationDuration: 5
-    m_rotationSpeed: 70
-    m_chargeSpeed: 60
-    m_maxChargeDistance: 100
-    m_stopMargin: 0.5
-    m_endDuration: 0
-    m_startAnimationTriggerName: 
-    m_chargeAnimationTriggerName: ChargingAttack
-    m_endAnimationTriggerName: 
-    m_attackIdentifier: {fileID: 11400000, guid: 5a4e3e18cb17cd44fa51915313dee76e, type: 2}
 --- !u!1 &1334131663
 GameObject:
   m_ObjectHideFlags: 0
@@ -14114,7 +14090,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ac89aa99baa547944a6deb0c0b7f7216, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BossPhaseController
-  m_initialPhase: 1
+  m_initialPhase: 2
   m_phaseDefinitions:
   - m_phaseID: 0
     m_phaseRoot: {fileID: 2106195331}
