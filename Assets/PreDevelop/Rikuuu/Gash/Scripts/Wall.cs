@@ -1,206 +1,369 @@
+// コレクションを扱うために使用します。
 using System.Collections.Generic;
+
+// Unityの基本機能を使用するために使用します。
 using UnityEngine;
+
+// URPのDecalProjectorを使用するために使用します。
 using UnityEngine.Rendering.Universal;
 
 /// <summary>
-/// 壁オブジェクトにアタッチし、武器（チェーンソー）の
-/// トリガー衝突を検知して壁面にダメージデカールを生成します。
+/// 壁オブジェクトにアタッチし、武器のトリガー衝突を検知してダメージデカールを生成します。
 /// </summary>
 public class Wall : MonoBehaviour
 {
-    // Ray判定時の方向ベクトルが有効かどうかを判定するための閾値（ゼロベクトル対策）
+    // Rayの方向ベクトルが有効か判定するための最小値です。
     private const float RAY_DIRECTION_EPSILON = 0.0001f;
 
-    // 振り方向の差分ベクトルが有効かどうかを判定するための閾値
+    // 武器の移動速度が有効か判定するための最小値です。
     private const float SWING_DELTA_EPSILON = 0.0001f;
 
-    // 平面投影後の振り方向が有効かどうかを判定するための閾値
+    // 平面へ投影した振り方向が有効か判定するための最小値です。
     private const float PROJECTED_SWING_EPSILON = 0.001f;
 
-    // Rayの飛距離に加える余裕距離（衝突点をわずかに超えて判定するため）
+    // Rayの判定距離に追加する余裕距離です。
     private const float RAY_DISTANCE_PADDING = 0.3f;
 
-    // DecalProjectorのピボットZ位置をサイズの何割に設定するかの比率（0.5＝中央）
+    // デカールのZ方向ピボットをサイズの半分に設定するための比率です。
     private const float DECAL_PIVOT_Z_RATIO = 0.5f;
 
-    // 生成するダメージデカールのプレハブ
+    // ゼロ除算を防ぐために使用する最小サイズです。
+    private const float BOX_SIZE_EPSILON = 0.0001f;
+
+    // デカールを生成するためのプレハブです。
     [SerializeField] private GameObject m_decalPrefab;
 
-    // デカールを壁面から浮かせるオフセット距離（Zファイティング防止用）
+    // デカールを壁面から浮かせる距離です。
     [SerializeField] private float m_surfaceOffset = 0.02f;
 
-    // トリガー判定対象とする武器のタグ名
+    // 武器として判定するオブジェクトのタグです。
     [SerializeField] private string m_weaponTag = "Chainsaw";
 
-    // 生成したデカールをこの壁の子オブジェクトにするかどうか
+    // 生成したデカールを壁の子オブジェクトにするかどうかです。
     [SerializeField] private bool m_parentDecalToSelf = true;
 
-    // 同一コライダーに対する連続ヒットを防ぐためのクールダウン時間（秒）
+    // 同じコライダーへの連続ヒットを防ぐための待機時間です。
     [SerializeField] private float m_hitCooldown = 0.15f;
 
-    // コライダーごとの直前フレーム位置（Rayの起点・振り方向の推定に使用）
+    // コライダーごとの前回位置を保持します。
     private readonly Dictionary<int, Vector3> m_lastPositions = new();
 
-    // コライダーごとの最終ヒット時刻（クールダウン判定に使用）
+    // コライダーごとの前回ヒット時刻を保持します。
     private readonly Dictionary<int, float> m_lastHitTime = new();
 
     /// <summary>
-    /// 生成するダメージデカールのプレハブ。
+    /// 生成するダメージデカールのプレハブを取得します。
     /// </summary>
     public GameObject DecalPrefab => m_decalPrefab;
 
     /// <summary>
-    /// デカールを壁面から浮かせるオフセット距離。
+    /// デカールを壁面から浮かせる距離を取得します。
     /// </summary>
     public float SurfaceOffset => m_surfaceOffset;
 
     /// <summary>
-    /// トリガー判定対象とする武器のタグ名。
+    /// 武器として判定するオブジェクトのタグを取得します。
     /// </summary>
     public string WeaponTag => m_weaponTag;
 
     /// <summary>
-    /// トリガーコライダーとの接触を検知し、対象タグの場合はデカール生成処理を行います。
+    /// トリガーへの侵入を検知してデカール生成処理を行います。
     /// </summary>
-    /// <param name="other">接触した相手のコライダー。</param>
+    /// <param name="other">トリガーへ侵入したコライダー。</param>
     private void OnTriggerEnter(Collider other)
     {
-        // nullチェックとタグ一致チェック（対象外なら何もしない）
-        if (other == null || !other.CompareTag(m_weaponTag))
+        // 相手のコライダーが存在しない場合は処理を終了します。
+        if (other == null)
         {
             return;
         }
 
-        // コライダーごとの識別にInstanceIDを使用
+        // 相手のタグが設定された武器タグと異なる場合は処理を終了します。
+        if (!other.CompareTag(m_weaponTag))
+        {
+            return;
+        }
+
+        // コライダーを識別するためのInstanceIDを取得します。
         int id = other.GetInstanceID();
 
-        // 前回ヒット時刻からクールダウン時間内であれば処理をスキップ（ジッター対策）
-        if (m_lastHitTime.TryGetValue(id, out float lastTime) &&
-            Time.time - lastTime < m_hitCooldown)
+        // 前回のヒット時刻が存在するか確認します。
+        if (m_lastHitTime.TryGetValue(id, out float lastTime))
         {
-            return;
+            // 前回のヒットからクールダウン時間が経過していない場合は処理を終了します。
+            if (Time.time - lastTime < m_hitCooldown)
+            {
+                return;
+            }
         }
 
-        // 今回のヒット時刻を記録
+        // 今回のヒット時刻を記録します。
         m_lastHitTime[id] = Time.time;
 
-        // デカール生成処理を実行
+        // トリガー情報を利用してデカールを生成します。
         SpawnDecalFromTrigger(other, id);
     }
 
     /// <summary>
-    /// トリガー衝突情報からRayを飛ばして正確な衝突点・法線を取得し、デカール生成に渡します。
+    /// トリガー衝突情報から壁面の衝突点、法線、振り方向を取得します。
     /// </summary>
-    /// <param name="other">接触した相手のコライダー。</param>
-    /// <param name="id">対象コライダーの識別ID。</param>
+    /// <param name="other">接触した武器のコライダー。</param>
+    /// <param name="id">武器コライダーの識別ID。</param>
     private void SpawnDecalFromTrigger(Collider other, int id)
     {
-        // デカールプレハブが未設定の場合は警告を出して処理を中断
+        // デカールプレハブが設定されていない場合は警告を出して処理を終了します。
         if (m_decalPrefab == null)
         {
+            // どのWallで設定漏れが発生したか分かるようにオブジェクト名を表示します。
             Debug.LogWarning($"{name}: DecalPrefab が設定されていません。", this);
+
+            // デカールを生成できないため処理を終了します。
             return;
         }
 
-        // 自身（壁）のコライダーを取得
+        // Wallに設定されているコライダーを取得します。
         Collider wallCollider = GetComponent<Collider>();
 
-        // 壁コライダー上で武器に最も近い点を大まかな衝突点として仮決定
+        // 壁面上のおおよその位置を取得します。
         Vector3 approxPoint = wallCollider != null
             ? wallCollider.ClosestPoint(other.bounds.center)
             : other.ClosestPoint(transform.position);
 
-        // Rayの起点は前フレームの武器位置（記録がなければ現在の武器中心）
+        // 前回位置が存在する場合はRayの始点として使用します。
         Vector3 rayOrigin = m_lastPositions.TryGetValue(id, out Vector3 prevPos)
             ? prevPos
             : other.bounds.center;
 
-        // Rayの方向は起点から仮衝突点へ向かうベクトル
-        Vector3 rayDir = (approxPoint - rayOrigin).normalized;
+        // Rayの方向を「武器の前回位置から壁面のおおよその位置」へ向けます。
+        Vector3 rayDirection = approxPoint - rayOrigin;
 
-        // Rayの飛距離は起点-仮衝突点間の距離に余裕分を加算
-        float rayDistance = Vector3.Distance(rayOrigin, approxPoint) + RAY_DISTANCE_PADDING;
+        // Rayの方向がほぼゼロの場合でも安全に処理できるように初期値を設定します。
+        Vector3 rayDir = rayDirection.sqrMagnitude > RAY_DIRECTION_EPSILON
+            ? rayDirection.normalized
+            : Vector3.zero;
 
-        // 衝突点・法線の初期値（フォールバック用）
+        // Rayが進む距離として起点から壁面までの距離を取得します。
+        float rayDistance = rayDirection.magnitude + RAY_DISTANCE_PADDING;
+
+        // Raycastが失敗した場合に使用する衝突点を仮設定します。
         Vector3 hitPoint = approxPoint;
-        Vector3 hitNormal = -rayDir;
 
-        // 方向ベクトルが有効な場合のみRaycastを実行
-        if (rayDir.sqrMagnitude > RAY_DIRECTION_EPSILON &&
-            Physics.Raycast(rayOrigin, rayDir, out RaycastHit hit, rayDistance))
+        // Raycastが失敗した場合に使用する法線を仮設定します。
+        Vector3 hitNormal = rayDir.sqrMagnitude > RAY_DIRECTION_EPSILON
+            ? -rayDir
+            : transform.forward;
+
+        // 壁のコライダーがBoxColliderの場合は専用の法線計算を使用します。
+        if (wallCollider is BoxCollider boxCollider)
         {
-            // Rayが壁コライダーに当たった場合のみ、正確な衝突点・法線で上書き
-            if (wallCollider == null || hit.collider == wallCollider)
-            {
-                hitPoint = hit.point;
-                hitNormal = hit.normal;
-            }
+            // BoxColliderの面情報から正確な法線を取得します。
+            hitNormal = GetBoxFaceNormal(boxCollider, approxPoint);
+        }
+        // BoxCollider以外のコライダーはRaycastによって衝突情報を取得します。
+        else if (wallCollider != null &&
+                 rayDir.sqrMagnitude > RAY_DIRECTION_EPSILON &&
+                 Physics.Raycast(
+                     rayOrigin,
+                     rayDir,
+                     out RaycastHit hit,
+                     rayDistance) &&
+                 hit.collider == wallCollider)
+        {
+            // Rayが実際に壁へ当たった位置を取得します。
+            hitPoint = hit.point;
+
+            // Rayが壁へ当たった位置の法線を取得します。
+            hitNormal = hit.normal;
         }
 
-        // 振り方向の初期値（デフォルトは上向き）
+        // 武器の振り方向を取得するための初期方向を設定します。
         Vector3 swingDirection = Vector3.up;
 
-        // 前フレーム位置が記録されていれば、移動差分から振り方向を推定
-        if (m_lastPositions.TryGetValue(id, out Vector3 lastPos))
+        // 武器のコライダー自身から速度トラッカーを取得します。
+        AttackHitboxVelocityTracker velocityTracker =
+            other.GetComponent<AttackHitboxVelocityTracker>();
+
+        // コライダー自身に存在しない場合は親オブジェクトから取得します。
+        if (velocityTracker == null)
         {
-            Vector3 delta = other.transform.position - lastPos;
-            if (delta.sqrMagnitude > SWING_DELTA_EPSILON)
-            {
-                swingDirection = delta.normalized;
-            }
+            velocityTracker =
+                other.GetComponentInParent<AttackHitboxVelocityTracker>();
         }
 
-        // 今回の武器位置を次回計算用に記録
+        // 速度トラッカーが見つからない場合は警告を表示します。
+        if (velocityTracker == null)
+        {
+            Debug.LogWarning(
+                $"{other.name}: AttackHitboxVelocityTracker が見つかりません。",
+                other);
+        }
+        else
+        {
+            // 現在の武器速度をデバッグログに表示します。
+            Debug.Log(
+                $"{other.name}: Velocity={velocityTracker.Velocity}, " +
+                $"sqrMagnitude={velocityTracker.Velocity.sqrMagnitude}");
+        }
+
+        // 武器の速度が十分に大きい場合だけ振り方向として使用します。
+        if (velocityTracker != null &&
+            velocityTracker.Velocity.sqrMagnitude > SWING_DELTA_EPSILON)
+        {
+            // 速度ベクトルを正規化して振り方向に変換します。
+            swingDirection = velocityTracker.Velocity.normalized;
+        }
+
+        // 次回のRay始点として使用するため現在の武器位置を保存します。
         m_lastPositions[id] = other.transform.position;
 
-        // デカール生成処理を呼び出し
+        // 取得した衝突情報を利用してデカールを生成します。
         SpawnDecal(hitPoint, hitNormal, swingDirection);
     }
 
     /// <summary>
-    /// 衝突点・法線・振り方向をもとにデカールを生成し、壁面に沿って配置します。
+    /// 衝突点、法線、振り方向を利用してデカールを生成します。
     /// </summary>
     /// <param name="hitPoint">壁面上の衝突点。</param>
     /// <param name="hitNormal">壁面の外向き法線。</param>
     /// <param name="swingDirection">武器の振り方向。</param>
-    private void SpawnDecal(Vector3 hitPoint, Vector3 hitNormal, Vector3 swingDirection)
+    private void SpawnDecal(
+        Vector3 hitPoint,
+        Vector3 hitNormal,
+        Vector3 swingDirection)
     {
-        // 法線方向にオフセットさせた生成位置を計算（Zファイティング防止）
+        // 衝突点から法線方向へ少し離した位置をデカールの生成位置にします。
         Vector3 spawnPosition = hitPoint + hitNormal * m_surfaceOffset;
 
-        // 振り方向を壁面（法線に垂直な平面）に投影
-        Vector3 projectedSwing = Vector3.ProjectOnPlane(swingDirection, hitNormal).normalized;
+        // 振り方向を壁面に沿う方向へ投影します。
+        Vector3 projectedSwing =
+            Vector3.ProjectOnPlane(swingDirection, hitNormal);
 
-        // 投影結果がほぼゼロベクトルの場合は上向きにフォールバック
-        if (projectedSwing.sqrMagnitude < PROJECTED_SWING_EPSILON)
+        // 投影したベクトルが十分な長さを持っているか確認します。
+        if (projectedSwing.sqrMagnitude > PROJECTED_SWING_EPSILON)
         {
+            // 投影結果を正規化してデカールの上方向として使用します。
+            projectedSwing.Normalize();
+        }
+        else
+        {
+            // 投影結果がほぼゼロの場合は上方向を仮の上方向として使用します。
             projectedSwing = Vector3.up;
+
+            // 法線と上方向が平行な場合は別の方向を使用します。
+            if (Mathf.Abs(Vector3.Dot(hitNormal, projectedSwing)) > 1.0f - PROJECTED_SWING_EPSILON)
+            {
+                // 上方向と平行にならないよう右方向を使用します。
+                projectedSwing = Vector3.right;
+            }
+
+            // 仮の上方向を壁面へ投影します。
+            projectedSwing =
+                Vector3.ProjectOnPlane(projectedSwing, hitNormal).normalized;
         }
 
-        // 法線を正面、投影した振り方向を上として回転を決定
-        Quaternion decalRotation = Quaternion.LookRotation(-hitNormal, projectedSwing);
+        // デカールの正面を法線の反対方向へ向け、上方向を振り方向に合わせます。
+        Quaternion decalRotation =
+            Quaternion.LookRotation(-hitNormal, projectedSwing);
 
-        // デカールを生成
-        GameObject decal = Instantiate(m_decalPrefab, spawnPosition, decalRotation);
+        // デカールプレハブを指定した位置と回転で生成します。
+        GameObject decal =
+            Instantiate(m_decalPrefab, spawnPosition, decalRotation);
 
-        // 子オブジェクトからDecalProjectorコンポーネントを検索
-        DecalProjector projector = decal.GetComponentInChildren<DecalProjector>();
+        // 生成したデカールからDecalProjectorを取得します。
+        DecalProjector projector =
+            decal.GetComponentInChildren<DecalProjector>();
+
+        // DecalProjectorが存在する場合だけピボットを変更します。
         if (projector != null)
         {
-            // 現在のピボット値を取得
+            // 現在のピボット値を取得します。
             Vector3 pivot = projector.pivot;
 
-            // Z方向のピボットをサイズの半分にずらす（投影の奥行き基準位置を調整）
+            // Z方向のピボットをデカールの奥行き半分に設定します。
             pivot.z = projector.size.z * DECAL_PIVOT_Z_RATIO;
 
-            // 変更したピボット値を反映
+            // 変更したピボットをDecalProjectorへ設定します。
             projector.pivot = pivot;
         }
 
-        // 設定に応じてデカールをこの壁の子オブジェクトにする
+        // デカールをWallの子オブジェクトにする設定の場合に処理します。
         if (m_parentDecalToSelf)
         {
+            // 生成したデカールをWallの子オブジェクトに設定します。
             decal.transform.SetParent(transform);
         }
+    }
+
+    /// <summary>
+    /// BoxColliderの形状から指定位置に最も近い面の法線を取得します。
+    /// </summary>
+    /// <param name="box">対象のBoxCollider。</param>
+    /// <param name="worldPoint">法線を求めたいワールド座標。</param>
+    /// <returns>ワールド空間での外向き法線。</returns>
+    private Vector3 GetBoxFaceNormal(
+        BoxCollider box,
+        Vector3 worldPoint)
+    {
+        // ワールド座標をBoxColliderのローカル座標へ変換します。
+        Vector3 localPoint =
+            box.transform.InverseTransformPoint(worldPoint);
+
+        // BoxColliderのCenterを基準とした座標へ変換します。
+        localPoint -= box.center;
+
+        // BoxColliderの各軸方向の半分のサイズを取得します。
+        Vector3 halfSize = box.size * 0.5f;
+
+        // X軸方向の境界への近さを比率として計算します。
+        float xRatio =
+            Mathf.Abs(localPoint.x) /
+            Mathf.Max(halfSize.x, BOX_SIZE_EPSILON);
+
+        // Y軸方向の境界への近さを比率として計算します。
+        float yRatio =
+            Mathf.Abs(localPoint.y) /
+            Mathf.Max(halfSize.y, BOX_SIZE_EPSILON);
+
+        // Z軸方向の境界への近さを比率として計算します。
+        float zRatio =
+            Mathf.Abs(localPoint.z) /
+            Mathf.Max(halfSize.z, BOX_SIZE_EPSILON);
+
+        // 算出した比率を比較するためのローカル法線を宣言します。
+        Vector3 localNormal;
+
+        // X軸方向の比率が最も大きい場合はX面を法線として使用します。
+        if (xRatio >= yRatio && xRatio >= zRatio)
+        {
+            // X座標の符号から左右どちらの面かを判定します。
+            float sign = localPoint.x >= 0.0f ? 1.0f : -1.0f;
+
+            // X方向の法線を設定します。
+            localNormal = new Vector3(sign, 0.0f, 0.0f);
+        }
+        // Y軸方向の比率が最も大きい場合はY面を法線として使用します。
+        else if (yRatio >= xRatio && yRatio >= zRatio)
+        {
+            // Y座標の符号から上下どちらの面かを判定します。
+            float sign = localPoint.y >= 0.0f ? 1.0f : -1.0f;
+
+            // Y方向の法線を設定します。
+            localNormal = new Vector3(0.0f, sign, 0.0f);
+        }
+        else
+        {
+            // Z座標の符号から前後どちらの面かを判定します。
+            float sign = localPoint.z >= 0.0f ? 1.0f : -1.0f;
+
+            // Z方向の法線を設定します。
+            localNormal = new Vector3(0.0f, 0.0f, sign);
+        }
+
+        // ローカル空間の法線をワールド空間へ変換します。
+        Vector3 worldNormal =
+            box.transform.TransformDirection(localNormal);
+
+        // 法線を正規化して返します。
+        return worldNormal.normalized;
     }
 }
