@@ -10,7 +10,7 @@ public enum HitboxDebugType
     HURT,
     GUARD,
     INTERACTION,
-    OTHER
+    OTHER,
 }
 
 /// <summary>
