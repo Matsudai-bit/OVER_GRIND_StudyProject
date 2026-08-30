@@ -40,6 +40,14 @@ public sealed class PlayerJumpingState
             return;
         }
 
+        // ジャンプ前がVブースト状態だった場合は、
+        // 待機状態を経由せず直接Vブーストへ復帰する
+        if (Owner.IsBoostSuspended)
+        {
+            Machine.ChangeState<PlayerVRunningState>();
+            return;
+        }
+
         Machine.ChangeState<PlayerIdlingState>();
     }
 

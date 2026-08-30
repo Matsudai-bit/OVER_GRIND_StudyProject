@@ -114,16 +114,49 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
     public bool IsInitialized =>
         m_isInitialized;
 
-    private float m_lastBoostChargeRate = 1.0f;
+
+    // チャージ解除時点でのゲージ量（0～1）
+    private float m_carriedBoostGaugeRate;
+
+    public float CarriedBoostGaugeRate
+    {
+        get => m_carriedBoostGaugeRate;
+        set => m_carriedBoostGaugeRate = Mathf.Clamp01(value);
+    }
+
+    // Vブースト中断時点／進行中の残りゲージ量（0～1）
+    // PlayerVRunningStateが開始・参照・更新し、
+    // 中断中（Idling/Jumping中）もこの本体側で消費し続けます
+    private float m_suspendedBoostGaugeRate;
+
+    public float SuspendedBoostGaugeRate
+    {
+        get => m_suspendedBoostGaugeRate;
+        set => m_suspendedBoostGaugeRate = Mathf.Clamp01(value);
+    }
+
+    // Vブーストが中断中か
+    // （trueの間、移動入力・接地などの条件が揃えばVRunningへ復帰する）
+    private bool m_isBoostSuspended;
+
+    public bool IsBoostSuspended
+    {
+        get => m_isBoostSuspended;
+        set => m_isBoostSuspended = value;
+    }
+
+    // ゲージを1秒あたりどれだけ消費するか
+    // （VRunningState開始時に設定される）
+    private float m_boostGaugeDepletionRatePerSecond;
 
     /// <summary>
-    /// チャージ完了時のチャージ率（0～1）を取得または設定します。
-    /// State間でのブースト強度の受け渡しに使用します。
+    /// ゲージの1秒あたりの消費レートを設定します。
+    /// PlayerVRunningStateがブースト開始時に呼び出します。
     /// </summary>
-    public float LastBoostChargeRate
+    public void SetBoostGaugeDepletionRate(float ratePerSecond)
     {
-        get => m_lastBoostChargeRate;
-        set => m_lastBoostChargeRate = Mathf.Clamp01(value);
+        m_boostGaugeDepletionRatePerSecond =
+            Mathf.Max(ratePerSecond, 0.0f);
     }
 
     /// <summary>
@@ -256,6 +289,10 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
 
         // 現在のStateに関係なく、常に実速度をUIへ反映する
         UpdateSpeedDisplay();
+
+        // Vブースト中（中断中を含む）は、
+        // 現在のStateに関係なく常にゲージを消費する
+        UpdateSuspendableBoostGauge();
     }
 
     /// <summary>
@@ -269,6 +306,49 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
         }
 
         m_vSpeedUI.SetSpeed(m_motor.HorizontalSpeed);
+    }
+
+    /// <summary>
+    /// Vブースト中（VRunningState中・中断中の両方）の
+    /// ゲージ消費とUI反映を、Stateに関係なく行います。
+    /// </summary>
+    private void UpdateSuspendableBoostGauge()
+    {
+        bool isConsumingGauge =
+            IsCurrentState<PlayerVRunningState>() ||
+            m_isBoostSuspended;
+
+        if (!isConsumingGauge)
+        {
+            return;
+        }
+
+        m_suspendedBoostGaugeRate -=
+            m_boostGaugeDepletionRatePerSecond *
+            (Time.fixedDeltaTime / 10.0f);
+
+        if (m_suspendedBoostGaugeRate < 0.0f)
+        {
+            m_suspendedBoostGaugeRate = 0.0f;
+        }
+
+        if (m_vGaugeUI != null)
+        {
+            m_vGaugeUI.SetGaugeRate(m_suspendedBoostGaugeRate);
+        }
+
+        // 中断中にゲージを使い切った場合も、
+        // 復帰しようがないため中断状態を解除しておく
+        if (m_suspendedBoostGaugeRate <= 0.0f &&
+            m_isBoostSuspended)
+        {
+            m_isBoostSuspended = false;
+
+            if (m_vGaugeUI != null)
+            {
+                m_vGaugeUI.SetCharging(false);
+            }
+        }
     }
 
     /// <summary>

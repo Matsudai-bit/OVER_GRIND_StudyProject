@@ -50,8 +50,10 @@ public sealed class PlayerWalkingState
             return;
         }
 
-        // Vブーストの長押し成立を確認
-        if (Owner.InputReader.ConsumeVBoostHoldStarted())
+        // Vブーストの長押し成立を確認。
+        // ただし新規のブースト開始は接地中のみ許可する
+        if (Owner.Monitor.IsGrounded &&
+            Owner.InputReader.ConsumeVBoostHoldStarted())
         {
             Machine.ChangeState<PlayerBoostChargingState>();
             return;

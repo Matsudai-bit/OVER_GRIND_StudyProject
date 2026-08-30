@@ -44,8 +44,12 @@ public sealed class PlayerInputReader : MonoBehaviour
     // Vブースト入力中か
     private bool m_isVBoostHeld;
 
-    // Vブースト入力が長押し状態になったか
+    // Vブースト入力が長押し状態になったか（外部消費用フラグ）
     private bool m_hasVBoostHoldStarted;
+
+    // 今回の押下中にすでに長押しをトリガー済みか
+    // （Consumeされても戻らない、内部専用ガード）
+    private bool m_vBoostHoldTriggeredThisPress;
 
     // Vブースト入力が離されたか
     private bool m_hasVBoostReleased;
@@ -55,9 +59,6 @@ public sealed class PlayerInputReader : MonoBehaviour
 
     // 入力が有効か
     private bool m_isInputEnabled;
-
-    // Vブースト長押しがこの押下中にすでにトリガー済みか（内部ガード用、Consumeでは戻らない）
-    private bool m_vBoostHoldTriggeredThisPress;
 
     /// <summary>
     /// 現在の移動入力を取得します。
@@ -344,6 +345,9 @@ public sealed class PlayerInputReader : MonoBehaviour
         }
 
         // すでにこの押下中に長押しをトリガー済みなら再判定しない
+        // （ConsumeVBoostHoldStarted()で外部フラグが消費されても
+        // 　この内部ガードは戻らないため、押しっぱなし中の
+        // 　多重トリガーを防げる）
         if (m_vBoostHoldTriggeredThisPress)
         {
             return;

@@ -22,7 +22,6 @@ public sealed class PlayerBoostChargingState
     private const float SPEED_LOG_INTERVAL = 0.25f;
 
     // 移動入力が瞬間的に途切れてもIdlingへ遷移しない猶予時間
-    // （逆入力時にスティックが0を通過する誤検知対策）
     private const float NO_MOVE_INPUT_GRACE_TIME = 0.15f;
 
     // チャージ経過時間
@@ -52,6 +51,14 @@ public sealed class PlayerBoostChargingState
     /// </summary>
     protected override void OnStartState()
     {
+        // 長押し成立経由でChargingに入った場合、
+        // ボタン押下時のワンショット開始フラグ(m_hasVBoostStarted)が
+        // 一度も消費されずに残っていることがあるため、ここで握りつぶす。
+        // これを怠ると、はるか後の別State（Idling等）が
+        // この古いイベントを誤って拾い、意図せずChargingへ
+        // 再突入してしまう不具合につながる。
+        Owner.InputReader.ConsumeVBoostStarted();
+
         m_chargeTime = 0.0f;
         m_speedLogElapsedTime = 0.0f;
         m_noMoveInputElapsedTime = 0.0f;
@@ -60,8 +67,6 @@ public sealed class PlayerBoostChargingState
             Owner.MovementParameterAsset
                 .CreateMoveParameters();
 
-        // 通常の最高速度ではなく、
-        // チャージ開始時点の「実際の速度」を基準にする
         float currentSpeedAtChargeStart =
             Owner.Motor.HorizontalSpeed;
 
@@ -69,7 +74,6 @@ public sealed class PlayerBoostChargingState
             currentSpeedAtChargeStart *
             CHARGE_MOVE_SPEED_RATE;
 
-        // 旋回補間の基準値として、通常旋回速度を保存
         m_normalRotationSpeed =
             normalParameters.RotationSpeed;
 
@@ -87,7 +91,6 @@ public sealed class PlayerBoostChargingState
             $"通常旋回速度={m_normalRotationSpeed:F2}",
             Owner);
 
-        // ゲージ演出を0からチャージ中表示へ切り替える
         if (Owner.VGaugeUI != null)
         {
             Owner.VGaugeUI.SetGaugeRate(0.0f);
@@ -102,14 +105,12 @@ public sealed class PlayerBoostChargingState
     /// </summary>
     protected override void OnFixedUpdate()
     {
-        // 攻撃入力
         if (Owner.InputReader.ConsumeAttackInput())
         {
             Machine.ChangeState<PlayerAttackingState>();
             return;
         }
 
-        // ジャンプ入力
         if (Owner.Monitor.IsGrounded &&
             Owner.InputReader.HasJumpInput)
         {
@@ -117,7 +118,6 @@ public sealed class PlayerBoostChargingState
             return;
         }
 
-        // Vブースト入力を離したか確認
         if (Owner.InputReader.ConsumeVBoostReleased())
         {
             Debug.Log(
@@ -132,7 +132,6 @@ public sealed class PlayerBoostChargingState
             return;
         }
 
-        // 移動入力の有無で、無入力の継続時間を更新
         if (Owner.InputReader.HasMoveInput)
         {
             m_noMoveInputElapsedTime = 0.0f;
@@ -141,8 +140,6 @@ public sealed class PlayerBoostChargingState
         {
             m_noMoveInputElapsedTime += Time.fixedDeltaTime;
 
-            // 猶予時間を超えて無入力が続いた場合のみ待機状態へ遷移
-            // （逆入力時の瞬間的な0通過は無視する）
             if (m_noMoveInputElapsedTime >=
                 NO_MOVE_INPUT_GRACE_TIME)
             {
@@ -156,17 +153,13 @@ public sealed class PlayerBoostChargingState
             }
         }
 
-        // チャージ時間を進める
         m_chargeTime += Time.fixedDeltaTime;
 
-        // 最大チャージ到達
         if (m_chargeTime >= MAX_CHARGE_TIME)
         {
             m_chargeTime = MAX_CHARGE_TIME;
         }
 
-        // チャージ率に応じて、通常旋回速度から
-        // 最も曲がりにくい旋回速度まで徐々に補間する
         float currentRotationSpeed =
             Mathf.Lerp(
                 m_normalRotationSpeed,
@@ -180,13 +173,11 @@ public sealed class PlayerBoostChargingState
             currentRotationSpeed,
             Time.fixedDeltaTime);
 
-        // ゲージ表示をチャージ率に合わせて更新する
         if (Owner.VGaugeUI != null)
         {
             Owner.VGaugeUI.SetGaugeRate(ChargeRate);
         }
 
-        // 速度ログ
         m_speedLogElapsedTime += Time.fixedDeltaTime;
 
         if (m_speedLogElapsedTime >= SPEED_LOG_INTERVAL)
@@ -212,13 +203,6 @@ public sealed class PlayerBoostChargingState
             "[PlayerBoostChargingState] チャージ状態終了",
             Owner);
 
-        // ゲージ表示・演出を通常状態へ戻す
-        if (Owner.VGaugeUI != null)
-        {
-            Owner.VGaugeUI.SetGaugeRate(0.0f);
-            Owner.VGaugeUI.SetCharging(false);
-        }
-
         Owner.AnimationPresenter.StopWalkAnimation();
     }
 
@@ -234,8 +218,7 @@ public sealed class PlayerBoostChargingState
                 $"チャージ率{ChargeRate:P1} → Vブーストへ遷移",
                 Owner);
 
-            // チャージ率をVRunningStateへ引き継ぐ
-            Owner.LastBoostChargeRate = ChargeRate;
+            Owner.CarriedBoostGaugeRate = ChargeRate;
 
             Machine.ChangeState<PlayerVRunningState>();
             return;
@@ -245,6 +228,12 @@ public sealed class PlayerBoostChargingState
             $"[PlayerBoostChargingState] " +
             $"チャージ率{ChargeRate:P1} → 通常歩行へ遷移",
             Owner);
+
+        if (Owner.VGaugeUI != null)
+        {
+            Owner.VGaugeUI.SetGaugeRate(0.0f);
+            Owner.VGaugeUI.SetCharging(false);
+        }
 
         Machine.ChangeState<PlayerWalkingState>();
     }

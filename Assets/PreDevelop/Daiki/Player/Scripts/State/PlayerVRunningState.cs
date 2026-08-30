@@ -1,7 +1,11 @@
 using UnityEngine;
 
 /// <summary>
-/// プレイヤーのVブースト移動状態を管理します。
+/// プレイヤーのVブースト状態を管理します。
+/// 解放直後の「ブーストダッシュ」と、その後の「通常移動」の
+/// 2フェーズで構成され、チャージしたゲージを消費しきるまで継続します。
+/// ゲージの消費自体はPlayerStateMachineComponent側で
+/// Stateに関係なく（中断中も）行われます。
 /// </summary>
 public sealed class PlayerVRunningState
     : StateBase<PlayerStateMachineComponent>
@@ -11,97 +15,113 @@ public sealed class PlayerVRunningState
     /// </summary>
     private enum VBoostPhase
     {
-        INITIAL_BOOST,
-        STABLE_BOOST
+        // ブーストダッシュ（固定0.5秒、圧倒的な高速移動）
+        BOOST_DASH,
+
+        // 通常移動（ダッシュ終了後、ゲージを消費しきるまで継続）
+        NORMAL_MOVE
     }
 
-    // チャージ不足時でも保証する最低のブースト効果割合
-    // （チャージ率が低いほどこの値に近づき、
-    // 　1.0チャージでアセット本来の値になる）
-    private const float MIN_BOOST_EFFECT_RATE = 0.4f;
+    // ブーストダッシュの継続時間（仮の固定値）
+    private const float BOOST_DASH_DURATION = 0.5f;
 
-    // 初速ブーストの移動パラメータ
-    private PlayerMoveParameters m_initialBoostParameters;
-
-    // 安定ブーストの移動パラメータ
-    private PlayerMoveParameters m_stableBoostParameters;
-
-    // チャージ率に応じて調整された初速ブースト時間
-    private float m_initialBoostDuration;
-
-    // チャージ率に応じて調整された安定ブースト時間
-    private float m_stableBoostDuration;
+    // ブーストダッシュ中の最大移動速度倍率（仮で基本の2倍）
+    private const float DASH_SPEED_MULTIPLIER = 2.0f;
 
     // 現在のブーストフェーズ
     private VBoostPhase m_currentPhase;
 
-    // 現在フェーズの経過時間
+    // 現在フェーズの経過時間（ダッシュ終了判定用）
     private float m_elapsedTime;
+
+    // ダッシュ中に使用する移動パラメータ（基本速度の2倍・瞬時到達）
+    private PlayerMoveParameters m_dashMoveParameters;
+
+    // ダッシュ終了後に使用する通常移動パラメータ
+    private PlayerMoveParameters m_normalMoveParameters;
 
     /// <summary>
     /// 状態開始時に呼ばれます。
+    /// 中断（ジャンプ・停止など）から復帰した場合は、
+    /// 中断時点のフェーズから再開します。
     /// </summary>
     protected override void OnStartState()
     {
-        PlayerVBoostMovementParameterAsset parameterAsset =
-            Owner.VBoostMovementParameterAsset;
+        PlayerMoveParameters normalParameters =
+            Owner.MovementParameterAsset
+                .CreateMoveParameters();
 
-        PlayerMoveParameters baseInitialParameters =
-            parameterAsset.CreateInitialBoostParameters();
-
-        PlayerMoveParameters baseStableParameters =
-            parameterAsset.CreateStableBoostParameters();
-
-        // チャージ率が低いほど効果を弱める倍率を計算する
-        // （MIN_BOOST_EFFECT_RATE ～ 1.0 の範囲で変動）
-        float boostEffectRate =
-            Mathf.Lerp(
-                MIN_BOOST_EFFECT_RATE,
-                1.0f,
-                Owner.LastBoostChargeRate);
-
-        // 速度をチャージ率に応じてスケーリングする
-        m_initialBoostParameters =
+        m_dashMoveParameters =
             new PlayerMoveParameters(
-                baseInitialParameters.MaxMoveSpeed *
-                    boostEffectRate,
-                baseInitialParameters.TimeToMaxSpeed,
-                baseInitialParameters.TimeToStop,
-                baseInitialParameters.RotationSpeed);
+                normalParameters.MaxMoveSpeed *
+                    DASH_SPEED_MULTIPLIER,
+                normalParameters.TimeToMaxSpeed,
+                normalParameters.TimeToStop,
+                normalParameters.RotationSpeed);
 
-        m_stableBoostParameters =
-            new PlayerMoveParameters(
-                baseStableParameters.MaxMoveSpeed *
-                    boostEffectRate,
-                baseStableParameters.TimeToMaxSpeed,
-                baseStableParameters.TimeToStop,
-                baseStableParameters.RotationSpeed);
+        m_normalMoveParameters = normalParameters;
 
-        // 持続時間もチャージ率に応じてスケーリングする
-        m_initialBoostDuration =
-            parameterAsset.InitialBoostDuration *
-            boostEffectRate;
+        // 満タンのゲージが、アセット設定の秒数で
+        // 使い切られるよう消費レートを算出し、本体側へ設定する
+        float fullTankDuration =
+            Mathf.Max(
+                Owner.VBoostMovementParameterAsset
+                    .StableBoostDuration,
+                0.01f);
 
-        m_stableBoostDuration =
-            parameterAsset.StableBoostDuration *
-            boostEffectRate;
+        Owner.SetBoostGaugeDepletionRate(
+            1.0f / fullTankDuration);
 
-        Debug.Log(
-            $"[PlayerVRunningState] ブースト開始 " +
-            $"チャージ率={Owner.LastBoostChargeRate:P1} " +
-            $"効果倍率={boostEffectRate:F2} " +
-            $"初速最高速度={m_initialBoostParameters.MaxMoveSpeed:F2} " +
-            $"安定最高速度={m_stableBoostParameters.MaxMoveSpeed:F2} " +
-            $"初速持続={m_initialBoostDuration:F2}秒 " +
-            $"安定持続={m_stableBoostDuration:F2}秒",
-            Owner);
+        if (Owner.IsBoostSuspended)
+        {
+            // 中断された状態からの復帰。
+            // ダッシュフェーズは終えている前提で
+            // 通常移動フェーズから再開する。
+            // ゲージ量は中断中も本体側で消費され続けているため、
+            // ここで読み直すだけでよい。
+            m_currentPhase =
+                VBoostPhase.NORMAL_MOVE;
 
-        m_currentPhase =
-            VBoostPhase.INITIAL_BOOST;
+            m_elapsedTime = 0.0f;
 
-        m_elapsedTime = 0.0f;
+            Owner.IsBoostSuspended = false;
+
+            Debug.Log(
+                $"[PlayerVRunningState] " +
+                $"中断から復帰 " +
+                $"残りゲージ量={Owner.SuspendedBoostGaugeRate:P1}",
+                Owner);
+        }
+        else
+        {
+            // 通常のブーストチャージからの新規開始
+            Owner.SuspendedBoostGaugeRate =
+                Owner.CarriedBoostGaugeRate;
+
+            m_currentPhase =
+                VBoostPhase.BOOST_DASH;
+
+            m_elapsedTime = 0.0f;
+
+            Debug.Log(
+                $"[PlayerVRunningState] ブーストダッシュ開始 " +
+                $"引き継ぎゲージ量={Owner.SuspendedBoostGaugeRate:P1} " +
+                $"ダッシュ最高速度={m_dashMoveParameters.MaxMoveSpeed:F2} " +
+                $"（通常速度={normalParameters.MaxMoveSpeed:F2}） " +
+                $"ダッシュ時間={BOOST_DASH_DURATION:F2}秒 " +
+                $"満タン消費時間={fullTankDuration:F2}秒",
+                Owner);
+        }
 
         Owner.AnimationPresenter.PlayWalkAnimation();
+
+        if (Owner.VGaugeUI != null)
+        {
+            Owner.VGaugeUI.SetGaugeRate(
+                Owner.SuspendedBoostGaugeRate);
+
+            Owner.VGaugeUI.SetCharging(true);
+        }
     }
 
     /// <summary>
@@ -109,9 +129,6 @@ public sealed class PlayerVRunningState
     /// </summary>
     protected override void OnFixedUpdate()
     {
-        // 再入力は次回ブーストとして持ち越さない
-        Owner.InputReader.ConsumeVBoostInput();
-
         // 攻撃入力を確認
         if (Owner.InputReader.ConsumeAttackInput())
         {
@@ -119,31 +136,41 @@ public sealed class PlayerVRunningState
             return;
         }
 
-        // 移動入力がなくなったら待機状態へ遷移
+        // ゲージが本体側の消費によって尽きていないか確認
+        // （中断復帰直後や、消費が進んで0になった場合はここで検知する）
+        if (Owner.SuspendedBoostGaugeRate <= 0.0f)
+        {
+            Debug.Log(
+                "[PlayerVRunningState] " +
+                "ゲージを消費しきったため通常歩行へ遷移します。",
+                Owner);
+
+            Machine.ChangeState<PlayerWalkingState>();
+            return;
+        }
+
+        // 移動入力がなくなった場合は、打ち切らずに中断する。
+        // 待機中に再び移動入力が入れば復帰できるようにする。
         if (!Owner.InputReader.HasMoveInput)
         {
+            SuspendBoost();
+
             Machine.ChangeState<PlayerIdlingState>();
             return;
         }
 
         // ジャンプ入力を確認
+        // 同様に打ち切らず中断し、着地後に復帰させる
         if (Owner.Monitor.IsGrounded &&
             Owner.InputReader.HasJumpInput)
         {
+            SuspendBoost();
+
             Machine.ChangeState<PlayerJumpingState>();
             return;
         }
 
-        // 現在のフェーズに対応したパラメータで移動
-        PlayerMoveParameters moveParameters =
-            GetCurrentMoveParameters();
-
-        Owner.Motor.Move(
-            Owner.InputReader.MoveInput,
-            moveParameters,
-            Time.fixedDeltaTime);
-
-        UpdateBoostPhase(Time.fixedDeltaTime);
+        UpdatePhaseMovement();
     }
 
     /// <summary>
@@ -152,74 +179,76 @@ public sealed class PlayerVRunningState
     protected override void OnExitState()
     {
         Owner.AnimationPresenter.StopWalkAnimation();
-    }
 
-    /// <summary>
-    /// 現在のブーストフェーズを更新します。
-    /// </summary>
-    /// <param name="deltaTime">物理更新の経過時間。</param>
-    private void UpdateBoostPhase(float deltaTime)
-    {
-        m_elapsedTime += deltaTime;
-
-        switch (m_currentPhase)
-        {
-            case VBoostPhase.INITIAL_BOOST:
-                UpdateInitialBoostPhase();
-                break;
-
-            case VBoostPhase.STABLE_BOOST:
-                UpdateStableBoostPhase();
-                break;
-        }
-    }
-
-    /// <summary>
-    /// 初速ブーストフェーズを更新します。
-    /// </summary>
-    private void UpdateInitialBoostPhase()
-    {
-        if (m_elapsedTime < m_initialBoostDuration)
+        // 中断による終了の場合は、後で再開するため
+        // ゲージ表示・演出をリセットしない
+        if (Owner.IsBoostSuspended)
         {
             return;
         }
 
-        m_currentPhase =
-            VBoostPhase.STABLE_BOOST;
-
-        m_elapsedTime = 0.0f;
-    }
-
-    /// <summary>
-    /// 安定ブーストフェーズを更新します。
-    /// </summary>
-    private void UpdateStableBoostPhase()
-    {
-        if (m_elapsedTime < m_stableBoostDuration)
+        // それ以外（ゲージを消費しきった、攻撃で打ち切られた等）の
+        // 正真正銘の終了時は、表示・演出をリセットする
+        if (Owner.VGaugeUI != null)
         {
-            return;
+            Owner.VGaugeUI.SetGaugeRate(0.0f);
+            Owner.VGaugeUI.SetCharging(false);
         }
-
-        // Vブースト終了後は通常歩行へ戻る
-        Machine.ChangeState<PlayerWalkingState>();
     }
 
     /// <summary>
-    /// 現在のフェーズに対応した移動パラメータを取得します。
+    /// 現在の状態を中断情報として保存します。
+    /// ゲージ量自体は本体側で保持され続けているため、
+    /// ここではフラグを立てるだけでよいです。
     /// </summary>
-    /// <returns>現在使用する移動パラメータ。</returns>
-    private PlayerMoveParameters GetCurrentMoveParameters()
+    private void SuspendBoost()
+    {
+        Owner.IsBoostSuspended = true;
+
+        Debug.Log(
+            $"[PlayerVRunningState] " +
+            $"Vブーストを中断 " +
+            $"残りゲージ量={Owner.SuspendedBoostGaugeRate:P1}",
+            Owner);
+    }
+
+    /// <summary>
+    /// 現在のフェーズに応じた移動処理を行い、
+    /// ダッシュ時間経過時はフェーズを切り替えます。
+    /// </summary>
+    private void UpdatePhaseMovement()
     {
         switch (m_currentPhase)
         {
-            case VBoostPhase.INITIAL_BOOST:
-                return m_initialBoostParameters;
+            case VBoostPhase.BOOST_DASH:
+                Owner.Motor.MoveAtFixedSpeed(
+                    Owner.InputReader.MoveInput,
+                    m_dashMoveParameters.MaxMoveSpeed,
+                    m_dashMoveParameters.RotationSpeed,
+                    Time.fixedDeltaTime);
 
-            case VBoostPhase.STABLE_BOOST:
-                return m_stableBoostParameters;
+                m_elapsedTime += Time.fixedDeltaTime;
 
-            default:
-                return m_stableBoostParameters;
+                if (m_elapsedTime >= BOOST_DASH_DURATION)
+                {
+                    Debug.Log(
+                        "[PlayerVRunningState] " +
+                        "ブーストダッシュ終了 → 通常移動フェーズへ",
+                        Owner);
+
+                    m_currentPhase =
+                        VBoostPhase.NORMAL_MOVE;
+                }
+
+                break;
+
+            case VBoostPhase.NORMAL_MOVE:
+                Owner.Motor.Move(
+                    Owner.InputReader.MoveInput,
+                    m_normalMoveParameters,
+                    Time.fixedDeltaTime);
+
+                break;
         }
     }
 }

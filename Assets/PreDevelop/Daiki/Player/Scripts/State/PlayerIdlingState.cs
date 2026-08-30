@@ -45,9 +45,21 @@ public sealed class PlayerIdlingState
         // 移動入力があれば移動状態へ遷移
         if (Owner.InputReader.HasMoveInput)
         {
+            // Vブーストが中断中であれば、接地状態に関わらず
+            // 通常歩行ではなくVブースト状態へ復帰する
+            // （これはジャンプ等で中断したものの再開であり、
+            // 　新規開始ではないため接地条件の対象外とする）
+            if (Owner.IsBoostSuspended)
+            {
+                Machine.ChangeState<PlayerVRunningState>();
+                return;
+            }
+
             // Vブースト入力が開始されたら
-            // ブーストチャージ状態へ遷移
-            if (Owner.InputReader.ConsumeVBoostStarted())
+            // ブーストチャージ状態へ遷移する。
+            // ただし新規のブースト開始は接地中のみ許可する
+            if (Owner.Monitor.IsGrounded &&
+                Owner.InputReader.ConsumeVBoostStarted())
             {
                 Machine.ChangeState<PlayerBoostChargingState>();
                 return;
