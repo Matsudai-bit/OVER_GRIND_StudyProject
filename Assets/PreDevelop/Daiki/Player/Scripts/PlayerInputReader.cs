@@ -10,6 +10,9 @@ public sealed class PlayerInputReader : MonoBehaviour
     // 移動入力の有効判定に使用する閾値
     private const float MOVE_INPUT_SQR_THRESHOLD = 0.0001f;
 
+    // Vブーストの長押し判定時間
+    private const float V_BOOST_HOLD_TIME = 0.2f;
+
     // 移動入力アクション
     [SerializeField, Header("移動入力アクション")]
     private InputActionReference m_moveActionReference;
@@ -35,11 +38,26 @@ public sealed class PlayerInputReader : MonoBehaviour
     // ジャンプ入力中か
     private bool m_hasJumpInput;
 
-    // Vブースト入力があるか
-    private bool m_hasVBoostInput;
+    // Vブースト入力が開始されたか
+    private bool m_hasVBoostStarted;
+
+    // Vブースト入力中か
+    private bool m_isVBoostHeld;
+
+    // Vブースト入力が長押し状態になったか
+    private bool m_hasVBoostHoldStarted;
+
+    // Vブースト入力が離されたか
+    private bool m_hasVBoostReleased;
+
+    // Vブーストを押している時間
+    private float m_vBoostHoldTime;
 
     // 入力が有効か
     private bool m_isInputEnabled;
+
+    // Vブースト長押しがこの押下中にすでにトリガー済みか（内部ガード用、Consumeでは戻らない）
+    private bool m_vBoostHoldTriggeredThisPress;
 
     /// <summary>
     /// 現在の移動入力を取得します。
@@ -47,28 +65,34 @@ public sealed class PlayerInputReader : MonoBehaviour
     public Vector2 MoveInput => m_moveInput;
 
     /// <summary>
-    /// 移動入力があるかを取得します。
+    /// 移動入力があるかどうかを取得します。
     /// </summary>
     public bool HasMoveInput =>
         m_moveInput.sqrMagnitude >
         MOVE_INPUT_SQR_THRESHOLD;
 
     /// <summary>
-    /// ジャンプ入力中かを取得します。
+    /// ジャンプ入力中かどうかを取得します。
     /// </summary>
     public bool HasJumpInput => m_hasJumpInput;
 
     /// <summary>
-    /// 入力が有効かを取得します。
+    /// 入力が有効かどうかを取得します。
     /// </summary>
     public bool IsInputEnabled => m_isInputEnabled;
+
+    /// <summary>
+    /// Vブースト入力が押され続けているか取得します。
+    /// </summary>
+    public bool IsVBoostHeld =>
+        m_isVBoostHeld;
 
     /// <summary>
     /// 攻撃入力を取得して消費します。
     /// </summary>
     /// <returns>
-    /// true：攻撃入力がありました。
-    /// false：攻撃入力がありません。
+    /// true：攻撃入力がある。
+    /// false：攻撃入力がない。
     /// </returns>
     public bool ConsumeAttackInput()
     {
@@ -83,19 +107,82 @@ public sealed class PlayerInputReader : MonoBehaviour
 
     /// <summary>
     /// Vブースト入力を取得して消費します。
+    /// 既存のVブースト状態との互換性のために残します。
     /// </summary>
     /// <returns>
-    /// true：Vブースト入力がありました。
-    /// false：Vブースト入力がありません。
+    /// true：Vブースト入力がある。
+    /// false：Vブースト入力がない。
     /// </returns>
     public bool ConsumeVBoostInput()
     {
-        if (!m_hasVBoostInput)
+        if (!m_hasVBoostStarted)
         {
             return false;
         }
 
-        m_hasVBoostInput = false;
+        m_hasVBoostStarted = false;
+        return true;
+    }
+
+    /// <summary>
+    /// Vブーストの長押し成立を取得して消費します。
+    /// </summary>
+    /// <returns>
+    /// true：Vブーストの長押しが成立した。
+    /// false：成立していない。
+    /// </returns>
+    public bool ConsumeVBoostHoldStarted()
+    {
+        if (!m_hasVBoostHoldStarted)
+        {
+            return false;
+        }
+
+        m_hasVBoostHoldStarted = false;
+        return true;
+    }
+
+    /// <summary>
+    /// Vブースト入力が開始されたか取得します。
+    /// 取得すると開始入力を消費します。
+    /// </summary>
+    /// <returns>
+    /// true：Vブースト入力が開始された。
+    /// false：開始されていない。
+    /// </returns>
+    public bool ConsumeVBoostStarted()
+    {
+        if (!m_hasVBoostStarted)
+        {
+            return false;
+        }
+
+        m_hasVBoostStarted = false;
+        return true;
+    }
+
+    /// <summary>
+    /// Vブースト入力が押され続けているか取得します。
+    /// </summary>
+    public bool IsVBoostHeldInput =>
+        m_isVBoostHeld;
+
+    /// <summary>
+    /// Vブースト入力が離されたか取得します。
+    /// 取得すると離した入力を消費します。
+    /// </summary>
+    /// <returns>
+    /// true：Vブースト入力が離された。
+    /// false：離されていない。
+    /// </returns>
+    public bool ConsumeVBoostReleased()
+    {
+        if (!m_hasVBoostReleased)
+        {
+            return false;
+        }
+
+        m_hasVBoostReleased = false;
         return true;
     }
 
@@ -152,8 +239,11 @@ public sealed class PlayerInputReader : MonoBehaviour
             m_vBoostActionReference,
             out InputAction vBoostAction))
         {
-            vBoostAction.performed +=
-                HandleVBoostPerformed;
+            vBoostAction.started +=
+                HandleVBoostStarted;
+
+            vBoostAction.canceled +=
+                HandleVBoostCanceled;
 
             vBoostAction.Enable();
         }
@@ -212,8 +302,11 @@ public sealed class PlayerInputReader : MonoBehaviour
             m_vBoostActionReference,
             out InputAction vBoostAction))
         {
-            vBoostAction.performed -=
-                HandleVBoostPerformed;
+            vBoostAction.started -=
+                HandleVBoostStarted;
+
+            vBoostAction.canceled -=
+                HandleVBoostCanceled;
 
             vBoostAction.Disable();
         }
@@ -224,11 +317,47 @@ public sealed class PlayerInputReader : MonoBehaviour
     }
 
     /// <summary>
-    /// コンポーネント無効化時に入力を解除します。
+    /// コンポーネント無効化時に入力を停止します。
     /// </summary>
     private void OnDisable()
     {
         DisableInput();
+    }
+
+    /// <summary>
+    /// 毎フレーム入力状態を更新します。
+    /// </summary>
+    private void Update()
+    {
+        UpdateVBoostHold();
+    }
+
+    /// <summary>
+    /// Vブーストの長押し状態を更新します。
+    /// </summary>
+    private void UpdateVBoostHold()
+    {
+        if (!m_isVBoostHeld)
+        {
+            m_vBoostHoldTime = 0.0f;
+            return;
+        }
+
+        // すでにこの押下中に長押しをトリガー済みなら再判定しない
+        if (m_vBoostHoldTriggeredThisPress)
+        {
+            return;
+        }
+
+        m_vBoostHoldTime += Time.deltaTime;
+
+        if (m_vBoostHoldTime < V_BOOST_HOLD_TIME)
+        {
+            return;
+        }
+
+        m_hasVBoostHoldStarted = true;
+        m_vBoostHoldTriggeredThisPress = true;
     }
 
     /// <summary>
@@ -253,7 +382,7 @@ public sealed class PlayerInputReader : MonoBehaviour
     }
 
     /// <summary>
-    /// 攻撃入力を保存します。
+    /// 攻撃入力を取得します。
     /// </summary>
     /// <param name="context">入力情報。</param>
     private void HandleAttackPerformed(
@@ -283,13 +412,43 @@ public sealed class PlayerInputReader : MonoBehaviour
     }
 
     /// <summary>
-    /// Vブースト入力を保存します。
+    /// Vブースト入力を開始します。
     /// </summary>
     /// <param name="context">入力情報。</param>
-    private void HandleVBoostPerformed(
+    private void HandleVBoostStarted(
         InputAction.CallbackContext context)
     {
-        m_hasVBoostInput = true;
+        // 前回の入力状態をリセット
+        m_hasVBoostReleased = false;
+        m_hasVBoostHoldStarted = false;
+        m_vBoostHoldTriggeredThisPress = false;
+        m_vBoostHoldTime = 0.0f;
+
+        // 今回のVブースト開始を記録
+        m_hasVBoostStarted = true;
+
+        // 現在Vブースト入力が押されている
+        m_isVBoostHeld = true;
+    }
+
+    /// <summary>
+    /// Vブースト入力を終了します。
+    /// </summary>
+    /// <param name="context">入力情報。</param>
+    private void HandleVBoostCanceled(
+        InputAction.CallbackContext context)
+    {
+        m_isVBoostHeld = false;
+        m_hasVBoostReleased = true;
+
+        // 長押し成立前に離した場合は
+        // 長押し開始フラグを残さない
+        if (m_vBoostHoldTime < V_BOOST_HOLD_TIME)
+        {
+            m_hasVBoostHoldStarted = false;
+        }
+
+        m_vBoostHoldTime = 0.0f;
     }
 
     /// <summary>
@@ -300,7 +459,12 @@ public sealed class PlayerInputReader : MonoBehaviour
         m_moveInput = Vector2.zero;
         m_hasAttackInput = false;
         m_hasJumpInput = false;
-        m_hasVBoostInput = false;
+        m_hasVBoostStarted = false;
+        m_isVBoostHeld = false;
+        m_hasVBoostHoldStarted = false;
+        m_vBoostHoldTriggeredThisPress = false;
+        m_hasVBoostReleased = false;
+        m_vBoostHoldTime = 0.0f;
     }
 
     /// <summary>
@@ -309,8 +473,8 @@ public sealed class PlayerInputReader : MonoBehaviour
     /// <param name="actionReference">入力アクション参照。</param>
     /// <param name="action">取得した入力アクション。</param>
     /// <returns>
-    /// true：入力アクションを取得しました。
-    /// false：入力アクションを取得できませんでした。
+    /// true：入力アクションを取得できた。
+    /// false：入力アクションを取得できなかった。
     /// </returns>
     private bool TryGetAction(
         InputActionReference actionReference,

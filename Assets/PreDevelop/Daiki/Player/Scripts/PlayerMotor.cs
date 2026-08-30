@@ -326,4 +326,75 @@ public sealed class PlayerMotor : MonoBehaviour
 
         return targetSpeed / safeTime;
     }
+
+    /// <summary>
+    /// プレイヤーの現在の水平移動速度を取得します。
+    /// </summary>
+    public float HorizontalSpeed
+    {
+        get
+        {
+            if (!m_isInitialized ||
+                m_playerRigidbody == null)
+            {
+                return 0.0f;
+            }
+
+            Vector3 velocity =
+                m_playerRigidbody.linearVelocity;
+
+            velocity.y = 0.0f;
+
+            return velocity.magnitude;
+        }
+    }
+
+    /// <summary>
+    /// 指定した速度で移動します。
+    /// 加速・減速を行わず、水平速度を一定にします。
+    /// </summary>
+    /// <param name="moveInput">移動入力。</param>
+    /// <param name="speed">移動速度。</param>
+    /// <param name="rotationSpeed">回転速度。</param>
+    /// <param name="deltaTime">物理更新時間。</param>
+    public void MoveAtFixedSpeed(
+        Vector2 moveInput,
+        float speed,
+        float rotationSpeed,
+        float deltaTime)
+    {
+        if (!m_isInitialized)
+        {
+            return;
+        }
+
+        Vector2 normalizedInput =
+            Vector2.ClampMagnitude(
+                moveInput,
+                1.0f);
+
+        Vector3 moveDirection =
+            CalculateCameraRelativeDirection(
+                normalizedInput);
+
+        float inputMagnitude =
+            normalizedInput.magnitude;
+
+        Vector3 targetHorizontalVelocity =
+            moveDirection *
+            (Mathf.Max(speed, 0.0f) * inputMagnitude);
+
+        ApplyHorizontalVelocity(
+            targetHorizontalVelocity);
+
+        RotateTowardsMoveDirection(
+            moveDirection,
+            rotationSpeed,
+            deltaTime);
+
+        m_currentMaxMoveSpeed =
+            Mathf.Max(speed, 0.0f);
+    }
+
+
 }

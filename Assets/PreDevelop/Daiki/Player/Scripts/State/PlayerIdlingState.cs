@@ -10,7 +10,7 @@ public sealed class PlayerIdlingState
     private PlayerMoveParameters m_moveParameters;
 
     /// <summary>
-    /// 状態開始時に呼ばれます。
+    /// 待機開始時に呼ばれます。
     /// </summary>
     protected override void OnStartState()
     {
@@ -45,9 +45,11 @@ public sealed class PlayerIdlingState
         // 移動入力があれば移動状態へ遷移
         if (Owner.InputReader.HasMoveInput)
         {
-            if (Owner.InputReader.ConsumeVBoostInput())
+            // Vブースト入力が開始されたら
+            // ブーストチャージ状態へ遷移
+            if (Owner.InputReader.ConsumeVBoostStarted())
             {
-                Machine.ChangeState<PlayerVRunningState>();
+                Machine.ChangeState<PlayerBoostChargingState>();
                 return;
             }
 
@@ -55,10 +57,11 @@ public sealed class PlayerIdlingState
             return;
         }
 
-        // 移動していない状態のVブースト入力は破棄
-        Owner.InputReader.ConsumeVBoostInput();
+        // 移動入力がなくても残っている
+        // Vブースト開始入力を消費する
+        Owner.InputReader.ConsumeVBoostStarted();
 
-        // 通常移動設定で停止
+        // 通常移動パラメータで停止
         Owner.Motor.Decelerate(
             m_moveParameters,
             Time.fixedDeltaTime);
