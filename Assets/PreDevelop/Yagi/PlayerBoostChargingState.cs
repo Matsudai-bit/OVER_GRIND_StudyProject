@@ -12,7 +12,7 @@ public sealed class PlayerBoostChargingState
     // ブーストダッシュに必要な最低チャージ割合
     private const float MIN_BOOST_CHARGE_RATE = 0.10f;
 
-    // チャージ中の移動速度倍率
+    // チャージ中の移動速度倍率（チャージ開始時点の実速度に対する倍率）
     private const float CHARGE_MOVE_SPEED_RATE = 0.75f;
 
     // 速度ログの出力間隔
@@ -46,18 +46,26 @@ public sealed class PlayerBoostChargingState
             Owner.MovementParameterAsset
                 .CreateMoveParameters();
 
+        // 通常の最高速度ではなく、
+        // チャージ開始時点の「実際の速度」を基準にする
+        float currentSpeedAtChargeStart =
+            Owner.Motor.HorizontalSpeed;
+
+        float chargeMoveSpeed =
+            currentSpeedAtChargeStart *
+            CHARGE_MOVE_SPEED_RATE;
+
         m_moveParameters =
             new PlayerMoveParameters(
-                normalParameters.MaxMoveSpeed *
-                CHARGE_MOVE_SPEED_RATE,
+                chargeMoveSpeed,
                 normalParameters.TimeToMaxSpeed,
                 normalParameters.TimeToStop,
                 normalParameters.RotationSpeed);
 
         Debug.Log(
             $"[PlayerBoostChargingState] チャージ開始 " +
-            $"通常最高速度={normalParameters.MaxMoveSpeed:F2} " +
-            $"チャージ最高速度={m_moveParameters.MaxMoveSpeed:F2}",
+            $"開始時実速度={currentSpeedAtChargeStart:F2} " +
+            $"チャージ固定速度={m_moveParameters.MaxMoveSpeed:F2}",
             Owner);
 
         Owner.AnimationPresenter.PlayWalkAnimation();
@@ -119,9 +127,12 @@ public sealed class PlayerBoostChargingState
             m_chargeTime = MAX_CHARGE_TIME;
         }
 
-        Owner.Motor.Move(
+        // 開始時に固定した速度のまま、
+        // 加速せずに一定速度で移動し続ける
+        Owner.Motor.MoveAtFixedSpeed(
             Owner.InputReader.MoveInput,
-            m_moveParameters,
+            m_moveParameters.MaxMoveSpeed,
+            m_moveParameters.RotationSpeed,
             Time.fixedDeltaTime);
 
         // 速度ログ
@@ -135,7 +146,7 @@ public sealed class PlayerBoostChargingState
                 $"[PlayerBoostChargingState] " +
                 $"チャージ={ChargeRate:P1} " +
                 $"実速度={Owner.Motor.HorizontalSpeed:F2} " +
-                $"設定最高速度={m_moveParameters.MaxMoveSpeed:F2}",
+                $"固定速度={m_moveParameters.MaxMoveSpeed:F2}",
                 Owner);
         }
     }
