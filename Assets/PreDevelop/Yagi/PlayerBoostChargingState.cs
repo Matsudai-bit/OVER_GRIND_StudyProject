@@ -15,8 +15,15 @@ public sealed class PlayerBoostChargingState
     // チャージ中の移動速度倍率（チャージ開始時点の実速度に対する倍率）
     private const float CHARGE_MOVE_SPEED_RATE = 0.75f;
 
+    // チャージ完了時点での旋回速度倍率（曲がりにくさの最大値）
+    private const float MIN_CHARGE_ROTATION_SPEED_RATE = 0.15f;
+
     // 速度ログの出力間隔
     private const float SPEED_LOG_INTERVAL = 0.25f;
+
+    // 移動入力が瞬間的に途切れてもIdlingへ遷移しない猶予時間
+    // （逆入力時にスティックが0を通過する誤検知対策）
+    private const float NO_MOVE_INPUT_GRACE_TIME = 0.15f;
 
     // チャージ経過時間
     private float m_chargeTime;
@@ -24,7 +31,13 @@ public sealed class PlayerBoostChargingState
     // 速度ログの経過時間
     private float m_speedLogElapsedTime;
 
-    // チャージ中に使用する移動パラメータ
+    // 移動入力が無い状態が続いている時間
+    private float m_noMoveInputElapsedTime;
+
+    // チャージ開始時点の通常旋回速度（補間の基準値）
+    private float m_normalRotationSpeed;
+
+    // チャージ中に固定して使う移動速度・加減速パラメータ
     private PlayerMoveParameters m_moveParameters;
 
     /// <summary>
@@ -41,6 +54,7 @@ public sealed class PlayerBoostChargingState
     {
         m_chargeTime = 0.0f;
         m_speedLogElapsedTime = 0.0f;
+        m_noMoveInputElapsedTime = 0.0f;
 
         PlayerMoveParameters normalParameters =
             Owner.MovementParameterAsset
@@ -55,18 +69,30 @@ public sealed class PlayerBoostChargingState
             currentSpeedAtChargeStart *
             CHARGE_MOVE_SPEED_RATE;
 
+        // 旋回補間の基準値として、通常旋回速度を保存
+        m_normalRotationSpeed =
+            normalParameters.RotationSpeed;
+
         m_moveParameters =
             new PlayerMoveParameters(
                 chargeMoveSpeed,
                 normalParameters.TimeToMaxSpeed,
                 normalParameters.TimeToStop,
-                normalParameters.RotationSpeed);
+                m_normalRotationSpeed);
 
         Debug.Log(
             $"[PlayerBoostChargingState] チャージ開始 " +
             $"開始時実速度={currentSpeedAtChargeStart:F2} " +
-            $"チャージ固定速度={m_moveParameters.MaxMoveSpeed:F2}",
+            $"チャージ固定速度={m_moveParameters.MaxMoveSpeed:F2} " +
+            $"通常旋回速度={m_normalRotationSpeed:F2}",
             Owner);
+
+        // ゲージ演出を0からチャージ中表示へ切り替える
+        if (Owner.VGaugeUI != null)
+        {
+            Owner.VGaugeUI.SetGaugeRate(0.0f);
+            Owner.VGaugeUI.SetCharging(true);
+        }
 
         Owner.AnimationPresenter.PlayWalkAnimation();
     }
@@ -106,16 +132,28 @@ public sealed class PlayerBoostChargingState
             return;
         }
 
-        // 移動入力がなくなった場合
-        if (!Owner.InputReader.HasMoveInput)
+        // 移動入力の有無で、無入力の継続時間を更新
+        if (Owner.InputReader.HasMoveInput)
         {
-            Debug.Log(
-                "[PlayerBoostChargingState] " +
-                "移動入力がなくなったため待機状態へ遷移します。",
-                Owner);
+            m_noMoveInputElapsedTime = 0.0f;
+        }
+        else
+        {
+            m_noMoveInputElapsedTime += Time.fixedDeltaTime;
 
-            Machine.ChangeState<PlayerIdlingState>();
-            return;
+            // 猶予時間を超えて無入力が続いた場合のみ待機状態へ遷移
+            // （逆入力時の瞬間的な0通過は無視する）
+            if (m_noMoveInputElapsedTime >=
+                NO_MOVE_INPUT_GRACE_TIME)
+            {
+                Debug.Log(
+                    "[PlayerBoostChargingState] " +
+                    "移動入力がなくなったため待機状態へ遷移します。",
+                    Owner);
+
+                Machine.ChangeState<PlayerIdlingState>();
+                return;
+            }
         }
 
         // チャージ時間を進める
@@ -127,13 +165,26 @@ public sealed class PlayerBoostChargingState
             m_chargeTime = MAX_CHARGE_TIME;
         }
 
-        // 開始時に固定した速度のまま、
-        // 加速せずに一定速度で移動し続ける
+        // チャージ率に応じて、通常旋回速度から
+        // 最も曲がりにくい旋回速度まで徐々に補間する
+        float currentRotationSpeed =
+            Mathf.Lerp(
+                m_normalRotationSpeed,
+                m_normalRotationSpeed *
+                    MIN_CHARGE_ROTATION_SPEED_RATE,
+                ChargeRate);
+
         Owner.Motor.MoveAtFixedSpeed(
             Owner.InputReader.MoveInput,
             m_moveParameters.MaxMoveSpeed,
-            m_moveParameters.RotationSpeed,
+            currentRotationSpeed,
             Time.fixedDeltaTime);
+
+        // ゲージ表示をチャージ率に合わせて更新する
+        if (Owner.VGaugeUI != null)
+        {
+            Owner.VGaugeUI.SetGaugeRate(ChargeRate);
+        }
 
         // 速度ログ
         m_speedLogElapsedTime += Time.fixedDeltaTime;
@@ -146,7 +197,8 @@ public sealed class PlayerBoostChargingState
                 $"[PlayerBoostChargingState] " +
                 $"チャージ={ChargeRate:P1} " +
                 $"実速度={Owner.Motor.HorizontalSpeed:F2} " +
-                $"固定速度={m_moveParameters.MaxMoveSpeed:F2}",
+                $"固定速度={m_moveParameters.MaxMoveSpeed:F2} " +
+                $"旋回速度={currentRotationSpeed:F2}",
                 Owner);
         }
     }
@@ -159,6 +211,13 @@ public sealed class PlayerBoostChargingState
         Debug.Log(
             "[PlayerBoostChargingState] チャージ状態終了",
             Owner);
+
+        // ゲージ表示・演出を通常状態へ戻す
+        if (Owner.VGaugeUI != null)
+        {
+            Owner.VGaugeUI.SetGaugeRate(0.0f);
+            Owner.VGaugeUI.SetCharging(false);
+        }
 
         Owner.AnimationPresenter.StopWalkAnimation();
     }
@@ -174,6 +233,9 @@ public sealed class PlayerBoostChargingState
                 $"[PlayerBoostChargingState] " +
                 $"チャージ率{ChargeRate:P1} → Vブーストへ遷移",
                 Owner);
+
+            // チャージ率をVRunningStateへ引き継ぐ
+            Owner.LastBoostChargeRate = ChargeRate;
 
             Machine.ChangeState<PlayerVRunningState>();
             return;

@@ -175,6 +175,20 @@ public class VGaugeUI : MonoBehaviour
     }
 
     /// <summary>
+    /// ゲージ値を0～1の割合で設定します。
+    /// ブーストチャージなど、外部の進捗率と連動させる用途に使用します。
+    /// </summary>
+    /// <param name="rate">0～1のゲージ割合。範囲外の値は自動的に丸められます。</param>
+    public void SetGaugeRate(float rate)
+    {
+        float clampedRate = Mathf.Clamp01(rate);
+
+        SetGauge(
+            Mathf.RoundToInt(
+                clampedRate * maxGauge));
+    }
+
+    /// <summary>
     /// ゲージ値を増減します。
     /// </summary>
     /// <param name="amount">増減量</param>
@@ -188,6 +202,22 @@ public class VGaugeUI : MonoBehaviour
 
         // 現在値へ増減量を加算する
         SetGauge(currentGauge + amount);
+    }
+
+    /// <summary>
+    /// チャージ中かどうかを刃の演出へ反映します。
+    /// ブーストチャージ開始・終了時に呼び出してください。
+    /// </summary>
+    /// <param name="isCharging">
+    /// true：チャージ中の演出（高速回転）を行う。
+    /// false：通常の演出へ戻す。
+    /// </param>
+    public void SetCharging(bool isCharging)
+    {
+        if (bladeRotator != null)
+        {
+            bladeRotator.SetGaugeUsing(isCharging);
+        }
     }
 
     /// <summary>

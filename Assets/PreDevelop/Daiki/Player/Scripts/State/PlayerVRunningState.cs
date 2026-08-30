@@ -15,11 +15,22 @@ public sealed class PlayerVRunningState
         STABLE_BOOST
     }
 
+    // チャージ不足時でも保証する最低のブースト効果割合
+    // （チャージ率が低いほどこの値に近づき、
+    // 　1.0チャージでアセット本来の値になる）
+    private const float MIN_BOOST_EFFECT_RATE = 0.4f;
+
     // 初速ブーストの移動パラメータ
     private PlayerMoveParameters m_initialBoostParameters;
 
     // 安定ブーストの移動パラメータ
     private PlayerMoveParameters m_stableBoostParameters;
+
+    // チャージ率に応じて調整された初速ブースト時間
+    private float m_initialBoostDuration;
+
+    // チャージ率に応じて調整された安定ブースト時間
+    private float m_stableBoostDuration;
 
     // 現在のブーストフェーズ
     private VBoostPhase m_currentPhase;
@@ -35,11 +46,55 @@ public sealed class PlayerVRunningState
         PlayerVBoostMovementParameterAsset parameterAsset =
             Owner.VBoostMovementParameterAsset;
 
-        m_initialBoostParameters =
+        PlayerMoveParameters baseInitialParameters =
             parameterAsset.CreateInitialBoostParameters();
 
-        m_stableBoostParameters =
+        PlayerMoveParameters baseStableParameters =
             parameterAsset.CreateStableBoostParameters();
+
+        // チャージ率が低いほど効果を弱める倍率を計算する
+        // （MIN_BOOST_EFFECT_RATE ～ 1.0 の範囲で変動）
+        float boostEffectRate =
+            Mathf.Lerp(
+                MIN_BOOST_EFFECT_RATE,
+                1.0f,
+                Owner.LastBoostChargeRate);
+
+        // 速度をチャージ率に応じてスケーリングする
+        m_initialBoostParameters =
+            new PlayerMoveParameters(
+                baseInitialParameters.MaxMoveSpeed *
+                    boostEffectRate,
+                baseInitialParameters.TimeToMaxSpeed,
+                baseInitialParameters.TimeToStop,
+                baseInitialParameters.RotationSpeed);
+
+        m_stableBoostParameters =
+            new PlayerMoveParameters(
+                baseStableParameters.MaxMoveSpeed *
+                    boostEffectRate,
+                baseStableParameters.TimeToMaxSpeed,
+                baseStableParameters.TimeToStop,
+                baseStableParameters.RotationSpeed);
+
+        // 持続時間もチャージ率に応じてスケーリングする
+        m_initialBoostDuration =
+            parameterAsset.InitialBoostDuration *
+            boostEffectRate;
+
+        m_stableBoostDuration =
+            parameterAsset.StableBoostDuration *
+            boostEffectRate;
+
+        Debug.Log(
+            $"[PlayerVRunningState] ブースト開始 " +
+            $"チャージ率={Owner.LastBoostChargeRate:P1} " +
+            $"効果倍率={boostEffectRate:F2} " +
+            $"初速最高速度={m_initialBoostParameters.MaxMoveSpeed:F2} " +
+            $"安定最高速度={m_stableBoostParameters.MaxMoveSpeed:F2} " +
+            $"初速持続={m_initialBoostDuration:F2}秒 " +
+            $"安定持続={m_stableBoostDuration:F2}秒",
+            Owner);
 
         m_currentPhase =
             VBoostPhase.INITIAL_BOOST;
@@ -124,8 +179,7 @@ public sealed class PlayerVRunningState
     /// </summary>
     private void UpdateInitialBoostPhase()
     {
-        if (m_elapsedTime <
-            Owner.VBoostMovementParameterAsset.InitialBoostDuration)
+        if (m_elapsedTime < m_initialBoostDuration)
         {
             return;
         }
@@ -141,8 +195,7 @@ public sealed class PlayerVRunningState
     /// </summary>
     private void UpdateStableBoostPhase()
     {
-        if (m_elapsedTime <
-            Owner.VBoostMovementParameterAsset.StableBoostDuration)
+        if (m_elapsedTime < m_stableBoostDuration)
         {
             return;
         }

@@ -57,6 +57,14 @@ public sealed class PlayerRootController : MonoBehaviour
     [SerializeField]
     private SplineGrindController m_splineGrindController;
 
+    // Vゲージ表示機能
+    [SerializeField]
+    private VGaugeUI m_vGaugeUI;
+
+    // 速度表示機能
+    [SerializeField]
+    private VSpeedUI m_vSpeedUI;
+
     // 初期化されているか
     private bool m_isInitialized;
 
@@ -77,7 +85,6 @@ public sealed class PlayerRootController : MonoBehaviour
         m_monitor.Initialize(
             m_playerRigidbody);
 
-        // MotorにはRigidbodyだけを渡す
         m_motor.Initialize(
             m_playerRigidbody);
 
@@ -100,7 +107,9 @@ public sealed class PlayerRootController : MonoBehaviour
             m_attackController,
             m_splineGrindController,
             m_movementParameterAsset,
-            m_vBoostMovementParameterAsset);
+            m_vBoostMovementParameterAsset,
+            m_vGaugeUI,
+            m_vSpeedUI);
 
         m_isInitialized =
             m_motor.IsInitialized &&
