@@ -29,6 +29,10 @@ public sealed class BossPhaseController : MonoBehaviour
         [SerializeField]
         private BossPhaseReferences m_bossPhaseReferences;
 
+        // フェーズ固有パラメータの供給元
+        [SerializeField]
+        private BossPhaseParameterProvider m_parameterProvider;
+
         /// <summary>
         /// フェーズIDを取得します。
         /// </summary>
@@ -44,6 +48,12 @@ public sealed class BossPhaseController : MonoBehaviour
         /// </summary>
         public BossPhaseObjective Objective => m_objective;
         public BossPhaseReferences PhaseReferences => m_bossPhaseReferences;
+
+        /// <summary>
+        /// フェーズパラメータの供給元を取得します。
+        /// </summary>
+        public BossPhaseParameterProvider ParameterProvider =>
+            m_parameterProvider;
     }
 
     // 初期フェーズ
@@ -67,6 +77,9 @@ public sealed class BossPhaseController : MonoBehaviour
 
     // フェーズ遷移中か
     private bool m_isTransitioning;
+
+    // ボス全体の制御
+    private BossController m_bossController;
 
     /// <summary>
     /// フェーズ終了条件を満たしたときに通知されます。
@@ -205,75 +218,15 @@ public sealed class BossPhaseController : MonoBehaviour
 
     private void ApplyCurrentPhase()
     {
-        if (!IsValidPhaseIndex(m_currentPhaseIndex))
-        {
-            return;
-        }
-
-        for (int i = 0; i < m_phaseDefinitions.Count; i++)
-        {
-            PhaseDefinition phaseDefinition =
-                m_phaseDefinitions[i];
-
-            if (phaseDefinition?.PhaseRoot == null)
-            {
-                continue;
-            }
-
-            phaseDefinition.PhaseRoot.SetActive(
-                i == m_currentPhaseIndex);
-        }
-
-        BossPhaseID currentPhase = CurrentPhase;
-
-        m_animationController?.SetPhase(currentPhase);
-        m_behaviorController?.SetPhase(currentPhase);
-
-        PhaseDefinition currentPhaseDefinition =
-            m_phaseDefinitions[m_currentPhaseIndex];
-
-        GetComponent<BossNavigation>().SetNavMeshSurface(
-            currentPhaseDefinition.PhaseReferences.NavMeshSurface);
-
-        GetComponent<BossNavigation>().SetNavigationOrigin(
-            currentPhaseDefinition
-                .PhaseReferences
-                .GroundCollider
-                .transform);
-
-        // 現在フェーズのパラメータを設定
-        S1P2BossReferences references =
-            currentPhaseDefinition
-                .PhaseRoot
-                .GetComponentInChildren<S1P2BossReferences>(true);
-
-        if (references == null)
-        {
-            return;
-        }
+        // フェーズ設定の取得
+        PhaseDefinition currentPhaseDefinition =  m_phaseDefinitions[m_currentPhaseIndex];
 
         BossPhaseParameters phaseParameters =
-            references.CreatePhaseParameters();
+            currentPhaseDefinition.ParameterProvider != null
+                ? currentPhaseDefinition.ParameterProvider.CreatePhaseParameters()
+                : BossPhaseParameters.Empty;
 
-        if (phaseParameters == null)
-        {
-            return;
-        }
-
-        BossController bossController =
-            GetComponent<BossController>();
-
-        if (bossController == null)
-        {
-            Debug.LogError(
-                $"[{nameof(BossPhaseController)}] " +
-                $"{nameof(BossController)}が見つかりません。",
-                this);
-
-            return;
-        }
-
-        bossController.SetPhaseParameters(
+        m_bossController?.SetPhaseParameters(
             phaseParameters);
     }
 
@@ -322,6 +275,11 @@ public sealed class BossPhaseController : MonoBehaviour
         if (m_animationController == null)
         {
             m_animationController = GetComponent<BossAnimationController>();
+        }
+        if (m_bossController == null)
+        {
+            m_bossController =
+                GetComponent<BossController>();
         }
     }
 

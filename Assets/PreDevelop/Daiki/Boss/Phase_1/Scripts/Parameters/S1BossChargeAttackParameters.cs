@@ -24,7 +24,7 @@ public sealed class S1BossChargeAttackParameters
     public float MaxChargeDistance { get; }
 
     /// <summary>
-    /// áŠQ•¨‚âs“®”ÍˆÍ‹«ŠE‚Æ‚Ì’â~—]”’‚ğæ“¾‚µ‚Ü‚·B
+    /// áŠQ•¨‚âˆÚ“®”ÍˆÍ‚Æ‚Ì’â~—]”’‚ğæ“¾‚µ‚Ü‚·B
     /// </summary>
     public float StopMargin { get; }
 

@@ -153,8 +153,9 @@ public sealed class BossController : MonoBehaviour, IStateStatusProvider
         }
     }
 
+
     /// <summary>
-    /// 現在フェーズで使用するパラメータを設定します。
+    /// 現在フェーズのパラメータを設定します。
     /// </summary>
     /// <param name="phaseParameters">
     /// 設定するフェーズパラメータ。
@@ -162,17 +163,9 @@ public sealed class BossController : MonoBehaviour, IStateStatusProvider
     public void SetPhaseParameters(
         BossPhaseParameters phaseParameters)
     {
-        if (phaseParameters == null)
-        {
-            Debug.LogError(
-                $"[{nameof(BossController)}] " +
-                $"{nameof(BossPhaseParameters)}がnullです。",
-                this);
-
-            return;
-        }
-
-        m_phaseParameters = phaseParameters;
+        m_phaseParameters =
+            phaseParameters ??
+            BossPhaseParameters.Empty;
     }
 
 }
