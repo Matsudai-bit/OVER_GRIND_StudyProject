@@ -11,6 +11,10 @@ public sealed class BossPhaseParameters
     private readonly S1BossChargeAttackParameters
         m_chargeAttackParameters;
 
+    // 連続突進攻撃パラメータ
+    private readonly S1P3BossSequentialChargeAttackParameters
+        m_sequentialChargeAttackParameters;
+
     /// <summary>
     /// 空のフェーズパラメータを取得します。
     /// </summary>
@@ -23,10 +27,23 @@ public sealed class BossPhaseParameters
         m_chargeAttackParameters;
 
     /// <summary>
+    /// 連続突進攻撃パラメータを取得します。
+    /// </summary>
+    public S1P3BossSequentialChargeAttackParameters SequentialChargeAttack =>
+        m_sequentialChargeAttackParameters;
+
+    /// <summary>
     /// 空のフェーズパラメータを生成します。
     /// </summary>
     public BossPhaseParameters()
     {
+    }
+
+    public BossPhaseParameters(
+    S1P3BossSequentialChargeAttackParameters sequentialChargeAttackParameters)
+    {
+        m_sequentialChargeAttackParameters =
+            sequentialChargeAttackParameters;
     }
 
     /// <summary>

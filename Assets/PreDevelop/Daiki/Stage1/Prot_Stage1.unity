@@ -1165,10 +1165,10 @@ GameObject:
   m_Component:
   - component: {fileID: 150509876}
   - component: {fileID: 150509878}
+  - component: {fileID: 150509882}
   - component: {fileID: 150509877}
   - component: {fileID: 150509879}
   - component: {fileID: 150509880}
-  - component: {fileID: 150509882}
   - component: {fileID: 150509881}
   - component: {fileID: 150509883}
   m_Layer: 0
@@ -1354,6 +1354,7 @@ MonoBehaviour:
   - {fileID: 1656250283}
   - {fileID: 808783842}
   - {fileID: 1244111004}
+  m_chargeAttackParameterAsset: {fileID: 11400000, guid: 9f7df797c6e076844bfea8f021e38e3b, type: 2}
 --- !u!114 &150509883
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -17656,22 +17657,27 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ac89aa99baa547944a6deb0c0b7f7216, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BossPhaseController
-  m_initialPhase: 1
+  m_initialPhase: 2
   m_phaseDefinitions:
   - m_phaseID: 0
     m_phaseRoot: {fileID: 2106195331}
     m_objective: {fileID: 2106195332}
-    m_bossPhaseReferences: {fileID: 2106195340}
+    m_phaseReferences: {fileID: 0}
+    m_parameterProvider: {fileID: 0}
   - m_phaseID: 1
     m_phaseRoot: {fileID: 1328045892}
     m_objective: {fileID: 1328045901}
-    m_bossPhaseReferences: {fileID: 1328045898}
+    m_phaseReferences: {fileID: 0}
+    m_parameterProvider: {fileID: 1328045902}
   - m_phaseID: 2
     m_phaseRoot: {fileID: 150509875}
     m_objective: {fileID: 150509883}
-    m_bossPhaseReferences: {fileID: 150509877}
+    m_phaseReferences: {fileID: 0}
+    m_parameterProvider: {fileID: 150509882}
+  m_bossController: {fileID: 0}
   m_behaviorController: {fileID: 0}
   m_animationController: {fileID: 0}
+  m_navigation: {fileID: 0}
 --- !u!114 &4921220546604968350
 MonoBehaviour:
   m_ObjectHideFlags: 0
