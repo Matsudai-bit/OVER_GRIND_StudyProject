@@ -69,6 +69,11 @@ public class SplineGrindController : MonoBehaviour
         // ※ここで元の物理挙動（CharacterControllerやRigidbody）を無効化する
     }
 
+    public void StopGrind()
+    {
+        ExitGrind(true);
+    }
+
     /// <summary>
     /// 毎フレームの移動計算
     /// </summary>
