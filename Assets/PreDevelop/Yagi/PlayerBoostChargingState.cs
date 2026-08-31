@@ -2,6 +2,10 @@ using UnityEngine;
 
 /// <summary>
 /// プレイヤーのブーストチャージ状態を管理します。
+/// マリオカートのドリフトのように、見た目の向きは
+/// 入力方向へ素早く追従する一方、実際の進行方向(慣性)は
+/// チャージが進むほど極端にゆっくりとしか変化しなくなり、
+/// 操作に強いクセ（曲がりにくさ）が生まれます。
 /// </summary>
 public sealed class PlayerBoostChargingState
     : StateBase<PlayerStateMachineComponent>
@@ -15,8 +19,14 @@ public sealed class PlayerBoostChargingState
     // チャージ中の移動速度倍率（チャージ開始時点の実速度に対する倍率）
     private const float CHARGE_MOVE_SPEED_RATE = 0.75f;
 
-    // チャージ完了時点での旋回速度倍率（曲がりにくさの最大値）
-    private const float MIN_CHARGE_ROTATION_SPEED_RATE = 0.15f;
+    // チャージ開始直後の、実際の進行方向の旋回速度（度/秒）
+    // アセット側のRotationSpeedの値に関わらず、
+    // 確実に「素早くは曲がれない」体感を保証するための絶対値
+    private const float DRIFT_TURN_SPEED_AT_START = 150.0f;
+
+    // チャージ完了時点の、実際の進行方向の旋回速度（度/秒）
+    // かなり小さい値にし、大きく外側へ膨らむ挙動にする
+    private const float DRIFT_TURN_SPEED_AT_FULL_CHARGE = 20.0f;
 
     // 速度ログの出力間隔
     private const float SPEED_LOG_INTERVAL = 0.25f;
@@ -33,11 +43,15 @@ public sealed class PlayerBoostChargingState
     // 移動入力が無い状態が続いている時間
     private float m_noMoveInputElapsedTime;
 
-    // チャージ開始時点の通常旋回速度（補間の基準値）
-    private float m_normalRotationSpeed;
+    // チャージ開始時点の通常旋回速度（見た目の向き用）
+    private float m_normalFacingRotationSpeed;
 
-    // チャージ中に固定して使う移動速度・加減速パラメータ
+    // チャージ中に固定して使う移動速度パラメータ
     private PlayerMoveParameters m_moveParameters;
+
+    // 現在の実際の進行方向（ワールド空間、正規化済み）
+    // 入力方向へは即座に一致せず、ドリフトのようにゆっくり近づく
+    private Vector3 m_currentVelocityDirection;
 
     /// <summary>
     /// 現在のチャージ割合を取得します。
@@ -51,12 +65,6 @@ public sealed class PlayerBoostChargingState
     /// </summary>
     protected override void OnStartState()
     {
-        // 長押し成立経由でChargingに入った場合、
-        // ボタン押下時のワンショット開始フラグ(m_hasVBoostStarted)が
-        // 一度も消費されずに残っていることがあるため、ここで握りつぶす。
-        // これを怠ると、はるか後の別State（Idling等）が
-        // この古いイベントを誤って拾い、意図せずChargingへ
-        // 再突入してしまう不具合につながる。
         Owner.InputReader.ConsumeVBoostStarted();
 
         m_chargeTime = 0.0f;
@@ -74,7 +82,7 @@ public sealed class PlayerBoostChargingState
             currentSpeedAtChargeStart *
             CHARGE_MOVE_SPEED_RATE;
 
-        m_normalRotationSpeed =
+        m_normalFacingRotationSpeed =
             normalParameters.RotationSpeed;
 
         m_moveParameters =
@@ -82,13 +90,17 @@ public sealed class PlayerBoostChargingState
                 chargeMoveSpeed,
                 normalParameters.TimeToMaxSpeed,
                 normalParameters.TimeToStop,
-                m_normalRotationSpeed);
+                m_normalFacingRotationSpeed);
+
+        // ドリフト開始時点の実際の進行方向を、
+        // チャージ開始直前の実速度方向で初期化する
+        m_currentVelocityDirection =
+            Owner.Motor.HorizontalDirection;
 
         Debug.Log(
             $"[PlayerBoostChargingState] チャージ開始 " +
             $"開始時実速度={currentSpeedAtChargeStart:F2} " +
-            $"チャージ固定速度={m_moveParameters.MaxMoveSpeed:F2} " +
-            $"通常旋回速度={m_normalRotationSpeed:F2}",
+            $"チャージ固定速度={m_moveParameters.MaxMoveSpeed:F2}",
             Owner);
 
         if (Owner.VGaugeUI != null)
@@ -160,17 +172,36 @@ public sealed class PlayerBoostChargingState
             m_chargeTime = MAX_CHARGE_TIME;
         }
 
-        float currentRotationSpeed =
-            Mathf.Lerp(
-                m_normalRotationSpeed,
-                m_normalRotationSpeed *
-                    MIN_CHARGE_ROTATION_SPEED_RATE,
-                ChargeRate);
+        // 入力方向を計算する（見た目の向き・進行方向の目標として共通で使用）
+        Vector2 normalizedInput =
+            Vector2.ClampMagnitude(
+                Owner.InputReader.MoveInput,
+                1.0f);
 
-        Owner.Motor.MoveAtFixedSpeed(
-            Owner.InputReader.MoveInput,
+        Vector3 inputDirection =
+            Owner.Motor.CalculateCameraRelativeDirection(
+                normalizedInput);
+
+        // チャージ開始直後から、フルチャージ時と同じ
+        // 強いドリフト状態にします。
+        // 実際の進行方向は入力方向へゆっくりしか追従せず、
+        // プレイヤーの見た目の向きだけが入力方向へ追従します。
+        float currentVelocityTurnSpeed =
+            DRIFT_TURN_SPEED_AT_FULL_CHARGE;
+
+        UpdateDriftVelocityDirection(
+            inputDirection,
+            currentVelocityTurnSpeed);
+
+        // 見た目の向きは、実際の進行方向とは切り離し、
+        // 入力方向へ通常の旋回速度で素早く追従させる。
+        // これにより「車体は曲がりたい方向を向いているのに
+        // 実際には外側へ滑っていく」というドリフトの見た目になる
+        Owner.Motor.MoveWithDriftAtFixedSpeed(
+            m_currentVelocityDirection,
             m_moveParameters.MaxMoveSpeed,
-            currentRotationSpeed,
+            inputDirection,
+            m_normalFacingRotationSpeed,
             Time.fixedDeltaTime);
 
         if (Owner.VGaugeUI != null)
@@ -189,7 +220,7 @@ public sealed class PlayerBoostChargingState
                 $"チャージ={ChargeRate:P1} " +
                 $"実速度={Owner.Motor.HorizontalSpeed:F2} " +
                 $"固定速度={m_moveParameters.MaxMoveSpeed:F2} " +
-                $"旋回速度={currentRotationSpeed:F2}",
+                $"進行方向旋回速度={currentVelocityTurnSpeed:F1}deg/s",
                 Owner);
         }
     }
@@ -204,6 +235,39 @@ public sealed class PlayerBoostChargingState
             Owner);
 
         Owner.AnimationPresenter.StopWalkAnimation();
+    }
+
+    /// <summary>
+    /// 入力方向へ向けて、実際の進行方向を
+    /// 指定した速度（度/秒）でゆっくり近づけます（ドリフトの横滑り本体）。
+    /// </summary>
+    /// <param name="inputDirection">入力方向。</param>
+    /// <param name="turnSpeedDegreesPerSecond">1秒間の最大方向転換角度。</param>
+    private void UpdateDriftVelocityDirection(
+        Vector3 inputDirection,
+        float turnSpeedDegreesPerSecond)
+    {
+        if (inputDirection.sqrMagnitude <= 0.0001f)
+        {
+            // 入力がほぼ無い場合は、
+            // 現在の進行方向をそのまま維持する
+            // （ハンドルをニュートラルに戻しても
+            // 　滑りは急には止まらない）
+            return;
+        }
+
+        float maxRadiansDelta =
+            turnSpeedDegreesPerSecond *
+            Mathf.Deg2Rad *
+            Time.fixedDeltaTime;
+
+        m_currentVelocityDirection =
+            Vector3.RotateTowards(
+                m_currentVelocityDirection,
+                inputDirection,
+                maxRadiansDelta,
+                0.0f)
+                .normalized;
     }
 
     /// <summary>

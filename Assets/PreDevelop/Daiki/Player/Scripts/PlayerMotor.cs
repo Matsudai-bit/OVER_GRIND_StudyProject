@@ -36,6 +36,36 @@ public sealed class PlayerMotor : MonoBehaviour
     public bool IsInitialized => m_isInitialized;
 
     /// <summary>
+    /// 現在の水平方向の移動方向（正規化済み）を取得します。
+    /// 速度がほぼ0の場合は現在の正面方向を返します。
+    /// ドリフト開始時など、現在の進行方向を基準にしたい場合に使用します。
+    /// </summary>
+    public Vector3 HorizontalDirection
+    {
+        get
+        {
+            if (!m_isInitialized ||
+                m_playerRigidbody == null)
+            {
+                return Vector3.forward;
+            }
+
+            Vector3 velocity =
+                m_playerRigidbody.linearVelocity;
+
+            velocity.y = 0.0f;
+
+            if (velocity.sqrMagnitude <=
+                DIRECTION_SQR_THRESHOLD)
+            {
+                return m_playerRigidbody.transform.forward;
+            }
+
+            return velocity.normalized;
+        }
+    }
+
+    /// <summary>
     /// PlayerMotorを初期化します。
     /// </summary>
     /// <param name="playerRigidbody">プレイヤーの物理ボディ。</param>
@@ -169,7 +199,6 @@ public sealed class PlayerMotor : MonoBehaviour
             return;
         }
 
-        // 現在のジャンプ処理を維持
         Vector3 velocity =
             m_playerRigidbody.transform.up *
             jumpPower *
@@ -177,7 +206,6 @@ public sealed class PlayerMotor : MonoBehaviour
 
         Vector3 nextVelocity = velocity;
 
-        // 水平方向の速度を維持
         nextVelocity.x =
             m_playerRigidbody.linearVelocity.x;
 
@@ -203,10 +231,11 @@ public sealed class PlayerMotor : MonoBehaviour
 
     /// <summary>
     /// 移動入力をカメラ基準のワールド方向へ変換します。
+    /// ドリフト処理など、方向計算だけを外部でも利用したい場合のために公開しています。
     /// </summary>
     /// <param name="moveInput">移動入力。</param>
     /// <returns>ワールド空間の移動方向。</returns>
-    private Vector3 CalculateCameraRelativeDirection(
+    public Vector3 CalculateCameraRelativeDirection(
         Vector2 moveInput)
     {
         Vector3 referenceForward =
@@ -214,7 +243,6 @@ public sealed class PlayerMotor : MonoBehaviour
                 ? m_movementReference.forward
                 : Vector3.forward;
 
-        // 水平面へ投影
         Vector3 forward = Vector3.ProjectOnPlane(
             referenceForward,
             Vector3.up);
@@ -303,7 +331,6 @@ public sealed class PlayerMotor : MonoBehaviour
     {
         Vector3 nextVelocity = horizontalVelocity;
 
-        // 重力・ジャンプによる垂直速度を維持
         nextVelocity.y =
             m_playerRigidbody.linearVelocity.y;
 
@@ -396,5 +423,61 @@ public sealed class PlayerMotor : MonoBehaviour
             Mathf.Max(speed, 0.0f);
     }
 
+    /// <summary>
+    /// ドリフトのように、見た目の向き(Facing)と
+    /// 実際の進行方向(Velocity)を別々に制御しながら
+    /// 一定速度で移動します。
+    /// 見た目の向きは入力方向へ通常通り追従させる一方、
+    /// 実際の進行方向はそれとは独立して
+    /// ゆっくりとしか変化しないようにできるため、
+    /// 「車体は曲がりたい方向を向いているのに
+    /// 実際には外側へ滑っていく」という
+    /// ドリフトの見た目・操作感を表現できます。
+    /// </summary>
+    /// <param name="velocityDirection">
+    /// 実際に進む方向（慣性でゆっくり変化させたい方向）。
+    /// </param>
+    /// <param name="speed">移動速度。</param>
+    /// <param name="facingDirection">
+    /// 見た目の向きの目標方向（通常は入力方向）。
+    /// </param>
+    /// <param name="facingRotationSpeed">
+    /// 見た目の向きの1秒間の最大回転角度。
+    /// </param>
+    /// <param name="deltaTime">物理更新時間。</param>
+    public void MoveWithDriftAtFixedSpeed(
+        Vector3 velocityDirection,
+        float speed,
+        Vector3 facingDirection,
+        float facingRotationSpeed,
+        float deltaTime)
+    {
+        if (!m_isInitialized)
+        {
+            return;
+        }
 
+        Vector3 normalizedVelocityDirection =
+            velocityDirection.sqrMagnitude >
+                DIRECTION_SQR_THRESHOLD
+                ? velocityDirection.normalized
+                : Vector3.forward;
+
+        Vector3 targetHorizontalVelocity =
+            normalizedVelocityDirection *
+            Mathf.Max(speed, 0.0f);
+
+        ApplyHorizontalVelocity(
+            targetHorizontalVelocity);
+
+        // 見た目の向きは、実際の進行方向とは独立して
+        // 入力方向へ通常の速度で追従させる
+        RotateTowardsMoveDirection(
+            facingDirection,
+            facingRotationSpeed,
+            deltaTime);
+
+        m_currentMaxMoveSpeed =
+            Mathf.Max(speed, 0.0f);
+    }
 }
