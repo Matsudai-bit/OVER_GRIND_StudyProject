@@ -203,9 +203,6 @@ public sealed class BossPhaseController : MonoBehaviour
         PhaseCompletionRequested?.Invoke(currentPhase.PhaseID);
     }
 
-    /// <summary>
-    /// 現在フェーズの設定を適用します。
-    /// </summary>
     private void ApplyCurrentPhase()
     {
         if (!IsValidPhaseIndex(m_currentPhaseIndex))
@@ -215,23 +212,69 @@ public sealed class BossPhaseController : MonoBehaviour
 
         for (int i = 0; i < m_phaseDefinitions.Count; i++)
         {
-            PhaseDefinition phaseDefinition = m_phaseDefinitions[i];
+            PhaseDefinition phaseDefinition =
+                m_phaseDefinitions[i];
 
             if (phaseDefinition?.PhaseRoot == null)
             {
                 continue;
             }
 
-            phaseDefinition.PhaseRoot.SetActive(i == m_currentPhaseIndex);
+            phaseDefinition.PhaseRoot.SetActive(
+                i == m_currentPhaseIndex);
         }
 
         BossPhaseID currentPhase = CurrentPhase;
+
         m_animationController?.SetPhase(currentPhase);
         m_behaviorController?.SetPhase(currentPhase);
 
+        PhaseDefinition currentPhaseDefinition =
+            m_phaseDefinitions[m_currentPhaseIndex];
 
-        GetComponent<BossNavigation>().SetNavMeshSurface(m_phaseDefinitions[m_currentPhaseIndex].PhaseReferences.NavMeshSurface);
-        GetComponent<BossNavigation>().SetNavigationOrigin(m_phaseDefinitions[m_currentPhaseIndex].PhaseReferences.GroundCollider.transform);
+        GetComponent<BossNavigation>().SetNavMeshSurface(
+            currentPhaseDefinition.PhaseReferences.NavMeshSurface);
+
+        GetComponent<BossNavigation>().SetNavigationOrigin(
+            currentPhaseDefinition
+                .PhaseReferences
+                .GroundCollider
+                .transform);
+
+        // 現在フェーズのパラメータを設定
+        S1P2BossReferences references =
+            currentPhaseDefinition
+                .PhaseRoot
+                .GetComponentInChildren<S1P2BossReferences>(true);
+
+        if (references == null)
+        {
+            return;
+        }
+
+        BossPhaseParameters phaseParameters =
+            references.CreatePhaseParameters();
+
+        if (phaseParameters == null)
+        {
+            return;
+        }
+
+        BossController bossController =
+            GetComponent<BossController>();
+
+        if (bossController == null)
+        {
+            Debug.LogError(
+                $"[{nameof(BossPhaseController)}] " +
+                $"{nameof(BossController)}が見つかりません。",
+                this);
+
+            return;
+        }
+
+        bossController.SetPhaseParameters(
+            phaseParameters);
     }
 
     /// <summary>

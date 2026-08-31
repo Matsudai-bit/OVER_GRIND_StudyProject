@@ -38,6 +38,11 @@ public sealed class BossController : MonoBehaviour, IStateStatusProvider
     // ボス全体で使用するステートマシン
     private StateMachine<BossController> m_stateMachine;
 
+    // 現在フェーズのパラメータ
+    private BossPhaseParameters m_phaseParameters;
+
+  
+
 
     /// <summary>
     /// ステートマシンを取得します。
@@ -69,6 +74,11 @@ public sealed class BossController : MonoBehaviour, IStateStatusProvider
     /// </summary>
     public BossNavigation Navigation => m_bossNavigation;
 
+
+    /// <summary>
+    /// 現在フェーズのパラメータを取得します。
+    /// </summary>
+    public BossPhaseParameters PhaseParameters => m_phaseParameters;
     /// <summary>
     /// 初期化します。
     /// </summary>
@@ -143,5 +153,26 @@ public sealed class BossController : MonoBehaviour, IStateStatusProvider
         }
     }
 
-   
+    /// <summary>
+    /// 現在フェーズで使用するパラメータを設定します。
+    /// </summary>
+    /// <param name="phaseParameters">
+    /// 設定するフェーズパラメータ。
+    /// </param>
+    public void SetPhaseParameters(
+        BossPhaseParameters phaseParameters)
+    {
+        if (phaseParameters == null)
+        {
+            Debug.LogError(
+                $"[{nameof(BossController)}] " +
+                $"{nameof(BossPhaseParameters)}がnullです。",
+                this);
+
+            return;
+        }
+
+        m_phaseParameters = phaseParameters;
+    }
+
 }

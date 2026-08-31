@@ -138,12 +138,12 @@ public sealed class S1P3BossChargingAttackState :
                 () => destination.position;
         }
 
-        if (!m_chargeExecutor.Start(
-                settings,
-                targetPositionProvider))
-        {
-            SetFailed();
-        }
+        //if (!m_chargeExecutor.Start(
+        //        settings,
+        //        targetPositionProvider))
+        //{
+        //    SetFailed();
+        //}
     }
 
     /// <summary>
