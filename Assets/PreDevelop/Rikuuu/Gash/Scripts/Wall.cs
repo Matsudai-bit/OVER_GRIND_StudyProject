@@ -37,11 +37,10 @@ public class Wall : MonoBehaviour
     // 同じコライダーへの連続ヒットを防ぐための待機時間です（現状未使用）。
     [SerializeField] private float m_hitCooldown = 0.15f;
 
-    // コライダーごとの前回ヒット時刻を保持します（現状未使用）。
-    private readonly Dictionary<int, float> m_lastHitTime = new();
-
-    // コライダーごとに、現在の重なり中に既にヒット済みかどうかを保持します。
-    private readonly HashSet<int> m_activeHitIds = new();
+    /// <summary>
+    /// 接触したオブジェクト。
+    /// </summary>
+    private Collider m_contactCollider;
 
     /// <summary>
     /// 生成するダメージデカールのプレハブを取得します。
@@ -59,23 +58,27 @@ public class Wall : MonoBehaviour
     public string WeaponTag => m_weaponTag;
 
     /// <summary>
+    /// 接触したオブジェクト
+    /// </summary>
+
+    /// <summary>
     /// トリガーへの侵入を検知してデカール生成処理を行います。
     /// </summary>
     /// <param name="other">トリガーへ侵入したコライダー。</param>
     private void OnTriggerEnter(Collider other)
     {
-        // 侵入時・滞在時共通の判定処理へ委譲します。
-        HandleTriggerContact(other);
-    }
+        if (other == null)
+        {
+            return;
+        }
 
-    /// <summary>
-    /// トリガーに滞在中のコライダーに対しても、未ヒットであればデカール生成を行います。
-    /// </summary>
-    /// <param name="other">トリガーに滞在中のコライダー。</param>
-    private void OnTriggerStay(Collider other)
-    {
-        // 侵入時・滞在時共通の判定処理へ委譲します。
-        HandleTriggerContact(other);
+        if (!other.CompareTag(m_weaponTag))
+        {
+            return;
+        }
+
+        // 接触したColliderを保持します。
+        m_contactCollider = other;
     }
 
     /// <summary>
@@ -84,17 +87,23 @@ public class Wall : MonoBehaviour
     /// <param name="other">トリガーから離れたコライダー。</param>
     private void OnTriggerExit(Collider other)
     {
-        // nullの場合は処理を終了します。
         if (other == null)
         {
             return;
         }
 
-        // 離れたコライダーの識別IDを取得します。
-        int id = other.GetInstanceID();
+        // 保持しているColliderと離れたColliderが
+        // 同一の場合のみデカール生成処理を行います。
+        if (other != m_contactCollider)
+        {
+            return;
+        }
 
-        // ヒット済み状態から除外し、次回の侵入時に再びヒット判定できるようにします。
-        m_activeHitIds.Remove(id);
+        // 保持していたColliderを使ってデカールを生成します。
+        HandleTriggerContact(other);
+
+        // 接触状態を解除します。
+        m_contactCollider = null;
     }
 
     /// <summary>
@@ -111,12 +120,6 @@ public class Wall : MonoBehaviour
 
         // コライダーごとの識別にInstanceIDを使用します。
         int id = other.GetInstanceID();
-
-        // 既にヒット済みのIDであれば処理を終了します（Addはすでに存在する場合falseを返します）。
-        if (!m_activeHitIds.Add(id))
-        {
-            return;
-        }
 
         // デカール生成処理を実行します。
         SpawnDecalFromTrigger(other, id);

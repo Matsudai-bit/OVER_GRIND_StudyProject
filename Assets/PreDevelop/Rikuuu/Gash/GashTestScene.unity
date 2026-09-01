@@ -502,12 +502,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Wall
   m_decalPrefab: {fileID: 690076942}
-  m_surfaceOffset: 0.5
+  m_surfaceOffset: 0.1
   m_weaponTag: Chainsaw
   m_parentDecalToSelf: 1
   m_hitCooldown: 0.15
---- !u!64 &677572271
-MeshCollider:
+--- !u!136 &677572271
+CapsuleCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -524,10 +524,11 @@ MeshCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 1
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
+  serializedVersion: 2
+  m_Radius: 0.5000001
+  m_Height: 2
+  m_Direction: 1
+  m_Center: {x: 0.000000059604645, y: 0, z: -0.00000008940697}
 --- !u!1 &690076942 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 694456951132092728, guid: 96eeaf65c450b8941a5f218b09a1d0be, type: 3}
@@ -1133,8 +1134,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: aa172fc75749f9846a9a2591cff97745, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Wall
-  m_decalPrefab: {fileID: 690076942}
-  m_surfaceOffset: 0.5
+  m_decalPrefab: {fileID: 0}
+  m_surfaceOffset: 0.02
   m_weaponTag: Chainsaw
   m_parentDecalToSelf: 1
   m_hitCooldown: 0.15
@@ -1222,8 +1223,8 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1854043502}
   m_Mesh: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
---- !u!64 &1854043509
-MeshCollider:
+--- !u!136 &1854043509
+CapsuleCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -1240,10 +1241,11 @@ MeshCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 1
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
+  serializedVersion: 2
+  m_Radius: 0.5000001
+  m_Height: 2
+  m_Direction: 1
+  m_Center: {x: 0.000000059604645, y: 0, z: -0.00000008940697}
 --- !u!1001 &6522554138372125345
 PrefabInstance:
   m_ObjectHideFlags: 0
