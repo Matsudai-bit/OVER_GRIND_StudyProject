@@ -4,12 +4,12 @@ using UnityEditor;
 
 /// @ className :: ウインドウクラス
 /// @ name :: Aoki Hayate
-/// @ date :: 2026/08/27
+/// @ date :: 2026/08/28
 public class SaveDataWindow : EditorWindow
 {
-    private SaveData targetData; // 編集・保存する対象のデータ
+    private SaveData m_targetData; // 編集・保存する対象のデータ（メンバー変数規約適用）
 
-    [MenuItem("Window/Save Data Manager")]
+    [MenuItem("Tools/SaveDataTool")]
     public static void ShowWindow()
     {
         GetWindow<SaveDataWindow>("セーブデータ管理");
@@ -20,11 +20,11 @@ public class SaveDataWindow : EditorWindow
         GUILayout.Label("JSONセーブデータ マネージャー", EditorStyles.boldLabel);
         EditorGUILayout.Space();
 
-        //  ScriptableObjectをセットするスロットを表示
-        targetData = (SaveData)EditorGUILayout.ObjectField(
-            "対象のセーブデータ", targetData, typeof(SaveData), false);
+        // ScriptableObjectをセットするスロットを表示
+        m_targetData = (SaveData)EditorGUILayout.ObjectField(
+            "対象のセーブデータ", m_targetData, typeof(SaveData), false);
 
-        if (targetData == null)
+        if (m_targetData == null)
         {
             EditorGUILayout.HelpBox(
                 "Projectウィンドウで右クリック ＞ Create ＞ ScriptableObjects ＞ SaveData からデータを作成し、ここにアタッチしてください。",
@@ -37,25 +37,25 @@ public class SaveDataWindow : EditorWindow
         // 現在のパラメータをエディタ上で確認・編集できるようにする
         EditorGUI.BeginChangeCheck();
 
-        targetData.saveFileName = EditorGUILayout.TextField("保存ファイル名", targetData.saveFileName);
+        m_targetData.m_saveFileName = EditorGUILayout.TextField("保存ファイル名", m_targetData.m_saveFileName);
         EditorGUILayout.Space();
 
-        targetData.clearedStage = EditorGUILayout.IntField("クリアステージ", targetData.clearedStage);
-        targetData.bgmVolume = EditorGUILayout.Slider("BGM音量", targetData.bgmVolume, 0f, 1f);
-        targetData.seVolume = EditorGUILayout.Slider("SE音量", targetData.seVolume, 0f, 1f);
-        targetData.masterVolume = EditorGUILayout.Slider("マスター音量", targetData.masterVolume, 0f, 1f);
-        targetData.screenSize = EditorGUILayout.IntField("スクリーンサイズ", targetData.screenSize);
-        targetData.cameraSensitivity = EditorGUILayout.Slider("カメラ感度", targetData.cameraSensitivity, 0.1f, 10f);
+        m_targetData.m_clearedStage = EditorGUILayout.IntField("クリアステージ", m_targetData.m_clearedStage);
+        m_targetData.m_bgmVolume = EditorGUILayout.Slider("BGM音量", m_targetData.m_bgmVolume, 0f, 1f);
+        m_targetData.m_seVolume = EditorGUILayout.Slider("SE音量", m_targetData.m_seVolume, 0f, 1f);
+        m_targetData.m_masterVolume = EditorGUILayout.Slider("マスター音量", m_targetData.m_masterVolume, 0f, 1f);
+        m_targetData.m_screenSize = EditorGUILayout.IntField("スクリーンサイズ", m_targetData.m_screenSize);
+        m_targetData.m_cameraSensitivity = EditorGUILayout.Slider("カメラ感度", m_targetData.m_cameraSensitivity, 0.1f, 10f);
 
         if (EditorGUI.EndChangeCheck())
         {
-            EditorUtility.SetDirty(targetData);
+            EditorUtility.SetDirty(m_targetData);
         }
 
         EditorGUILayout.Space();
 
         // SaveSystemからパスを取得して表示
-        string path = SaveSystem.GetFilePath(targetData.saveFileName);
+        string path = SaveSystem.GetFilePath(m_targetData.m_saveFileName);
         EditorGUILayout.HelpBox($"【保存先】\n{path}", MessageType.Info);
         EditorGUILayout.Space();
 
@@ -65,14 +65,14 @@ public class SaveDataWindow : EditorWindow
         // SaveSystem.Save を呼び出す
         if (GUILayout.Button("セーブする\n(JSONへ書出)", GUILayout.Height(40)))
         {
-            SaveSystem.Save(targetData, targetData.saveFileName);
+            SaveSystem.Save(m_targetData, m_targetData.m_saveFileName);
             AssetDatabase.SaveAssets();
         }
 
         // SaveSystem.LoadOverwrite を呼び出す
         if (GUILayout.Button("ロードする\n(JSONから読込)", GUILayout.Height(40)))
         {
-            SaveSystem.LoadOverwrite(targetData, targetData.saveFileName);
+            SaveSystem.LoadOverwrite(m_targetData, m_targetData.m_saveFileName);
             GUI.FocusControl(null);
         }
 
