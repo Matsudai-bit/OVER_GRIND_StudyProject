@@ -1,43 +1,41 @@
-// Unityの基本機能を使用するために読み込みます。
 using UnityEngine;
 
 /// <summary>
-/// アタッチしたオブジェクトの移動速度を毎フレーム計測し、
-/// 振り方向の推定などに利用できるようにするコンポーネントです。
+/// アタッチしたオブジェクトの移動速度を毎フレーム計測します。
+/// 攻撃判定のON/OFFに影響されない、常にアクティブな親オブジェクトに付与してください。
 /// </summary>
 public class AttackHitboxVelocityTracker : MonoBehaviour
 {
-    // 直前のフレームで記録したワールド座標を保持します。
+    // 直前フレームのワールド座標です。
     private Vector3 m_previousPosition;
 
-    // 現在の移動速度を保持します。
+    /// <summary>
+    /// 現在の移動速度（ワールド空間、m/秒）を取得します。
+    /// </summary>
     public Vector3 Velocity { get; private set; }
 
     /// <summary>
-    /// オブジェクトが有効になったときに速度計測の基準位置を初期化します。
+    /// 初回フレームで速度が異常値にならないよう、初期位置を記録します。
     /// </summary>
-    private void OnEnable()
+    private void Start()
     {
-        // 現在のワールド座標を基準位置として記録します。
+        // 現在位置を前回位置として保存します。
         m_previousPosition = transform.position;
-
-        // 有効化直後は移動速度がまだ計算されていないため、速度をゼロにします。
-        Velocity = Vector3.zero;
     }
 
     /// <summary>
-    /// 毎フレーム、オブジェクトの移動速度を計算します。
+    /// 毎フレーム、前回位置との差分から移動速度を計算します。
     /// </summary>
     private void Update()
     {
-        // フレーム経過時間が0より大きい場合だけ速度を計算します。
-        if (Time.deltaTime > 0.0f)
+        // deltaTimeが0以下だと除算エラーになるため、正の値のときのみ速度を更新します。
+        if (Time.deltaTime > 0f)
         {
-            // 現在位置と前回位置の差をフレーム経過時間で割り、速度を計算します。
+            // 位置の差分を経過時間で割って速度を求めます。
             Velocity = (transform.position - m_previousPosition) / Time.deltaTime;
         }
 
-        // 次のフレームで使用するため、現在の位置を前回位置として保存します。
+        // 次フレームの計算に使うため、現在位置を前回位置として保存します。
         m_previousPosition = transform.position;
     }
 }

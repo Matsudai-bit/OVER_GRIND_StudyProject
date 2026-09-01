@@ -1,10 +1,5 @@
-// コレクションを扱うために使用します。
 using System.Collections.Generic;
-
-// Unityの基本機能を使用するために使用します。
 using UnityEngine;
-
-// URPのDecalProjectorを使用するために使用します。
 using UnityEngine.Rendering.Universal;
 
 /// <summary>
@@ -20,9 +15,6 @@ public class Wall : MonoBehaviour
 
     // 平面へ投影した振り方向が有効か判定するための最小値です。
     private const float PROJECTED_SWING_EPSILON = 0.001f;
-
-    // Rayの判定距離に追加する余裕距離です。
-    private const float RAY_DISTANCE_PADDING = 0.3f;
 
     // デカールのZ方向ピボットをサイズの半分に設定するための比率です。
     private const float DECAL_PIVOT_Z_RATIO = 0.5f;
@@ -42,14 +34,14 @@ public class Wall : MonoBehaviour
     // 生成したデカールを壁の子オブジェクトにするかどうかです。
     [SerializeField] private bool m_parentDecalToSelf = true;
 
-    // 同じコライダーへの連続ヒットを防ぐための待機時間です。
+    // 同じコライダーへの連続ヒットを防ぐための待機時間です（現状未使用）。
     [SerializeField] private float m_hitCooldown = 0.15f;
 
-    // コライダーごとの前回位置を保持します。
-    private readonly Dictionary<int, Vector3> m_lastPositions = new();
-
-    // コライダーごとの前回ヒット時刻を保持します。
+    // コライダーごとの前回ヒット時刻を保持します（現状未使用）。
     private readonly Dictionary<int, float> m_lastHitTime = new();
+
+    // コライダーごとに、現在の重なり中に既にヒット済みかどうかを保持します。
+    private readonly HashSet<int> m_activeHitIds = new();
 
     /// <summary>
     /// 生成するダメージデカールのプレハブを取得します。
@@ -72,35 +64,61 @@ public class Wall : MonoBehaviour
     /// <param name="other">トリガーへ侵入したコライダー。</param>
     private void OnTriggerEnter(Collider other)
     {
-        // 相手のコライダーが存在しない場合は処理を終了します。
+        // 侵入時・滞在時共通の判定処理へ委譲します。
+        HandleTriggerContact(other);
+    }
+
+    /// <summary>
+    /// トリガーに滞在中のコライダーに対しても、未ヒットであればデカール生成を行います。
+    /// </summary>
+    /// <param name="other">トリガーに滞在中のコライダー。</param>
+    private void OnTriggerStay(Collider other)
+    {
+        // 侵入時・滞在時共通の判定処理へ委譲します。
+        HandleTriggerContact(other);
+    }
+
+    /// <summary>
+    /// コライダーが離れたら、そのコライダーのヒット済み状態をリセットします。
+    /// </summary>
+    /// <param name="other">トリガーから離れたコライダー。</param>
+    private void OnTriggerExit(Collider other)
+    {
+        // nullの場合は処理を終了します。
         if (other == null)
         {
             return;
         }
 
-        // 相手のタグが設定された武器タグと異なる場合は処理を終了します。
-        if (!other.CompareTag(m_weaponTag))
+        // 離れたコライダーの識別IDを取得します。
+        int id = other.GetInstanceID();
+
+        // ヒット済み状態から除外し、次回の侵入時に再びヒット判定できるようにします。
+        m_activeHitIds.Remove(id);
+    }
+
+    /// <summary>
+    /// 対象タグかどうかとヒット済みかどうかを判定し、未ヒットならデカール生成処理を呼び出します。
+    /// </summary>
+    /// <param name="other">判定対象のコライダー。</param>
+    private void HandleTriggerContact(Collider other)
+    {
+        // nullチェックとタグ一致チェック（対象外なら何もしません）。
+        if (other == null || !other.CompareTag(m_weaponTag))
         {
             return;
         }
 
-        // コライダーを識別するためのInstanceIDを取得します。
+        // コライダーごとの識別にInstanceIDを使用します。
         int id = other.GetInstanceID();
 
-        // 前回のヒット時刻が存在するか確認します。
-        if (m_lastHitTime.TryGetValue(id, out float lastTime))
+        // 既にヒット済みのIDであれば処理を終了します（Addはすでに存在する場合falseを返します）。
+        if (!m_activeHitIds.Add(id))
         {
-            // 前回のヒットからクールダウン時間が経過していない場合は処理を終了します。
-            if (Time.time - lastTime < m_hitCooldown)
-            {
-                return;
-            }
+            return;
         }
 
-        // 今回のヒット時刻を記録します。
-        m_lastHitTime[id] = Time.time;
-
-        // トリガー情報を利用してデカールを生成します。
+        // デカール生成処理を実行します。
         SpawnDecalFromTrigger(other, id);
     }
 
@@ -114,66 +132,44 @@ public class Wall : MonoBehaviour
         // デカールプレハブが設定されていない場合は警告を出して処理を終了します。
         if (m_decalPrefab == null)
         {
-            // どのWallで設定漏れが発生したか分かるようにオブジェクト名を表示します。
             Debug.LogWarning($"{name}: DecalPrefab が設定されていません。", this);
-
-            // デカールを生成できないため処理を終了します。
             return;
         }
 
         // Wallに設定されているコライダーを取得します。
         Collider wallCollider = GetComponent<Collider>();
 
-        // 壁面上のおおよその位置を取得します。
+        // 武器の現在位置を取得します（bounds.centerではなくtransform.positionを使用します）。
+        Vector3 weaponPosition = other.transform.position;
+
+        // 壁面上の最近接点を取得します（Convexなコライダーである必要があります）。
         Vector3 approxPoint = wallCollider != null
-            ? wallCollider.ClosestPoint(other.bounds.center)
-            : other.ClosestPoint(transform.position);
+            ? wallCollider.ClosestPoint(weaponPosition)
+            : weaponPosition;
 
-        // 前回位置が存在する場合はRayの始点として使用します。
-        Vector3 rayOrigin = m_lastPositions.TryGetValue(id, out Vector3 prevPos)
-            ? prevPos
-            : other.bounds.center;
-
-        // Rayの方向を「武器の前回位置から壁面のおおよその位置」へ向けます。
-        Vector3 rayDirection = approxPoint - rayOrigin;
-
-        // Rayの方向がほぼゼロの場合でも安全に処理できるように初期値を設定します。
-        Vector3 rayDir = rayDirection.sqrMagnitude > RAY_DIRECTION_EPSILON
-            ? rayDirection.normalized
-            : Vector3.zero;
-
-        // Rayが進む距離として起点から壁面までの距離を取得します。
-        float rayDistance = rayDirection.magnitude + RAY_DISTANCE_PADDING;
-
-        // Raycastが失敗した場合に使用する衝突点を仮設定します。
+        // 衝突点の初期値を設定します。
         Vector3 hitPoint = approxPoint;
 
-        // Raycastが失敗した場合に使用する法線を仮設定します。
-        Vector3 hitNormal = rayDir.sqrMagnitude > RAY_DIRECTION_EPSILON
-            ? -rayDir
-            : transform.forward;
+        // 法線の初期値を壁の正面方向で設定します。
+        Vector3 hitNormal = transform.forward;
 
-        // 壁のコライダーがBoxColliderの場合は専用の法線計算を使用します。
         if (wallCollider is BoxCollider boxCollider)
         {
-            // BoxColliderの面情報から正確な法線を取得します。
+            // BoxColliderの場合は面情報から正確な法線を取得します。
             hitNormal = GetBoxFaceNormal(boxCollider, approxPoint);
         }
-        // BoxCollider以外のコライダーはRaycastによって衝突情報を取得します。
-        else if (wallCollider != null &&
-                 rayDir.sqrMagnitude > RAY_DIRECTION_EPSILON &&
-                 Physics.Raycast(
-                     rayOrigin,
-                     rayDir,
-                     out RaycastHit hit,
-                     rayDistance) &&
-                 hit.collider == wallCollider)
+        else if (wallCollider != null)
         {
-            // Rayが実際に壁へ当たった位置を取得します。
-            hitPoint = hit.point;
+            // BoxCollider以外（円柱などの凸形状）は、
+            // 「武器位置→表面最近接点」の逆方向を外向き法線として使用します。
+            // 過去の位置履歴やRaycastに依存しないため、攻撃をまたいだ状態汚染が起きません。
+            Vector3 outwardDirection = weaponPosition - approxPoint;
 
-            // Rayが壁へ当たった位置の法線を取得します。
-            hitNormal = hit.normal;
+            // ベクトルの長さが十分にある場合のみ法線として採用します。
+            if (outwardDirection.sqrMagnitude > RAY_DIRECTION_EPSILON)
+            {
+                hitNormal = outwardDirection.normalized;
+            }
         }
 
         // 武器の振り方向を取得するための初期方向を設定します。
@@ -183,38 +179,18 @@ public class Wall : MonoBehaviour
         AttackHitboxVelocityTracker velocityTracker =
             other.GetComponent<AttackHitboxVelocityTracker>();
 
-        // コライダー自身に存在しない場合は親オブジェクトから取得します。
+        // コライダー自身になければ親オブジェクトから探します。
         if (velocityTracker == null)
         {
-            velocityTracker =
-                other.GetComponentInParent<AttackHitboxVelocityTracker>();
+            velocityTracker = other.GetComponentInParent<AttackHitboxVelocityTracker>();
         }
 
-        // 速度トラッカーが見つからない場合は警告を表示します。
-        if (velocityTracker == null)
-        {
-            Debug.LogWarning(
-                $"{other.name}: AttackHitboxVelocityTracker が見つかりません。",
-                other);
-        }
-        else
-        {
-            // 現在の武器速度をデバッグログに表示します。
-            Debug.Log(
-                $"{other.name}: Velocity={velocityTracker.Velocity}, " +
-                $"sqrMagnitude={velocityTracker.Velocity.sqrMagnitude}");
-        }
-
-        // 武器の速度が十分に大きい場合だけ振り方向として使用します。
+        // 速度トラッカーが見つかり、かつ速度が十分にある場合は振り方向として採用します。
         if (velocityTracker != null &&
             velocityTracker.Velocity.sqrMagnitude > SWING_DELTA_EPSILON)
         {
-            // 速度ベクトルを正規化して振り方向に変換します。
             swingDirection = velocityTracker.Velocity.normalized;
         }
-
-        // 次回のRay始点として使用するため現在の武器位置を保存します。
-        m_lastPositions[id] = other.transform.position;
 
         // 取得した衝突情報を利用してデカールを生成します。
         SpawnDecal(hitPoint, hitNormal, swingDirection);
@@ -249,14 +225,14 @@ public class Wall : MonoBehaviour
             // 投影結果がほぼゼロの場合は上方向を仮の上方向として使用します。
             projectedSwing = Vector3.up;
 
-            // 法線と上方向が平行な場合は別の方向を使用します。
+            // 法線と上方向がほぼ平行な場合は別の方向を使用します。
             if (Mathf.Abs(Vector3.Dot(hitNormal, projectedSwing)) > 1.0f - PROJECTED_SWING_EPSILON)
             {
                 // 上方向と平行にならないよう右方向を使用します。
                 projectedSwing = Vector3.right;
             }
 
-            // 仮の上方向を壁面へ投影します。
+            // 仮の上方向を壁面へ投影して正規化します。
             projectedSwing =
                 Vector3.ProjectOnPlane(projectedSwing, hitNormal).normalized;
         }
