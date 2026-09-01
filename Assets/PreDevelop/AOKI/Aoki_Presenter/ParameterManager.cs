@@ -8,7 +8,7 @@ public class ParameterManager : MonoBehaviour
     [Serializable]
     public struct ParameterConfig
     {
-        public string name;      // 例："HP", "スタミナ", "Vゲージ"
+        public string name;      // "HP", "スタミナ", "Vゲージ"
         public int initialValue; // 初期値
         public int maxValue;     // 最大値
 
@@ -22,7 +22,7 @@ public class ParameterManager : MonoBehaviour
 
     [Header("UI自動生成用の設定")]
     [SerializeField] private ValueTextView viewPrefab; // UIのプレハブ
-    [SerializeField] private Transform viewContainer;  // UIを並べる親オブジェクト（VerticalLayoutGroupなど）
+    [SerializeField] private Transform viewContainer;  // UIを並べる親オブジェクト
 
     // 生成されたModelを名前で検索して操作するための辞書
     private Dictionary<string, ParameterModel> _models = new Dictionary<string, ParameterModel>();
@@ -30,7 +30,7 @@ public class ParameterManager : MonoBehaviour
 
     private void Start()
     {
-        // リストに書いた設定の数だけ、Model・View・Presenterを全自動生成！
+        // リストに書いた設定の数だけ、Model・View・Presenterを全自動生成
         foreach (var config in parameterConfigs)
         {
             // 1. Modelを自動生成
@@ -47,7 +47,7 @@ public class ParameterManager : MonoBehaviour
         }
     }
 
-    // テスト操作用（名前を指定して値を変更）
+    // テスト操作用
     private void Update()
     {
         // 最新のInput Systemでのスペースキー判定
