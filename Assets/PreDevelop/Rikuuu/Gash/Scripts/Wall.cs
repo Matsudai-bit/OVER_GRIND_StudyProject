@@ -79,6 +79,8 @@ public class Wall : MonoBehaviour
 
         // 接触したColliderを保持します。
         m_contactCollider = other;
+
+        Debug.Log("Enter");
     }
 
     /// <summary>
@@ -98,6 +100,8 @@ public class Wall : MonoBehaviour
         {
             return;
         }
+
+        Debug.Log("Exit");
 
         // 保持していたColliderを使ってデカールを生成します。
         HandleTriggerContact(other);
