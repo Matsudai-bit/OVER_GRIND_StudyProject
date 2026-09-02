@@ -2,10 +2,11 @@ using UnityEngine;
 
 /// <summary>
 /// プレイヤーのブーストチャージ状態を管理します。
-/// マリオカートのドリフトのように、見た目の向きは
-/// 入力方向へ素早く追従する一方、実際の進行方向(慣性)は
-/// チャージが進むほど極端にゆっくりとしか変化しなくなり、
-/// 操作に強いクセ（曲がりにくさ）が生まれます。
+/// チャージ中はマリオカートのドリフトのように、
+/// キャラクターの向きと実際の進行方向を分離します。
+///
+/// チャージが進むほど進行方向の旋回性能が低下し、
+/// 徐々に強い横滑りが発生します。
 /// </summary>
 public sealed class PlayerBoostChargingState
     : StateBase<PlayerStateMachineComponent>
@@ -16,23 +17,40 @@ public sealed class PlayerBoostChargingState
     // ブーストダッシュに必要な最低チャージ割合
     private const float MIN_BOOST_CHARGE_RATE = 0.10f;
 
-    // チャージ中の移動速度倍率（チャージ開始時点の実速度に対する倍率）
+    // チャージ中の移動速度倍率
     private const float CHARGE_MOVE_SPEED_RATE = 0.75f;
 
-    // チャージ開始直後の、実際の進行方向の旋回速度（度/秒）
-    // アセット側のRotationSpeedの値に関わらず、
-    // 確実に「素早くは曲がれない」体感を保証するための絶対値
-    private const float DRIFT_TURN_SPEED_AT_START = 150.0f;
 
-    // チャージ完了時点の、実際の進行方向の旋回速度（度/秒）
-    // かなり小さい値にし、大きく外側へ膨らむ挙動にする
-    private const float DRIFT_TURN_SPEED_AT_FULL_CHARGE = 20.0f;
+    // ============================================================
+    // ドリフト設定
+    // ============================================================
+
+    // 軽いドリフトへ移行するチャージ率
+    private const float DRIFT_STAGE_LIGHT_END = 0.25f;
+
+    // 中程度のドリフトへ移行するチャージ率
+    private const float DRIFT_STAGE_MEDIUM_END = 0.65f;
+
+    // チャージ開始時の進行方向旋回速度
+    private const float DRIFT_TURN_SPEED_LIGHT = 120.0f;
+
+    // 中程度のドリフト時の進行方向旋回速度
+    private const float DRIFT_TURN_SPEED_MEDIUM = 65.0f;
+
+    // 最大チャージ時の進行方向旋回速度
+    private const float DRIFT_TURN_SPEED_DEEP = 25.0f;
+
+
+    // ============================================================
+    // その他
+    // ============================================================
 
     // 速度ログの出力間隔
     private const float SPEED_LOG_INTERVAL = 0.25f;
 
     // 移動入力が瞬間的に途切れてもIdlingへ遷移しない猶予時間
     private const float NO_MOVE_INPUT_GRACE_TIME = 0.15f;
+
 
     // チャージ経過時間
     private float m_chargeTime;
@@ -43,15 +61,15 @@ public sealed class PlayerBoostChargingState
     // 移動入力が無い状態が続いている時間
     private float m_noMoveInputElapsedTime;
 
-    // チャージ開始時点の通常旋回速度（見た目の向き用）
+    // チャージ開始時点の通常旋回速度
     private float m_normalFacingRotationSpeed;
 
     // チャージ中に固定して使う移動速度パラメータ
     private PlayerMoveParameters m_moveParameters;
 
-    // 現在の実際の進行方向（ワールド空間、正規化済み）
-    // 入力方向へは即座に一致せず、ドリフトのようにゆっくり近づく
+    // 現在の実際の進行方向
     private Vector3 m_currentVelocityDirection;
+
 
     /// <summary>
     /// 現在のチャージ割合を取得します。
@@ -59,6 +77,7 @@ public sealed class PlayerBoostChargingState
     private float ChargeRate =>
         Mathf.Clamp01(
             m_chargeTime / MAX_CHARGE_TIME);
+
 
     /// <summary>
     /// 状態開始時に呼ばれます。
@@ -92,8 +111,7 @@ public sealed class PlayerBoostChargingState
                 normalParameters.TimeToStop,
                 m_normalFacingRotationSpeed);
 
-        // ドリフト開始時点の実際の進行方向を、
-        // チャージ開始直前の実速度方向で初期化する
+        // チャージ開始時の実際の進行方向を保存
         m_currentVelocityDirection =
             Owner.Motor.HorizontalDirection;
 
@@ -111,6 +129,7 @@ public sealed class PlayerBoostChargingState
 
         Owner.AnimationPresenter.PlayWalkAnimation();
     }
+
 
     /// <summary>
     /// 一定間隔の更新処理を行います。
@@ -144,6 +163,11 @@ public sealed class PlayerBoostChargingState
             return;
         }
 
+
+        // --------------------------------------------------------
+        // 移動入力チェック
+        // --------------------------------------------------------
+
         if (Owner.InputReader.HasMoveInput)
         {
             m_noMoveInputElapsedTime = 0.0f;
@@ -165,6 +189,11 @@ public sealed class PlayerBoostChargingState
             }
         }
 
+
+        // --------------------------------------------------------
+        // チャージ時間更新
+        // --------------------------------------------------------
+
         m_chargeTime += Time.fixedDeltaTime;
 
         if (m_chargeTime >= MAX_CHARGE_TIME)
@@ -172,7 +201,11 @@ public sealed class PlayerBoostChargingState
             m_chargeTime = MAX_CHARGE_TIME;
         }
 
-        // 入力方向を計算する（見た目の向き・進行方向の目標として共通で使用）
+
+        // --------------------------------------------------------
+        // 入力方向取得
+        // --------------------------------------------------------
+
         Vector2 normalizedInput =
             Vector2.ClampMagnitude(
                 Owner.InputReader.MoveInput,
@@ -182,21 +215,28 @@ public sealed class PlayerBoostChargingState
             Owner.Motor.CalculateCameraRelativeDirection(
                 normalizedInput);
 
-        // チャージ開始直後から、フルチャージ時と同じ
-        // 強いドリフト状態にします。
-        // 実際の進行方向は入力方向へゆっくりしか追従せず、
-        // プレイヤーの見た目の向きだけが入力方向へ追従します。
+
+        // --------------------------------------------------------
+        // ドリフト旋回速度を計算
+        // --------------------------------------------------------
+
         float currentVelocityTurnSpeed =
-            DRIFT_TURN_SPEED_AT_FULL_CHARGE;
+            CalculateDriftTurnSpeed(ChargeRate);
+
+
+        // --------------------------------------------------------
+        // 実際の進行方向を更新
+        // --------------------------------------------------------
 
         UpdateDriftVelocityDirection(
             inputDirection,
             currentVelocityTurnSpeed);
 
-        // 見た目の向きは、実際の進行方向とは切り離し、
-        // 入力方向へ通常の旋回速度で素早く追従させる。
-        // これにより「車体は曲がりたい方向を向いているのに
-        // 実際には外側へ滑っていく」というドリフトの見た目になる
+
+        // --------------------------------------------------------
+        // ドリフト移動
+        // --------------------------------------------------------
+
         Owner.Motor.MoveWithDriftAtFixedSpeed(
             m_currentVelocityDirection,
             m_moveParameters.MaxMoveSpeed,
@@ -204,14 +244,25 @@ public sealed class PlayerBoostChargingState
             m_normalFacingRotationSpeed,
             Time.fixedDeltaTime);
 
+
+        // --------------------------------------------------------
+        // ゲージ更新
+        // --------------------------------------------------------
+
         if (Owner.VGaugeUI != null)
         {
             Owner.VGaugeUI.SetGaugeRate(ChargeRate);
         }
 
+
+        // --------------------------------------------------------
+        // デバッグログ
+        // --------------------------------------------------------
+
         m_speedLogElapsedTime += Time.fixedDeltaTime;
 
-        if (m_speedLogElapsedTime >= SPEED_LOG_INTERVAL)
+        if (m_speedLogElapsedTime >=
+            SPEED_LOG_INTERVAL)
         {
             m_speedLogElapsedTime = 0.0f;
 
@@ -225,34 +276,67 @@ public sealed class PlayerBoostChargingState
         }
     }
 
-    /// <summary>
-    /// 状態終了時に呼ばれます。
-    /// </summary>
-    protected override void OnExitState()
-    {
-        Debug.Log(
-            "[PlayerBoostChargingState] チャージ状態終了",
-            Owner);
 
-        Owner.AnimationPresenter.StopWalkAnimation();
+    /// <summary>
+    /// チャージ率からドリフト中の
+    /// 実際の進行方向旋回速度を計算します。
+    ///
+    /// チャージ開始時は軽く曲がれますが、
+    /// チャージが進むほど徐々に曲がりにくくなります。
+    /// </summary>
+    /// <param name="chargeRate">チャージ割合。</param>
+    /// <returns>進行方向の旋回速度。</returns>
+    private float CalculateDriftTurnSpeed(
+        float chargeRate)
+    {
+        if (chargeRate <= DRIFT_STAGE_LIGHT_END)
+        {
+            float stageRate =
+                Mathf.InverseLerp(
+                    0.0f,
+                    DRIFT_STAGE_LIGHT_END,
+                    chargeRate);
+
+            return Mathf.Lerp(
+                DRIFT_TURN_SPEED_LIGHT,
+                DRIFT_TURN_SPEED_MEDIUM,
+                stageRate);
+        }
+
+        if (chargeRate <= DRIFT_STAGE_MEDIUM_END)
+        {
+            float stageRate =
+                Mathf.InverseLerp(
+                    DRIFT_STAGE_LIGHT_END,
+                    DRIFT_STAGE_MEDIUM_END,
+                    chargeRate);
+
+            return Mathf.Lerp(
+                DRIFT_TURN_SPEED_MEDIUM,
+                DRIFT_TURN_SPEED_DEEP,
+                stageRate);
+        }
+
+        return DRIFT_TURN_SPEED_DEEP;
     }
+
 
     /// <summary>
     /// 入力方向へ向けて、実際の進行方向を
-    /// 指定した速度（度/秒）でゆっくり近づけます（ドリフトの横滑り本体）。
+    /// 指定した速度でゆっくり近づけます。
     /// </summary>
     /// <param name="inputDirection">入力方向。</param>
-    /// <param name="turnSpeedDegreesPerSecond">1秒間の最大方向転換角度。</param>
+    /// <param name="turnSpeedDegreesPerSecond">
+    /// 1秒間の最大方向転換角度。
+    /// </param>
     private void UpdateDriftVelocityDirection(
         Vector3 inputDirection,
         float turnSpeedDegreesPerSecond)
     {
         if (inputDirection.sqrMagnitude <= 0.0001f)
         {
-            // 入力がほぼ無い場合は、
-            // 現在の進行方向をそのまま維持する
-            // （ハンドルをニュートラルに戻しても
-            // 　滑りは急には止まらない）
+            // 入力がなくなっても、
+            // 現在の進行方向を維持します。
             return;
         }
 
@@ -267,8 +351,22 @@ public sealed class PlayerBoostChargingState
                 inputDirection,
                 maxRadiansDelta,
                 0.0f)
-                .normalized;
+            .normalized;
     }
+
+
+    /// <summary>
+    /// 状態終了時に呼ばれます。
+    /// </summary>
+    protected override void OnExitState()
+    {
+        Debug.Log(
+            "[PlayerBoostChargingState] チャージ状態終了",
+            Owner);
+
+        Owner.AnimationPresenter.StopWalkAnimation();
+    }
+
 
     /// <summary>
     /// チャージを解除したときの遷移を行います。
@@ -282,7 +380,8 @@ public sealed class PlayerBoostChargingState
                 $"チャージ率{ChargeRate:P1} → Vブーストへ遷移",
                 Owner);
 
-            Owner.CarriedBoostGaugeRate = ChargeRate;
+            Owner.CarriedBoostGaugeRate =
+                ChargeRate;
 
             Machine.ChangeState<PlayerVRunningState>();
             return;
