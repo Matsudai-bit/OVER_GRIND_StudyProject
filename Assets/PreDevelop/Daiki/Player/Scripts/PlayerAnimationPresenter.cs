@@ -354,10 +354,10 @@ public sealed class PlayerAnimationPresenter : MonoBehaviour
             MOVE_SPEED_PARAMETER_NAME,
             AnimatorControllerParameterType.Float);
 
-        LogMissingParameter(
-            m_hasGroundedParameter,
-            IS_GROUNDED_PARAMETER_NAME,
-            AnimatorControllerParameterType.Bool);
+        //LogMissingParameter(
+        //    m_hasGroundedParameter,
+        //    IS_GROUNDED_PARAMETER_NAME,
+        //    AnimatorControllerParameterType.Bool);
 
         LogMissingParameter(
             m_hasJumpParameter,
@@ -369,10 +369,10 @@ public sealed class PlayerAnimationPresenter : MonoBehaviour
             ATTACK_PARAMETER_NAME,
             AnimatorControllerParameterType.Trigger);
 
-        LogMissingParameter(
-            m_hasHitParameter,
-            HIT_PARAMETER_NAME,
-            AnimatorControllerParameterType.Trigger);
+        //LogMissingParameter(
+        //    m_hasHitParameter,
+        //    HIT_PARAMETER_NAME,
+        //    AnimatorControllerParameterType.Trigger);
     }
 
     /// <summary>

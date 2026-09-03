@@ -22,7 +22,7 @@ public sealed class HealthGaugeView : MonoBehaviour
     {
         elapsedTime += Time.deltaTime;
 
-        if (!gameObject.CompareTag("Player") &&  elapsedTime >= 3.0f)
+        if (!gameObject.CompareTag("PlayerUI") &&  elapsedTime >= 3.0f)
         {
             m_healthSlider.gameObject.SetActive(false);
         }
