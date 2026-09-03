@@ -1,6 +1,7 @@
 using System.Collections;
 
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 /// <summary>
@@ -62,6 +63,7 @@ public class TitleMenuManager : MonoBehaviour
         Debug.Log("ゲーム開始");
 
         // TODO : ゲームシーンへ遷移
+        SceneManager.LoadScene("Prot_Stage1");
     }
 
     /// <summary>
