@@ -3,15 +3,22 @@ using UnityEngine;
 /// <summary>
 /// プレイヤーのブーストチャージ状態を管理します。
 ///
-/// チャージ開始時の移動方向を固定し、
-/// チャージ中はその方向へ進み続けます。
+/// チャージ中は現在の移動方向を維持しながら、
+/// スティック入力によって少しずつ移動方向を変更できます。
 ///
-/// プレイヤーの向きはチャージ開始方向を基準にして、
-/// スティック入力された方向へ一定角度まで変更できます。
+/// 移動方向の変更速度は通常移動より遅く、
+/// 後ろ方向への移動はできません。
+///
+/// プレイヤーの向きは、現在の移動方向へ
+/// ゆっくり追従します。
 /// </summary>
 public sealed class PlayerBoostChargingState
     : StateBase<PlayerStateMachineComponent>
 {
+    // ============================================================
+    // チャージ設定
+    // ============================================================
+
     // 最大チャージ時間
     private const float MAX_CHARGE_TIME = 4.0f;
 
@@ -26,11 +33,16 @@ public sealed class PlayerBoostChargingState
     // ドリフト設定
     // ============================================================
 
-    // チャージ中のプレイヤーの向きを変更できる最大角度
-    private const float MAX_CHARGE_FACING_ANGLE = 1.0f;
+    // チャージ中に移動方向を変更する速度（度/秒）
+    //
+    // 小さくするほど曲がりにくくなります。
+    private const float CHARGE_DRIFT_TURN_SPEED = 40.0f;
 
-    // プレイヤーの向きが目標方向へ変化する速度
-    private const float CHARGE_FACING_ROTATION_SPEED = 180.0f;
+    // チャージ中にプレイヤーの向きを変更する速度（度/秒）
+    //
+    // 移動方向よりさらに遅くすることで、
+    // 「滑りながら徐々に向きが変わる」感覚を作ります。
+    private const float CHARGE_FACING_ROTATION_SPEED = 50.0f;
 
     // スティック入力のデッドゾーン
     private const float STEERING_DEAD_ZONE = 0.1f;
@@ -63,17 +75,14 @@ public sealed class PlayerBoostChargingState
     // チャージ開始時点の通常旋回速度
     private float m_normalFacingRotationSpeed;
 
-    // チャージ中に固定して使う移動速度パラメータ
+    // チャージ中に使用する移動速度パラメータ
     private PlayerMoveParameters m_moveParameters;
 
-    // チャージ中の固定された移動方向
+    // 現在のチャージ中の移動方向
     private Vector3 m_currentVelocityDirection;
 
-    // チャージ開始時のプレイヤーの向き
-    private Vector3 m_chargeStartFacingDirection;
-
     // 現在のプレイヤーの向き
-    private Vector3 m_chargeFacingDirection;
+    private Vector3 m_currentFacingDirection;
 
 
     /// <summary>
@@ -118,39 +127,38 @@ public sealed class PlayerBoostChargingState
 
 
         // --------------------------------------------------------
-        // チャージ開始時の移動方向を保存
+        // チャージ開始時の移動方向を取得
         // --------------------------------------------------------
 
         m_currentVelocityDirection =
             Owner.Motor.HorizontalDirection;
 
-        // 念のため水平化
+        // 水平方向だけを使用
         m_currentVelocityDirection.y = 0.0f;
 
         if (m_currentVelocityDirection.sqrMagnitude <= 0.0001f)
         {
             m_currentVelocityDirection =
                 Owner.transform.forward;
+
+            m_currentVelocityDirection.y = 0.0f;
         }
 
         m_currentVelocityDirection.Normalize();
 
 
         // --------------------------------------------------------
-        // チャージ開始時のプレイヤーの向きを保存
+        // プレイヤーの向きを初期化
         // --------------------------------------------------------
 
-        m_chargeStartFacingDirection =
+        m_currentFacingDirection =
             m_currentVelocityDirection;
-
-        m_chargeFacingDirection =
-            m_chargeStartFacingDirection;
 
 
         Debug.Log(
             $"[PlayerBoostChargingState] チャージ開始 " +
             $"開始時実速度={currentSpeedAtChargeStart:F2} " +
-            $"チャージ固定速度={m_moveParameters.MaxMoveSpeed:F2}",
+            $"チャージ速度={m_moveParameters.MaxMoveSpeed:F2}",
             Owner);
 
 
@@ -175,12 +183,14 @@ public sealed class PlayerBoostChargingState
             return;
         }
 
+
         if (Owner.Monitor.IsGrounded &&
             Owner.InputReader.HasJumpInput)
         {
             Machine.ChangeState<PlayerJumpingState>();
             return;
         }
+
 
         if (Owner.InputReader.ConsumeVBoostReleased())
         {
@@ -250,28 +260,28 @@ public sealed class PlayerBoostChargingState
 
 
         // --------------------------------------------------------
-        // プレイヤーの向きを更新
+        // チャージ中の移動方向を更新
         // --------------------------------------------------------
 
-        UpdateChargeFacingDirection(
+        UpdateDriftVelocityDirection(
             inputDirection);
+
+
+        // --------------------------------------------------------
+        // プレイヤーの向きを移動方向へ追従させる
+        // --------------------------------------------------------
+
+        UpdateFacingDirection();
 
 
         // --------------------------------------------------------
         // チャージ中の移動
         // --------------------------------------------------------
-        //
-        // m_currentVelocityDirection は
-        // チャージ開始時に保存した方向から変更しません。
-        //
-        // そのため、チャージ中に後ろや横へ入力しても
-        // 移動方向は変わりません。
-        //
 
         Owner.Motor.MoveWithDriftAtFixedSpeed(
             m_currentVelocityDirection,
             m_moveParameters.MaxMoveSpeed,
-            m_chargeFacingDirection,
+            m_currentFacingDirection,
             CHARGE_FACING_ROTATION_SPEED,
             Time.fixedDeltaTime);
 
@@ -308,76 +318,102 @@ public sealed class PlayerBoostChargingState
 
 
     /// <summary>
-    /// チャージ中のプレイヤーの向きを更新します。
+    /// チャージ中の移動方向を更新します。
     ///
-    /// 移動方向そのものは変更せず、
-    /// チャージ開始時の方向を基準にして
-    /// プレイヤーの向きだけを変更します。
+    /// スティック入力に対して移動方向を徐々に追従させます。
+    /// そのため、通常移動よりも曲がりにくいドリフトになります。
     ///
-    /// チャージ開始方向からの角度は
-    /// 最大角度を超えないように制限します。
+    /// 現在の移動方向より後ろ側への入力は無視します。
+    /// これにより、チャージ中に後退することを防ぎます。
     /// </summary>
-    /// <param name="inputDirection">入力方向。</param>
-    private void UpdateChargeFacingDirection(
+    /// <param name="inputDirection">カメラ基準の入力方向。</param>
+    private void UpdateDriftVelocityDirection(
         Vector3 inputDirection)
     {
+        inputDirection.y = 0.0f;
+
         if (inputDirection.sqrMagnitude <=
             STEERING_DEAD_ZONE * STEERING_DEAD_ZONE)
         {
             return;
         }
 
-
-        // --------------------------------------------------------
-        // チャージ開始方向から見た入力方向の角度を取得
-        // --------------------------------------------------------
-
-        float signedAngle =
-            Vector3.SignedAngle(
-                m_chargeStartFacingDirection,
-                inputDirection.normalized,
-                Vector3.up);
+        inputDirection.Normalize();
 
 
         // --------------------------------------------------------
-        // 最大角度を超えないように制限
+        // 後ろ方向への入力を禁止
         // --------------------------------------------------------
 
-        signedAngle =
-            Mathf.Clamp(
-                signedAngle,
-                -MAX_CHARGE_FACING_ANGLE,
-                MAX_CHARGE_FACING_ANGLE);
+        float forwardDot =
+            Vector3.Dot(
+                m_currentVelocityDirection,
+                inputDirection);
 
 
-        // --------------------------------------------------------
-        // チャージ開始方向を基準に
-        // 制限された角度だけ回転した方向を作る
-        // --------------------------------------------------------
-
-        Vector3 targetFacingDirection =
-            Quaternion.AngleAxis(
-                signedAngle,
-                Vector3.up) *
-            m_chargeStartFacingDirection;
+        // 現在の移動方向より後ろを向いている入力は無視
+        //
+        // これにより、チャージ中にスティックを
+        // 真後ろへ倒しても後退しません。
+        if (forwardDot <= 0.0f)
+        {
+            return;
+        }
 
 
         // --------------------------------------------------------
-        // 現在の向きを目標方向へ徐々に変更
+        // 入力方向へ徐々に移動方向を変更
         // --------------------------------------------------------
 
+        float maxRadiansDelta =
+            CHARGE_DRIFT_TURN_SPEED *
+            Mathf.Deg2Rad *
+            Time.fixedDeltaTime;
+
+        m_currentVelocityDirection =
+            Vector3.RotateTowards(
+                m_currentVelocityDirection,
+                inputDirection,
+                maxRadiansDelta,
+                0.0f);
+
+        m_currentVelocityDirection.y = 0.0f;
+
+        if (m_currentVelocityDirection.sqrMagnitude >
+            0.0001f)
+        {
+            m_currentVelocityDirection.Normalize();
+        }
+    }
+
+
+    /// <summary>
+    /// プレイヤーの向きを現在の移動方向へ徐々に変更します。
+    ///
+    /// 移動方向とプレイヤーの向きを完全に同期させるのではなく、
+    /// 一定速度で追従させることでドリフト感を出します。
+    /// </summary>
+    private void UpdateFacingDirection()
+    {
         float maxRadiansDelta =
             CHARGE_FACING_ROTATION_SPEED *
             Mathf.Deg2Rad *
             Time.fixedDeltaTime;
 
-        m_chargeFacingDirection =
+        m_currentFacingDirection =
             Vector3.RotateTowards(
-                m_chargeFacingDirection,
-                targetFacingDirection,
+                m_currentFacingDirection,
+                m_currentVelocityDirection,
                 maxRadiansDelta,
-                0.0f)
-            .normalized;
+                0.0f);
+
+        m_currentFacingDirection.y = 0.0f;
+
+        if (m_currentFacingDirection.sqrMagnitude >
+            0.0001f)
+        {
+            m_currentFacingDirection.Normalize();
+        }
     }
 
 
@@ -418,6 +454,7 @@ public sealed class PlayerBoostChargingState
             $"[PlayerBoostChargingState] " +
             $"チャージ率{ChargeRate:P1} → 通常歩行へ遷移",
             Owner);
+
 
         if (Owner.VGaugeUI != null)
         {
