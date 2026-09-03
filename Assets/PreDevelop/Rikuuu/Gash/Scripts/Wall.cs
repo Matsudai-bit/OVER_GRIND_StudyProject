@@ -80,6 +80,9 @@ public class Wall : MonoBehaviour
         // 接触したColliderを保持します。
         m_contactCollider = other;
 
+        // 保持していたColliderを使ってデカールを生成します。
+        HandleTriggerContact(other);
+
         Debug.Log("Enter");
     }
 
@@ -91,6 +94,7 @@ public class Wall : MonoBehaviour
     {
         if (other == null)
         {
+            Debug.Log("Other is Null");
             return;
         }
 
@@ -98,13 +102,14 @@ public class Wall : MonoBehaviour
         // 同一の場合のみデカール生成処理を行います。
         if (other != m_contactCollider)
         {
+            Debug.Log("Not Contact Collider");
             return;
         }
 
         Debug.Log("Exit");
 
         // 保持していたColliderを使ってデカールを生成します。
-        HandleTriggerContact(other);
+        //HandleTriggerContact(other);
 
         // 接触状態を解除します。
         m_contactCollider = null;
@@ -119,6 +124,7 @@ public class Wall : MonoBehaviour
         // nullチェックとタグ一致チェック（対象外なら何もしません）。
         if (other == null || !other.CompareTag(m_weaponTag))
         {
+            Debug.Log("Not Weapon Tag");
             return;
         }
 
