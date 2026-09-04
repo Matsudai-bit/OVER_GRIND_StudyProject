@@ -1177,7 +1177,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &150509876
 Transform:
   m_ObjectHideFlags: 0
@@ -1337,8 +1337,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::S1BossPhaseAttackDamageProvider
   m_parameterAsset: {fileID: 11400000, guid: 089a3fb6fcd77c646ab14fa27a640a98, type: 2}
-  m_hitboxBindings: []
+  m_hitboxBindings:
+  - m_hitboxId: 5
+    m_attackHitbox: {fileID: 457524154}
+  m_hitboxGroups:
+  - m_attackIdentifier: {fileID: 11400000, guid: 3bb3e4d6cb2b8f54bbd9b6cc487eef06, type: 2}
+    m_hitboxIds: 05000000
   m_attackDamageController: {fileID: 4921220546604968353}
+  m_attackHitboxRegistry: {fileID: 4921220546604968345}
 --- !u!4 &151981190 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -5794357509716786096, guid: 4586a0511fbe72c4bacda86ebb308e01, type: 3}
@@ -1976,7 +1982,7 @@ RectTransform:
   m_Father: {fileID: 897748233}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0.424, y: 1}
+  m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -6393,7 +6399,6 @@ GameObject:
   - component: {fileID: 1328045895}
   - component: {fileID: 1328045897}
   - component: {fileID: 1328045898}
-  - component: {fileID: 1328045900}
   - component: {fileID: 1328045901}
   - component: {fileID: 1328045902}
   - component: {fileID: 1328045903}
@@ -6517,18 +6522,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::BossPhaseReferences
   m_groundCollider: {fileID: 12290998}
   m_navMeshSurface: {fileID: 1690830706}
---- !u!114 &1328045900
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1328045892}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0f1daf7b871a2fc4da55a4f4477bd4e0, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::S1P2BossChargeSettings
 --- !u!114 &1328045901
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6569,8 +6562,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::S1BossPhaseAttackDamageProvider
   m_parameterAsset: {fileID: 11400000, guid: ddcb7557565a314429249f27aaefe368, type: 2}
-  m_hitboxBindings: []
+  m_hitboxBindings:
+  - m_hitboxId: 7
+    m_attackHitbox: {fileID: 1994744091}
+  - m_hitboxId: 6
+    m_attackHitbox: {fileID: 1555089207}
+  - m_hitboxId: 5
+    m_attackHitbox: {fileID: 1245345416}
+  m_hitboxGroups:
+  - m_attackIdentifier: {fileID: 11400000, guid: 5a4e3e18cb17cd44fa51915313dee76e, type: 2}
+    m_hitboxIds: 060000000700000005000000
   m_attackDamageController: {fileID: 4921220546604968353}
+  m_attackHitboxRegistry: {fileID: 4921220546604968345}
 --- !u!1 &1334131663
 GameObject:
   m_ObjectHideFlags: 0
@@ -8644,7 +8647,7 @@ MonoBehaviour:
   m_OverrideTileSize: 0
   m_TileSize: 256
   m_OverrideVoxelSize: 0
-  m_VoxelSize: 3.3
+  m_VoxelSize: 5
   m_MinRegionArea: 2
   m_NavMeshData: {fileID: 23800000, guid: 046e0da7dd90b0d46b46f063c990d497, type: 2}
   m_BuildHeightMesh: 0
@@ -10734,7 +10737,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &2106195332
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -11021,11 +11024,17 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::S1BossPhaseAttackDamageProvider
   m_parameterAsset: {fileID: 11400000, guid: 3259eb903df5c504c94c0ad016264049, type: 2}
   m_hitboxBindings:
-  - m_hitboxId: 0
-    m_attackHitbox: {fileID: 8321113477645484133}
   - m_hitboxId: 1
     m_attackHitbox: {fileID: 5884406706008016854}
+  - m_hitboxId: 0
+    m_attackHitbox: {fileID: 8321113477645484133}
+  m_hitboxGroups:
+  - m_attackIdentifier: {fileID: 11400000, guid: 5c1eebcc2f4f5814ea2038964836c514, type: 2}
+    m_hitboxIds: 00000000
+  - m_attackIdentifier: {fileID: 11400000, guid: bcf3942b893c38c40b0983b09b7019c3, type: 2}
+    m_hitboxIds: 01000000
   m_attackDamageController: {fileID: 4921220546604968353}
+  m_attackHitboxRegistry: {fileID: 4921220546604968345}
 --- !u!1 &2116355286
 GameObject:
   m_ObjectHideFlags: 0
@@ -17496,7 +17505,7 @@ RectTransform:
   m_Father: {fileID: 142889304956606809}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
+  m_AnchorMax: {x: 0.424, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -17589,17 +17598,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4559e771ad8a89f42829d035232d1690, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AttackHitboxRegistry
-  m_hitboxes:
-  - m_attackIdentifier: {fileID: 11400000, guid: 5c1eebcc2f4f5814ea2038964836c514, type: 2}
-    m_hitbox: {fileID: 8321113477645484133}
-  - m_attackIdentifier: {fileID: 11400000, guid: bcf3942b893c38c40b0983b09b7019c3, type: 2}
-    m_hitbox: {fileID: 5884406706008016854}
-  - m_attackIdentifier: {fileID: 11400000, guid: 5a4e3e18cb17cd44fa51915313dee76e, type: 2}
-    m_hitbox: {fileID: 1245345416}
-  - m_attackIdentifier: {fileID: 11400000, guid: 5a4e3e18cb17cd44fa51915313dee76e, type: 2}
-    m_hitbox: {fileID: 1994744091}
-  - m_attackIdentifier: {fileID: 11400000, guid: 5a4e3e18cb17cd44fa51915313dee76e, type: 2}
-    m_hitbox: {fileID: 1555089207}
 --- !u!114 &4921220546604968346
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -17673,7 +17671,7 @@ MonoBehaviour:
   - m_phaseID: 0
     m_phaseRoot: {fileID: 2106195331}
     m_objective: {fileID: 2106195332}
-    m_phaseReferences: {fileID: 2106195340}
+    m_phaseReferences: {fileID: 0}
     m_parameterProvider: {fileID: 0}
     m_attackDamageProvider: {fileID: 2106195342}
   - m_phaseID: 1
@@ -17724,6 +17722,7 @@ MonoBehaviour:
   m_attackHitboxRegistry: {fileID: 0}
   m_bossNavigation: {fileID: 0}
   m_currentStatus: 1
+  m_attackDamageController: {fileID: 0}
 --- !u!114 &4921220546604968352
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -18662,7 +18661,7 @@ RectTransform:
   m_Father: {fileID: 3389676728841923579}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
+  m_AnchorMax: {x: 0.424, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
