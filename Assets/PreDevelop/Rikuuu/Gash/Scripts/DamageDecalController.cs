@@ -5,7 +5,7 @@ using UnityEngine.Rendering.Universal;
 /// <summary>
 /// 壁オブジェクトにアタッチし、武器のトリガー衝突を検知してダメージデカールを生成します。
 /// </summary>
-public class DecalController : MonoBehaviour
+public class DamageDecalController : MonoBehaviour
 {
     // Rayの方向ベクトルが有効か判定するための最小値です。
     private const float RAY_DIRECTION_EPSILON = 0.0001f;
