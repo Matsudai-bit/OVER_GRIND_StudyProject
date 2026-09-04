@@ -36,6 +36,14 @@ public sealed class PlayerMotor : MonoBehaviour
     public bool IsInitialized => m_isInitialized;
 
     /// <summary>
+    /// 現在の垂直速度を取得します。
+    /// </summary>
+    public float VerticalVelocity =>
+        m_isInitialized
+            ? m_playerRigidbody.linearVelocity.y
+            : 0.0f;
+
+    /// <summary>
     /// PlayerMotorを初期化します。
     /// </summary>
     /// <param name="playerRigidbody">プレイヤーの物理ボディ。</param>
@@ -156,12 +164,34 @@ public sealed class PlayerMotor : MonoBehaviour
     }
 
     /// <summary>
-    /// プレイヤーへ上方向の移動力を適用します。
+    /// プレイヤーへジャンプの初速を与えます。
     /// </summary>
-    /// <param name="jumpPower">ジャンプ力。</param>
+    /// <param name="jumpPower">ジャンプ力(初速)。</param>
+    public void Jump(float jumpPower)
+    {
+        if (!m_isInitialized)
+        {
+            return;
+        }
+
+        Vector3 nextVelocity =
+            m_playerRigidbody.linearVelocity;
+
+        nextVelocity.y = jumpPower;
+
+        m_playerRigidbody.linearVelocity =
+            nextVelocity;
+    }
+
+    /// <summary>
+    /// 落下速度の調整とジャンプの早期打ち切りのための追加重力を適用します。
+    /// </summary>
+    /// <param name="parameterAsset">移動パラメータアセット。</param>
+    /// <param name="isJumpHeld">ジャンプ入力が継続中かどうか。</param>
     /// <param name="deltaTime">物理更新の経過時間。</param>
-    public void Jump(
-        float jumpPower,
+    public void ApplyExtraGravity(
+        PlayerMovementParameterAsset parameterAsset,
+        bool isJumpHeld,
         float deltaTime)
     {
         if (!m_isInitialized)
@@ -169,23 +199,37 @@ public sealed class PlayerMotor : MonoBehaviour
             return;
         }
 
-        // 現在のジャンプ処理を維持
         Vector3 velocity =
-            m_playerRigidbody.transform.up *
-            jumpPower *
-            deltaTime;
+            m_playerRigidbody.linearVelocity;
 
-        Vector3 nextVelocity = velocity;
+        if (velocity.y < 0.0f)
+        {
+            // 落下中は追加の重力を加算する
+            // (Use Gravityによる1倍分はエンジン側が処理済み)
+            velocity.y += Physics.gravity.y *
+                (parameterAsset.FallGravityMultiplier - 1.0f) *
+                deltaTime;
+        }
+        else if (velocity.y > 0.0f && !isJumpHeld)
+        {
+            // 上昇中に入力を離した場合は追加の重力を加算する
+            velocity.y += Physics.gravity.y *
+                (parameterAsset.LowJumpMultiplier - 1.0f) *
+                deltaTime;
+        }
 
-        // 水平方向の速度を維持
-        nextVelocity.x =
-            m_playerRigidbody.linearVelocity.x;
+        // velocity.y > 0.0f && isJumpHeld の場合は
+        // エンジンの自動重力(1倍)のみが効く(通常の上昇)
 
-        nextVelocity.z =
-            m_playerRigidbody.linearVelocity.z;
+        float maxFallSpeed =
+            Mathf.Max(parameterAsset.MaxFallSpeed, 0.0f);
 
-        m_playerRigidbody.linearVelocity =
-            nextVelocity;
+        if (velocity.y < -maxFallSpeed)
+        {
+            velocity.y = -maxFallSpeed;
+        }
+
+        m_playerRigidbody.linearVelocity = velocity;
     }
 
     /// <summary>
