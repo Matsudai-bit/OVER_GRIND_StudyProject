@@ -6,7 +6,7 @@ using UnityEngine;
 /// ˆê‚Â‚ÌUŒ‚‚Åg—p‚·‚éHitboxŒQ‚ğŠÇ—‚µ‚Ü‚·B
 /// </summary>
 [Serializable]
-public sealed class AttackHitboxGroup
+public sealed class AttackHitboxGroup : MonoBehaviour
 {
     // UŒ‚ID
     [SerializeField]

@@ -3,7 +3,7 @@ using UnityEngine;
 /// <summary>
 /// フェーズごとの攻撃ダメージ設定を適用します。
 /// </summary>
-public abstract class BossPhaseAttackDamageProvider : MonoBehaviour
+public abstract class BossPhaseAttackSettingsProvider : MonoBehaviour
 {
     /// <summary>
     /// このフェーズの攻撃ダメージ設定を適用します。

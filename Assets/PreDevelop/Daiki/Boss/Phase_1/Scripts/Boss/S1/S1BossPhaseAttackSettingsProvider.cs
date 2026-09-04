@@ -5,8 +5,8 @@ using UnityEngine;
 /// ステージ1ボスのフェーズごとの攻撃ダメージ設定を保持します。
 /// </summary>
 [DisallowMultipleComponent]
-public sealed class S1BossPhaseAttackDamageProvider :
-    BossPhaseAttackDamageProvider
+public sealed class S1BossPhaseAttackSettingsProvider :
+    BossPhaseAttackSettingsProvider
 {
     // フェーズで使用する攻撃ダメージパラメータ
     [SerializeField, Header("攻撃ダメージ設定")]

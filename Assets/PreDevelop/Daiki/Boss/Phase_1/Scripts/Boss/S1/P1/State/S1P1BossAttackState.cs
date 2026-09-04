@@ -82,8 +82,7 @@ public sealed class S1P1BossAttackState : StateBase<BossController>
         switch (attackEventData.AttackEventType)
         {
             case AttackEventType.HITBOX_ENABLE:
-                Owner.AttackHitboxRegistry?.EnableHitbox(
-                    m_attackIdentifier, Owner.AttackDamageController);
+                Owner.EnableAttackHitboxes(m_attackIdentifier);
                 break;
 
             case AttackEventType.HITBOX_DISABLE:

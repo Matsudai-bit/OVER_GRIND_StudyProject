@@ -38,9 +38,9 @@ public sealed class BossPhaseController : MonoBehaviour
         [SerializeField]
         private BossPhaseParameterProvider m_parameterProvider;
 
-        // フェーズごとの攻撃ダメージ設定
+        // フェーズ攻撃設定供給元
         [SerializeField]
-        private BossPhaseAttackDamageProvider m_attackDamageProvider;
+        private BossPhaseAttackSettingsProvider m_attackDamageProvider;
 
         /// <summary>
         /// フェーズIDを取得します。
@@ -70,9 +70,9 @@ public sealed class BossPhaseController : MonoBehaviour
             m_parameterProvider;
 
         /// <summary>
-        /// 攻撃ダメージ設定を取得します。
+        /// フェーズ攻撃設定供給元を取得します。
         /// </summary>
-        public BossPhaseAttackDamageProvider AttackDamageProvider =>
+        public BossPhaseAttackSettingsProvider AttackDamageProvider =>
             m_attackDamageProvider;
     }
 
@@ -107,8 +107,8 @@ public sealed class BossPhaseController : MonoBehaviour
     // フェーズ遷移中か
     private bool m_isTransitioning;
 
-    // 現在適用されている攻撃ダメージ設定
-    private BossPhaseAttackDamageProvider m_currentAttackDamageProvider;
+    // 現在適用中のフェーズ攻撃設定
+    private BossPhaseAttackSettingsProvider m_currentAttackDamageProvider;
 
     /// <summary>
     /// フェーズ終了条件を満たしたときに通知されます。
@@ -178,11 +178,14 @@ public sealed class BossPhaseController : MonoBehaviour
     }
 
     /// <summary>
-    /// イベント購読を解除します。
+    /// イベント購読と現在設定を解除します。
     /// </summary>
     private void OnDestroy()
     {
         UnsubscribeObjectives();
+
+        m_currentAttackDamageProvider?.ClearDamageSettings();
+        m_currentAttackDamageProvider = null;
     }
 
     /// <summary>
@@ -286,9 +289,7 @@ public sealed class BossPhaseController : MonoBehaviour
     /// <summary>
     /// フェーズ終了通知を処理します。
     /// </summary>
-    /// <param name="objective">
-    /// 達成された終了条件。
-    /// </param>
+    /// <param name="objective">達成された終了条件。</param>
     private void HandleObjectiveCompleted(
         BossPhaseObjective objective)
     {
@@ -332,29 +333,28 @@ public sealed class BossPhaseController : MonoBehaviour
             m_phaseDefinitions[
                 m_currentPhaseIndex];
 
-        // 前フェーズの攻撃ダメージ設定を先に解除します。
+        // 旧フェーズの攻撃設定を解除します。
         ReleaseAttackDamageSettings(
             currentPhase.AttackDamageProvider);
 
+        // 現在フェーズのルートへ切り替えます。
         SetActivePhaseRoot();
 
-        // フェーズ固有のHitbox対応とダメージパラメータを適用します。
+        // Behavior開始前にフェーズ固有設定を適用します。
         ApplyAttackDamageSettings(
             currentPhase);
 
-        // フェーズ固有パラメータを先に適用
-        // Behaviorが開始された際にStateから取得できるようにします。
         ApplyPhaseParameters(
             currentPhase);
 
         ApplyNavigationSettings(
             currentPhase);
 
-        // フェーズに対応するアニメーションを設定
+        // フェーズに対応するアニメーションを設定します。
         m_animationController.SetPhase(
             currentPhase.PhaseID);
 
-        // 最後にBehaviorを切り替える
+        // 最後にBehaviorを切り替えます。
         m_behaviorController.SetPhase(
             currentPhase.PhaseID);
     }
@@ -385,15 +385,13 @@ public sealed class BossPhaseController : MonoBehaviour
     }
 
     /// <summary>
-    /// 現在フェーズの攻撃ダメージ設定を適用します。
+    /// 現在フェーズの攻撃設定を適用します。
     /// </summary>
-    /// <param name="phaseDefinition">
-    /// 適用するフェーズ定義。
-    /// </param>
+    /// <param name="phaseDefinition">適用するフェーズ定義。</param>
     private void ApplyAttackDamageSettings(
         PhaseDefinition phaseDefinition)
     {
-        BossPhaseAttackDamageProvider attackDamageProvider =
+        BossPhaseAttackSettingsProvider attackDamageProvider =
             phaseDefinition.AttackDamageProvider;
 
         if (attackDamageProvider == null)
@@ -401,7 +399,7 @@ public sealed class BossPhaseController : MonoBehaviour
             Debug.LogWarning(
                 $"[{nameof(BossPhaseController)}] " +
                 $"{phaseDefinition.PhaseID} の" +
-                $"{nameof(BossPhaseAttackDamageProvider)}が設定されていません。",
+                $"{nameof(BossPhaseAttackSettingsProvider)}が設定されていません。",
                 this);
 
             m_currentAttackDamageProvider = null;
@@ -413,7 +411,7 @@ public sealed class BossPhaseController : MonoBehaviour
             Debug.LogError(
                 $"[{nameof(BossPhaseController)}] " +
                 $"{phaseDefinition.PhaseID} の" +
-                "攻撃ダメージ設定の適用に失敗しました。",
+                "攻撃設定の適用に失敗しました。",
                 attackDamageProvider);
 
             m_currentAttackDamageProvider = null;
@@ -425,13 +423,11 @@ public sealed class BossPhaseController : MonoBehaviour
     }
 
     /// <summary>
-    /// 前フェーズの攻撃ダメージ設定を解除します。
+    /// 旧フェーズの攻撃設定を解除します。
     /// </summary>
-    /// <param name="nextProvider">
-    /// 次フェーズで使用する設定。
-    /// </param>
+    /// <param name="nextProvider">次フェーズの攻撃設定供給元。</param>
     private void ReleaseAttackDamageSettings(
-        BossPhaseAttackDamageProvider nextProvider)
+        BossPhaseAttackSettingsProvider nextProvider)
     {
         if (m_currentAttackDamageProvider == null ||
             m_currentAttackDamageProvider == nextProvider)
@@ -446,9 +442,7 @@ public sealed class BossPhaseController : MonoBehaviour
     /// <summary>
     /// 現在フェーズのパラメータをボスへ適用します。
     /// </summary>
-    /// <param name="phaseDefinition">
-    /// 適用するフェーズ定義。
-    /// </param>
+    /// <param name="phaseDefinition">適用するフェーズ定義。</param>
     private void ApplyPhaseParameters(
         PhaseDefinition phaseDefinition)
     {
@@ -487,9 +481,7 @@ public sealed class BossPhaseController : MonoBehaviour
     /// <summary>
     /// 現在フェーズのNavigation設定を適用します。
     /// </summary>
-    /// <param name="phaseDefinition">
-    /// 適用するフェーズ定義。
-    /// </param>
+    /// <param name="phaseDefinition">適用するフェーズ定義。</param>
     private void ApplyNavigationSettings(
         PhaseDefinition phaseDefinition)
     {
@@ -678,9 +670,7 @@ public sealed class BossPhaseController : MonoBehaviour
     /// <summary>
     /// フェーズ位置が有効か確認します。
     /// </summary>
-    /// <param name="phaseIndex">
-    /// 確認する位置。
-    /// </param>
+    /// <param name="phaseIndex">確認する位置。</param>
     /// <returns>
     /// true：有効です。
     /// false：無効です。

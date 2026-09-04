@@ -184,4 +184,14 @@ public sealed class BossController : MonoBehaviour, IStateStatusProvider
             BossPhaseParameters.Empty;
     }
 
+    public void EnableAttackHitboxes(
+    AttackIdentifier attackIdentifier)
+    {
+        m_attackDamageController.ApplyDamageParameters(
+            attackIdentifier);
+
+        m_attackHitboxRegistry.EnableHitboxes(
+            attackIdentifier);
+    }
+
 }

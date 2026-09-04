@@ -419,8 +419,8 @@ public sealed class StraightChargeExecutor
         {
             return;
         }
-        m_owner.AttackHitboxRegistry?.EnableHitbox(
-            m_parameters.AttackIdentifier, m_owner.AttackDamageController);
+        m_owner.EnableAttackHitboxes(m_parameters.AttackIdentifier);
+
     }
 
     /// <summary>
@@ -433,7 +433,7 @@ public sealed class StraightChargeExecutor
             return;
         }
 
-        m_owner.AttackHitboxRegistry?.DisableHitbox(
+        m_owner.AttackHitboxRegistry?.DisableHitboxes(
             m_parameters.AttackIdentifier);
 
     }
