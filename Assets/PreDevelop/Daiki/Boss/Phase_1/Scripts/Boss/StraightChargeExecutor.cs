@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using static UnityEngine.UI.GridLayoutGroup;
 
 /// <summary>
 /// 1回分の直線突進を実行します。
@@ -418,9 +419,8 @@ public sealed class StraightChargeExecutor
         {
             return;
         }
-
         m_owner.AttackHitboxRegistry?.EnableHitbox(
-            m_parameters.AttackIdentifier);
+            m_parameters.AttackIdentifier, m_owner.AttackDamageController);
     }
 
     /// <summary>

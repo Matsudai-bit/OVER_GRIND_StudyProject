@@ -38,6 +38,10 @@ public sealed class BossPhaseController : MonoBehaviour
         [SerializeField]
         private BossPhaseParameterProvider m_parameterProvider;
 
+        // フェーズごとの攻撃ダメージ設定
+        [SerializeField]
+        private BossPhaseAttackDamageProvider m_attackDamageProvider;
+
         /// <summary>
         /// フェーズIDを取得します。
         /// </summary>
@@ -64,6 +68,12 @@ public sealed class BossPhaseController : MonoBehaviour
         /// </summary>
         public BossPhaseParameterProvider ParameterProvider =>
             m_parameterProvider;
+
+        /// <summary>
+        /// 攻撃ダメージ設定を取得します。
+        /// </summary>
+        public BossPhaseAttackDamageProvider AttackDamageProvider =>
+            m_attackDamageProvider;
     }
 
     // 初期フェーズ
@@ -96,6 +106,9 @@ public sealed class BossPhaseController : MonoBehaviour
 
     // フェーズ遷移中か
     private bool m_isTransitioning;
+
+    // 現在適用されている攻撃ダメージ設定
+    private BossPhaseAttackDamageProvider m_currentAttackDamageProvider;
 
     /// <summary>
     /// フェーズ終了条件を満たしたときに通知されます。
@@ -315,11 +328,19 @@ public sealed class BossPhaseController : MonoBehaviour
             return;
         }
 
-        SetActivePhaseRoot();
-
         PhaseDefinition currentPhase =
             m_phaseDefinitions[
                 m_currentPhaseIndex];
+
+        // 前フェーズの攻撃ダメージ設定を先に解除します。
+        ReleaseAttackDamageSettings(
+            currentPhase.AttackDamageProvider);
+
+        SetActivePhaseRoot();
+
+        // フェーズ固有のHitbox対応とダメージパラメータを適用します。
+        ApplyAttackDamageSettings(
+            currentPhase);
 
         // フェーズ固有パラメータを先に適用
         // Behaviorが開始された際にStateから取得できるようにします。
@@ -361,6 +382,65 @@ public sealed class BossPhaseController : MonoBehaviour
             phaseDefinition.PhaseRoot.SetActive(
                 isCurrentPhase);
         }
+    }
+
+    /// <summary>
+    /// 現在フェーズの攻撃ダメージ設定を適用します。
+    /// </summary>
+    /// <param name="phaseDefinition">
+    /// 適用するフェーズ定義。
+    /// </param>
+    private void ApplyAttackDamageSettings(
+        PhaseDefinition phaseDefinition)
+    {
+        BossPhaseAttackDamageProvider attackDamageProvider =
+            phaseDefinition.AttackDamageProvider;
+
+        if (attackDamageProvider == null)
+        {
+            Debug.LogWarning(
+                $"[{nameof(BossPhaseController)}] " +
+                $"{phaseDefinition.PhaseID} の" +
+                $"{nameof(BossPhaseAttackDamageProvider)}が設定されていません。",
+                this);
+
+            m_currentAttackDamageProvider = null;
+            return;
+        }
+
+        if (!attackDamageProvider.ApplyDamageSettings())
+        {
+            Debug.LogError(
+                $"[{nameof(BossPhaseController)}] " +
+                $"{phaseDefinition.PhaseID} の" +
+                "攻撃ダメージ設定の適用に失敗しました。",
+                attackDamageProvider);
+
+            m_currentAttackDamageProvider = null;
+            return;
+        }
+
+        m_currentAttackDamageProvider =
+            attackDamageProvider;
+    }
+
+    /// <summary>
+    /// 前フェーズの攻撃ダメージ設定を解除します。
+    /// </summary>
+    /// <param name="nextProvider">
+    /// 次フェーズで使用する設定。
+    /// </param>
+    private void ReleaseAttackDamageSettings(
+        BossPhaseAttackDamageProvider nextProvider)
+    {
+        if (m_currentAttackDamageProvider == null ||
+            m_currentAttackDamageProvider == nextProvider)
+        {
+            return;
+        }
+
+        m_currentAttackDamageProvider.ClearDamageSettings();
+        m_currentAttackDamageProvider = null;
     }
 
     /// <summary>

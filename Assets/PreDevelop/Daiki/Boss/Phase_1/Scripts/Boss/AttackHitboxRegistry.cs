@@ -37,6 +37,7 @@ public sealed class AttackHitboxRegistry : MonoBehaviour
     [SerializeField, Header("攻撃Hitbox")]
     private List<HitboxEntry> m_hitboxes = new();
 
+
     // 実行時に使用する検索テーブル
     private readonly Dictionary<AttackIdentifier, AttackHitbox>
         m_hitboxMap = new();
@@ -72,12 +73,15 @@ public sealed class AttackHitboxRegistry : MonoBehaviour
     /// 指定攻撃のHitboxを有効にします。
     /// </summary>
     /// <param name="attackIdentifier">攻撃ID。</param>
-    public void EnableHitbox(AttackIdentifier attackIdentifier)
+    public void EnableHitbox(AttackIdentifier attackIdentifier, AttackDamageControllerBase attackDamage)
     {
         if (!TryGetHitbox(attackIdentifier, out AttackHitbox hitbox))
         {
             return;
         }
+
+       
+        attackDamage.ApplyDamageParameters(attackIdentifier);
 
         hitbox.EnableHitbox();
     }

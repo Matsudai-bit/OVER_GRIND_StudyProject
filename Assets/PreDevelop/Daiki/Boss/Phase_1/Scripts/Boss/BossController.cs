@@ -9,6 +9,7 @@ using UnityEngine;
 [RequireComponent(typeof(BossMotor))]
 [RequireComponent(typeof(AttackHitboxRegistry))]
 [RequireComponent(typeof(BossNavigation))]
+[RequireComponent(typeof(AttackDamageControllerBase))]
 public sealed class BossController : MonoBehaviour, IStateStatusProvider
 {
     // フェーズ管理
@@ -35,13 +36,17 @@ public sealed class BossController : MonoBehaviour, IStateStatusProvider
     [SerializeField, Header("デバッグ")]
     private StateExecutionStatus m_currentStatus = StateExecutionStatus.SUCCEEDED;
 
+    [SerializeField]
     // ボス全体で使用するステートマシン
     private StateMachine<BossController> m_stateMachine;
 
+    [SerializeField]
     // 現在フェーズのパラメータ
     private BossPhaseParameters m_phaseParameters;
 
-  
+    // 攻撃ダメージ管理
+    [SerializeField]
+    private AttackDamageControllerBase m_attackDamageController;
 
 
     /// <summary>
@@ -79,6 +84,11 @@ public sealed class BossController : MonoBehaviour, IStateStatusProvider
     /// 現在フェーズのパラメータを取得します。
     /// </summary>
     public BossPhaseParameters PhaseParameters => m_phaseParameters;
+
+    /// <summary>
+    /// 攻撃ダメージ管理を取得します。
+    /// </summary>
+    public AttackDamageControllerBase AttackDamageController => m_attackDamageController;
     /// <summary>
     /// 初期化します。
     /// </summary>
@@ -150,6 +160,12 @@ public sealed class BossController : MonoBehaviour, IStateStatusProvider
         if (m_bossNavigation == null)
         {
             m_bossNavigation = GetComponent<BossNavigation>();
+        }
+
+        if (m_attackDamageController == null)
+        {
+            m_attackDamageController =
+                GetComponent<AttackDamageControllerBase>();
         }
     }
 

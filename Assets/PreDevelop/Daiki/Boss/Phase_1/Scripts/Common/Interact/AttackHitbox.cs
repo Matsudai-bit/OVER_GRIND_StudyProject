@@ -23,13 +23,15 @@ public sealed class AttackHitbox : MonoBehaviour
     private LayerMask m_targetLayerMask;
 
     // パラメータ未設定時に使用する基本ダメージ量
-    [SerializeField, Header("ダメージ")]
+    [SerializeField, Header("デフォルト設定ダメージ")]
     [Min(0)]
     private int m_defaultDamage = 10;
 
+    [SerializeField, Header("現在のダメージ")]
     // 現在の攻撃で使用するダメージ量
     private int m_currentDamage;
 
+    [SerializeField, Header("外部からダメージが設定されているか")]
     // 外部からダメージが設定されているか
     private bool m_hasDamageOverride;
 
