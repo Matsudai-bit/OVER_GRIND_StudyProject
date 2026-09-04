@@ -435,6 +435,7 @@ public sealed class StraightChargeExecutor
 
         m_owner.AttackHitboxRegistry?.DisableHitbox(
             m_parameters.AttackIdentifier);
+
     }
 
     /// <summary>
