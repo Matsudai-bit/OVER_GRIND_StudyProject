@@ -8,10 +8,11 @@ using UnityEngine;
 public sealed class AttackHitboxRegistry : MonoBehaviour
 {
     // 現在フェーズで使用する攻撃Hitbox情報
-    private readonly List<AttackHitboxGroup> m_hitboxGroups = new();
+    private readonly List<AttackHitboxRuntimeGroup>
+        m_hitboxGroups = new();
 
-    // 実行時に使用する検索テーブル
-    private readonly Dictionary<AttackIdentifier, AttackHitboxGroup>
+    // 攻撃IDからHitbox情報を取得する検索テーブル
+    private readonly Dictionary<AttackIdentifier, AttackHitboxRuntimeGroup>
         m_hitboxGroupMap = new();
 
     /// <summary>
@@ -23,7 +24,7 @@ public sealed class AttackHitboxRegistry : MonoBehaviour
     /// false：設定内容に不備があります。
     /// </returns>
     public bool SetHitboxGroups(
-        IReadOnlyList<AttackHitboxGroup> hitboxGroups)
+        IReadOnlyList<AttackHitboxRuntimeGroup> hitboxGroups)
     {
         if (hitboxGroups == null)
         {
@@ -34,16 +35,16 @@ public sealed class AttackHitboxRegistry : MonoBehaviour
             return false;
         }
 
-        // 旧フェーズのHitboxを停止してから設定を破棄します。
         ClearHitboxGroups();
 
         bool isValid = true;
 
-        foreach (AttackHitboxGroup hitboxGroup in hitboxGroups)
+        foreach (AttackHitboxRuntimeGroup hitboxGroup
+                 in hitboxGroups)
         {
             if (hitboxGroup == null)
             {
-                Debug.LogWarning(
+                Debug.LogError(
                     "攻撃Hitbox情報に未設定の要素があります。",
                     this);
 
@@ -51,25 +52,12 @@ public sealed class AttackHitboxRegistry : MonoBehaviour
                 continue;
             }
 
-            AttackIdentifier attackIdentifier =
-                hitboxGroup.AttackIdentifier;
-
-            if (attackIdentifier == null)
-            {
-                Debug.LogWarning(
-                    "Attack IDが設定されていない攻撃Hitbox情報があります。",
-                    this);
-
-                isValid = false;
-                continue;
-            }
-
             if (!m_hitboxGroupMap.TryAdd(
-                    attackIdentifier,
+                    hitboxGroup.AttackIdentifier,
                     hitboxGroup))
             {
-                Debug.LogWarning(
-                    $"{attackIdentifier.name}が重複しています。",
+                Debug.LogError(
+                    $"{hitboxGroup.AttackIdentifier.name} が重複しています。",
                     this);
 
                 isValid = false;
@@ -78,6 +66,11 @@ public sealed class AttackHitboxRegistry : MonoBehaviour
 
             m_hitboxGroups.Add(
                 hitboxGroup);
+        }
+
+        if (!isValid)
+        {
+            ClearHitboxGroups();
         }
 
         return isValid;
@@ -107,7 +100,7 @@ public sealed class AttackHitboxRegistry : MonoBehaviour
     {
         if (!TryGetHitboxGroup(
                 attackIdentifier,
-                out AttackHitboxGroup hitboxGroup))
+                out AttackHitboxRuntimeGroup hitboxGroup))
         {
             return false;
         }
@@ -130,7 +123,7 @@ public sealed class AttackHitboxRegistry : MonoBehaviour
     {
         if (!TryGetHitboxGroup(
                 attackIdentifier,
-                out AttackHitboxGroup hitboxGroup))
+                out AttackHitboxRuntimeGroup hitboxGroup))
         {
             return false;
         }
@@ -151,7 +144,7 @@ public sealed class AttackHitboxRegistry : MonoBehaviour
     /// </returns>
     public bool TryGetHitboxGroup(
         AttackIdentifier attackIdentifier,
-        out AttackHitboxGroup hitboxGroup)
+        out AttackHitboxRuntimeGroup hitboxGroup)
     {
         hitboxGroup = null;
 
@@ -168,7 +161,7 @@ public sealed class AttackHitboxRegistry : MonoBehaviour
         }
 
         Debug.LogWarning(
-            $"{attackIdentifier.name}に対応するHitbox情報がありません。",
+            $"{attackIdentifier.name} に対応するHitbox情報がありません。",
             this);
 
         return false;
@@ -179,14 +172,28 @@ public sealed class AttackHitboxRegistry : MonoBehaviour
     /// </summary>
     private void DisableAllHitboxes()
     {
-        foreach (AttackHitboxGroup hitboxGroup in m_hitboxGroups)
+        HashSet<AttackHitbox> disabledHitboxes = new();
+
+        foreach (AttackHitboxRuntimeGroup hitboxGroup
+                 in m_hitboxGroups)
         {
-            if (hitboxGroup == null)
+            if (hitboxGroup?.Hitboxes == null)
             {
                 continue;
             }
 
-            hitboxGroup.DisableHitboxes();
+            foreach (AttackHitbox hitbox
+                     in hitboxGroup.Hitboxes)
+            {
+                if (hitbox == null ||
+                    !disabledHitboxes.Add(
+                        hitbox))
+                {
+                    continue;
+                }
+
+                hitbox.DisableHitbox();
+            }
         }
     }
 
