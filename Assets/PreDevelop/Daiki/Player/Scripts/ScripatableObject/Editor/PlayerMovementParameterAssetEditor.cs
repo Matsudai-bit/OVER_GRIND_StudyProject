@@ -28,6 +28,15 @@ public sealed class PlayerMovementParameterAssetEditor : Editor
     // ジャンプ入力の最大反映時間
     private SerializedProperty m_jumpInputDurationProperty;
 
+    // 落下中の重力倍率
+    private SerializedProperty m_fallGravityMultiplierProperty;
+
+    // ジャンプ早期解除時の重力倍率
+    private SerializedProperty m_lowJumpMultiplierProperty;
+
+    // 落下速度の上限
+    private SerializedProperty m_maxFallSpeedProperty;
+
     /// <summary>
     /// SerializedPropertyを取得します。
     /// </summary>
@@ -50,6 +59,15 @@ public sealed class PlayerMovementParameterAssetEditor : Editor
 
         m_jumpInputDurationProperty =
             serializedObject.FindProperty("m_jumpInputDuration");
+
+        m_fallGravityMultiplierProperty =
+        serializedObject.FindProperty("m_fallGravityMultiplier");
+
+        m_lowJumpMultiplierProperty =
+            serializedObject.FindProperty("m_lowJumpMultiplier");
+
+        m_maxFallSpeedProperty =
+            serializedObject.FindProperty("m_maxFallSpeed");
     }
 
     /// <summary>
@@ -72,6 +90,10 @@ public sealed class PlayerMovementParameterAssetEditor : Editor
         EditorGUILayout.Space(SECTION_SPACE);
 
         DrawMovementPreview();
+
+        EditorGUILayout.Space(SECTION_SPACE);
+
+        DrawJumpPreview();
 
         serializedObject.ApplyModifiedProperties();
     }
@@ -154,6 +176,30 @@ public sealed class PlayerMovementParameterAssetEditor : Editor
                 "入力反映時間",
                 "ジャンプ入力を上方向の移動へ反映する最大時間です。"));
 
+        EditorGUILayout.Space();
+
+        EditorGUILayout.LabelField(
+            "落下調整",
+            EditorStyles.boldLabel);
+
+        EditorGUILayout.PropertyField(
+            m_fallGravityMultiplierProperty,
+            new GUIContent(
+                "落下重力倍率",
+                "落下中に適用する重力倍率です。大きいほど早く落下します。"));
+
+        EditorGUILayout.PropertyField(
+            m_lowJumpMultiplierProperty,
+            new GUIContent(
+                "早期解除重力倍率",
+                "上昇中にジャンプ入力を離した際に適用する重力倍率です。"));
+
+        EditorGUILayout.PropertyField(
+            m_maxFallSpeedProperty,
+            new GUIContent(
+                "最大落下速度",
+                "落下速度の上限(絶対値)です。"));
+
         EditorGUILayout.EndVertical();
     }
 
@@ -196,6 +242,70 @@ public sealed class PlayerMovementParameterAssetEditor : Editor
             "減速度",
             deceleration,
             " units/s?");
+
+        EditorGUILayout.EndVertical();
+    }
+
+    /// <summary>
+    /// ジャンプの計算結果を表示します。
+    /// </summary>
+    private void DrawJumpPreview()
+    {
+        EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+
+        EditorGUILayout.LabelField(
+            "ジャンプ調整確認",
+            EditorStyles.boldLabel);
+
+        float jumpPower =
+            m_jumpPowerProperty.floatValue;
+
+        float gravity =
+            Mathf.Abs(Physics.gravity.y);
+
+        float fallGravityMultiplier =
+            m_fallGravityMultiplierProperty.floatValue;
+
+        // 上昇中(通常重力)の頂点到達時間・高さ
+        float timeToApex =
+            gravity > 0.0f
+                ? jumpPower / gravity
+                : 0.0f;
+
+        float maxHeight =
+            (jumpPower * jumpPower) /
+            Mathf.Max(2.0f * gravity, 0.0001f);
+
+        // 落下時の実効重力を考慮した落下時間の目安
+        float effectiveFallGravity =
+            gravity * Mathf.Max(fallGravityMultiplier, 0.0001f);
+
+        float timeToFall =
+            effectiveFallGravity > 0.0f
+                ? Mathf.Sqrt(
+                    2.0f * maxHeight / effectiveFallGravity)
+                : 0.0f;
+
+        DrawReadOnlyFloat(
+            "最大到達高さ",
+            maxHeight,
+            " m");
+
+        DrawReadOnlyFloat(
+            "頂点到達時間",
+            timeToApex,
+            " s");
+
+        DrawReadOnlyFloat(
+            "落下時間(目安)",
+            timeToFall,
+            " s");
+
+        EditorGUILayout.HelpBox(
+            "最大到達高さ・頂点到達時間は、" +
+            "ジャンプ力(初速)と重力のみから計算した理論値です。" +
+            "入力反映時間や早期解除重力倍率の影響は含みません。",
+            MessageType.Info);
 
         EditorGUILayout.EndVertical();
     }
