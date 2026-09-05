@@ -17,9 +17,6 @@ public sealed class S1P3BossChargingAttackState :
     // フェーズ3固有参照
     private S1P3BossReferences m_references;
 
-    // フェーズ3突進設定
-    private S1P3BossChargeSettings m_chargeSettings;
-
     // 直線突進実行機構
     private StraightChargeExecutor m_chargeExecutor;
 
@@ -39,9 +36,7 @@ public sealed class S1P3BossChargingAttackState :
         }
 
         if (!Owner.PhaseController.TryGetCurrentPhaseComponent(
-                out m_references) ||
-            !Owner.PhaseController.TryGetCurrentPhaseComponent(
-                out m_chargeSettings))
+                out m_references) )
         {
             SetFailed();
             return;
@@ -108,13 +103,7 @@ public sealed class S1P3BossChargingAttackState :
     /// </summary>
     private void StartCurrentCharge()
     {
-        if (!m_chargeSettings.TryGetChargeSettings(
-                m_currentChargeIndex,
-                out StraightChargeSettings settings))
-        {
-            SetFailed();
-            return;
-        }
+    
 
         Func<Vector3> targetPositionProvider;
 
@@ -138,8 +127,9 @@ public sealed class S1P3BossChargingAttackState :
                 () => destination.position;
         }
 
+        S1P3BossSequentialChargeAttackParameters parameters = Owner.PhaseParameters.SequentialChargeAttack;
         if (!m_chargeExecutor.Start(
-                settings,
+                parameters.ChargeParameters[m_currentChargeIndex],
                 targetPositionProvider))
         {
             SetFailed();
@@ -208,7 +198,6 @@ public sealed class S1P3BossChargingAttackState :
         m_chargeExecutor = null;
         m_playerTransform = null;
         m_references = null;
-        m_chargeSettings = null;
         m_currentChargeIndex = 0;
 
         if (Owner != null &&

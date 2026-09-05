@@ -9,6 +9,7 @@ using UnityEngine;
 [RequireComponent(typeof(BossMotor))]
 [RequireComponent(typeof(AttackHitboxRegistry))]
 [RequireComponent(typeof(BossNavigation))]
+[RequireComponent(typeof(AttackDamageControllerBase))]
 public sealed class BossController : MonoBehaviour, IStateStatusProvider
 {
     // フェーズ管理
@@ -35,8 +36,17 @@ public sealed class BossController : MonoBehaviour, IStateStatusProvider
     [SerializeField, Header("デバッグ")]
     private StateExecutionStatus m_currentStatus = StateExecutionStatus.SUCCEEDED;
 
+    [SerializeField]
     // ボス全体で使用するステートマシン
     private StateMachine<BossController> m_stateMachine;
+
+    [SerializeField]
+    // 現在フェーズのパラメータ
+    private BossPhaseParameters m_phaseParameters;
+
+    // 攻撃ダメージ管理
+    [SerializeField]
+    private AttackDamageControllerBase m_attackDamageController;
 
 
     /// <summary>
@@ -69,6 +79,16 @@ public sealed class BossController : MonoBehaviour, IStateStatusProvider
     /// </summary>
     public BossNavigation Navigation => m_bossNavigation;
 
+
+    /// <summary>
+    /// 現在フェーズのパラメータを取得します。
+    /// </summary>
+    public BossPhaseParameters PhaseParameters => m_phaseParameters;
+
+    /// <summary>
+    /// 攻撃ダメージ管理を取得します。
+    /// </summary>
+    public AttackDamageControllerBase AttackDamageController => m_attackDamageController;
     /// <summary>
     /// 初期化します。
     /// </summary>
@@ -141,7 +161,37 @@ public sealed class BossController : MonoBehaviour, IStateStatusProvider
         {
             m_bossNavigation = GetComponent<BossNavigation>();
         }
+
+        if (m_attackDamageController == null)
+        {
+            m_attackDamageController =
+                GetComponent<AttackDamageControllerBase>();
+        }
     }
 
-   
+
+    /// <summary>
+    /// 現在フェーズのパラメータを設定します。
+    /// </summary>
+    /// <param name="phaseParameters">
+    /// 設定するフェーズパラメータ。
+    /// </param>
+    public void SetPhaseParameters(
+        BossPhaseParameters phaseParameters)
+    {
+        m_phaseParameters =
+            phaseParameters ??
+            BossPhaseParameters.Empty;
+    }
+
+    public void EnableAttackHitboxes(
+    AttackIdentifier attackIdentifier)
+    {
+        m_attackDamageController.ApplyDamageParameters(
+            attackIdentifier);
+
+        m_attackHitboxRegistry.EnableHitboxes(
+            attackIdentifier);
+    }
+
 }

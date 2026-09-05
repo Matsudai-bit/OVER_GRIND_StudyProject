@@ -22,25 +22,33 @@ public sealed class AttackHitbox : MonoBehaviour
     [SerializeField]
     private LayerMask m_targetLayerMask;
 
-    // 基本ダメージ量
-    [SerializeField]
+    // パラメータ未設定時に使用する基本ダメージ量
+    [SerializeField, Header("デフォルト設定ダメージ")]
+    [Min(0)]
     private int m_defaultDamage = 10;
 
+    [SerializeField, Header("現在のダメージ")]
     // 現在の攻撃で使用するダメージ量
     private int m_currentDamage;
 
+    [SerializeField, Header("外部からダメージが設定されているか")]
+    // 外部からダメージが設定されているか
+    private bool m_hasDamageOverride;
+
     // 現在の攻撃で命中済みの対象ID
     private readonly HashSet<int> m_hitTargetIds = new();
+
+    /// <summary>
+    /// 現在のダメージ量を取得します。
+    /// </summary>
+    public int CurrentDamage => m_currentDamage;
 
     /// <summary>
     /// 初期化します。
     /// </summary>
     private void Awake()
     {
-        if (m_hitboxCollider == null)
-        {
-            m_hitboxCollider = GetComponent<Collider>();
-        }
+        ResolveCollider();
 
         if (m_hitboxCollider == null)
         {
@@ -52,9 +60,11 @@ public sealed class AttackHitbox : MonoBehaviour
             return;
         }
 
+        // 攻撃判定をTriggerとして使用します。
         m_hitboxCollider.isTrigger = true;
         m_hitboxCollider.enabled = false;
-        m_currentDamage = m_defaultDamage;
+
+        ResetDamage();
     }
 
     /// <summary>
@@ -62,7 +72,23 @@ public sealed class AttackHitbox : MonoBehaviour
     /// </summary>
     public void EnableHitbox()
     {
-        EnableHitbox(m_defaultDamage);
+        if (m_hitboxCollider == null)
+        {
+            Debug.LogWarning(
+                $"{nameof(Collider)}が設定されていません。",
+                this);
+            return;
+        }
+
+        if (!m_hasDamageOverride)
+        {
+            m_currentDamage = m_defaultDamage;
+        }
+
+        // 新しい攻撃判定として命中履歴を初期化します。
+        m_hitTargetIds.Clear();
+        m_hitboxCollider.enabled = true;
+        gameObject.SetActive(true);
     }
 
     /// <summary>
@@ -71,16 +97,27 @@ public sealed class AttackHitbox : MonoBehaviour
     /// <param name="damage">与えるダメージ量。</param>
     public void EnableHitbox(int damage)
     {
-        if (m_hitboxCollider == null)
-        {
-            return;
-        }
+        SetDamage(damage);
+        EnableHitbox();
+    }
 
-        m_hitTargetIds.Clear();
+    /// <summary>
+    /// 現在の攻撃で使用するダメージ量を設定します。
+    /// </summary>
+    /// <param name="damage">設定するダメージ量。</param>
+    public void SetDamage(int damage)
+    {
         m_currentDamage = Mathf.Max(0, damage);
+        m_hasDamageOverride = true;
+    }
 
-        gameObject.SetActive(true);
-        m_hitboxCollider.enabled = true;
+    /// <summary>
+    /// ダメージ量をInspectorの初期値へ戻します。
+    /// </summary>
+    public void ResetDamage()
+    {
+        m_currentDamage = Mathf.Max(0, m_defaultDamage);
+        m_hasDamageOverride = false;
     }
 
     /// <summary>
@@ -103,12 +140,17 @@ public sealed class AttackHitbox : MonoBehaviour
     /// <param name="other">侵入したCollider。</param>
     private void OnTriggerEnter(Collider other)
     {
-        if (other == null ||
-            !IsTargetLayer(other.gameObject.layer))
+        if (other == null)
         {
             return;
         }
 
+        if (!IsTargetLayer(other.gameObject.layer))
+        {
+            return;
+        }
+
+        // Colliderの親階層からダメージ受付コンポーネントを探します。
         IDamageable damageReceiver =
             other.GetComponentInParent<IDamageable>();
 
@@ -117,36 +159,23 @@ public sealed class AttackHitbox : MonoBehaviour
             return;
         }
 
-        int targetID = GetDamageReceiverID(damageReceiver);
+        Component receiverComponent = damageReceiver as Component;
 
-        if (targetID == 0 ||
-            !m_hitTargetIds.Add(targetID))
+        if (receiverComponent == null)
+        {
+            return;
+        }
+
+        int targetId = receiverComponent.GetInstanceID();
+
+        // 同じ攻撃判定中に同一対象へ複数回命中することを防ぎます。
+        if (!m_hitTargetIds.Add(targetId))
         {
             return;
         }
 
         damageReceiver.TakeDamage(m_currentDamage);
         AttackHit?.Invoke(damageReceiver);
-    }
-
-    /// <summary>
-    /// ダメージ受付対象を識別するIDを取得します。
-    /// </summary>
-    /// <param name="damageReceiver">ダメージ受付対象。</param>
-    /// <returns>対象のInstance ID。</returns>
-    private int GetDamageReceiverID(IDamageable damageReceiver)
-    {
-        if (damageReceiver is Hurtbox hurtbox)
-        {
-            return hurtbox.GetDamageReceiverInstanceId();
-        }
-
-        if (damageReceiver is Component component)
-        {
-            return component.GetInstanceID();
-        }
-
-        return 0;
     }
 
     /// <summary>
@@ -164,16 +193,31 @@ public sealed class AttackHitbox : MonoBehaviour
     }
 
     /// <summary>
+    /// Collider参照を取得します。
+    /// </summary>
+    private void ResolveCollider()
+    {
+        if (m_hitboxCollider != null)
+        {
+            return;
+        }
+
+        m_hitboxCollider = GetComponent<Collider>();
+    }
+
+    /// <summary>
     /// Inspector設定時にColliderを自動取得します。
     /// </summary>
     private void Reset()
     {
-        m_hitboxCollider = GetComponent<Collider>();
+        ResolveCollider();
 
-        if (m_hitboxCollider != null)
+        if (m_hitboxCollider == null)
         {
-            m_hitboxCollider.isTrigger = true;
-            m_hitboxCollider.enabled = false;
+            return;
         }
+
+        m_hitboxCollider.isTrigger = true;
+        m_hitboxCollider.enabled = false;
     }
 }

@@ -17,19 +17,29 @@ public sealed class S1P2BossChargingAttackState :
     /// </summary>
     protected override void OnStartState()
     {
-        if (Owner == null ||
-            Owner.PhaseController == null)
+        if (Owner == null)
         {
             SetFailed();
             return;
         }
 
-        if (!Owner.PhaseController.TryGetCurrentPhaseComponent(
-                out S1P2BossChargeSettings chargeSettings))
+        // 現在フェーズの突進パラメータを取得
+        BossPhaseParameters phaseParameters =
+            Owner.PhaseParameters;
+
+        if (phaseParameters == null ||
+            phaseParameters.ChargeAttack == null)
         {
+            Debug.LogError(
+                $"[{nameof(S1P2BossChargingAttackState)}] " +
+                "突進攻撃パラメータを取得できませんでした.");
+
             SetFailed();
             return;
         }
+
+        S1BossChargeAttackParameters chargeParameters =
+            phaseParameters.ChargeAttack;
 
         GameObject player =
             GameObject.FindGameObjectWithTag("Player");
@@ -41,13 +51,14 @@ public sealed class S1P2BossChargingAttackState :
         }
 
         m_playerTransform = player.transform;
-        m_chargeExecutor = new StraightChargeExecutor(Owner);
+        m_chargeExecutor =
+            new StraightChargeExecutor(Owner);
 
         Owner.SetStateExecutionStatus(
             StateExecutionStatus.RUNNING);
 
         if (!m_chargeExecutor.Start(
-                chargeSettings.ChargeSettings,
+                chargeParameters,
                 () => m_playerTransform.position))
         {
             SetFailed();
@@ -89,6 +100,7 @@ public sealed class S1P2BossChargingAttackState :
     protected override void OnExitState()
     {
         m_chargeExecutor?.Cancel();
+
         m_chargeExecutor = null;
         m_playerTransform = null;
 
