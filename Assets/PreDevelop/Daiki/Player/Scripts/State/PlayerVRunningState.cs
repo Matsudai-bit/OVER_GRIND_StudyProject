@@ -22,11 +22,15 @@ public sealed class PlayerVRunningState
         NORMAL_MOVE
     }
 
-    // ブーストダッシュの継続時間（仮の固定値）
+    // ブーストダッシュの継続時間
     private const float BOOST_DASH_DURATION = 0.5f;
 
-    // ブーストダッシュ中の最大移動速度倍率（仮で基本の2倍）
+    // ブーストダッシュ中の最大移動速度倍率
     private const float DASH_SPEED_MULTIPLIER = 2.0f;
+
+    // ブーストダッシュ中のプレイヤー回転速度
+    // 値を大きくすると、より素早く進行方向を向きます。
+    private const float BOOST_DASH_ROTATION_SPEED = 360.0f;
 
     // 現在のブーストフェーズ
     private VBoostPhase m_currentPhase;
@@ -133,14 +137,17 @@ public sealed class PlayerVRunningState
 
             m_boostDashDirection.Normalize();
 
+            // ----------------------------------------------------
+            // ここではPlayerの向きを変更しない
+            // ----------------------------------------------------
+            //
+            // チャージ終了直後に一瞬でダッシュ方向を向かせると
+            // 不自然になるため、ダッシュ中に徐々に向きを変更する。
+            //
+            // ダッシュの移動方向自体は
+            // m_boostDashDirectionに固定される。
+            //
 
-            // ダッシュ開始の瞬間、視点を一度だけ
-            // ダッシュ方向へリセットする
-            if (Owner.PlayerCamera != null)
-            {
-                Owner.PlayerCamera.SnapLookDirectionOnce(
-                    m_boostDashDirection);
-            }
 
             Debug.Log(
                 $"[PlayerVRunningState] ブーストダッシュ開始 " +
@@ -269,18 +276,48 @@ public sealed class PlayerVRunningState
                 // ------------------------------------------------
                 // ブーストダッシュ
                 // ------------------------------------------------
+                //
                 // スティック入力は使用しない。
                 // チャージ終了時に確定した方向へ固定する。
+                //
+                // 第3引数に回転速度を指定することで、
+                // Player自身はダッシュ方向へ徐々に向く。
+                //
+                // 移動方向と向きを分離しているため、
+                // 回転途中でもダッシュの移動方向は変化しない。
+                //
+
                 Owner.Motor.MoveAtFixedWorldDirection(
-    m_boostDashDirection,
-    m_dashMoveParameters.MaxMoveSpeed,
-    0.0f,
-    Time.fixedDeltaTime);
+                    m_boostDashDirection,
+                    m_dashMoveParameters.MaxMoveSpeed,
+                    BOOST_DASH_ROTATION_SPEED,
+                    Time.fixedDeltaTime);
 
                 m_elapsedTime += Time.fixedDeltaTime;
 
                 if (m_elapsedTime >= BOOST_DASH_DURATION)
                 {
+                    // ------------------------------------------------
+                    // ダッシュ終了時に正面を確実に進行方向へ合わせる
+                    // ------------------------------------------------
+                    //
+                    // 回転速度だけでは微妙な誤差が残る可能性があるため、
+                    // 通常移動へ移行する瞬間に正面を完全に合わせる。
+                    //
+
+                    Vector3 finalForward =
+                        m_boostDashDirection;
+
+                    finalForward.y = 0.0f;
+
+                    if (finalForward.sqrMagnitude > 0.0001f)
+                    {
+                        finalForward.Normalize();
+
+                        Owner.transform.forward =
+                            finalForward;
+                    }
+
                     Debug.Log(
                         "[PlayerVRunningState] " +
                         "ブーストダッシュ終了 → 通常移動フェーズへ",
@@ -298,7 +335,12 @@ public sealed class PlayerVRunningState
                 // ------------------------------------------------
                 // 通常移動
                 // ------------------------------------------------
-                // ここからスティック入力を再び使用する。
+                //
+                // ダッシュ終了後はスティック入力を再び使用する。
+                // Playerの正面もダッシュ進行方向に揃っているため、
+                // ここから通常通り操作できる。
+                //
+
                 Owner.Motor.Move(
                     Owner.InputReader.MoveInput,
                     m_normalMoveParameters,
