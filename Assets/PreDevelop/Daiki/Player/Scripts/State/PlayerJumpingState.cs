@@ -17,6 +17,10 @@ public sealed class PlayerJumpingState
         m_elapsedTime = 0.0f;
 
         Owner.AnimationPresenter.PlayJumpAnimation();
+
+        // ジャンプ初速は開始時に一度だけ与える
+        Owner.Motor.Jump(
+            Owner.MovementParameterAsset.JumpPower);
     }
 
     /// <summary>
@@ -24,23 +28,33 @@ public sealed class PlayerJumpingState
     /// </summary>
     protected override void OnFixedUpdate()
     {
+
+        Debug.Log(
+      $"[Jump] y-vel={Owner.Motor.VerticalVelocity:F3}, " +
+      $"y-pos={Owner.transform.position.y:F3}, " +
+      $"deltaTime={Time.fixedDeltaTime:F4}, " +
+      $"gravity.y={Physics.gravity.y:F3}");
+
         m_elapsedTime += Time.fixedDeltaTime;
 
         PlayerMovementParameterAsset parameterAsset =
             Owner.MovementParameterAsset;
 
-        if (m_elapsedTime <
+        bool isJumpHeld =
+            m_elapsedTime <
                 parameterAsset.JumpInputDuration &&
-            Owner.InputReader.HasJumpInput)
+            Owner.InputReader.HasJumpInput;
+
+        Owner.Motor.ApplyExtraGravity(
+            parameterAsset,
+            isJumpHeld,
+            Time.fixedDeltaTime);
+
+        // 頂点を過ぎて落下に転じたら状態遷移
+        if (Owner.Motor.VerticalVelocity <= 0.0f)
         {
-            Owner.Motor.Jump(
-                parameterAsset.JumpPower,
-                Time.fixedDeltaTime);
-
-            return;
+            Machine.ChangeState<PlayerIdlingState>();
         }
-
-        Machine.ChangeState<PlayerIdlingState>();
     }
 
     /// <summary>
