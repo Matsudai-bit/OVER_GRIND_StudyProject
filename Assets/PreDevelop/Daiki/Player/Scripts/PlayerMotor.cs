@@ -1,44 +1,44 @@
 using UnityEngine;
 
 /// <summary>
-/// ƒvƒŒƒCƒ„[‚Ì•¨—ˆÚ“®‚ðŽÀs‚µ‚Ü‚·B
+/// ï¿½vï¿½ï¿½ï¿½Cï¿½ï¿½ï¿½[ï¿½Ì•ï¿½ï¿½ï¿½ï¿½Ú“ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½sï¿½ï¿½ï¿½Ü‚ï¿½ï¿½B
 /// </summary>
 [DisallowMultipleComponent]
 public sealed class PlayerMotor : MonoBehaviour
 {
-    // ŽžŠÔƒpƒ‰ƒ[ƒ^‚ÌÅ¬’l
+    // ï¿½ï¿½ï¿½Ôƒpï¿½ï¿½ï¿½ï¿½ï¿½[ï¿½^ï¿½ÌÅï¿½ï¿½l
     private const float MIN_TIME = 0.01f;
 
-    // •ûŒüƒxƒNƒgƒ‹‚Ì—LŒø”»’è‚ÉŽg—p‚·‚éè‡’l
+    // ï¿½ï¿½ï¿½ï¿½ï¿½xï¿½Nï¿½gï¿½ï¿½ï¿½Ì—Lï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÉŽgï¿½pï¿½ï¿½ï¿½ï¿½è‡’l
     private const float DIRECTION_SQR_THRESHOLD = 0.0001f;
 
-    // ƒJƒƒ‰Šî€ˆÚ“®‚ÉŽg—p‚·‚éTransform
-    [SerializeField, Header("ˆÚ“®Šî€")]
+    // ï¿½Jï¿½ï¿½ï¿½ï¿½ï¿½î€ï¿½Ú“ï¿½ï¿½ÉŽgï¿½pï¿½ï¿½ï¿½ï¿½Transform
+    [SerializeField, Header("ï¿½Ú“ï¿½ï¿½î€")]
     private Transform m_movementReference;
 
-    // ƒvƒŒƒCƒ„[‚Ì•¨—ƒ{ƒfƒB
+    // ï¿½vï¿½ï¿½ï¿½Cï¿½ï¿½ï¿½[ï¿½Ì•ï¿½ï¿½ï¿½ï¿½{ï¿½fï¿½B
     private Rigidbody m_playerRigidbody;
 
-    // Œ»ÝŽg—p‚µ‚Ä‚¢‚éÅ‚ˆÚ“®‘¬“x
+    // ï¿½ï¿½ï¿½ÝŽgï¿½pï¿½ï¿½ï¿½Ä‚ï¿½ï¿½ï¿½Åï¿½ï¿½Ú“ï¿½ï¿½ï¿½ï¿½x
     private float m_currentMaxMoveSpeed;
 
-    // ‰Šú‰»‚³‚ê‚Ä‚¢‚é‚©
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä‚ï¿½ï¿½é‚©
     private bool m_isInitialized;
 
     /// <summary>
-    /// Œ»ÝŽg—p‚µ‚Ä‚¢‚éÅ‚ˆÚ“®‘¬“x‚ðŽæ“¾‚µ‚Ü‚·B
+    /// ï¿½ï¿½ï¿½ÝŽgï¿½pï¿½ï¿½ï¿½Ä‚ï¿½ï¿½ï¿½Åï¿½ï¿½Ú“ï¿½ï¿½ï¿½ï¿½xï¿½ï¿½ï¿½æ“¾ï¿½ï¿½ï¿½Ü‚ï¿½ï¿½B
     /// </summary>
     public float MaxMoveSpeed => m_currentMaxMoveSpeed;
 
     /// <summary>
-    /// ‰Šú‰»‚³‚ê‚Ä‚¢‚é‚©‚ðŽæ“¾‚µ‚Ü‚·B
+    /// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä‚ï¿½ï¿½é‚©ï¿½ï¿½ï¿½æ“¾ï¿½ï¿½ï¿½Ü‚ï¿½ï¿½B
     /// </summary>
     public bool IsInitialized => m_isInitialized;
 
     /// <summary>
-    /// Œ»Ý‚Ì…•½•ûŒü‚ÌˆÚ“®•ûŒüi³‹K‰»Ï‚Ýj‚ðŽæ“¾‚µ‚Ü‚·B
-    /// ‘¬“x‚ª‚Ù‚Ú0‚Ìê‡‚ÍŒ»Ý‚Ì³–Ê•ûŒü‚ð•Ô‚µ‚Ü‚·B
-    /// ƒhƒŠƒtƒgŠJŽnŽž‚È‚ÇAŒ»Ý‚Ìis•ûŒü‚ðŠî€‚É‚µ‚½‚¢ê‡‚ÉŽg—p‚µ‚Ü‚·B
+    /// ï¿½ï¿½ï¿½Ý‚Ìï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÌˆÚ“ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½iï¿½ï¿½ï¿½Kï¿½ï¿½ï¿½Ï‚Ýjï¿½ï¿½ï¿½æ“¾ï¿½ï¿½ï¿½Ü‚ï¿½ï¿½B
+    /// ï¿½ï¿½ï¿½xï¿½ï¿½ï¿½Ù‚ï¿½0ï¿½Ìê‡ï¿½ÍŒï¿½ï¿½Ý‚Ìï¿½ï¿½Ê•ï¿½ï¿½ï¿½ï¿½ï¿½Ô‚ï¿½ï¿½Ü‚ï¿½ï¿½B
+    /// ï¿½hï¿½ï¿½ï¿½tï¿½gï¿½Jï¿½nï¿½ï¿½ï¿½È‚ÇAï¿½ï¿½ï¿½Ý‚Ìiï¿½sï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½î€ï¿½É‚ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ê‡ï¿½ÉŽgï¿½pï¿½ï¿½ï¿½Ü‚ï¿½ï¿½B
     /// </summary>
     public Vector3 HorizontalDirection
     {
@@ -64,17 +64,23 @@ public sealed class PlayerMotor : MonoBehaviour
             return velocity.normalized;
         }
     }
+    /// ï¿½ï¿½ï¿½Ý‚Ìï¿½ï¿½ï¿½ï¿½ï¿½ï¿½xï¿½ï¿½ï¿½æ“¾ï¿½ï¿½ï¿½Ü‚ï¿½ï¿½B
+    /// </summary>
+    public float VerticalVelocity =>
+        m_isInitialized
+            ? m_playerRigidbody.linearVelocity.y
+            : 0.0f;
 
     /// <summary>
-    /// PlayerMotor‚ð‰Šú‰»‚µ‚Ü‚·B
+    /// PlayerMotorï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ü‚ï¿½ï¿½B
     /// </summary>
-    /// <param name="playerRigidbody">ƒvƒŒƒCƒ„[‚Ì•¨—ƒ{ƒfƒBB</param>
+    /// <param name="playerRigidbody">ï¿½vï¿½ï¿½ï¿½Cï¿½ï¿½ï¿½[ï¿½Ì•ï¿½ï¿½ï¿½ï¿½{ï¿½fï¿½Bï¿½B</param>
     public void Initialize(Rigidbody playerRigidbody)
     {
         if (playerRigidbody == null)
         {
             Debug.LogError(
-                $"[{nameof(PlayerMotor)}] Rigidbody‚ªŽw’è‚³‚ê‚Ä‚¢‚Ü‚¹‚ñB",
+                $"[{nameof(PlayerMotor)}] Rigidbodyï¿½ï¿½ï¿½wï¿½è‚³ï¿½ï¿½Ä‚ï¿½ï¿½Ü‚ï¿½ï¿½ï¿½B",
                 this);
 
             m_isInitialized = false;
@@ -88,17 +94,17 @@ public sealed class PlayerMotor : MonoBehaviour
         {
             Debug.LogWarning(
                 $"[{nameof(PlayerMotor)}] " +
-                "Rigidbody‚ªIs Kinematic‚Å‚·B",
+                "Rigidbodyï¿½ï¿½Is Kinematicï¿½Å‚ï¿½ï¿½B",
                 this);
         }
     }
 
     /// <summary>
-    /// Žw’è‚µ‚½ƒpƒ‰ƒ[ƒ^‚ÅƒvƒŒƒCƒ„[‚ðˆÚ“®‚³‚¹‚Ü‚·B
+    /// ï¿½wï¿½è‚µï¿½ï¿½ï¿½pï¿½ï¿½ï¿½ï¿½ï¿½[ï¿½^ï¿½Åƒvï¿½ï¿½ï¿½Cï¿½ï¿½ï¿½[ï¿½ï¿½ï¿½Ú“ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ü‚ï¿½ï¿½B
     /// </summary>
-    /// <param name="moveInput">ˆÚ“®“ü—ÍB</param>
-    /// <param name="parameters">ˆÚ“®ƒpƒ‰ƒ[ƒ^B</param>
-    /// <param name="deltaTime">•¨—XV‚ÌŒo‰ßŽžŠÔB</param>
+    /// <param name="moveInput">ï¿½Ú“ï¿½ï¿½ï¿½ï¿½ÍB</param>
+    /// <param name="parameters">ï¿½Ú“ï¿½ï¿½pï¿½ï¿½ï¿½ï¿½ï¿½[ï¿½^ï¿½B</param>
+    /// <param name="deltaTime">ï¿½ï¿½ï¿½ï¿½ï¿½Xï¿½Vï¿½ÌŒoï¿½ßŽï¿½ï¿½ÔB</param>
     public void Move(
         Vector2 moveInput,
         PlayerMoveParameters parameters,
@@ -112,7 +118,7 @@ public sealed class PlayerMotor : MonoBehaviour
         Vector2 normalizedInput =
             Vector2.ClampMagnitude(moveInput, 1.0f);
 
-        // “ü—Í‚ðƒJƒƒ‰Šî€‚Ìƒ[ƒ‹ƒh•ûŒü‚Ö•ÏŠ·
+        // ï¿½ï¿½ï¿½Í‚ï¿½ï¿½Jï¿½ï¿½ï¿½ï¿½ï¿½î€ï¿½Ìƒï¿½ï¿½[ï¿½ï¿½ï¿½hï¿½ï¿½ï¿½ï¿½ï¿½Ö•ÏŠï¿½
         Vector3 moveDirection =
             CalculateCameraRelativeDirection(normalizedInput);
 
@@ -123,7 +129,7 @@ public sealed class PlayerMotor : MonoBehaviour
 
         m_currentMaxMoveSpeed = maxMoveSpeed;
 
-        // –Ú•W…•½‘¬“x‚ðŒvŽZ
+        // ï¿½Ú•Wï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½xï¿½ï¿½ï¿½vï¿½Z
         Vector3 targetHorizontalVelocity =
             moveDirection *
             (maxMoveSpeed * inputMagnitude);
@@ -143,7 +149,7 @@ public sealed class PlayerMotor : MonoBehaviour
 
         ApplyHorizontalVelocity(nextHorizontalVelocity);
 
-        // ˆÚ“®•ûŒü‚Ö™X‚É‰ñ“]
+        // ï¿½Ú“ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Öï¿½ï¿½Xï¿½É‰ï¿½]
         RotateTowardsMoveDirection(
             moveDirection,
             parameters.RotationSpeed,
@@ -151,10 +157,10 @@ public sealed class PlayerMotor : MonoBehaviour
     }
 
     /// <summary>
-    /// Žw’è‚µ‚½ƒpƒ‰ƒ[ƒ^‚Å…•½‘¬“x‚ðŒ¸‘¬‚³‚¹‚Ü‚·B
+    /// ï¿½wï¿½è‚µï¿½ï¿½ï¿½pï¿½ï¿½ï¿½ï¿½ï¿½[ï¿½^ï¿½Åï¿½ï¿½ï¿½ï¿½ï¿½ï¿½xï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ü‚ï¿½ï¿½B
     /// </summary>
-    /// <param name="parameters">ˆÚ“®ƒpƒ‰ƒ[ƒ^B</param>
-    /// <param name="deltaTime">•¨—XV‚ÌŒo‰ßŽžŠÔB</param>
+    /// <param name="parameters">ï¿½Ú“ï¿½ï¿½pï¿½ï¿½ï¿½ï¿½ï¿½[ï¿½^ï¿½B</param>
+    /// <param name="deltaTime">ï¿½ï¿½ï¿½ï¿½ï¿½Xï¿½Vï¿½ÌŒoï¿½ßŽï¿½ï¿½ÔB</param>
     public void Decelerate(
         PlayerMoveParameters parameters,
         float deltaTime)
@@ -186,12 +192,34 @@ public sealed class PlayerMotor : MonoBehaviour
     }
 
     /// <summary>
-    /// ƒvƒŒƒCƒ„[‚Öã•ûŒü‚ÌˆÚ“®—Í‚ð“K—p‚µ‚Ü‚·B
+    /// ï¿½vï¿½ï¿½ï¿½Cï¿½ï¿½ï¿½[ï¿½ÖƒWï¿½ï¿½ï¿½ï¿½ï¿½vï¿½Ìï¿½ï¿½ï¿½ï¿½ï¿½^ï¿½ï¿½ï¿½Ü‚ï¿½ï¿½B
     /// </summary>
-    /// <param name="jumpPower">ƒWƒƒƒ“ƒv—ÍB</param>
-    /// <param name="deltaTime">•¨—XV‚ÌŒo‰ßŽžŠÔB</param>
-    public void Jump(
-        float jumpPower,
+    /// <param name="jumpPower">ï¿½Wï¿½ï¿½ï¿½ï¿½ï¿½vï¿½ï¿½(ï¿½ï¿½ï¿½ï¿½)ï¿½B</param>
+    public void Jump(float jumpPower)
+    {
+        if (!m_isInitialized)
+        {
+            return;
+        }
+
+        Vector3 nextVelocity =
+            m_playerRigidbody.linearVelocity;
+
+        nextVelocity.y = jumpPower;
+
+        m_playerRigidbody.linearVelocity =
+            nextVelocity;
+    }
+
+    /// <summary>
+    /// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½xï¿½Ì’ï¿½ï¿½ï¿½ï¿½ÆƒWï¿½ï¿½ï¿½ï¿½ï¿½vï¿½Ì‘ï¿½ï¿½ï¿½ï¿½Å‚ï¿½ï¿½Ø‚ï¿½Ì‚ï¿½ï¿½ß‚Ì’Ç‰ï¿½ï¿½dï¿½Í‚ï¿½Kï¿½pï¿½ï¿½ï¿½Ü‚ï¿½ï¿½B
+    /// </summary>
+    /// <param name="parameterAsset">ï¿½Ú“ï¿½ï¿½pï¿½ï¿½ï¿½ï¿½ï¿½[ï¿½^ï¿½Aï¿½Zï¿½bï¿½gï¿½B</param>
+    /// <param name="isJumpHeld">ï¿½Wï¿½ï¿½ï¿½ï¿½ï¿½vï¿½ï¿½ï¿½Í‚ï¿½ï¿½pï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç‚ï¿½ï¿½ï¿½ï¿½B</param>
+    /// <param name="deltaTime">ï¿½ï¿½ï¿½ï¿½ï¿½Xï¿½Vï¿½ÌŒoï¿½ßŽï¿½ï¿½ÔB</param>
+    public void ApplyExtraGravity(
+        PlayerMovementParameterAsset parameterAsset,
+        bool isJumpHeld,
         float deltaTime)
     {
         if (!m_isInitialized)
@@ -200,24 +228,42 @@ public sealed class PlayerMotor : MonoBehaviour
         }
 
         Vector3 velocity =
-            m_playerRigidbody.transform.up *
-            jumpPower *
-            deltaTime;
+            m_playerRigidbody.linearVelocity;
 
-        Vector3 nextVelocity = velocity;
+        if (velocity.y < 0.0f)
+        {
+            // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í’Ç‰ï¿½ï¿½Ìdï¿½Í‚ï¿½ï¿½ï¿½ï¿½Zï¿½ï¿½ï¿½ï¿½
+            // (Use Gravityï¿½É‚ï¿½ï¿½1ï¿½{ï¿½ï¿½ï¿½ÍƒGï¿½ï¿½ï¿½Wï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï‚ï¿½)
+            velocity.y += Physics.gravity.y *
+                (parameterAsset.FallGravityMultiplier - 1.0f) *
+                deltaTime;
+        }
+        else if (velocity.y > 0.0f && !isJumpHeld)
+        {
+            // ï¿½ã¸ï¿½ï¿½ï¿½É“ï¿½ï¿½Í‚ð—£‚ï¿½ï¿½ï¿½ï¿½ê‡ï¿½Í’Ç‰ï¿½ï¿½Ìdï¿½Í‚ï¿½ï¿½ï¿½ï¿½Zï¿½ï¿½ï¿½ï¿½
+            velocity.y += Physics.gravity.y *
+                (parameterAsset.LowJumpMultiplier - 1.0f) *
+                deltaTime;
+        }
 
         nextVelocity.x =
             m_playerRigidbody.linearVelocity.x;
+        // velocity.y > 0.0f && isJumpHeld ï¿½Ìê‡ï¿½ï¿½
+        // ï¿½Gï¿½ï¿½ï¿½Wï¿½ï¿½ï¿½ÌŽï¿½ï¿½ï¿½ï¿½dï¿½ï¿½(1ï¿½{)ï¿½Ì‚Ý‚ï¿½ï¿½ï¿½ï¿½ï¿½(ï¿½Êï¿½Ìã¸)
 
-        nextVelocity.z =
-            m_playerRigidbody.linearVelocity.z;
+        float maxFallSpeed =
+            Mathf.Max(parameterAsset.MaxFallSpeed, 0.0f);
 
-        m_playerRigidbody.linearVelocity =
-            nextVelocity;
+        if (velocity.y < -maxFallSpeed)
+        {
+            velocity.y = -maxFallSpeed;
+        }
+
+        m_playerRigidbody.linearVelocity = velocity;
     }
 
     /// <summary>
-    /// ƒvƒŒƒCƒ„[‚Ì…•½‘¬“x‚ð‘¦À‚É’âŽ~‚µ‚Ü‚·B
+    /// ï¿½vï¿½ï¿½ï¿½Cï¿½ï¿½ï¿½[ï¿½Ìï¿½ï¿½ï¿½ï¿½ï¿½ï¿½xï¿½ð‘¦ï¿½ï¿½É’ï¿½~ï¿½ï¿½ï¿½Ü‚ï¿½ï¿½B
     /// </summary>
     public void StopImmediately()
     {
@@ -230,11 +276,11 @@ public sealed class PlayerMotor : MonoBehaviour
     }
 
     /// <summary>
-    /// ˆÚ“®“ü—Í‚ðƒJƒƒ‰Šî€‚Ìƒ[ƒ‹ƒh•ûŒü‚Ö•ÏŠ·‚µ‚Ü‚·B
-    /// ƒhƒŠƒtƒgˆ—‚È‚ÇA•ûŒüŒvŽZ‚¾‚¯‚ðŠO•”‚Å‚à—˜—p‚µ‚½‚¢ê‡‚Ì‚½‚ß‚ÉŒöŠJ‚µ‚Ä‚¢‚Ü‚·B
+    /// ï¿½Ú“ï¿½ï¿½ï¿½ï¿½Í‚ï¿½ï¿½Jï¿½ï¿½ï¿½ï¿½ï¿½î€ï¿½Ìƒï¿½ï¿½[ï¿½ï¿½ï¿½hï¿½ï¿½ï¿½ï¿½ï¿½Ö•ÏŠï¿½ï¿½ï¿½ï¿½Ü‚ï¿½ï¿½B
+    /// ï¿½hï¿½ï¿½ï¿½tï¿½gï¿½ï¿½ï¿½ï¿½ï¿½È‚ÇAï¿½ï¿½ï¿½ï¿½ï¿½vï¿½Zï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Oï¿½ï¿½ï¿½Å‚ï¿½ï¿½ï¿½ï¿½pï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ê‡ï¿½Ì‚ï¿½ï¿½ß‚ÉŒï¿½ï¿½Jï¿½ï¿½ï¿½Ä‚ï¿½ï¿½Ü‚ï¿½ï¿½B
     /// </summary>
-    /// <param name="moveInput">ˆÚ“®“ü—ÍB</param>
-    /// <returns>ƒ[ƒ‹ƒh‹óŠÔ‚ÌˆÚ“®•ûŒüB</returns>
+    /// <param name="moveInput">ï¿½Ú“ï¿½ï¿½ï¿½ï¿½ÍB</param>
+    /// <returns>ï¿½ï¿½ï¿½[ï¿½ï¿½ï¿½hï¿½ï¿½Ô‚ÌˆÚ“ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½B</returns>
     public Vector3 CalculateCameraRelativeDirection(
         Vector2 moveInput)
     {
@@ -274,11 +320,11 @@ public sealed class PlayerMotor : MonoBehaviour
     }
 
     /// <summary>
-    /// ˆÚ“®•ûŒü‚ÖƒvƒŒƒCƒ„[‚ð™X‚É‰ñ“]‚³‚¹‚Ü‚·B
+    /// ï¿½Ú“ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Öƒvï¿½ï¿½ï¿½Cï¿½ï¿½ï¿½[ï¿½ï¿½ï¿½ï¿½ï¿½Xï¿½É‰ï¿½]ï¿½ï¿½ï¿½ï¿½ï¿½Ü‚ï¿½ï¿½B
     /// </summary>
-    /// <param name="moveDirection">ˆÚ“®•ûŒüB</param>
-    /// <param name="rotationSpeed">1•bŠÔ‚ÌÅ‘å‰ñ“]Šp“xB</param>
-    /// <param name="deltaTime">•¨—XV‚ÌŒo‰ßŽžŠÔB</param>
+    /// <param name="moveDirection">ï¿½Ú“ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½B</param>
+    /// <param name="rotationSpeed">1ï¿½bï¿½Ô‚ÌÅ‘ï¿½ï¿½]ï¿½pï¿½xï¿½B</param>
+    /// <param name="deltaTime">ï¿½ï¿½ï¿½ï¿½ï¿½Xï¿½Vï¿½ÌŒoï¿½ßŽï¿½ï¿½ÔB</param>
     private void RotateTowardsMoveDirection(
         Vector3 moveDirection,
         float rotationSpeed,
@@ -309,9 +355,9 @@ public sealed class PlayerMotor : MonoBehaviour
     }
 
     /// <summary>
-    /// Œ»Ý‚Ì…•½‘¬“x‚ðŽæ“¾‚µ‚Ü‚·B
+    /// ï¿½ï¿½ï¿½Ý‚Ìï¿½ï¿½ï¿½ï¿½ï¿½ï¿½xï¿½ï¿½ï¿½æ“¾ï¿½ï¿½ï¿½Ü‚ï¿½ï¿½B
     /// </summary>
-    /// <returns>Œ»Ý‚Ì…•½‘¬“xB</returns>
+    /// <returns>ï¿½ï¿½ï¿½Ý‚Ìï¿½ï¿½ï¿½ï¿½ï¿½ï¿½xï¿½B</returns>
     private Vector3 GetHorizontalVelocity()
     {
         Vector3 horizontalVelocity =
@@ -323,9 +369,9 @@ public sealed class PlayerMotor : MonoBehaviour
     }
 
     /// <summary>
-    /// …•½‘¬“x‚ðRigidbody‚Ö“K—p‚µ‚Ü‚·B
+    /// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½xï¿½ï¿½Rigidbodyï¿½Ö“Kï¿½pï¿½ï¿½ï¿½Ü‚ï¿½ï¿½B
     /// </summary>
-    /// <param name="horizontalVelocity">“K—p‚·‚é…•½‘¬“xB</param>
+    /// <param name="horizontalVelocity">ï¿½Kï¿½pï¿½ï¿½ï¿½é…ï¿½ï¿½ï¿½ï¿½ï¿½xï¿½B</param>
     private void ApplyHorizontalVelocity(
         Vector3 horizontalVelocity)
     {
@@ -339,11 +385,11 @@ public sealed class PlayerMotor : MonoBehaviour
     }
 
     /// <summary>
-    /// Žw’èŽžŠÔ‚Å–Ú•W‘¬“x‚Ö“ž’B‚·‚é‰Á‘¬“x‚ðŒvŽZ‚µ‚Ü‚·B
+    /// ï¿½wï¿½èŽžï¿½Ô‚Å–Ú•Wï¿½ï¿½ï¿½xï¿½Ö“ï¿½ï¿½Bï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½xï¿½ï¿½ï¿½vï¿½Zï¿½ï¿½ï¿½Ü‚ï¿½ï¿½B
     /// </summary>
-    /// <param name="targetSpeed">–Ú•W‘¬“xB</param>
-    /// <param name="requiredTime">“ž’BŽžŠÔB</param>
-    /// <returns>‰Á‘¬“xB</returns>
+    /// <param name="targetSpeed">ï¿½Ú•Wï¿½ï¿½ï¿½xï¿½B</param>
+    /// <param name="requiredTime">ï¿½ï¿½ï¿½Bï¿½ï¿½ï¿½ÔB</param>
+    /// <returns>ï¿½ï¿½ï¿½ï¿½ï¿½xï¿½B</returns>
     private float CalculateAcceleration(
         float targetSpeed,
         float requiredTime)
@@ -355,7 +401,7 @@ public sealed class PlayerMotor : MonoBehaviour
     }
 
     /// <summary>
-    /// ƒvƒŒƒCƒ„[‚ÌŒ»Ý‚Ì…•½ˆÚ“®‘¬“x‚ðŽæ“¾‚µ‚Ü‚·B
+    /// ï¿½vï¿½ï¿½ï¿½Cï¿½ï¿½ï¿½[ï¿½ÌŒï¿½ï¿½Ý‚Ìï¿½ï¿½ï¿½ï¿½Ú“ï¿½ï¿½ï¿½ï¿½xï¿½ï¿½ï¿½æ“¾ï¿½ï¿½ï¿½Ü‚ï¿½ï¿½B
     /// </summary>
     public float HorizontalSpeed
     {
@@ -377,13 +423,13 @@ public sealed class PlayerMotor : MonoBehaviour
     }
 
     /// <summary>
-    /// Žw’è‚µ‚½‘¬“x‚ÅˆÚ“®‚µ‚Ü‚·B
-    /// ‰Á‘¬EŒ¸‘¬‚ðs‚í‚¸A…•½‘¬“x‚ðˆê’è‚É‚µ‚Ü‚·B
+    /// ï¿½wï¿½è‚µï¿½ï¿½ï¿½ï¿½ï¿½xï¿½ÅˆÚ“ï¿½ï¿½ï¿½ï¿½Ü‚ï¿½ï¿½B
+    /// ï¿½ï¿½ï¿½ï¿½ï¿½Eï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½sï¿½í‚¸ï¿½Aï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½xï¿½ï¿½ï¿½ï¿½ï¿½É‚ï¿½ï¿½Ü‚ï¿½ï¿½B
     /// </summary>
-    /// <param name="moveInput">ˆÚ“®“ü—ÍB</param>
-    /// <param name="speed">ˆÚ“®‘¬“xB</param>
-    /// <param name="rotationSpeed">‰ñ“]‘¬“xB</param>
-    /// <param name="deltaTime">•¨—XVŽžŠÔB</param>
+    /// <param name="moveInput">ï¿½Ú“ï¿½ï¿½ï¿½ï¿½ÍB</param>
+    /// <param name="speed">ï¿½Ú“ï¿½ï¿½ï¿½ï¿½xï¿½B</param>
+    /// <param name="rotationSpeed">ï¿½ï¿½]ï¿½ï¿½ï¿½xï¿½B</param>
+    /// <param name="deltaTime">ï¿½ï¿½ï¿½ï¿½ï¿½Xï¿½Vï¿½ï¿½ï¿½ÔB</param>
     public void MoveAtFixedSpeed(
         Vector2 moveInput,
         float speed,
@@ -424,13 +470,13 @@ public sealed class PlayerMotor : MonoBehaviour
     }
 
     /// <summary>
-    /// Žw’è‚µ‚½ƒ[ƒ‹ƒh•ûŒü‚ÖAˆê’è‘¬“x‚ÅˆÚ“®‚µ‚Ü‚·B
-    /// ƒXƒeƒBƒbƒN“ü—Í‚âƒJƒƒ‰•ûŒü‚É‚Í‰e‹¿‚³‚ê‚Ü‚¹‚ñB
+    /// ï¿½wï¿½è‚µï¿½ï¿½ï¿½ï¿½ï¿½[ï¿½ï¿½ï¿½hï¿½ï¿½ï¿½ï¿½ï¿½ÖAï¿½ï¿½è‘¬ï¿½xï¿½ÅˆÚ“ï¿½ï¿½ï¿½ï¿½Ü‚ï¿½ï¿½B
+    /// ï¿½Xï¿½eï¿½Bï¿½bï¿½Nï¿½ï¿½ï¿½Í‚ï¿½Jï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É‚Í‰eï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ü‚ï¿½ï¿½ï¿½B
     /// </summary>
-    /// <param name="worldDirection">ƒ[ƒ‹ƒh‹óŠÔ‚Å‚ÌˆÚ“®•ûŒüB</param>
-    /// <param name="speed">ˆÚ“®‘¬“xB</param>
-    /// <param name="rotationSpeed">‰ñ“]‘¬“xB</param>
-    /// <param name="deltaTime">•¨—XVŽžŠÔB</param>
+    /// <param name="worldDirection">ï¿½ï¿½ï¿½[ï¿½ï¿½ï¿½hï¿½ï¿½Ô‚Å‚ÌˆÚ“ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½B</param>
+    /// <param name="speed">ï¿½Ú“ï¿½ï¿½ï¿½ï¿½xï¿½B</param>
+    /// <param name="rotationSpeed">ï¿½ï¿½]ï¿½ï¿½ï¿½xï¿½B</param>
+    /// <param name="deltaTime">ï¿½ï¿½ï¿½ï¿½ï¿½Xï¿½Vï¿½ï¿½ï¿½ÔB</param>
     public void MoveAtFixedWorldDirection(
         Vector3 worldDirection,
         float speed,
@@ -469,27 +515,27 @@ public sealed class PlayerMotor : MonoBehaviour
     }
 
     /// <summary>
-    /// ƒhƒŠƒtƒg‚Ì‚æ‚¤‚ÉAŒ©‚½–Ú‚ÌŒü‚«(Facing)‚Æ
-    /// ŽÀÛ‚Ìis•ûŒü(Velocity)‚ð•ÊX‚É§Œä‚µ‚È‚ª‚ç
-    /// ˆê’è‘¬“x‚ÅˆÚ“®‚µ‚Ü‚·B
-    /// Œ©‚½–Ú‚ÌŒü‚«‚Í“ü—Í•ûŒü‚Ö’Êí’Ê‚è’Ç]‚³‚¹‚éˆê•ûA
-    /// ŽÀÛ‚Ìis•ûŒü‚Í‚»‚ê‚Æ‚Í“Æ—§‚µ‚Ä
-    /// ‚ä‚Á‚­‚è‚Æ‚µ‚©•Ï‰»‚µ‚È‚¢‚æ‚¤‚É‚Å‚«‚é‚½‚ßA
-    /// uŽÔ‘Ì‚Í‹È‚ª‚è‚½‚¢•ûŒü‚ðŒü‚¢‚Ä‚¢‚é‚Ì‚É
-    /// ŽÀÛ‚É‚ÍŠO‘¤‚ÖŠŠ‚Á‚Ä‚¢‚­v‚Æ‚¢‚¤
-    /// ƒhƒŠƒtƒg‚ÌŒ©‚½–ÚE‘€ìŠ´‚ð•\Œ»‚Å‚«‚Ü‚·B
+    /// ï¿½hï¿½ï¿½ï¿½tï¿½gï¿½Ì‚æ‚¤ï¿½ÉAï¿½ï¿½ï¿½ï¿½ï¿½Ú‚ÌŒï¿½ï¿½ï¿½(Facing)ï¿½ï¿½
+    /// ï¿½ï¿½ï¿½Û‚Ìiï¿½sï¿½ï¿½ï¿½ï¿½(Velocity)ï¿½ï¿½ÊXï¿½Éï¿½ï¿½ä‚µï¿½È‚ï¿½ï¿½ï¿½
+    /// ï¿½ï¿½è‘¬ï¿½xï¿½ÅˆÚ“ï¿½ï¿½ï¿½ï¿½Ü‚ï¿½ï¿½B
+    /// ï¿½ï¿½ï¿½ï¿½ï¿½Ú‚ÌŒï¿½ï¿½ï¿½ï¿½Í“ï¿½ï¿½Í•ï¿½ï¿½ï¿½ï¿½Ö’Êï¿½Ê‚ï¿½Ç]ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½A
+    /// ï¿½ï¿½ï¿½Û‚Ìiï¿½sï¿½ï¿½ï¿½ï¿½ï¿½Í‚ï¿½ï¿½ï¿½Æ‚Í“Æ—ï¿½ï¿½ï¿½ï¿½ï¿½
+    /// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ‚ï¿½ï¿½ï¿½ï¿½Ï‰ï¿½ï¿½ï¿½ï¿½È‚ï¿½ï¿½æ‚¤ï¿½É‚Å‚ï¿½ï¿½é‚½ï¿½ßA
+    /// ï¿½uï¿½Ô‘Ì‚Í‹È‚ï¿½ï¿½è‚½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä‚ï¿½ï¿½ï¿½Ì‚ï¿½
+    /// ï¿½ï¿½ï¿½Û‚É‚ÍŠOï¿½ï¿½ï¿½ÖŠï¿½ï¿½ï¿½ï¿½Ä‚ï¿½ï¿½ï¿½ï¿½vï¿½Æ‚ï¿½ï¿½ï¿½
+    /// ï¿½hï¿½ï¿½ï¿½tï¿½gï¿½ÌŒï¿½ï¿½ï¿½ï¿½ÚEï¿½ï¿½ï¿½ìŠ´ï¿½ï¿½\ï¿½ï¿½ï¿½Å‚ï¿½ï¿½Ü‚ï¿½ï¿½B
     /// </summary>
     /// <param name="velocityDirection">
-    /// ŽÀÛ‚Éi‚Þ•ûŒüiŠµ«‚Å‚ä‚Á‚­‚è•Ï‰»‚³‚¹‚½‚¢•ûŒüjB
+    /// ï¿½ï¿½ï¿½Û‚Éiï¿½Þ•ï¿½ï¿½ï¿½ï¿½iï¿½ï¿½ï¿½ï¿½ï¿½Å‚ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï‰ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½jï¿½B
     /// </param>
-    /// <param name="speed">ˆÚ“®‘¬“xB</param>
+    /// <param name="speed">ï¿½Ú“ï¿½ï¿½ï¿½ï¿½xï¿½B</param>
     /// <param name="facingDirection">
-    /// Œ©‚½–Ú‚ÌŒü‚«‚Ì–Ú•W•ûŒüi’Êí‚Í“ü—Í•ûŒüjB
+    /// ï¿½ï¿½ï¿½ï¿½ï¿½Ú‚ÌŒï¿½ï¿½ï¿½ï¿½Ì–Ú•Wï¿½ï¿½ï¿½ï¿½ï¿½iï¿½Êï¿½Í“ï¿½ï¿½Í•ï¿½ï¿½ï¿½ï¿½jï¿½B
     /// </param>
     /// <param name="facingRotationSpeed">
-    /// Œ©‚½–Ú‚ÌŒü‚«‚Ì1•bŠÔ‚ÌÅ‘å‰ñ“]Šp“xB
+    /// ï¿½ï¿½ï¿½ï¿½ï¿½Ú‚ÌŒï¿½ï¿½ï¿½ï¿½ï¿½1ï¿½bï¿½Ô‚ÌÅ‘ï¿½ï¿½]ï¿½pï¿½xï¿½B
     /// </param>
-    /// <param name="deltaTime">•¨—XVŽžŠÔB</param>
+    /// <param name="deltaTime">ï¿½ï¿½ï¿½ï¿½ï¿½Xï¿½Vï¿½ï¿½ï¿½ÔB</param>
     public void MoveWithDriftAtFixedSpeed(
         Vector3 velocityDirection,
         float speed,
@@ -515,8 +561,8 @@ public sealed class PlayerMotor : MonoBehaviour
         ApplyHorizontalVelocity(
             targetHorizontalVelocity);
 
-        // Œ©‚½–Ú‚ÌŒü‚«‚ÍAŽÀÛ‚Ìis•ûŒü‚Æ‚Í“Æ—§‚µ‚Ä
-        // “ü—Í•ûŒü‚Ö’Êí‚Ì‘¬“x‚Å’Ç]‚³‚¹‚é
+        // ï¿½ï¿½ï¿½ï¿½ï¿½Ú‚ÌŒï¿½ï¿½ï¿½ï¿½ÍAï¿½ï¿½ï¿½Û‚Ìiï¿½sï¿½ï¿½ï¿½ï¿½ï¿½Æ‚Í“Æ—ï¿½ï¿½ï¿½ï¿½ï¿½
+        // ï¿½ï¿½ï¿½Í•ï¿½ï¿½ï¿½ï¿½Ö’Êï¿½Ì‘ï¿½ï¿½xï¿½Å’Ç]ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         RotateTowardsMoveDirection(
             facingDirection,
             facingRotationSpeed,

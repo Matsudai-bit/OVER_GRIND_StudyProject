@@ -1,47 +1,64 @@
 using UnityEngine;
 
 /// <summary>
-/// ƒvƒŒƒCƒ„[‚ÌƒWƒƒƒ“ƒvó‘Ô‚ğŠÇ—‚µ‚Ü‚·B
+/// ï¿½vï¿½ï¿½ï¿½Cï¿½ï¿½ï¿½[ï¿½ÌƒWï¿½ï¿½ï¿½ï¿½ï¿½vï¿½ï¿½Ô‚ï¿½ï¿½Ç—ï¿½ï¿½ï¿½ï¿½Ü‚ï¿½ï¿½B
 /// </summary>
 public sealed class PlayerJumpingState
     : StateBase<PlayerStateMachineComponent>
 {
-    // ƒWƒƒƒ“ƒvŠJn‚©‚ç‚ÌŒo‰ßŠÔ
+    // ï¿½Wï¿½ï¿½ï¿½ï¿½ï¿½vï¿½Jï¿½nï¿½ï¿½ï¿½ï¿½ÌŒoï¿½ßï¿½ï¿½ï¿½
     private float m_elapsedTime;
 
     /// <summary>
-    /// ó‘ÔŠJn‚ÉŒÄ‚Î‚ê‚Ü‚·B
+    /// ï¿½ï¿½ÔŠJï¿½nï¿½ï¿½ï¿½ÉŒÄ‚Î‚ï¿½Ü‚ï¿½ï¿½B
     /// </summary>
     protected override void OnStartState()
     {
         m_elapsedTime = 0.0f;
 
         Owner.AnimationPresenter.PlayJumpAnimation();
+
+        // ï¿½Wï¿½ï¿½ï¿½ï¿½ï¿½vï¿½ï¿½ï¿½ï¿½ï¿½ÍŠJï¿½nï¿½ï¿½ï¿½Éˆï¿½xï¿½ï¿½ï¿½ï¿½ï¿½^ï¿½ï¿½ï¿½ï¿½
+        Owner.Motor.Jump(
+            Owner.MovementParameterAsset.JumpPower);
     }
 
     /// <summary>
-    /// ˆê’èŠÔŠu‚ÌXVˆ—‚ğs‚¢‚Ü‚·B
+    /// ï¿½ï¿½ï¿½ÔŠuï¿½ÌXï¿½Vï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½sï¿½ï¿½ï¿½Ü‚ï¿½ï¿½B
     /// </summary>
     protected override void OnFixedUpdate()
     {
+
+        Debug.Log(
+      $"[Jump] y-vel={Owner.Motor.VerticalVelocity:F3}, " +
+      $"y-pos={Owner.transform.position.y:F3}, " +
+      $"deltaTime={Time.fixedDeltaTime:F4}, " +
+      $"gravity.y={Physics.gravity.y:F3}");
+
         m_elapsedTime += Time.fixedDeltaTime;
 
         PlayerMovementParameterAsset parameterAsset =
             Owner.MovementParameterAsset;
 
-        if (m_elapsedTime <
+        bool isJumpHeld =
+            m_elapsedTime <
                 parameterAsset.JumpInputDuration &&
-            Owner.InputReader.HasJumpInput)
-        {
-            Owner.Motor.Jump(
-                parameterAsset.JumpPower,
-                Time.fixedDeltaTime);
+            Owner.InputReader.HasJumpInput;
 
-            return;
+        Owner.Motor.ApplyExtraGravity(
+            parameterAsset,
+            isJumpHeld,
+            Time.fixedDeltaTime);
+
+        // ï¿½ï¿½ï¿½_ï¿½ï¿½ï¿½ß‚ï¿½ï¿½Ä—ï¿½ï¿½ï¿½ï¿½É“]ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô‘Jï¿½ï¿½
+        if (Owner.Motor.VerticalVelocity <= 0.0f)
+        {
+            Machine.ChangeState<PlayerIdlingState>();
         }
 
-        // ƒWƒƒƒ“ƒv‘O‚ªVƒu[ƒXƒgó‘Ô‚¾‚Á‚½ê‡‚ÍA
-        // ‘Ò‹@ó‘Ô‚ğŒo—R‚¹‚¸’¼ÚVƒu[ƒXƒg‚Ö•œ‹A‚·‚é
+
+        // ï¿½Wï¿½ï¿½ï¿½ï¿½ï¿½vï¿½Oï¿½ï¿½Vï¿½uï¿½[ï¿½Xï¿½gï¿½ï¿½Ô‚ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ê‡ï¿½ÍA
+        // ï¿½Ò‹@ï¿½ï¿½Ô‚ï¿½ï¿½oï¿½Rï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Vï¿½uï¿½[ï¿½Xï¿½gï¿½Ö•ï¿½ï¿½Aï¿½ï¿½ï¿½ï¿½
         if (Owner.IsBoostSuspended)
         {
             Machine.ChangeState<PlayerVRunningState>();
@@ -49,10 +66,11 @@ public sealed class PlayerJumpingState
         }
 
         Machine.ChangeState<PlayerIdlingState>();
+
     }
 
     /// <summary>
-    /// ó‘ÔI—¹‚ÉŒÄ‚Î‚ê‚Ü‚·B
+    /// ï¿½ï¿½ÔIï¿½ï¿½ï¿½ï¿½ï¿½ÉŒÄ‚Î‚ï¿½Ü‚ï¿½ï¿½B
     /// </summary>
     protected override void OnExitState()
     {
