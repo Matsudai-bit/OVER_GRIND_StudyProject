@@ -98,59 +98,6 @@ public sealed class PlayerMotor : MonoBehaviour
                 "RigidbodyがIs Kinematicです。",
                 this);
         }
-
-        WarnIfVelocityWillBeInterfered();
-    }
-
-    /// <summary>
-    /// Linear DampingやPhysic Materialの摩擦設定が
-    /// 0でない場合に警告を出します。
-    /// これらはMove/Decelerateで計算した速度に対し
-    /// エンジン側から追加の減衰・摩擦を及ぼすため、
-    /// TimeToMaxSpeed/TimeToStopで意図した
-    /// 加減速カーブと食い違う原因になります。
-    /// </summary>
-    private void WarnIfVelocityWillBeInterfered()
-    {
-        if (m_playerRigidbody.linearDamping > 0.0f)
-        {
-            Debug.LogWarning(
-                $"[{nameof(PlayerMotor)}] " +
-                "RigidbodyのLinear Dampingが0ではありません" +
-                $"(現在値: {m_playerRigidbody.linearDamping})。" +
-                "Move/Decelerateで計算した速度が" +
-                "意図せず減衰され、" +
-                "TimeToMaxSpeed/TimeToStopの" +
-                "設定と食い違う挙動になります。" +
-                "0への変更を推奨します。",
-                this);
-        }
-
-        Collider playerCollider =
-            m_playerRigidbody.GetComponent<Collider>();
-
-        PhysicsMaterial physicsMaterial =
-            playerCollider != null
-                ? playerCollider.sharedMaterial
-                : null;
-
-        if (physicsMaterial != null &&
-            (physicsMaterial.dynamicFriction > 0.0f ||
-             physicsMaterial.staticFriction > 0.0f))
-        {
-            Debug.LogWarning(
-                $"[{nameof(PlayerMotor)}] " +
-                "プレイヤーのColliderに設定された" +
-                $"PhysicMaterial「{physicsMaterial.name}」の" +
-                "摩擦が0ではありません" +
-                $"(Dynamic: {physicsMaterial.dynamicFriction}, " +
-                $"Static: {physicsMaterial.staticFriction})。" +
-                "接地中の摩擦がMove/Decelerateの速度計算と" +
-                "競合し、加減速が鈍くなる原因になります。" +
-                "摩擦0・Friction Combine = Minimumの" +
-                "PhysicMaterialへの変更を推奨します。",
-                this);
-        }
     }
 
     /// <summary>
