@@ -6,6 +6,10 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public sealed class PlayerStateMachineComponent : MonoBehaviour
 {
+    // ============================================================
+    // 参照
+    // ============================================================
+
     // プレイヤー入力
     private PlayerInputReader m_inputReader;
 
@@ -24,6 +28,15 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
     // スプライングラインド機能
     private SplineGrindController m_splineGrindController;
 
+    // Vゲージ表示機能
+    private VGaugeUI m_vGaugeUI;
+
+    // 速度表示機能
+    private VSpeedUI m_vSpeedUI;
+
+    // プレイヤーカメラ機能
+    private PlayerCamera m_playerCamera;
+
     // 通常移動パラメータ
     private PlayerMovementParameterAsset
         m_movementParameterAsset;
@@ -31,6 +44,10 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
     // Vブースト移動パラメータ
     private PlayerVBoostMovementParameterAsset
         m_vBoostMovementParameterAsset;
+
+    // ブーストチャージパラメータ
+    private PlayerBoostChargingParameterAsset
+        m_boostChargingParameterAsset;
 
     // プレイヤー用ステートマシン
     private StateMachine<PlayerStateMachineComponent>
@@ -76,6 +93,26 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
         m_splineGrindController;
 
     /// <summary>
+    /// Vゲージ表示機能を取得します。
+    /// シーンに配置されていない場合はnullを返すことがあります。
+    /// </summary>
+    public VGaugeUI VGaugeUI =>
+        m_vGaugeUI;
+
+    /// <summary>
+    /// 速度表示機能を取得します。
+    /// シーンに配置されていない場合はnullを返すことがあります。
+    /// </summary>
+    public VSpeedUI VSpeedUI =>
+        m_vSpeedUI;
+
+    /// <summary>
+    /// プレイヤーカメラ機能を取得します。
+    /// </summary>
+    public PlayerCamera PlayerCamera =>
+        m_playerCamera;
+
+    /// <summary>
     /// 通常移動パラメータを取得します。
     /// </summary>
     public PlayerMovementParameterAsset MovementParameterAsset =>
@@ -89,10 +126,104 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
             m_vBoostMovementParameterAsset;
 
     /// <summary>
+    /// ブーストチャージパラメータを取得します。
+    /// </summary>
+    public PlayerBoostChargingParameterAsset
+        BoostChargingParameterAsset =>
+            m_boostChargingParameterAsset;
+
+    /// <summary>
     /// 初期化されているかを取得します。
     /// </summary>
     public bool IsInitialized =>
         m_isInitialized;
+
+
+    // ============================================================
+    // Vブースト関連
+    // ============================================================
+
+    // チャージ解除時点でのゲージ量（0～1）
+    private float m_carriedBoostGaugeRate;
+
+    public float CarriedBoostGaugeRate
+    {
+        get => m_carriedBoostGaugeRate;
+        set => m_carriedBoostGaugeRate = Mathf.Clamp01(value);
+    }
+
+    // ------------------------------------------------------------
+    // チャージ終了時のダッシュ方向
+    // ------------------------------------------------------------
+
+    // チャージ終了時にプレイヤーが向いていた方向。
+    // VRunningStateのBOOST_DASH中はこの方向に固定して移動します。
+    private Vector3 m_boostDashDirection;
+
+    /// <summary>
+    /// チャージ終了時に確定したVブーストダッシュ方向を取得・設定します。
+    /// </summary>
+    public Vector3 BoostDashDirection
+    {
+        get => m_boostDashDirection;
+        set
+        {
+            Vector3 direction = value;
+            direction.y = 0.0f;
+
+            if (direction.sqrMagnitude <= 0.0001f)
+            {
+                return;
+            }
+
+            m_boostDashDirection =
+                direction.normalized;
+        }
+    }
+
+    // ------------------------------------------------------------
+    // 中断・ゲージ関連
+    // ------------------------------------------------------------
+
+    // Vブースト中断時点／進行中の残りゲージ量（0～1）
+    // PlayerVRunningStateが開始・参照・更新し、
+    // 中断中（Idling/Jumping中）もこの本体側で消費し続けます
+    private float m_suspendedBoostGaugeRate;
+
+    public float SuspendedBoostGaugeRate
+    {
+        get => m_suspendedBoostGaugeRate;
+        set => m_suspendedBoostGaugeRate = Mathf.Clamp01(value);
+    }
+
+    // Vブーストが中断中か
+    // （trueの間、移動入力・接地などの条件が揃えばVRunningへ復帰する）
+    private bool m_isBoostSuspended;
+
+    public bool IsBoostSuspended
+    {
+        get => m_isBoostSuspended;
+        set => m_isBoostSuspended = value;
+    }
+
+    // ゲージを1秒あたりどれだけ消費するか
+    // （VRunningState開始時に設定される）
+    private float m_boostGaugeDepletionRatePerSecond;
+
+    /// <summary>
+    /// ゲージの1秒あたりの消費レートを設定します。
+    /// PlayerVRunningStateがブースト開始時に呼び出します。
+    /// </summary>
+    public void SetBoostGaugeDepletionRate(float ratePerSecond)
+    {
+        m_boostGaugeDepletionRatePerSecond =
+            Mathf.Max(ratePerSecond, 0.0f);
+    }
+
+
+    // ============================================================
+    // 初期化
+    // ============================================================
 
     /// <summary>
     /// プレイヤー用ステートマシンを初期化します。
@@ -106,7 +237,12 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
         SplineGrindController splineGrindController,
         PlayerMovementParameterAsset movementParameterAsset,
         PlayerVBoostMovementParameterAsset
-            vBoostMovementParameterAsset)
+            vBoostMovementParameterAsset,
+        PlayerBoostChargingParameterAsset
+            boostChargingParameterAsset,
+        VGaugeUI vGaugeUI,
+        VSpeedUI vSpeedUI,
+        PlayerCamera playerCamera)
     {
         if (inputReader == null ||
             monitor == null ||
@@ -115,7 +251,8 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
             attackController == null ||
             splineGrindController == null ||
             movementParameterAsset == null ||
-            vBoostMovementParameterAsset == null)
+            vBoostMovementParameterAsset == null ||
+            boostChargingParameterAsset == null)
         {
             Debug.LogError(
                 $"[{nameof(PlayerStateMachineComponent)}] " +
@@ -124,6 +261,35 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
 
             m_isInitialized = false;
             return;
+        }
+
+        // VGaugeUI・VSpeedUI・PlayerCameraはUI/演出側の用途のため、
+        // 未設定でも初期化失敗とはしない
+        if (vGaugeUI == null)
+        {
+            Debug.LogWarning(
+                $"[{nameof(PlayerStateMachineComponent)}] " +
+                $"{nameof(VGaugeUI)}が設定されていません。" +
+                "ゲージ演出は行われません。",
+                this);
+        }
+
+        if (vSpeedUI == null)
+        {
+            Debug.LogWarning(
+                $"[{nameof(PlayerStateMachineComponent)}] " +
+                $"{nameof(VSpeedUI)}が設定されていません。" +
+                "速度表示は行われません。",
+                this);
+        }
+
+        if (playerCamera == null)
+        {
+            Debug.LogWarning(
+                $"[{nameof(PlayerStateMachineComponent)}] " +
+                $"{nameof(PlayerCamera)}が設定されていません。" +
+                "チャージ中のカメラ演出は行われません。",
+                this);
         }
 
         m_stateMachine?.Dispose();
@@ -146,6 +312,13 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
         m_vBoostMovementParameterAsset =
             vBoostMovementParameterAsset;
 
+        m_boostChargingParameterAsset =
+            boostChargingParameterAsset;
+
+        m_vGaugeUI = vGaugeUI;
+        m_vSpeedUI = vSpeedUI;
+        m_playerCamera = playerCamera;
+
         m_stateMachine =
             new StateMachine<PlayerStateMachineComponent>(
                 this);
@@ -154,6 +327,11 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
 
         m_stateMachine.ChangeState<PlayerIdlingState>();
     }
+
+
+    // ============================================================
+    // State
+    // ============================================================
 
     /// <summary>
     /// 現在のステートが指定された型か確認します。
@@ -169,6 +347,11 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
 
         return m_stateMachine.IsCurrentState<TState>();
     }
+
+
+    // ============================================================
+    // 更新
+    // ============================================================
 
     /// <summary>
     /// ステートマシンを更新します。
@@ -196,7 +379,76 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
         m_monitor.Refresh();
 
         m_stateMachine.FixedUpdate();
+
+        // 現在のStateに関係なく、常に実速度をUIへ反映する
+        UpdateSpeedDisplay();
+
+        // Vブースト中（中断中を含む）は、
+        // 現在のStateに関係なく常にゲージを消費する
+        UpdateSuspendableBoostGauge();
     }
+
+    /// <summary>
+    /// 現在の水平速度をVSpeedUIへ反映します。
+    /// </summary>
+    private void UpdateSpeedDisplay()
+    {
+        if (m_vSpeedUI == null)
+        {
+            return;
+        }
+
+        m_vSpeedUI.SetSpeed(m_motor.HorizontalSpeed);
+    }
+
+    /// <summary>
+    /// Vブースト中（VRunningState中・中断中の両方）の
+    /// ゲージ消費とUI反映を、Stateに関係なく行います。
+    /// </summary>
+    private void UpdateSuspendableBoostGauge()
+    {
+        bool isConsumingGauge =
+            IsCurrentState<PlayerVRunningState>() ||
+            m_isBoostSuspended;
+
+        if (!isConsumingGauge)
+        {
+            return;
+        }
+
+        m_suspendedBoostGaugeRate -=
+            m_boostGaugeDepletionRatePerSecond *
+            Time.fixedDeltaTime;
+
+        if (m_suspendedBoostGaugeRate < 0.0f)
+        {
+            m_suspendedBoostGaugeRate = 0.0f;
+        }
+
+        if (m_vGaugeUI != null)
+        {
+            m_vGaugeUI.SetGaugeRate(
+                m_suspendedBoostGaugeRate);
+        }
+
+        // 中断中にゲージを使い切った場合も、
+        // 復帰しようがないため中断状態を解除しておく
+        if (m_suspendedBoostGaugeRate <= 0.0f &&
+            m_isBoostSuspended)
+        {
+            m_isBoostSuspended = false;
+
+            if (m_vGaugeUI != null)
+            {
+                m_vGaugeUI.SetCharging(false);
+            }
+        }
+    }
+
+
+    // ============================================================
+    // 破棄
+    // ============================================================
 
     /// <summary>
     /// ステートマシンを破棄します。
