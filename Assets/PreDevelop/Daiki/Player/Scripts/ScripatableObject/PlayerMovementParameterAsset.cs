@@ -50,6 +50,24 @@ public sealed class PlayerMovementParameterAsset : ScriptableObject
     [Min(MIN_TIME)]
     private float m_jumpInputDuration = 0.5f;
 
+    // 落下中の重力倍率
+    [SerializeField]
+    [Tooltip("落下中に適用する重力倍率です。大きいほど早く落下します。")]
+    [Min(1.0f)]
+    private float m_fallGravityMultiplier = 2.5f;
+
+    // ジャンプ早期解除時の重力倍率
+    [SerializeField]
+    [Tooltip("上昇中にジャンプ入力を離した際に適用する重力倍率です。")]
+    [Min(1.0f)]
+    private float m_lowJumpMultiplier = 4.0f;
+
+    // 落下速度の上限
+    [SerializeField]
+    [Tooltip("落下速度の上限(絶対値)です。")]
+    [Min(0.0f)]
+    private float m_maxFallSpeed = 20.0f;
+
     /// <summary>
     /// ジャンプ力を取得します。
     /// </summary>
@@ -59,6 +77,21 @@ public sealed class PlayerMovementParameterAsset : ScriptableObject
     /// ジャンプ入力の最大反映時間を取得します。
     /// </summary>
     public float JumpInputDuration => m_jumpInputDuration;
+
+    /// <summary>
+    /// 落下中に適用する重力倍率を取得します。
+    /// </summary>
+    public float FallGravityMultiplier => m_fallGravityMultiplier;
+
+    /// <summary>
+    /// ジャンプ入力を早期に離した際に適用する重力倍率を取得します。
+    /// </summary>
+    public float LowJumpMultiplier => m_lowJumpMultiplier;
+
+    /// <summary>
+    /// 落下速度の上限(絶対値)を取得します。
+    /// </summary>
+    public float MaxFallSpeed => m_maxFallSpeed;
 
     /// <summary>
     /// 通常移動パラメータを生成します。
