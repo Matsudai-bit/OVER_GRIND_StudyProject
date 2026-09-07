@@ -6,6 +6,10 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public sealed class PlayerStateMachineComponent : MonoBehaviour
 {
+    // ============================================================
+    // 参照
+    // ============================================================
+
     // プレイヤー入力
     private PlayerInputReader m_inputReader;
 
@@ -30,6 +34,9 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
     // 速度表示機能
     private VSpeedUI m_vSpeedUI;
 
+    // プレイヤーカメラ機能
+    private PlayerCamera m_playerCamera;
+
     // 通常移動パラメータ
     private PlayerMovementParameterAsset
         m_movementParameterAsset;
@@ -37,6 +44,10 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
     // Vブースト移動パラメータ
     private PlayerVBoostMovementParameterAsset
         m_vBoostMovementParameterAsset;
+
+    // ブーストチャージパラメータ
+    private PlayerBoostChargingParameterAsset
+        m_boostChargingParameterAsset;
 
     // プレイヤー用ステートマシン
     private StateMachine<PlayerStateMachineComponent>
@@ -96,6 +107,12 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
         m_vSpeedUI;
 
     /// <summary>
+    /// プレイヤーカメラ機能を取得します。
+    /// </summary>
+    public PlayerCamera PlayerCamera =>
+        m_playerCamera;
+
+    /// <summary>
     /// 通常移動パラメータを取得します。
     /// </summary>
     public PlayerMovementParameterAsset MovementParameterAsset =>
@@ -109,11 +126,22 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
             m_vBoostMovementParameterAsset;
 
     /// <summary>
+    /// ブーストチャージパラメータを取得します。
+    /// </summary>
+    public PlayerBoostChargingParameterAsset
+        BoostChargingParameterAsset =>
+            m_boostChargingParameterAsset;
+
+    /// <summary>
     /// 初期化されているかを取得します。
     /// </summary>
     public bool IsInitialized =>
         m_isInitialized;
 
+
+    // ============================================================
+    // Vブースト関連
+    // ============================================================
 
     // チャージ解除時点でのゲージ量（0～1）
     private float m_carriedBoostGaugeRate;
@@ -123,6 +151,39 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
         get => m_carriedBoostGaugeRate;
         set => m_carriedBoostGaugeRate = Mathf.Clamp01(value);
     }
+
+    // ------------------------------------------------------------
+    // チャージ終了時のダッシュ方向
+    // ------------------------------------------------------------
+
+    // チャージ終了時にプレイヤーが向いていた方向。
+    // VRunningStateのBOOST_DASH中はこの方向に固定して移動します。
+    private Vector3 m_boostDashDirection;
+
+    /// <summary>
+    /// チャージ終了時に確定したVブーストダッシュ方向を取得・設定します。
+    /// </summary>
+    public Vector3 BoostDashDirection
+    {
+        get => m_boostDashDirection;
+        set
+        {
+            Vector3 direction = value;
+            direction.y = 0.0f;
+
+            if (direction.sqrMagnitude <= 0.0001f)
+            {
+                return;
+            }
+
+            m_boostDashDirection =
+                direction.normalized;
+        }
+    }
+
+    // ------------------------------------------------------------
+    // 中断・ゲージ関連
+    // ------------------------------------------------------------
 
     // Vブースト中断時点／進行中の残りゲージ量（0～1）
     // PlayerVRunningStateが開始・参照・更新し、
@@ -159,6 +220,11 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
             Mathf.Max(ratePerSecond, 0.0f);
     }
 
+
+    // ============================================================
+    // 初期化
+    // ============================================================
+
     /// <summary>
     /// プレイヤー用ステートマシンを初期化します。
     /// </summary>
@@ -172,8 +238,11 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
         PlayerMovementParameterAsset movementParameterAsset,
         PlayerVBoostMovementParameterAsset
             vBoostMovementParameterAsset,
+        PlayerBoostChargingParameterAsset
+            boostChargingParameterAsset,
         VGaugeUI vGaugeUI,
-        VSpeedUI vSpeedUI)
+        VSpeedUI vSpeedUI,
+        PlayerCamera playerCamera)
     {
         if (inputReader == null ||
             monitor == null ||
@@ -182,7 +251,8 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
             attackController == null ||
             splineGrindController == null ||
             movementParameterAsset == null ||
-            vBoostMovementParameterAsset == null)
+            vBoostMovementParameterAsset == null ||
+            boostChargingParameterAsset == null)
         {
             Debug.LogError(
                 $"[{nameof(PlayerStateMachineComponent)}] " +
@@ -193,7 +263,7 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
             return;
         }
 
-        // VGaugeUI・VSpeedUIはUI側の演出用途のため、
+        // VGaugeUI・VSpeedUI・PlayerCameraはUI/演出側の用途のため、
         // 未設定でも初期化失敗とはしない
         if (vGaugeUI == null)
         {
@@ -210,6 +280,15 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
                 $"[{nameof(PlayerStateMachineComponent)}] " +
                 $"{nameof(VSpeedUI)}が設定されていません。" +
                 "速度表示は行われません。",
+                this);
+        }
+
+        if (playerCamera == null)
+        {
+            Debug.LogWarning(
+                $"[{nameof(PlayerStateMachineComponent)}] " +
+                $"{nameof(PlayerCamera)}が設定されていません。" +
+                "チャージ中のカメラ演出は行われません。",
                 this);
         }
 
@@ -233,8 +312,12 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
         m_vBoostMovementParameterAsset =
             vBoostMovementParameterAsset;
 
+        m_boostChargingParameterAsset =
+            boostChargingParameterAsset;
+
         m_vGaugeUI = vGaugeUI;
         m_vSpeedUI = vSpeedUI;
+        m_playerCamera = playerCamera;
 
         m_stateMachine =
             new StateMachine<PlayerStateMachineComponent>(
@@ -244,6 +327,11 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
 
         m_stateMachine.ChangeState<PlayerIdlingState>();
     }
+
+
+    // ============================================================
+    // State
+    // ============================================================
 
     /// <summary>
     /// 現在のステートが指定された型か確認します。
@@ -259,6 +347,11 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
 
         return m_stateMachine.IsCurrentState<TState>();
     }
+
+
+    // ============================================================
+    // 更新
+    // ============================================================
 
     /// <summary>
     /// ステートマシンを更新します。
@@ -325,7 +418,7 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
 
         m_suspendedBoostGaugeRate -=
             m_boostGaugeDepletionRatePerSecond *
-            (Time.fixedDeltaTime / 10.0f);
+            Time.fixedDeltaTime;
 
         if (m_suspendedBoostGaugeRate < 0.0f)
         {
@@ -334,7 +427,8 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
 
         if (m_vGaugeUI != null)
         {
-            m_vGaugeUI.SetGaugeRate(m_suspendedBoostGaugeRate);
+            m_vGaugeUI.SetGaugeRate(
+                m_suspendedBoostGaugeRate);
         }
 
         // 中断中にゲージを使い切った場合も、
@@ -350,6 +444,11 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
             }
         }
     }
+
+
+    // ============================================================
+    // 破棄
+    // ============================================================
 
     /// <summary>
     /// ステートマシンを破棄します。

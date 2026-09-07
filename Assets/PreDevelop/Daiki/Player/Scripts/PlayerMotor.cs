@@ -424,6 +424,51 @@ public sealed class PlayerMotor : MonoBehaviour
     }
 
     /// <summary>
+    /// 指定したワールド方向へ、一定速度で移動します。
+    /// スティック入力やカメラ方向には影響されません。
+    /// </summary>
+    /// <param name="worldDirection">ワールド空間での移動方向。</param>
+    /// <param name="speed">移動速度。</param>
+    /// <param name="rotationSpeed">回転速度。</param>
+    /// <param name="deltaTime">物理更新時間。</param>
+    public void MoveAtFixedWorldDirection(
+        Vector3 worldDirection,
+        float speed,
+        float rotationSpeed,
+        float deltaTime)
+    {
+        if (!m_isInitialized)
+        {
+            return;
+        }
+
+        worldDirection.y = 0.0f;
+
+        if (worldDirection.sqrMagnitude <=
+            DIRECTION_SQR_THRESHOLD)
+        {
+            return;
+        }
+
+        worldDirection.Normalize();
+
+        Vector3 targetHorizontalVelocity =
+            worldDirection *
+            Mathf.Max(speed, 0.0f);
+
+        ApplyHorizontalVelocity(
+            targetHorizontalVelocity);
+
+        RotateTowardsMoveDirection(
+            worldDirection,
+            rotationSpeed,
+            deltaTime);
+
+        m_currentMaxMoveSpeed =
+            Mathf.Max(speed, 0.0f);
+    }
+
+    /// <summary>
     /// ドリフトのように、見た目の向き(Facing)と
     /// 実際の進行方向(Velocity)を別々に制御しながら
     /// 一定速度で移動します。

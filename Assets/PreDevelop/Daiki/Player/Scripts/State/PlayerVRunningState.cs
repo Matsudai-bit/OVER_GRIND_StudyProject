@@ -40,6 +40,11 @@ public sealed class PlayerVRunningState
     // ダッシュ終了後に使用する通常移動パラメータ
     private PlayerMoveParameters m_normalMoveParameters;
 
+    // チャージ終了時に確定したダッシュ方向
+    // BOOST_DASH中はこの方向から変更しない
+    private Vector3 m_boostDashDirection;
+
+
     /// <summary>
     /// 状態開始時に呼ばれます。
     /// 中断（ジャンプ・停止など）から復帰した場合は、
@@ -61,8 +66,6 @@ public sealed class PlayerVRunningState
 
         m_normalMoveParameters = normalParameters;
 
-        // 満タンのゲージが、アセット設定の秒数で
-        // 使い切られるよう消費レートを算出し、本体側へ設定する
         float fullTankDuration =
             Mathf.Max(
                 Owner.VBoostMovementParameterAsset
@@ -72,13 +75,15 @@ public sealed class PlayerVRunningState
         Owner.SetBoostGaugeDepletionRate(
             1.0f / fullTankDuration);
 
+
         if (Owner.IsBoostSuspended)
         {
-            // 中断された状態からの復帰。
+            // ----------------------------------------------------
+            // 中断された状態からの復帰
+            // ----------------------------------------------------
+
             // ダッシュフェーズは終えている前提で
             // 通常移動フェーズから再開する。
-            // ゲージ量は中断中も本体側で消費され続けているため、
-            // ここで読み直すだけでよい。
             m_currentPhase =
                 VBoostPhase.NORMAL_MOVE;
 
@@ -94,7 +99,10 @@ public sealed class PlayerVRunningState
         }
         else
         {
+            // ----------------------------------------------------
             // 通常のブーストチャージからの新規開始
+            // ----------------------------------------------------
+
             Owner.SuspendedBoostGaugeRate =
                 Owner.CarriedBoostGaugeRate;
 
@@ -103,9 +111,41 @@ public sealed class PlayerVRunningState
 
             m_elapsedTime = 0.0f;
 
+            // ----------------------------------------------------
+            // チャージ終了時に保存した方向を取得
+            // ----------------------------------------------------
+
+            m_boostDashDirection =
+                Owner.BoostDashDirection;
+
+            // 念のためY方向を除去
+            m_boostDashDirection.y = 0.0f;
+
+            if (m_boostDashDirection.sqrMagnitude <= 0.0001f)
+            {
+                // 万が一方向が保存されていなかった場合のみ、
+                // 現在のプレイヤーの向きを使用する
+                m_boostDashDirection =
+                    Owner.transform.forward;
+
+                m_boostDashDirection.y = 0.0f;
+            }
+
+            m_boostDashDirection.Normalize();
+
+
+            // ダッシュ開始の瞬間、視点を一度だけ
+            // ダッシュ方向へリセットする
+            if (Owner.PlayerCamera != null)
+            {
+                Owner.PlayerCamera.SnapLookDirectionOnce(
+                    m_boostDashDirection);
+            }
+
             Debug.Log(
                 $"[PlayerVRunningState] ブーストダッシュ開始 " +
                 $"引き継ぎゲージ量={Owner.SuspendedBoostGaugeRate:P1} " +
+                $"ダッシュ方向={m_boostDashDirection} " +
                 $"ダッシュ最高速度={m_dashMoveParameters.MaxMoveSpeed:F2} " +
                 $"（通常速度={normalParameters.MaxMoveSpeed:F2}） " +
                 $"ダッシュ時間={BOOST_DASH_DURATION:F2}秒 " +
@@ -123,6 +163,7 @@ public sealed class PlayerVRunningState
             Owner.VGaugeUI.SetCharging(true);
         }
     }
+
 
     /// <summary>
     /// 一定間隔の更新処理を行います。
@@ -173,6 +214,7 @@ public sealed class PlayerVRunningState
         UpdatePhaseMovement();
     }
 
+
     /// <summary>
     /// 状態終了時に呼ばれます。
     /// </summary>
@@ -196,6 +238,7 @@ public sealed class PlayerVRunningState
         }
     }
 
+
     /// <summary>
     /// 現在の状態を中断情報として保存します。
     /// ゲージ量自体は本体側で保持され続けているため、
@@ -212,6 +255,7 @@ public sealed class PlayerVRunningState
             Owner);
     }
 
+
     /// <summary>
     /// 現在のフェーズに応じた移動処理を行い、
     /// ダッシュ時間経過時はフェーズを切り替えます。
@@ -221,11 +265,17 @@ public sealed class PlayerVRunningState
         switch (m_currentPhase)
         {
             case VBoostPhase.BOOST_DASH:
-                Owner.Motor.MoveAtFixedSpeed(
-                    Owner.InputReader.MoveInput,
-                    m_dashMoveParameters.MaxMoveSpeed,
-                    m_dashMoveParameters.RotationSpeed,
-                    Time.fixedDeltaTime);
+
+                // ------------------------------------------------
+                // ブーストダッシュ
+                // ------------------------------------------------
+                // スティック入力は使用しない。
+                // チャージ終了時に確定した方向へ固定する。
+                Owner.Motor.MoveAtFixedWorldDirection(
+    m_boostDashDirection,
+    m_dashMoveParameters.MaxMoveSpeed,
+    0.0f,
+    Time.fixedDeltaTime);
 
                 m_elapsedTime += Time.fixedDeltaTime;
 
@@ -242,7 +292,13 @@ public sealed class PlayerVRunningState
 
                 break;
 
+
             case VBoostPhase.NORMAL_MOVE:
+
+                // ------------------------------------------------
+                // 通常移動
+                // ------------------------------------------------
+                // ここからスティック入力を再び使用する。
                 Owner.Motor.Move(
                     Owner.InputReader.MoveInput,
                     m_normalMoveParameters,
