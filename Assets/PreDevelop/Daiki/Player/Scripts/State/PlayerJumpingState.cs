@@ -1,58 +1,78 @@
 using UnityEngine;
 
 /// <summary>
-/// �v���C���[�̃W�����v��Ԃ��Ǘ����܂��B
+/// プレイヤーのジャンプ状態を管理します。
 /// </summary>
 public sealed class PlayerJumpingState
     : StateBase<PlayerStateMachineComponent>
 {
-    // �W�����v�J�n����̌o�ߎ���
+    // ジャンプ開始からの経過時間
     private float m_elapsedTime;
 
     /// <summary>
-    /// ��ԊJ�n���ɌĂ΂�܂��B
+    /// 状態開始時に呼ばれます。
     /// </summary>
     protected override void OnStartState()
     {
         m_elapsedTime = 0.0f;
 
         Owner.AnimationPresenter.PlayJumpAnimation();
+
+        // ジャンプ開始時に一度だけ上方向へ力を与える
+        Owner.Motor.Jump(
+            Owner.MovementParameterAsset.JumpPower);
     }
 
     /// <summary>
-    /// ���Ԋu�̍X�V�������s���܂��B
+    /// 一定間隔の更新処理を行います。
     /// </summary>
     protected override void OnFixedUpdate()
     {
+        Debug.Log(
+            $"[Jump] y-vel={Owner.Motor.VerticalVelocity:F3}, " +
+            $"y-pos={Owner.transform.position.y:F3}, " +
+            $"deltaTime={Time.fixedDeltaTime:F4}, " +
+            $"gravity.y={Physics.gravity.y:F3}");
+
         m_elapsedTime += Time.fixedDeltaTime;
 
         PlayerMovementParameterAsset parameterAsset =
             Owner.MovementParameterAsset;
 
-        if (m_elapsedTime <
+        bool isJumpHeld =
+            m_elapsedTime <
                 parameterAsset.JumpInputDuration &&
-            Owner.InputReader.HasJumpInput)
-        {
-            Owner.Motor.Jump(
-                parameterAsset.JumpPower,
-                Time.fixedDeltaTime);
+            Owner.InputReader.HasJumpInput;
 
+        // 上昇・下降状態に応じた追加重力を適用する
+        Owner.Motor.ApplyExtraGravity(
+            parameterAsset,
+            isJumpHeld,
+            Time.fixedDeltaTime);
+
+        // 上昇中はジャンプ状態を継続する。
+        // 下降に入ったら、ジャンプ状態を終了する。
+        if (Owner.Motor.VerticalVelocity <= 0.0f)
+        {
+            // Vブーストを中断した状態でジャンプした場合は、
+            // 着地を待たずにVブースト状態へ復帰するのではなく、
+            // ここでは従来通り下降開始を基準に状態を切り替える。
+            //
+            // IsBoostSuspendedの場合は、ジャンプによる中断から
+            // Vブーストへ復帰する。
+            if (Owner.IsBoostSuspended)
+            {
+                Machine.ChangeState<PlayerVRunningState>();
+                return;
+            }
+
+            Machine.ChangeState<PlayerIdlingState>();
             return;
         }
-
-        // �W�����v�O��V�u�[�X�g��Ԃ������ꍇ�́A
-        // �ҋ@��Ԃ��o�R��������V�u�[�X�g�֕��A����
-        if (Owner.IsBoostSuspended)
-        {
-            Machine.ChangeState<PlayerVRunningState>();
-            return;
-        }
-
-        Machine.ChangeState<PlayerIdlingState>();
     }
 
     /// <summary>
-    /// ��ԏI�����ɌĂ΂�܂��B
+    /// 状態終了時に呼ばれます。
     /// </summary>
     protected override void OnExitState()
     {

@@ -2,27 +2,28 @@ using UnityEngine;
 
 /// <summary>
 /// プレイヤーのブーストチャージ状態を管理します。
+///
+/// チャージ中は現在の移動方向を維持しながら、
+/// スティック入力によって少しずつ移動方向を変更できます。
+///
+/// チャージが進むほど移動方向の曲がりやすさが増していきます
+/// （PlayerBoostChargingParameterAssetで調整可能）。
+///
+/// プレイヤーの向きは、現在の移動方向へ
+/// ゆっくり追従します。
+///
+/// また、カメラはマリオカートのドリフトのように、
+/// プレイヤーの見た目の向きの一部を向くようになります。
 /// </summary>
 public sealed class PlayerBoostChargingState
     : StateBase<PlayerStateMachineComponent>
 {
-    // 最大チャージ時間
-    private const float MAX_CHARGE_TIME = 4.0f;
+    // ============================================================
+    // 状態
+    // ============================================================
 
-    // ブーストダッシュに必要な最低チャージ割合
-    private const float MIN_BOOST_CHARGE_RATE = 0.10f;
-
-    // チャージ中の移動速度倍率（チャージ開始時点の実速度に対する倍率）
-    private const float CHARGE_MOVE_SPEED_RATE = 0.75f;
-
-    // チャージ完了時点での旋回速度倍率（曲がりにくさの最大値）
-    private const float MIN_CHARGE_ROTATION_SPEED_RATE = 0.15f;
-
-    // 速度ログの出力間隔
-    private const float SPEED_LOG_INTERVAL = 0.25f;
-
-    // 移動入力が瞬間的に途切れてもIdlingへ遷移しない猶予時間
-    private const float NO_MOVE_INPUT_GRACE_TIME = 0.15f;
+    // 使用するパラメータアセット
+    private PlayerBoostChargingParameterAsset m_parameterAsset;
 
     // チャージ経過時間
     private float m_chargeTime;
@@ -33,31 +34,33 @@ public sealed class PlayerBoostChargingState
     // 移動入力が無い状態が続いている時間
     private float m_noMoveInputElapsedTime;
 
-    // チャージ開始時点の通常旋回速度（補間の基準値）
-    private float m_normalRotationSpeed;
-
-    // チャージ中に固定して使う移動速度・加減速パラメータ
+    // チャージ中に使用する移動速度パラメータ
     private PlayerMoveParameters m_moveParameters;
+
+    // 現在のチャージ中の移動方向
+    private Vector3 m_currentVelocityDirection;
+
+    // 現在のプレイヤーの向き
+    private Vector3 m_currentFacingDirection;
+
 
     /// <summary>
     /// 現在のチャージ割合を取得します。
     /// </summary>
     private float ChargeRate =>
         Mathf.Clamp01(
-            m_chargeTime / MAX_CHARGE_TIME);
+            m_chargeTime / m_parameterAsset.MaxChargeTime);
+
 
     /// <summary>
     /// 状態開始時に呼ばれます。
     /// </summary>
     protected override void OnStartState()
     {
-        // 長押し成立経由でChargingに入った場合、
-        // ボタン押下時のワンショット開始フラグ(m_hasVBoostStarted)が
-        // 一度も消費されずに残っていることがあるため、ここで握りつぶす。
-        // これを怠ると、はるか後の別State（Idling等）が
-        // この古いイベントを誤って拾い、意図せずChargingへ
-        // 再突入してしまう不具合につながる。
         Owner.InputReader.ConsumeVBoostStarted();
+
+        m_parameterAsset =
+            Owner.BoostChargingParameterAsset;
 
         m_chargeTime = 0.0f;
         m_speedLogElapsedTime = 0.0f;
@@ -72,24 +75,50 @@ public sealed class PlayerBoostChargingState
 
         float chargeMoveSpeed =
             currentSpeedAtChargeStart *
-            CHARGE_MOVE_SPEED_RATE;
-
-        m_normalRotationSpeed =
-            normalParameters.RotationSpeed;
+            m_parameterAsset.ChargeMoveSpeedRate;
 
         m_moveParameters =
             new PlayerMoveParameters(
                 chargeMoveSpeed,
                 normalParameters.TimeToMaxSpeed,
                 normalParameters.TimeToStop,
-                m_normalRotationSpeed);
+                m_parameterAsset.FacingRotationSpeed);
+
+
+        // --------------------------------------------------------
+        // チャージ開始時の移動方向を取得
+        // --------------------------------------------------------
+
+        m_currentVelocityDirection =
+            Owner.Motor.HorizontalDirection;
+
+        m_currentVelocityDirection.y = 0.0f;
+
+        if (m_currentVelocityDirection.sqrMagnitude <= 0.0001f)
+        {
+            m_currentVelocityDirection =
+                Owner.transform.forward;
+
+            m_currentVelocityDirection.y = 0.0f;
+        }
+
+        m_currentVelocityDirection.Normalize();
+
+
+        // --------------------------------------------------------
+        // プレイヤーの向きを初期化
+        // --------------------------------------------------------
+
+        m_currentFacingDirection =
+            m_currentVelocityDirection;
+
 
         Debug.Log(
             $"[PlayerBoostChargingState] チャージ開始 " +
             $"開始時実速度={currentSpeedAtChargeStart:F2} " +
-            $"チャージ固定速度={m_moveParameters.MaxMoveSpeed:F2} " +
-            $"通常旋回速度={m_normalRotationSpeed:F2}",
+            $"チャージ速度={m_moveParameters.MaxMoveSpeed:F2}",
             Owner);
+
 
         if (Owner.VGaugeUI != null)
         {
@@ -97,8 +126,14 @@ public sealed class PlayerBoostChargingState
             Owner.VGaugeUI.SetCharging(true);
         }
 
+        if (Owner.PlayerCamera != null)
+        {
+            Owner.PlayerCamera.BeginDriftLookOverride();
+        }
+
         Owner.AnimationPresenter.PlayWalkAnimation();
     }
+
 
     /// <summary>
     /// 一定間隔の更新処理を行います。
@@ -111,12 +146,14 @@ public sealed class PlayerBoostChargingState
             return;
         }
 
+
         if (Owner.Monitor.IsGrounded &&
             Owner.InputReader.HasJumpInput)
         {
             Machine.ChangeState<PlayerJumpingState>();
             return;
         }
+
 
         if (Owner.InputReader.ConsumeVBoostReleased())
         {
@@ -132,6 +169,11 @@ public sealed class PlayerBoostChargingState
             return;
         }
 
+
+        // --------------------------------------------------------
+        // 移動入力チェック
+        // --------------------------------------------------------
+
         if (Owner.InputReader.HasMoveInput)
         {
             m_noMoveInputElapsedTime = 0.0f;
@@ -141,7 +183,7 @@ public sealed class PlayerBoostChargingState
             m_noMoveInputElapsedTime += Time.fixedDeltaTime;
 
             if (m_noMoveInputElapsedTime >=
-                NO_MOVE_INPUT_GRACE_TIME)
+                m_parameterAsset.NoMoveInputGraceTime)
             {
                 Debug.Log(
                     "[PlayerBoostChargingState] " +
@@ -153,34 +195,104 @@ public sealed class PlayerBoostChargingState
             }
         }
 
+
+        // --------------------------------------------------------
+        // チャージ時間更新
+        // --------------------------------------------------------
+
         m_chargeTime += Time.fixedDeltaTime;
 
-        if (m_chargeTime >= MAX_CHARGE_TIME)
+        if (m_chargeTime >= m_parameterAsset.MaxChargeTime)
         {
-            m_chargeTime = MAX_CHARGE_TIME;
+            m_chargeTime = m_parameterAsset.MaxChargeTime;
         }
 
-        float currentRotationSpeed =
+
+        // --------------------------------------------------------
+        // 入力方向取得
+        // --------------------------------------------------------
+
+        Vector2 normalizedInput =
+            Vector2.ClampMagnitude(
+                Owner.InputReader.MoveInput,
+                1.0f);
+
+        Vector3 inputDirection =
+            Owner.Motor.CalculateCameraRelativeDirection(
+                normalizedInput);
+
+
+        // --------------------------------------------------------
+        // チャージ率に応じた、現在の曲がりやすさを計算
+        // --------------------------------------------------------
+
+        float currentDriftTurnSpeed =
             Mathf.Lerp(
-                m_normalRotationSpeed,
-                m_normalRotationSpeed *
-                    MIN_CHARGE_ROTATION_SPEED_RATE,
+                m_parameterAsset.DriftTurnSpeedAtChargeStart,
+                m_parameterAsset.DriftTurnSpeedAtFullCharge,
                 ChargeRate);
 
-        Owner.Motor.MoveAtFixedSpeed(
-            Owner.InputReader.MoveInput,
+
+        // --------------------------------------------------------
+        // チャージ中の移動方向を更新
+        // --------------------------------------------------------
+
+        UpdateDriftVelocityDirection(
+            inputDirection,
+            currentDriftTurnSpeed);
+
+
+        // --------------------------------------------------------
+        // プレイヤーの向きを移動方向へ追従させる
+        // --------------------------------------------------------
+
+        UpdateFacingDirection();
+
+
+        // --------------------------------------------------------
+        // チャージ中の移動
+        // --------------------------------------------------------
+
+        Owner.Motor.MoveWithDriftAtFixedSpeed(
+            m_currentVelocityDirection,
             m_moveParameters.MaxMoveSpeed,
-            currentRotationSpeed,
+            m_currentFacingDirection,
+            m_parameterAsset.FacingRotationSpeed,
             Time.fixedDeltaTime);
+
+
+        // --------------------------------------------------------
+        // カメラを、開始時の向きとプレイヤーの向きの中間へ追従させる
+        // --------------------------------------------------------
+
+        if (Owner.PlayerCamera != null)
+        {
+            Owner.PlayerCamera.UpdateDriftLookDirection(
+                m_currentFacingDirection,
+                m_parameterAsset.CameraDriftLookBlendRate,
+                m_parameterAsset.CameraDriftLookTurnSpeed,
+                Time.fixedDeltaTime);
+        }
+
+
+        // --------------------------------------------------------
+        // ゲージ更新
+        // --------------------------------------------------------
 
         if (Owner.VGaugeUI != null)
         {
             Owner.VGaugeUI.SetGaugeRate(ChargeRate);
         }
 
+
+        // --------------------------------------------------------
+        // デバッグログ
+        // --------------------------------------------------------
+
         m_speedLogElapsedTime += Time.fixedDeltaTime;
 
-        if (m_speedLogElapsedTime >= SPEED_LOG_INTERVAL)
+        if (m_speedLogElapsedTime >=
+            m_parameterAsset.SpeedLogInterval)
         {
             m_speedLogElapsedTime = 0.0f;
 
@@ -189,10 +301,112 @@ public sealed class PlayerBoostChargingState
                 $"チャージ={ChargeRate:P1} " +
                 $"実速度={Owner.Motor.HorizontalSpeed:F2} " +
                 $"固定速度={m_moveParameters.MaxMoveSpeed:F2} " +
-                $"旋回速度={currentRotationSpeed:F2}",
+                $"曲がりやすさ={currentDriftTurnSpeed:F1}deg/s",
                 Owner);
         }
     }
+
+
+    /// <summary>
+    /// チャージ中の移動方向を更新します。
+    ///
+    /// スティック入力に対して移動方向を徐々に追従させます。
+    /// turnSpeedDegreesPerSecondが小さいほど曲がりにくく、
+    /// 大きいほど曲がりやすくなります。
+    ///
+    /// 現在の移動方向より後ろ側への入力は無視します。
+    /// これにより、チャージ中に後退することを防ぎます。
+    /// </summary>
+    /// <param name="inputDirection">カメラ基準の入力方向。</param>
+    /// <param name="turnSpeedDegreesPerSecond">
+    /// 1秒間の最大方向転換角度（曲がりやすさ）。
+    /// </param>
+    private void UpdateDriftVelocityDirection(
+        Vector3 inputDirection,
+        float turnSpeedDegreesPerSecond)
+    {
+        inputDirection.y = 0.0f;
+
+        float deadZone =
+            m_parameterAsset.SteeringDeadZone;
+
+        if (inputDirection.sqrMagnitude <=
+            deadZone * deadZone)
+        {
+            return;
+        }
+
+        inputDirection.Normalize();
+
+
+        // --------------------------------------------------------
+        // 後ろ方向への入力を禁止
+        // --------------------------------------------------------
+
+        float forwardDot =
+            Vector3.Dot(
+                m_currentVelocityDirection,
+                inputDirection);
+
+        // 現在の移動方向より後ろを向いている入力は無視
+        if (forwardDot <= 0.0f)
+        {
+            return;
+        }
+
+
+        // --------------------------------------------------------
+        // 入力方向へ徐々に移動方向を変更
+        // --------------------------------------------------------
+
+        float maxRadiansDelta =
+            turnSpeedDegreesPerSecond *
+            Mathf.Deg2Rad *
+            Time.fixedDeltaTime;
+
+        m_currentVelocityDirection =
+            Vector3.RotateTowards(
+                m_currentVelocityDirection,
+                inputDirection,
+                maxRadiansDelta,
+                0.0f);
+
+        m_currentVelocityDirection.y = 0.0f;
+
+        if (m_currentVelocityDirection.sqrMagnitude >
+            0.0001f)
+        {
+            m_currentVelocityDirection.Normalize();
+        }
+    }
+
+
+    /// <summary>
+    /// プレイヤーの向きを現在の移動方向へ徐々に変更します。
+    /// </summary>
+    private void UpdateFacingDirection()
+    {
+        float maxRadiansDelta =
+            m_parameterAsset.FacingRotationSpeed *
+            Mathf.Deg2Rad *
+            Time.fixedDeltaTime;
+
+        m_currentFacingDirection =
+            Vector3.RotateTowards(
+                m_currentFacingDirection,
+                m_currentVelocityDirection,
+                maxRadiansDelta,
+                0.0f);
+
+        m_currentFacingDirection.y = 0.0f;
+
+        if (m_currentFacingDirection.sqrMagnitude >
+            0.0001f)
+        {
+            m_currentFacingDirection.Normalize();
+        }
+    }
+
 
     /// <summary>
     /// 状態終了時に呼ばれます。
@@ -203,31 +417,49 @@ public sealed class PlayerBoostChargingState
             "[PlayerBoostChargingState] チャージ状態終了",
             Owner);
 
+        if (Owner.PlayerCamera != null)
+        {
+            Owner.PlayerCamera.EndDriftLookOverride();
+        }
+
         Owner.AnimationPresenter.StopWalkAnimation();
     }
+
 
     /// <summary>
     /// チャージを解除したときの遷移を行います。
     /// </summary>
     private void ReleaseCharge()
     {
-        if (ChargeRate >= MIN_BOOST_CHARGE_RATE)
+        if (ChargeRate >= m_parameterAsset.MinBoostChargeRate)
         {
+            // ----------------------------------------------------
+            // チャージ終了時のプレイヤーの向きを保存
+            // ----------------------------------------------------
+            // この方向がVRunningStateのブーストダッシュ中、
+            // 固定のダッシュ方向として使用されます。
+            Owner.BoostDashDirection =
+                m_currentFacingDirection;
+
             Debug.Log(
                 $"[PlayerBoostChargingState] " +
-                $"チャージ率{ChargeRate:P1} → Vブーストへ遷移",
+                $"チャージ率{ChargeRate:P1} → Vブーストへ遷移 " +
+                $"ダッシュ方向={m_currentFacingDirection}",
                 Owner);
 
-            Owner.CarriedBoostGaugeRate = ChargeRate;
+            Owner.CarriedBoostGaugeRate =
+                ChargeRate;
 
             Machine.ChangeState<PlayerVRunningState>();
             return;
         }
 
+
         Debug.Log(
             $"[PlayerBoostChargingState] " +
             $"チャージ率{ChargeRate:P1} → 通常歩行へ遷移",
             Owner);
+
 
         if (Owner.VGaugeUI != null)
         {

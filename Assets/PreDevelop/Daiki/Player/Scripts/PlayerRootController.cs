@@ -24,6 +24,11 @@ public sealed class PlayerRootController : MonoBehaviour
     private PlayerVBoostMovementParameterAsset
         m_vBoostMovementParameterAsset;
 
+    // ブーストチャージパラメータ
+    [SerializeField]
+    private PlayerBoostChargingParameterAsset
+        m_boostChargingParameterAsset;
+
     // プレイヤーの物理ボディ
     [SerializeField, Header("コンポーネント")]
     private Rigidbody m_playerRigidbody;
@@ -64,6 +69,10 @@ public sealed class PlayerRootController : MonoBehaviour
     // 速度表示機能
     [SerializeField]
     private VSpeedUI m_vSpeedUI;
+
+    // プレイヤーカメラ機能
+    [SerializeField]
+    private PlayerCamera m_playerCamera;
 
     // 初期化されているか
     private bool m_isInitialized;
@@ -108,8 +117,10 @@ public sealed class PlayerRootController : MonoBehaviour
             m_splineGrindController,
             m_movementParameterAsset,
             m_vBoostMovementParameterAsset,
+            m_boostChargingParameterAsset,
             m_vGaugeUI,
-            m_vSpeedUI);
+            m_vSpeedUI,
+            m_playerCamera);
 
         m_isInitialized =
             m_motor.IsInitialized &&
@@ -250,6 +261,17 @@ public sealed class PlayerRootController : MonoBehaviour
             Debug.LogError(
                 $"[{nameof(PlayerRootController)}] " +
                 $"{nameof(PlayerVBoostMovementParameterAsset)}" +
+                "が設定されていません。",
+                this);
+
+            isValid = false;
+        }
+
+        if (m_boostChargingParameterAsset == null)
+        {
+            Debug.LogError(
+                $"[{nameof(PlayerRootController)}] " +
+                $"{nameof(PlayerBoostChargingParameterAsset)}" +
                 "が設定されていません。",
                 this);
 
