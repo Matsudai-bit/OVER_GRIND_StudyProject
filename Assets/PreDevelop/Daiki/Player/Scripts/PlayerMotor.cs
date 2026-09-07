@@ -218,9 +218,9 @@ public sealed class PlayerMotor : MonoBehaviour
     /// <param name="isJumpHeld">�W�����v���͂��p�������ǂ����B</param>
     /// <param name="deltaTime">�����X�V�̌o�ߎ��ԁB</param>
     public void ApplyExtraGravity(
-        PlayerMovementParameterAsset parameterAsset,
-        bool isJumpHeld,
-        float deltaTime)
+    PlayerMovementParameterAsset parameterAsset,
+    bool isJumpHeld,
+    float deltaTime)
     {
         if (!m_isInitialized)
         {
@@ -232,24 +232,22 @@ public sealed class PlayerMotor : MonoBehaviour
 
         if (velocity.y < 0.0f)
         {
-            // �������͒ǉ��̏d�͂����Z����
-            // (Use Gravity�ɂ��1�{���̓G���W�����������ς�)
+            // 落下中は追加の重力を加算
+            // (Use Gravityによる1倍分はエンジン側で処理済み)
             velocity.y += Physics.gravity.y *
                 (parameterAsset.FallGravityMultiplier - 1.0f) *
                 deltaTime;
         }
         else if (velocity.y > 0.0f && !isJumpHeld)
         {
-            // �㏸���ɓ��͂𗣂����ꍇ�͒ǉ��̏d�͂����Z����
+            // 上昇中に入力を離した場合は追加の重力を加算
             velocity.y += Physics.gravity.y *
                 (parameterAsset.LowJumpMultiplier - 1.0f) *
                 deltaTime;
         }
 
-        nextVelocity.x =
-            m_playerRigidbody.linearVelocity.x;
-        // velocity.y > 0.0f && isJumpHeld �̏ꍇ��
-        // �G���W���̎����d��(1�{)�݂̂�����(�ʏ�̏㏸)
+        // velocity.y > 0.0f && isJumpHeld の場合は
+        // エンジンの標準重力(1倍)のみが作用する(通常の上昇)
 
         float maxFallSpeed =
             Mathf.Max(parameterAsset.MaxFallSpeed, 0.0f);
