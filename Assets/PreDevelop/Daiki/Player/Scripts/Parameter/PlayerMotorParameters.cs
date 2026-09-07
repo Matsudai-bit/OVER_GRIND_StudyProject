@@ -49,4 +49,21 @@ public readonly struct PlayerMotorParameters
         TimeToStop = timeToStop;
         RotationSpeed = rotationSpeed;
     }
+
+    /// <summary>
+    /// PlayerMotor.Move / Decelerateにそのまま渡せる
+    /// PlayerMoveParametersへ変換します。
+    /// JumpPowerはPlayerMoveParameters側に存在しないため
+    /// 変換時に破棄されます(ジャンプは別途
+    /// PlayerMotor.Jump(JumpPower)で扱ってください)。
+    /// </summary>
+    /// <returns>変換されたPlayerMoveParameters。</returns>
+    public PlayerMoveParameters ToMoveParameters()
+    {
+        return new PlayerMoveParameters(
+            MaxMoveSpeed,
+            TimeToMaxSpeed,
+            TimeToStop,
+            RotationSpeed);
+    }
 }
