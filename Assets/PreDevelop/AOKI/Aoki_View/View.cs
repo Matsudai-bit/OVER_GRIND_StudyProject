@@ -1,6 +1,6 @@
 /// @ using :: 使用エンジン
 using UnityEngine;
-using TMPro;
+using TMPro; // TextMeshProを使用
 
 /// @ className :: テキスト値表示UIクラス
 /// @ name :: Aoki Hayate
