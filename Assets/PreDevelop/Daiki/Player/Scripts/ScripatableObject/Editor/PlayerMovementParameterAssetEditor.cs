@@ -45,6 +45,8 @@ public sealed class PlayerMovementParameterAssetEditor : Editor
     // 最大落下速度
     private SerializedProperty m_maxFallSpeedProperty;
 
+    // 空中移動時の空気抵抗
+    private SerializedProperty m_airResistanceProperty;
     /// <summary>
     /// SerializedPropertyを取得します。
     /// </summary>
@@ -76,6 +78,9 @@ public sealed class PlayerMovementParameterAssetEditor : Editor
 
         m_maxFallSpeedProperty =
             serializedObject.FindProperty("m_maxFallSpeed");
+        m_airResistanceProperty =
+    serializedObject.FindProperty("m_airResistance");
+
     }
 
     /// <summary>
@@ -185,6 +190,16 @@ public sealed class PlayerMovementParameterAssetEditor : Editor
                 "ジャンプ入力を上方向の移動へ反映する最大時間です。"));
 
         EditorGUILayout.Space();
+
+        EditorGUILayout.LabelField(
+            "空中移動",
+            EditorStyles.boldLabel);
+
+        EditorGUILayout.PropertyField(
+            m_airResistanceProperty,
+            new GUIContent(
+                "空気抵抗",
+                "空中で水平方向の速度が減衰する強さです。0で速度を維持します。"));
 
         EditorGUILayout.LabelField(
             "落下調整",
