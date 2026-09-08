@@ -44,6 +44,11 @@ public sealed class PlayerJumpingState
                 parameterAsset.JumpInputDuration &&
             Owner.InputReader.HasJumpInput;
 
+        // 空中時の水平方向に空気抵抗を適用する
+        Owner.Motor.ApplyAirResistance(
+            parameterAsset.AirResistance,
+            Time.fixedDeltaTime);
+
         // 上昇・下降状態に応じた追加重力を適用する
         Owner.Motor.ApplyExtraGravity(
             parameterAsset,

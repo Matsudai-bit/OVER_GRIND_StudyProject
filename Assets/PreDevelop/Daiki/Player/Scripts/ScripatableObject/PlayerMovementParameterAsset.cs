@@ -50,6 +50,12 @@ public sealed class PlayerMovementParameterAsset : ScriptableObject
     [Min(MIN_TIME)]
     private float m_jumpInputDuration = 0.5f;
 
+    // 空中移動時の空気抵抗
+    [SerializeField, Header("空中移動")]
+    [Tooltip("空中で水平方向の速度が減衰する強さです。0で速度を維持します。")]
+    [Min(0.0f)]
+    private float m_airResistance = 1.0f;
+
     // 落下中の重力倍率
     [SerializeField]
     [Tooltip("落下中に適用する重力倍率です。大きいほど早く落下します。")]
@@ -77,6 +83,11 @@ public sealed class PlayerMovementParameterAsset : ScriptableObject
     /// ジャンプ入力の最大反映時間を取得します。
     /// </summary>
     public float JumpInputDuration => m_jumpInputDuration;
+
+    /// <summary>
+    /// 空中移動時の空気抵抗を取得します。
+    /// </summary>
+    public float AirResistance => m_airResistance;
 
     /// <summary>
     /// 落下中に適用する重力倍率を取得します。

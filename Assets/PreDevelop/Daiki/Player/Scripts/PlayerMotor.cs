@@ -629,4 +629,52 @@ public sealed class PlayerMotor : MonoBehaviour
                 speed,
                 0.0f);
     }
+    /// <summary>
+    /// 空中移動時の水平方向の空気抵抗を適用します。
+    /// </summary>
+    /// <param name="airResistance">空気抵抗の強さ。</param>
+    /// <param name="deltaTime">経過時間。</param>
+    public void ApplyAirResistance(
+        float airResistance,
+        float deltaTime)
+    {
+        if (!m_isInitialized ||
+            airResistance <= 0.0f)
+        {
+            return;
+        }
+
+        Vector3 velocity =
+            m_playerRigidbody.linearVelocity;
+
+        Vector3 horizontalVelocity =
+            new Vector3(
+                velocity.x,
+                0.0f,
+                velocity.z);
+
+        float horizontalSpeed =
+            horizontalVelocity.magnitude;
+
+        if (horizontalSpeed <= 0.0f)
+        {
+            return;
+        }
+
+        float deceleration =
+            horizontalSpeed * airResistance;
+
+        Vector3 nextHorizontalVelocity =
+            Vector3.MoveTowards(
+                horizontalVelocity,
+                Vector3.zero,
+                deceleration * deltaTime);
+
+        // 垂直方向の速度は変更しない
+        m_playerRigidbody.linearVelocity =
+            new Vector3(
+                nextHorizontalVelocity.x,
+                velocity.y,
+                nextHorizontalVelocity.z);
+    }
 }
