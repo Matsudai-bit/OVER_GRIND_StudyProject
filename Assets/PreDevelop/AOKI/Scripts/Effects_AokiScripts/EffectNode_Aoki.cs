@@ -5,30 +5,29 @@ using System;
 public class EffectNode_Aoki : MonoBehaviour
 {
     private ParticleSystem m_targetParticle;
-    private Action<EffectNode_Aoki> m_returnAction; //プールへ帰還する用
+    private Action<EffectNode_Aoki> m_returnAction; // プールへ帰還する用
 
     private bool m_isLooping;
     private bool m_isPaused;
 
     private void Awake()
     {
-        //　子要素を含めたパーティクルを一括制御できるようにするキャッシュ
+        // 子要素を含めたパーティクルを一括制御できるようにするキャッシュ
         m_targetParticle = GetComponent<ParticleSystem>();
     }
 
     /// <summary>
     /// エフェクト再生開始関数
     /// </summary>
-    /// <param name="loop"></param>
-    /// <param name="onReturnTopool"></param>
     public void EffectsPlayer(bool loop, Action<EffectNode_Aoki> onReturnTopool)
     {
         m_isLooping = loop;
         m_returnAction = onReturnTopool;
-        m_isPaused = true;
 
+        // 再生開始時はポーズ状態ではないのでfalse
+        m_isPaused = false;
 
-        // プレハブの設定モスを防ぐため、コードからループ設定を上書き
+        // プレハブの設定ミスを防ぐため、コードからループ設定を上書き
         var main = m_targetParticle.main;
         main.loop = loop;
         m_targetParticle.Play(true);
@@ -39,18 +38,29 @@ public class EffectNode_Aoki : MonoBehaviour
     /// </summary>
     public void EffectsStop()
     {
-       if(m_targetParticle != null)
+        if (m_targetParticle != null)
         {
-            m_targetParticle.Stop(true,ParticleSystemStopBehavior.StopEmittingAndClear);
-        
+            m_targetParticle.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
         }
         ReturnToPool();
     }
 
     /// <summary>
-    /// 再開開始関数
+    /// 一時停止関数
     /// </summary>
     public void Pause()
+    {
+        if (m_targetParticle != null && !m_isPaused)
+        {
+            m_targetParticle.Pause(true); // 実際にポーズさせる
+            m_isPaused = true;
+        }
+    }
+
+    /// <summary>
+    /// 再開開始関数
+    /// </summary>
+    public void Resume()
     {
         if (m_targetParticle != null && m_isPaused)
         {
@@ -60,7 +70,7 @@ public class EffectNode_Aoki : MonoBehaviour
     }
 
     /// <summary>
-    ///  更新処理
+    /// 更新処理
     /// </summary>
     private void Update()
     {
@@ -77,7 +87,7 @@ public class EffectNode_Aoki : MonoBehaviour
 
     private void ReturnToPool()
     {
-        if(m_returnAction != null)
+        if (m_returnAction != null)
         {
             m_returnAction.Invoke(this);
             m_returnAction = null;
