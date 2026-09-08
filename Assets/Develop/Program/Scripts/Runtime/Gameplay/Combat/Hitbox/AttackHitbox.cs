@@ -4,6 +4,7 @@ using UnityEngine;
 
 /// <summary>
 /// 攻撃用Colliderの衝突判定を管理します。
+/// 単発ヒットモードと多段ヒットモードの両方をサポートします。
 /// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(Collider))]
@@ -35,8 +36,14 @@ public sealed class AttackHitbox : MonoBehaviour
     // 外部からダメージが設定されているか
     private bool m_hasDamageOverride;
 
-    // 現在の攻撃で命中済みの対象ID
+    // 現在の攻撃で命中済みの対象ID（単発ヒットモード用）
     private readonly HashSet<int> m_hitTargetIds = new();
+
+    // 現在Triggerに重なっている対象（多段ヒットモード用）
+    private readonly HashSet<IDamageable> m_overlappingTargets = new();
+
+    // 多段ヒットモードで判定中かどうか
+    private bool m_isContinuousHitMode;
 
     /// <summary>
     /// 現在のダメージ量を取得します。
@@ -68,7 +75,8 @@ public sealed class AttackHitbox : MonoBehaviour
     }
 
     /// <summary>
-    /// 攻撃判定を有効にします。
+    /// 攻撃判定を単発ヒットモードで有効にします。
+    /// 同一攻撃中、同じ対象には1回のみ命中します。
     /// </summary>
     public void EnableHitbox()
     {
@@ -87,18 +95,47 @@ public sealed class AttackHitbox : MonoBehaviour
 
         // 新しい攻撃判定として命中履歴を初期化します。
         m_hitTargetIds.Clear();
+        m_isContinuousHitMode = false;
         m_hitboxCollider.enabled = true;
         gameObject.SetActive(true);
     }
 
     /// <summary>
-    /// ダメージ量を指定して攻撃判定を有効にします。
+    /// ダメージ量を指定して攻撃判定を単発ヒットモードで有効にします。
     /// </summary>
     /// <param name="damage">与えるダメージ量。</param>
     public void EnableHitbox(int damage)
     {
         SetDamage(damage);
         EnableHitbox();
+    }
+
+    /// <summary>
+    /// 攻撃判定を多段ヒットモードで有効にします。
+    /// Trigger内に留まっている対象を継続的に記録し、
+    /// <see cref="ApplyContinuousDamage"/>が呼ばれるたびに
+    /// まとめてダメージを与える方式です。
+    /// </summary>
+    public void EnableContinuousHitbox()
+    {
+        if (m_hitboxCollider == null)
+        {
+            Debug.LogWarning(
+                $"{nameof(Collider)}が設定されていません。",
+                this);
+            return;
+        }
+
+        if (!m_hasDamageOverride)
+        {
+            m_currentDamage = m_defaultDamage;
+        }
+
+        m_hitTargetIds.Clear();
+        m_overlappingTargets.Clear();
+        m_isContinuousHitMode = true;
+        m_hitboxCollider.enabled = true;
+        gameObject.SetActive(true);
     }
 
     /// <summary>
@@ -132,6 +169,53 @@ public sealed class AttackHitbox : MonoBehaviour
 
         m_hitboxCollider.enabled = false;
         gameObject.SetActive(false);
+
+        m_isContinuousHitMode = false;
+        m_overlappingTargets.Clear();
+    }
+
+    /// <summary>
+    /// 多段ヒットモード中、現在重なっている全対象へダメージを与えます。
+    /// 一定周期ごとに外部（<see cref="PlayerAttackController"/>等）から
+    /// 呼び出されることを想定しています。
+    /// </summary>
+    /// <returns>
+    /// true：1体以上の対象にダメージを与えた（命中した）。
+    /// false：重なっている対象がなく、命中しなかった。
+    /// </returns>
+    public bool ApplyContinuousDamage()
+    {
+        if (!m_isContinuousHitMode ||
+            m_overlappingTargets.Count == 0)
+        {
+            return false;
+        }
+
+        // ダメージ適用中に対象が破棄されコレクションを操作する
+        // 可能性があるため、コピーを取ってから反復します。
+        List<IDamageable> targets =
+            new List<IDamageable>(m_overlappingTargets);
+
+        bool hasHitAnyTarget = false;
+
+        foreach (IDamageable damageReceiver in targets)
+        {
+            Component receiverComponent =
+                damageReceiver as Component;
+
+            // 対象が破棄されている場合は追跡から除去します。
+            if (receiverComponent == null)
+            {
+                m_overlappingTargets.Remove(damageReceiver);
+                continue;
+            }
+
+            damageReceiver.TakeDamage(m_currentDamage);
+            AttackHit?.Invoke(damageReceiver);
+            hasHitAnyTarget = true;
+        }
+
+        return hasHitAnyTarget;
     }
 
     /// <summary>
@@ -159,6 +243,14 @@ public sealed class AttackHitbox : MonoBehaviour
             return;
         }
 
+        if (m_isContinuousHitMode)
+        {
+            // 多段ヒットモードでは即時ダメージを与えず、
+            // 重なっている対象として記録するのみに留めます。
+            m_overlappingTargets.Add(damageReceiver);
+            return;
+        }
+
         Component receiverComponent = damageReceiver as Component;
 
         if (receiverComponent == null)
@@ -176,6 +268,28 @@ public sealed class AttackHitbox : MonoBehaviour
 
         damageReceiver.TakeDamage(m_currentDamage);
         AttackHit?.Invoke(damageReceiver);
+    }
+
+    /// <summary>
+    /// Triggerから離脱した対象を処理します（多段ヒットモード用）。
+    /// </summary>
+    /// <param name="other">離脱したCollider。</param>
+    private void OnTriggerExit(Collider other)
+    {
+        if (!m_isContinuousHitMode || other == null)
+        {
+            return;
+        }
+
+        IDamageable damageReceiver =
+            other.GetComponentInParent<IDamageable>();
+
+        if (damageReceiver == null)
+        {
+            return;
+        }
+
+        m_overlappingTargets.Remove(damageReceiver);
     }
 
     /// <summary>

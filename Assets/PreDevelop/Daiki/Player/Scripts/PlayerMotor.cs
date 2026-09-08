@@ -65,6 +65,36 @@ public sealed class PlayerMotor : MonoBehaviour
     }
 
     /// <summary>
+    /// プレイヤーの体が現在向いている水平方向を取得します。
+    /// 移動速度やカメラの向きに関係なく、
+    /// Transformの正面方向を基準とします（攻撃の繰り出し方向などに使用）。
+    /// </summary>
+    public Vector3 FacingDirection
+    {
+        get
+        {
+            if (!m_isInitialized ||
+                m_playerRigidbody == null)
+            {
+                return Vector3.forward;
+            }
+
+            Vector3 forward =
+                m_playerRigidbody.transform.forward;
+
+            forward.y = 0.0f;
+
+            if (forward.sqrMagnitude <=
+                DIRECTION_SQR_THRESHOLD)
+            {
+                return Vector3.forward;
+            }
+
+            return forward.normalized;
+        }
+    }
+
+    /// <summary>
     /// 現在の垂直方向の速度を取得します。
     /// </summary>
     public float VerticalVelocity =>
