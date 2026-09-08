@@ -17,6 +17,12 @@ public sealed class PlayerGrindingState
         {
             Machine.ChangeState<PlayerIdlingState>();
         }
+
+        if (Owner.InputReader.HasJumpInput)
+        {
+            Owner.GrindController.StopGrind();
+            Machine.ChangeState<PlayerJumpingState>();
+        }
     }
     /// <summary>
     /// 一定間隔の更新処理を行います。
