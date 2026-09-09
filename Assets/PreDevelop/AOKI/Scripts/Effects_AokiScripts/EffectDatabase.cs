@@ -1,9 +1,8 @@
 using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
-using Unity.Collections;
 
-//エフェクトの識別子
+// エフェクトの識別子
 public enum EffectID
 {
     Explosion,
@@ -18,18 +17,19 @@ public class EffectDatabase : ScriptableObject
     public struct EffectData
     {
         public EffectID m_id;
-        public EffectNode_Aoki m_prefab; //nodeの指定
+        public EffectNode_Aoki m_prefab;
     }
 
-
-    [SerializeReference] private List<EffectData> m_effectList;
+    // [SerializeReference] はインターフェース等に使うため、構造体には [SerializeField] を使用します
+    [SerializeField]
+    public List<EffectData> m_effectList = new List<EffectData>();
 
     private Dictionary<EffectID, EffectNode_Aoki> m_dict;
 
     public void Initialize()
     {
-        // 検索を０にするため辞書化
-        m_dict = m_effectList.ToDictionary(x => x.m_id , x=> x.m_prefab);
+        // 検索をOにするため辞書化
+        m_dict = m_effectList.ToDictionary(x => x.m_id, x => x.m_prefab);
     }
 
     public EffectNode_Aoki GetPrefab(EffectID id)
