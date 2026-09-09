@@ -16,7 +16,7 @@ public class ButtonSelector : MonoBehaviour
 
     // カーソル移動させる場合に呼び出す関数
     [SerializeField]
-    private UnityEngine.Events.UnityEvent<Vector3, Vector3> m_moveAction = null;
+    private UnityEngine.Events.UnityEvent<GameObject, Vector3> m_moveAction = null;
 
     private void Start()
     {
@@ -62,7 +62,7 @@ public class ButtonSelector : MonoBehaviour
         if(m_moveAction.GetPersistentEventCount() > 0)
         {
             m_moveAction.Invoke(
-                m_cursor.transform.position,
+                m_cursor,
                 m_buttons[m_selectButtonNumber].transform.position
             );
         }
