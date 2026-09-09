@@ -10,13 +10,13 @@ public class ButtonSelector : MonoBehaviour
 
     // カーソルオブジェクト
     [SerializeField]
-    private GameObject m_cursor;
+    private UnityEngine.UI.Image m_cursor;
     // カーソルが指しているボタン番号
     private int m_selectButtonNumber = 0;
 
     // カーソル移動させる場合に呼び出す関数
     [SerializeField]
-    private UnityEngine.Events.UnityEvent<GameObject, Vector3> m_moveAction = null;
+    private UnityEngine.Events.UnityEvent<UnityEngine.UI.Image, Vector3> m_moveAction = null;
 
     private void Start()
     {
