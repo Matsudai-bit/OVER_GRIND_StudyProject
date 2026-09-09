@@ -61,6 +61,7 @@ public class TitleButton : MonoBehaviour
             // 変更
             m_currentScale += SCALE_SPEED * Time.deltaTime;
             
+
         }
 
         // スケールを範囲内に収める
