@@ -263,6 +263,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 127084751}
+  - component: {fileID: 127084753}
   - component: {fileID: 127084752}
   m_Layer: 5
   m_Name: TitleButtonManager
@@ -302,12 +303,39 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a52340f466d4bde4aa7f3ad60ac9bde7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TitleButtonManager
+--- !u!114 &127084753
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 127084750}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4aae24bb00f5145468ec1dcfce9c5d22, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ButtonSelector
   m_buttons:
   - {fileID: 1399107074}
   - {fileID: 1271871417}
   - {fileID: 77080367}
   - {fileID: 697113120}
   m_cursor: {fileID: 1212141261}
+  m_moveAction:
+    m_PersistentCalls:
+      m_Calls:
+      - m_Target: {fileID: 127084752}
+        m_TargetAssemblyTypeName: TitleButtonManager, Assembly-CSharp
+        m_MethodName: MoveCursor
+        m_Mode: 0
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!1 &282324940
 GameObject:
   m_ObjectHideFlags: 0
@@ -752,10 +780,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0cd44c1031e13a943bb63640046fad76, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.CanvasScaler
-  m_UiScaleMode: 0
+  m_UiScaleMode: 1
   m_ReferencePixelsPerUnit: 100
   m_ScaleFactor: 1
-  m_ReferenceResolution: {x: 800, y: 600}
+  m_ReferenceResolution: {x: 1920, y: 1080}
   m_ScreenMatchMode: 0
   m_MatchWidthOrHeight: 0
   m_PhysicalUnit: 3
