@@ -4,9 +4,9 @@ using UnityEngine.InputSystem;
 public class TitleButtonManager : MonoBehaviour
 {
     public void MoveCursor(
-        GameObject  cursor,             // カーソル
+        UnityEngine.UI.Image cursor,    // カーソル
         Vector3     targetPosition)     // 目標座標
     {
-
+        
     }
 }
