@@ -4,13 +4,11 @@ using DG.Tweening;
 
 public class TitleButtonManager : MonoBehaviour
 {
-    Vector3 pos  = Vector3.zero;
+    Vector3 pos = Vector3.zero;
     public void MoveCursor(
-        UnityEngine.UI.Image  cursor,             // ƒJ[ƒ\ƒ‹
-        Vector3     targetPosition)     // –Ú•WÀ•W
+        UnityEngine.UI.Image cursor,             // ï¿½Jï¿½[ï¿½\ï¿½ï¿½
+        Vector3 targetPosition)     // ï¿½Ú•Wï¿½ï¿½ï¿½W
     {
-        
-
         if (pos == targetPosition)
         {
             cursor.DOFade(endValue: 1.0f, duration: 0.2f);
@@ -18,9 +16,10 @@ public class TitleButtonManager : MonoBehaviour
         else if (pos != targetPosition)
         {
             cursor.DOFade(endValue: 0.0f, duration: 0.01f);
-            pos = targetPosition;  
+
+            pos = targetPosition;
         }
-        
+
         cursor.transform.DOMove(targetPosition, 0.2f);
 
     }
