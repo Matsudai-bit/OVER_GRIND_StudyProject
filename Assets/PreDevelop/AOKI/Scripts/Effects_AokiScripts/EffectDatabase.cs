@@ -2,12 +2,6 @@ using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
 
-// エフェクトの識別子
-public enum EffectID
-{
-    Explosion
-}
-
 [CreateAssetMenu(fileName = "EffectDatabase", menuName = "Data/EffectDatabase")]
 public class EffectDatabase : ScriptableObject
 {
