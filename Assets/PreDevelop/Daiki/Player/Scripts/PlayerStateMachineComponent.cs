@@ -140,6 +140,37 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
 
 
     // ============================================================
+    // 速度表示オーバーライド
+    // ============================================================
+
+    // 速度UIへ表示する値を、実際の物理速度の代わりに上書きする値
+    // （nullの場合は通常通りMotor.HorizontalSpeedを表示する）
+    // 例：攻撃中に物理速度が実際の状況と異なる場合でも、
+    // 　　攻撃継続リソースとしての速度を見た目上は減衰表示させたい場合に使用
+    private float? m_speedDisplayOverride;
+
+    /// <summary>
+    /// 速度UIへ表示する値を上書き設定します。
+    /// PlayerAttackingStateなど、実際の物理速度とは別の値を
+    /// 見た目上の速度として表示したいStateが使用します。
+    /// </summary>
+    /// <param name="displaySpeed">表示する速度値。</param>
+    public void SetSpeedDisplayOverride(float displaySpeed)
+    {
+        m_speedDisplayOverride = Mathf.Max(0.0f, displaySpeed);
+    }
+
+    /// <summary>
+    /// 速度UIの表示オーバーライドを解除し、
+    /// 通常通り実際の物理速度を表示する状態に戻します。
+    /// </summary>
+    public void ClearSpeedDisplayOverride()
+    {
+        m_speedDisplayOverride = null;
+    }
+
+
+    // ============================================================
     // Vブースト関連
     // ============================================================
 
@@ -390,6 +421,8 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
 
     /// <summary>
     /// 現在の水平速度をVSpeedUIへ反映します。
+    /// 速度表示オーバーライドが設定されている場合は、
+    /// 実際の物理速度の代わりにその値を表示します。
     /// </summary>
     private void UpdateSpeedDisplay()
     {
@@ -398,7 +431,11 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
             return;
         }
 
-        m_vSpeedUI.SetSpeed(m_motor.HorizontalSpeed);
+        float displaySpeed =
+            m_speedDisplayOverride ??
+            m_motor.HorizontalSpeed;
+
+        m_vSpeedUI.SetSpeed(displaySpeed);
     }
 
     /// <summary>

@@ -12,9 +12,26 @@ public sealed class PlayerMotor : MonoBehaviour
     // 方向ベクトルの有効判定に使用する閾値
     private const float DIRECTION_SQR_THRESHOLD = 0.0001f;
 
+    // 障害物検知を行う最低速度の閾値
+    // これ未満の速度では障害物検知を行わない（静止判定のノイズ回避）
+    private const float OBSTACLE_CHECK_SPEED_THRESHOLD = 0.01f;
+
     // カメラ基準移動に使用するTransform
     [SerializeField, Header("移動基準")]
     private Transform m_movementReference;
+
+    // 障害物への食い込みを防ぐための手前バッファ距離
+    // 大きいほど障害物の手前で早めに減速するが、
+    // 隙間の狭い通路で引っかかりやすくなる
+    [SerializeField, Header("障害物検知")]
+    [Min(0.0f)]
+    private float m_obstacleSkinWidth = 0.05f;
+
+    // 障害物に接触している間、1秒あたり減速する速度
+    // 値が大きいほど、障害物へ接触した際に速く止まる
+    [SerializeField]
+    [Min(0.0f)]
+    private float m_obstacleDecelerationPerSecond = 20.0f;
 
     // プレイヤーの物理ボディ
     private Rigidbody m_playerRigidbody;
@@ -136,10 +153,15 @@ public sealed class PlayerMotor : MonoBehaviour
     /// <param name="moveInput">移動入力。</param>
     /// <param name="parameters">移動用パラメータ。</param>
     /// <param name="deltaTime">物理更新の経過時間。</param>
+    /// <param name="applyObstacleAvoidance">
+    /// 障害物への接触時に緩やかな減速を適用するかどうか。
+    /// 通常はtrueのまま使用してください。
+    /// </param>
     public void Move(
         Vector2 moveInput,
         PlayerMoveParameters parameters,
-        float deltaTime)
+        float deltaTime,
+        bool applyObstacleAvoidance = true)
     {
         if (!m_isInitialized)
         {
@@ -186,7 +208,9 @@ public sealed class PlayerMotor : MonoBehaviour
                 acceleration * deltaTime);
 
         ApplyHorizontalVelocity(
-            nextHorizontalVelocity);
+            nextHorizontalVelocity,
+            deltaTime,
+            applyObstacleAvoidance);
 
         // 移動方向へ徐々に回転
         RotateTowardsMoveDirection(
@@ -231,7 +255,8 @@ public sealed class PlayerMotor : MonoBehaviour
                 deceleration * deltaTime);
 
         ApplyHorizontalVelocity(
-            nextHorizontalVelocity);
+            nextHorizontalVelocity,
+            deltaTime);
     }
 
     /// <summary>
@@ -328,8 +353,49 @@ public sealed class PlayerMotor : MonoBehaviour
             return;
         }
 
-        ApplyHorizontalVelocity(
-            Vector3.zero);
+        // 目標速度が0のため障害物検知は不要
+        Vector3 nextVelocity =
+            Vector3.zero;
+
+        nextVelocity.y =
+            m_playerRigidbody.linearVelocity.y;
+
+        m_playerRigidbody.linearVelocity =
+            nextVelocity;
+    }
+
+    /// <summary>
+    /// 指定した方向・距離ぶん、Rigidbodyの位置を即座に補正します（水平成分のみ）。
+    /// アニメーション駆動の部位（脚など）が物理演算を介さずに
+    /// 対象へ食い込んでしまった場合に、その貫通量を打ち消す用途を想定しています。
+    /// </summary>
+    /// <param name="direction">補正する方向。</param>
+    /// <param name="distance">補正する距離。</param>
+    public void ResolvePenetration(
+        Vector3 direction,
+        float distance)
+    {
+        if (!m_isInitialized || distance <= 0.0f)
+        {
+            return;
+        }
+
+        Vector3 horizontalDirection = direction;
+        horizontalDirection.y = 0.0f;
+
+        if (horizontalDirection.sqrMagnitude <=
+            DIRECTION_SQR_THRESHOLD)
+        {
+            return;
+        }
+
+        horizontalDirection.Normalize();
+
+        Vector3 offset =
+            horizontalDirection * distance;
+
+        m_playerRigidbody.MovePosition(
+            m_playerRigidbody.position + offset);
     }
 
     /// <summary>
@@ -432,21 +498,117 @@ public sealed class PlayerMotor : MonoBehaviour
 
     /// <summary>
     /// 水平速度をRigidbodyへ適用します。
+    /// 障害物検知を行う場合、進行方向に障害物がないかを確認し、
+    /// あれば緩やかに減速させます（<see cref="ClampVelocityForObstacles"/>）。
     /// </summary>
     /// <param name="horizontalVelocity">
-    /// 適用する水平速度。
+    /// 適用したい水平速度（障害物検知前の目標値）。
+    /// </param>
+    /// <param name="deltaTime">
+    /// この速度が適用される時間幅。障害物までの距離判定に使用する。
+    /// </param>
+    /// <param name="applyObstacleAvoidance">
+    /// 障害物検知による減速を適用するかどうか。
+    /// falseの場合、目標速度をそのまま適用します
+    /// （攻撃状態など、独自の速度制御を優先したい場合に使用）。
     /// </param>
     private void ApplyHorizontalVelocity(
-        Vector3 horizontalVelocity)
+        Vector3 horizontalVelocity,
+        float deltaTime,
+        bool applyObstacleAvoidance = true)
     {
+        Vector3 nextHorizontalVelocity =
+            applyObstacleAvoidance
+                ? ClampVelocityForObstacles(
+                    horizontalVelocity,
+                    deltaTime)
+                : horizontalVelocity;
+
         Vector3 nextVelocity =
-            horizontalVelocity;
+            nextHorizontalVelocity;
 
         nextVelocity.y =
             m_playerRigidbody.linearVelocity.y;
 
         m_playerRigidbody.linearVelocity =
             nextVelocity;
+    }
+
+    /// <summary>
+    /// 進行方向に障害物がある場合、
+    /// 実際の現在速度を基準に緩やかに減速させます。
+    /// 障害物の手前で瞬時に速度を切り詰めるのではなく、
+    /// <see cref="m_obstacleDecelerationPerSecond"/>の減速度で
+    /// 徐々に速度を落とすことで、不自然な急停止を避けます。
+    /// </summary>
+    /// <param name="horizontalVelocity">要求されている目標水平速度。</param>
+    /// <param name="deltaTime">この速度が適用される時間幅。</param>
+    /// <returns>障害物を考慮して減速した水平速度。</returns>
+    private Vector3 ClampVelocityForObstacles(
+        Vector3 horizontalVelocity,
+        float deltaTime)
+    {
+        float requestedSpeed = horizontalVelocity.magnitude;
+
+        if (requestedSpeed <= OBSTACLE_CHECK_SPEED_THRESHOLD ||
+            deltaTime <= 0.0f)
+        {
+            return horizontalVelocity;
+        }
+
+        Vector3 direction =
+            horizontalVelocity / requestedSpeed;
+
+        // このステップで実際に進もうとしている距離
+        float travelDistance =
+            requestedSpeed * deltaTime;
+
+        // Rigidbodyに付いている非Trigger Colliderを基準に、
+        // 進行方向へのスイープ判定を行う
+        // （AttackHitbox等のTrigger Colliderは自動的に除外される）
+        bool isBlocked =
+            m_playerRigidbody.SweepTest(
+                direction,
+                out RaycastHit hitInfo,
+                travelDistance,
+                QueryTriggerInteraction.Ignore);
+
+        if (!isBlocked)
+        {
+            return horizontalVelocity;
+        }
+
+        // 障害物の手前、バッファ分だけ余裕を持たせた距離までなら
+        // 進んでよい速度（このステップの上限）
+        float allowedDistance =
+            Mathf.Max(
+                hitInfo.distance - m_obstacleSkinWidth,
+                0.0f);
+
+        float allowedSpeedThisStep =
+            allowedDistance / deltaTime;
+
+        // 現在の実速度を基準に、上限速度へ向けて
+        // 緩やかに減速させる（瞬時の切り詰めを避ける）
+        float currentActualSpeed =
+            GetHorizontalVelocity().magnitude;
+
+        float decelerationThisStep =
+            m_obstacleDecelerationPerSecond * deltaTime;
+
+        float nextSpeed =
+            Mathf.MoveTowards(
+                currentActualSpeed,
+                allowedSpeedThisStep,
+                decelerationThisStep);
+
+        nextSpeed =
+            Mathf.Clamp(
+                nextSpeed,
+                0.0f,
+                requestedSpeed);
+
+        return direction * nextSpeed;
     }
 
     /// <summary>
@@ -498,11 +660,15 @@ public sealed class PlayerMotor : MonoBehaviour
     /// <param name="speed">移動速度。</param>
     /// <param name="rotationSpeed">回転速度。</param>
     /// <param name="deltaTime">物理更新時間。</param>
+    /// <param name="applyObstacleAvoidance">
+    /// 障害物への接触時に緩やかな減速を適用するかどうか。
+    /// </param>
     public void MoveAtFixedSpeed(
         Vector2 moveInput,
         float speed,
         float rotationSpeed,
-        float deltaTime)
+        float deltaTime,
+        bool applyObstacleAvoidance = true)
     {
         if (!m_isInitialized)
         {
@@ -529,7 +695,9 @@ public sealed class PlayerMotor : MonoBehaviour
              inputMagnitude);
 
         ApplyHorizontalVelocity(
-            targetHorizontalVelocity);
+            targetHorizontalVelocity,
+            deltaTime,
+            applyObstacleAvoidance);
 
         RotateTowardsMoveDirection(
             moveDirection,
@@ -559,11 +727,16 @@ public sealed class PlayerMotor : MonoBehaviour
     /// <param name="deltaTime">
     /// 物理更新時間。
     /// </param>
+    /// <param name="applyObstacleAvoidance">
+    /// 障害物への接触時に緩やかな減速を適用するかどうか。
+    /// 攻撃状態のように、独自の速度消費ロジックを優先したい場合はfalseを指定してください。
+    /// </param>
     public void MoveAtFixedWorldDirection(
         Vector3 worldDirection,
         float speed,
         float rotationSpeed,
-        float deltaTime)
+        float deltaTime,
+        bool applyObstacleAvoidance = true)
     {
         if (!m_isInitialized)
         {
@@ -589,7 +762,9 @@ public sealed class PlayerMotor : MonoBehaviour
 
         // 移動方向はworldDirectionに完全固定
         ApplyHorizontalVelocity(
-            targetHorizontalVelocity);
+            targetHorizontalVelocity,
+            deltaTime,
+            applyObstacleAvoidance);
 
         // 向きだけは指定した回転速度で徐々に合わせる
         RotateTowardsMoveDirection(
@@ -621,12 +796,16 @@ public sealed class PlayerMotor : MonoBehaviour
     /// <param name="deltaTime">
     /// 物理更新時間。
     /// </param>
+    /// <param name="applyObstacleAvoidance">
+    /// 障害物への接触時に緩やかな減速を適用するかどうか。
+    /// </param>
     public void MoveWithDriftAtFixedSpeed(
         Vector3 velocityDirection,
         float speed,
         Vector3 facingDirection,
         float facingRotationSpeed,
-        float deltaTime)
+        float deltaTime,
+        bool applyObstacleAvoidance = true)
     {
         if (!m_isInitialized)
         {
@@ -646,7 +825,9 @@ public sealed class PlayerMotor : MonoBehaviour
                 0.0f);
 
         ApplyHorizontalVelocity(
-            targetHorizontalVelocity);
+            targetHorizontalVelocity,
+            deltaTime,
+            applyObstacleAvoidance);
 
         // キャラクターの向きは実際の進行方向とは独立して制御
         RotateTowardsMoveDirection(

@@ -129,6 +129,77 @@ public class PlayerAttackController : MonoBehaviour
     }
 
     /// <summary>
+    /// いずれかの攻撃ヒットボックスが、現在1体以上の対象と重なっているかどうかを判定します。
+    /// 攻撃中の前進を止めるかどうかの判定などに使用します。
+    /// </summary>
+    /// <returns>
+    /// true：いずれかのヒットボックスが対象と重なっている。
+    /// false：どのヒットボックスも対象と重なっていない。
+    /// </returns>
+    public bool IsHittingAnyTarget()
+    {
+        foreach (AttackHitbox attackHitbox in m_attackHitboxes)
+        {
+            if (attackHitbox == null)
+            {
+                continue;
+            }
+
+            if (attackHitbox.HasOverlappingTargets)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// すべての攻撃ヒットボックスの中で、
+    /// 最も深く貫通している対象についての貫通解消方向・距離を取得します。
+    /// </summary>
+    /// <param name="direction">貫通を解消する方向（正規化済み）。</param>
+    /// <param name="distance">貫通している距離。</param>
+    /// <returns>
+    /// true：貫通している対象があり、direction・distanceが有効です。
+    /// false：貫通している対象がありません。
+    /// </returns>
+    public bool TryGetMaxPenetration(
+        out Vector3 direction,
+        out float distance)
+    {
+        direction = Vector3.zero;
+        distance = 0.0f;
+
+        bool hasFoundPenetration = false;
+
+        foreach (AttackHitbox attackHitbox in m_attackHitboxes)
+        {
+            if (attackHitbox == null)
+            {
+                continue;
+            }
+
+            if (!attackHitbox.TryGetMaxPenetration(
+                    out Vector3 hitboxDirection,
+                    out float hitboxDistance))
+            {
+                continue;
+            }
+
+            if (!hasFoundPenetration ||
+                hitboxDistance > distance)
+            {
+                direction = hitboxDirection;
+                distance = hitboxDistance;
+                hasFoundPenetration = true;
+            }
+        }
+
+        return hasFoundPenetration;
+    }
+
+    /// <summary>
     /// すべての攻撃ヒットボックスを無効化します。
     /// </summary>
     public void DisableAttackHitboxes()

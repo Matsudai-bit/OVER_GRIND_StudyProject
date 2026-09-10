@@ -39,8 +39,9 @@ public sealed class AttackHitbox : MonoBehaviour
     // 現在の攻撃で命中済みの対象ID（単発ヒットモード用）
     private readonly HashSet<int> m_hitTargetIds = new();
 
-    // 現在Triggerに重なっている対象（多段ヒットモード用）
-    private readonly HashSet<IDamageable> m_overlappingTargets = new();
+    // 現在Triggerに重なっている対象と、その対象側のCollider（多段ヒットモード用）
+    // 貫通量計算（Physics.ComputePenetration）にも使用する
+    private readonly Dictionary<IDamageable, Collider> m_overlappingTargets = new();
 
     // 多段ヒットモードで判定中かどうか
     private bool m_isContinuousHitMode;
@@ -49,6 +50,14 @@ public sealed class AttackHitbox : MonoBehaviour
     /// 現在のダメージ量を取得します。
     /// </summary>
     public int CurrentDamage => m_currentDamage;
+
+    /// <summary>
+    /// 多段ヒットモード中、現在1体以上の対象と重なっているかどうかを取得します。
+    /// 攻撃中の前進を止めるかどうかの判定などに使用します。
+    /// </summary>
+    public bool HasOverlappingTargets =>
+        m_isContinuousHitMode &&
+        m_overlappingTargets.Count > 0;
 
     /// <summary>
     /// 初期化します。
@@ -192,9 +201,9 @@ public sealed class AttackHitbox : MonoBehaviour
         }
 
         // ダメージ適用中に対象が破棄されコレクションを操作する
-        // 可能性があるため、コピーを取ってから反復します。
+        // 可能性があるため、キーのコピーを取ってから反復します。
         List<IDamageable> targets =
-            new List<IDamageable>(m_overlappingTargets);
+            new List<IDamageable>(m_overlappingTargets.Keys);
 
         bool hasHitAnyTarget = false;
 
@@ -216,6 +225,69 @@ public sealed class AttackHitbox : MonoBehaviour
         }
 
         return hasHitAnyTarget;
+    }
+
+    /// <summary>
+    /// 現在重なっている対象のうち、最も深く貫通している対象について、
+    /// 貫通を解消するための方向・距離を取得します。
+    /// <see cref="Physics.ComputePenetration"/>を使用するため、
+    /// 対象側のColliderが凸形状（Box・Sphere・Capsule・Convex Mesh等）である必要があります。
+    /// </summary>
+    /// <param name="direction">貫通を解消する方向（正規化済み）。</param>
+    /// <param name="distance">貫通している距離。</param>
+    /// <returns>
+    /// true：貫通している対象があり、direction・distanceが有効です。
+    /// false：貫通している対象がありません。
+    /// </returns>
+    public bool TryGetMaxPenetration(
+        out Vector3 direction,
+        out float distance)
+    {
+        direction = Vector3.zero;
+        distance = 0.0f;
+
+        if (!m_isContinuousHitMode ||
+            m_overlappingTargets.Count == 0 ||
+            m_hitboxCollider == null)
+        {
+            return false;
+        }
+
+        bool hasFoundPenetration = false;
+
+        foreach (Collider otherCollider in m_overlappingTargets.Values)
+        {
+            if (otherCollider == null)
+            {
+                continue;
+            }
+
+            bool isOverlapping =
+                Physics.ComputePenetration(
+                    m_hitboxCollider,
+                    m_hitboxCollider.transform.position,
+                    m_hitboxCollider.transform.rotation,
+                    otherCollider,
+                    otherCollider.transform.position,
+                    otherCollider.transform.rotation,
+                    out Vector3 penetrationDirection,
+                    out float penetrationDistance);
+
+            if (!isOverlapping)
+            {
+                continue;
+            }
+
+            if (!hasFoundPenetration ||
+                penetrationDistance > distance)
+            {
+                direction = penetrationDirection;
+                distance = penetrationDistance;
+                hasFoundPenetration = true;
+            }
+        }
+
+        return hasFoundPenetration;
     }
 
     /// <summary>
@@ -246,8 +318,8 @@ public sealed class AttackHitbox : MonoBehaviour
         if (m_isContinuousHitMode)
         {
             // 多段ヒットモードでは即時ダメージを与えず、
-            // 重なっている対象として記録するのみに留めます。
-            m_overlappingTargets.Add(damageReceiver);
+            // 重なっている対象・対象側Colliderとして記録するのみに留めます。
+            m_overlappingTargets[damageReceiver] = other;
             return;
         }
 
