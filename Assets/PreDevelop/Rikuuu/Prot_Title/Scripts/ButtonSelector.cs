@@ -20,8 +20,11 @@ public class ButtonSelector : MonoBehaviour
 
     private void Start()
     {
-        // カーソルの座標初期化
-        m_cursor.transform.position = m_buttons[m_selectButtonNumber].transform.position;
+        if (m_cursor != null)
+        {
+            // カーソルの座標初期化
+            m_cursor.transform.position = m_buttons[m_selectButtonNumber].transform.position;
+        }
 
         // 選択している状態にする
         m_buttons[m_selectButtonNumber].OnCursor();
@@ -58,17 +61,20 @@ public class ButtonSelector : MonoBehaviour
             m_buttons[m_selectButtonNumber].OnCursor();
         }
 
-        // カーソルの座標更新
-        if(m_moveAction.GetPersistentEventCount() > 0)
+        if (m_cursor != null)
         {
-            m_moveAction.Invoke(
-                m_cursor,
-                m_buttons[m_selectButtonNumber].transform.position
-            );
-        }
-        else
-        {
-            m_cursor.transform.position = m_buttons[m_selectButtonNumber].transform.position;
+            // カーソルの座標更新
+            if (m_moveAction.GetPersistentEventCount() > 0)
+            {
+                m_moveAction.Invoke(
+                    m_cursor,
+                    m_buttons[m_selectButtonNumber].transform.position
+                );
+            }
+            else
+            {
+                m_cursor.transform.position = m_buttons[m_selectButtonNumber].transform.position;
+            }
         }
 
         // 決定ボタンが押されたら

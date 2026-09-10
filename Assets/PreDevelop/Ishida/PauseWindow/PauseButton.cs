@@ -1,3 +1,5 @@
+using System.Reflection.Emit;
+using TMPro;
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.UI;
@@ -30,6 +32,14 @@ public class PauseButton : MonoBehaviour
     // 現在表示してる画像サイズ
     private float m_currentScale = MAX_TEXTURE_SCALE;
 
+    [Header("説明文設定")]
+    // 表示する文字列
+    [SerializeField]
+    private string m_tooltip = "null";
+    // テキストコンポーネント
+    [SerializeField]
+    private TextMeshProUGUI m_tipText;
+
     private void Awake()
     {
         // 通常状態画像を表示する
@@ -50,6 +60,7 @@ public class PauseButton : MonoBehaviour
             (m_texture.rectTransform.pivot.x - oldPivot.x) * oldSize.x,
             (m_texture.rectTransform.pivot.y - oldPivot.y) * oldSize.y
         );
+       
     }
 
     private void Update()
@@ -86,6 +97,9 @@ public class PauseButton : MonoBehaviour
 
         // 画像サイズの変更
         m_currentScale = MIN_TEXTURE_SCALE;
+
+        // 文字の置き換え
+        m_tipText.text = m_tooltip;
     }
 
     public void OnCursorExit()
