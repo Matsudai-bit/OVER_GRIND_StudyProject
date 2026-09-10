@@ -34,6 +34,12 @@ public sealed class QTEPrototypeController : MonoBehaviour
     [SerializeField, Header("QTEループ設定"), Min(0.0f)]
     private double m_loopStartTime = 2.0;
 
+    [SerializeField, Header("右ヒットボックス")]
+    private AttackHitbox m_rightHitbox;
+
+    [SerializeField, Header("左ヒットボックス")]
+    private AttackHitbox m_leftHitbox;
+
     // QTEが実行中か
     private bool m_isQteActive;
 
@@ -190,5 +196,24 @@ public sealed class QTEPrototypeController : MonoBehaviour
 
         m_playableDirector.time = m_loopStartTime;
         m_playableDirector.Evaluate();
+    }
+
+    public void EnableLeftHitbox()
+    {
+        m_leftHitbox.EnableHitbox();
+    }
+    public void DisableLeftHitbox()
+    {
+        m_leftHitbox.DisableHitbox();
+    }
+
+    public void EnableRightHitbox()
+    {
+        m_rightHitbox.EnableHitbox();
+    }
+
+    public void DisableRightHitbox()
+    {
+        m_rightHitbox.DisableHitbox();
     }
 }
