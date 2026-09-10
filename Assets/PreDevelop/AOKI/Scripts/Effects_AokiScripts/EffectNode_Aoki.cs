@@ -1,7 +1,6 @@
 using UnityEngine;
 using System;
 
-[RequireComponent(typeof(ParticleSystem))]
 public class EffectNode_Aoki : MonoBehaviour
 {
     [Header("エフェクト識別子（自動設定されます）")]
@@ -10,11 +9,14 @@ public class EffectNode_Aoki : MonoBehaviour
 
     private ParticleSystem m_particle;
     private Action<EffectNode_Aoki> m_onComplete;
+    private bool m_isPlaying = false; // 再生完了の誤発火を防ぐフラグ
+
     public int HandleID { get; private set; }
 
     private void Awake()
     {
-        m_particle = GetComponent<ParticleSystem>();
+        // 自身または子オブジェクトから ParticleSystem を取得（構造を選ばない）
+        m_particle = GetComponentInChildren<ParticleSystem>();
     }
 
     // 自動登録ツールから ID をセットするためのメソッド
@@ -27,33 +29,49 @@ public class EffectNode_Aoki : MonoBehaviour
     {
         HandleID = handleID;
         m_onComplete = onComplete;
+        m_isPlaying = false;
     }
+
     public void Play()
     {
-        m_particle.Play(true);
+        if (m_particle != null)
+        {
+            m_particle.Play(true);
+            m_isPlaying = true;
+        }
     }
 
     public void Stop()
     {
-        m_particle.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+        if (m_particle != null)
+        {
+            m_particle.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+        }
         OnFinished();
     }
 
     public void Pause()
     {
-        m_particle.Pause(true);
+        if (m_particle != null)
+        {
+            m_particle.Pause(true);
+        }
     }
 
     public void Resume()
     {
-        m_particle.Play(true);
+        if (m_particle != null)
+        {
+            m_particle.Play(true);
+        }
     }
 
     private void Update()
     {
-        // ループしていない単発系で、再生が終わったらマネージャーへ返却通知
-        if (m_particle != null && !m_particle.main.loop)
+        // 再生が開始されており、かつループしない単発エフェクトの場合のみ完了チェック
+        if (m_isPlaying && m_particle != null && !m_particle.main.loop)
         {
+            // 全ての粒子が消滅したらマネージャーへ完了通知
             if (!m_particle.IsAlive(true))
             {
                 OnFinished();
@@ -63,6 +81,7 @@ public class EffectNode_Aoki : MonoBehaviour
 
     private void OnFinished()
     {
+        m_isPlaying = false;
         if (m_onComplete != null)
         {
             var action = m_onComplete;
