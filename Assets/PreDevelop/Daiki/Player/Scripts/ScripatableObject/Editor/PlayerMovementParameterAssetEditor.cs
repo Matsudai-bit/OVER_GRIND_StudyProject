@@ -47,6 +47,13 @@ public sealed class PlayerMovementParameterAssetEditor : Editor
 
     // ‹ó’†ˆÚ“®‚Ì‹ó‹C’ïR
     private SerializedProperty m_airResistanceProperty;
+
+    // UŒ‚’†‚ÌŒ¸‘¬”{—¦
+    private SerializedProperty m_attackDecelerationMultiplierProperty; 
+
+    // UŒ‚ƒqƒbƒg’†‚ÌˆÚ“®‘¬“x”{—¦
+    private SerializedProperty m_attackHitMovementSpeedMultiplierProperty;
+
     /// <summary>
     /// SerializedProperty‚ğæ“¾‚µ‚Ü‚·B
     /// </summary>
@@ -80,6 +87,13 @@ public sealed class PlayerMovementParameterAssetEditor : Editor
             serializedObject.FindProperty("m_maxFallSpeed");
         m_airResistanceProperty =
     serializedObject.FindProperty("m_airResistance");
+
+        m_attackDecelerationMultiplierProperty = 
+            serializedObject.FindProperty("m_attackDecelerationMultiplier"); 
+
+
+        m_attackHitMovementSpeedMultiplierProperty = 
+            serializedObject.FindProperty("m_attackHitMovementSpeedMultiplier");
 
     }
 
@@ -163,6 +177,21 @@ public sealed class PlayerMovementParameterAssetEditor : Editor
                 "‰ñ“]‘¬“x",
                 "1•bŠÔ‚É‰ñ“]‚Å‚«‚éÅ‘åŠp“x‚Å‚·B"));
 
+        EditorGUILayout.LabelField(
+            "UŒ‚",
+            EditorStyles.boldLabel);
+
+        EditorGUILayout.PropertyField(
+            m_attackDecelerationMultiplierProperty,
+            new GUIContent(
+                "UŒ‚’†‚ÌŒ¸‘¬”{—¦",
+                "UŒ‚’†‚ÉˆÚ“®“ü—Í‚ª‚È‚¢ê‡‚ÌŒ¸‘¬ŠÔ”{—¦‚Å‚·B"));
+
+        EditorGUILayout.PropertyField(
+            m_attackHitMovementSpeedMultiplierProperty,
+            new GUIContent(
+                "ƒqƒbƒg’†‚ÌˆÚ“®‘¬“x”{—¦",
+                "UŒ‚‚ª‘ÎÛ‚Éƒqƒbƒg‚µ‚Ä‚¢‚éŠÔ‚ÌÀÛ‚ÌˆÚ“®‘¬“x”{—¦‚Å‚·B"));
         EditorGUILayout.EndVertical();
     }
 

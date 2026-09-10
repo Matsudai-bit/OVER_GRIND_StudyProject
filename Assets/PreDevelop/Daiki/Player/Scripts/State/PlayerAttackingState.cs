@@ -4,65 +4,67 @@ using UnityEngine;
 /// プレイヤーの地上攻撃状態を管理します。
 /// 攻撃ボタンを押している間、開始時点の体の向きを維持したまま
 /// 移動しながら攻撃を続け、一定周期で多段ヒット判定を行います。
-/// 移動速度は攻撃継続リソースとして消費され、0になると攻撃は中断されます。
-/// 攻撃対象に命中している場合は通常速度で消費し、
-/// 空振りしている場合は緩やかに消費します。
-/// 移動・判定処理は物理タイミングに同期させるためFixedUpdateで行います。
+/// 移動速度は攻撃継続時間として消費されます。
 /// </summary>
 public sealed class PlayerAttackingState
     : StateBase<PlayerStateMachineComponent>
 {
-    // 攻撃移動中の回転速度
-    // 移動方向は開始時点の体の向きに固定するため、
-    // ここでは回転させず0を指定する
+    // 攻撃中は開始時の方向へ固定するため回転させない
     private const float ATTACK_ROTATION_SPEED = 0.0f;
 
-    // 攻撃対象に命中しているときに1秒あたり消費する速度
-    private const float HIT_SPEED_DECAY_PER_SECOND = 5.0f;
+    // 攻撃中に1秒あたり消費する速度
+    private const float SPEED_DECAY_PER_SECOND = 8.0f;
 
-    // 攻撃対象に命中していないときに1秒あたり消費する速度
-    // 空振り中は攻撃を長く継続できるよう、命中時より緩やかに消費する
-    private const float MISS_SPEED_DECAY_PER_SECOND = 1.0f;
-
-    // これ未満になったら速度を使い切ったとみなす閾値
+    // これ未満になったら速度を使い切ったとみなす
     private const float SPEED_EPSILON = 0.01f;
+
+    // 攻撃開始時の速度
+    private float m_initialSlideSpeed;
+
+    // 攻撃中の残り速度
+    private float m_currentSlideSpeed;
 
     // 次のヒット判定までの経過時間
     private float m_hitTimer;
 
-    // 攻撃中の現在の移動速度（攻撃継続リソース）
-    private float m_currentSlideSpeed;
-
-    // 攻撃開始時に固定する移動方向（体が向いている方向）
+    // 攻撃開始時に固定する移動方向
     private Vector3 m_slideDirection;
 
     /// <summary>
-    /// 攻撃状態開始時の初期化を行います。
+    /// 攻撃状態を開始します。
     /// </summary>
     protected override void OnStartState()
     {
-        // 攻撃開始時点の速度・向きを固定する
-        // 速度は攻撃継続リソースとして、以後消費していく
-        m_currentSlideSpeed = Owner.Motor.HorizontalSpeed;
-        m_slideDirection = Owner.Motor.FacingDirection;
+        m_currentSlideSpeed =
+            Owner.Motor.HorizontalSpeed;
+
+        m_initialSlideSpeed =
+            Mathf.Max(
+                m_currentSlideSpeed,
+                SPEED_EPSILON);
+
+        m_slideDirection =
+            Owner.Motor.FacingDirection;
 
         m_hitTimer = 0.0f;
 
-        Owner.AttackController.EnableContinuousAttackHitboxes();
-        Owner.AnimationPresenter.PlayAttackAnimation();
+        Owner.AttackController
+            .EnableContinuousAttackHitboxes();
 
-        // UI上は、実際の物理速度ではなく
-        // 攻撃継続リソースとしての速度を表示させる
-        Owner.SetSpeedDisplayOverride(m_currentSlideSpeed);
+        Owner.AnimationPresenter
+            .PlayAttackAnimation();
+
+        Owner.SetSpeedDisplayOverride(
+            m_currentSlideSpeed);
     }
 
     /// <summary>
-    /// 毎フレームの入力処理を行います。
+    /// 攻撃状態を更新します。
     /// </summary>
-    /// <param name="deltaTime">フレーム間の経過時間。</param>
+    /// <param name="deltaTime">経過時間。</param>
     protected override void OnUpdate(float deltaTime)
     {
-        // 攻撃ボタンを離した場合は攻撃を終了する
+        // 攻撃ボタンを離したら通常移動へ戻る
         if (!Owner.InputReader.IsAttackHeld)
         {
             Machine.ChangeState<PlayerIdlingState>();
@@ -70,52 +72,40 @@ public sealed class PlayerAttackingState
     }
 
     /// <summary>
-    /// 一定間隔の物理更新処理を行います。
+    /// 攻撃状態の物理更新を行います。
     /// </summary>
     protected override void OnFixedUpdate()
     {
-        float fixedDeltaTime = Time.fixedDeltaTime;
+        float fixedDeltaTime =
+            Time.fixedDeltaTime;
 
-        // 攻撃ボタンが離されている場合は、
-        // OnUpdate側で状態遷移するためここでは何もしない
         if (!Owner.InputReader.IsAttackHeld)
         {
             return;
         }
 
-        // 一定周期で攻撃のヒット判定を実行する
-        bool isHittingTarget = UpdateHitCycle(fixedDeltaTime);
-
-        // 命中中と空振り中で速度の消費量を変更する
-        float speedDecayPerSecond =
-            isHittingTarget
-                ? HIT_SPEED_DECAY_PER_SECOND
-                : MISS_SPEED_DECAY_PER_SECOND;
-
+        // 攻撃継続用の速度を消費する。
+        // 実際の移動速度を遅くしても、この値自体は変更しない。
         m_currentSlideSpeed -=
-            speedDecayPerSecond * fixedDeltaTime;
+            SPEED_DECAY_PER_SECOND *
+            fixedDeltaTime;
 
-        // 速度を使い切ったら攻撃を終了する
         if (m_currentSlideSpeed <= SPEED_EPSILON)
         {
             Machine.ChangeState<PlayerIdlingState>();
             return;
         }
 
-        // 開始時の向きを維持したまま攻撃移動する
-        // 障害物減速は無効化し、攻撃側で速度を管理する
-        Owner.Motor.MoveAtFixedWorldDirection(
-            m_slideDirection,
-            m_currentSlideSpeed,
-            ATTACK_ROTATION_SPEED,
-            fixedDeltaTime,
-            applyObstacleAvoidance: false);
+        UpdateMovement(fixedDeltaTime);
 
-        // UI上は攻撃継続リソースを表示する
-        Owner.SetSpeedDisplayOverride(m_currentSlideSpeed);
+        // UIには攻撃継続用の残り速度を表示する
+        Owner.SetSpeedDisplayOverride(
+            m_currentSlideSpeed);
 
-        // 脚（AttackHitbox）が対象に食い込んでいる場合、
-        // その貫通量ぶんPlayer本体を後方へ補正する
+        // 速度に応じてヒット間隔を変化させる
+        UpdateHitCycle(fixedDeltaTime);
+
+        // ヒットボックスが対象へ食い込んでいる場合は位置を補正する
         if (Owner.AttackController.TryGetMaxPenetration(
                 out Vector3 penetrationDirection,
                 out float penetrationDistance))
@@ -125,7 +115,7 @@ public sealed class PlayerAttackingState
                 penetrationDistance);
         }
 
-        // 接地中にジャンプ入力があれば攻撃を中断してジャンプへ遷移する
+        // 攻撃中でもジャンプ入力を受け付ける
         if (Owner.Monitor.IsGrounded &&
             Owner.InputReader.HasJumpInput)
         {
@@ -134,56 +124,107 @@ public sealed class PlayerAttackingState
     }
 
     /// <summary>
-    /// 攻撃状態終了時の後処理を行います。
+    /// 攻撃中の移動を更新します。
     /// </summary>
-    protected override void OnExitState()
+    /// <param name="fixedDeltaTime">物理更新時間。</param>
+    private void UpdateMovement(float fixedDeltaTime)
     {
-        Owner.AnimationPresenter.StopAttackAnimation();
-        Owner.AttackController.DisableAttackHitboxes();
+        // 移動入力がない場合は、通常の減速処理を
+        // 攻撃用の倍率で緩やかにして使用する。
+        if (!Owner.InputReader.HasMoveInput)
+        {
+            PlayerMoveParameters normalParameters =
+                Owner.MovementParameterAsset
+                    .CreateMoveParameters();
 
-        // 攻撃終了後は通常通り実際の物理速度を表示させる
-        Owner.ClearSpeedDisplayOverride();
+            float attackDecelerationMultiplier =
+                Mathf.Max(
+                    Owner.MovementParameterAsset
+                        .AttackDecelerationMultiplier,
+                    1.0f);
+
+            PlayerMoveParameters attackParameters =
+                new PlayerMoveParameters(
+                    normalParameters.MaxMoveSpeed,
+                    normalParameters.TimeToMaxSpeed,
+                    normalParameters.TimeToStop *
+                        attackDecelerationMultiplier,
+                    normalParameters.RotationSpeed);
+
+            Owner.Motor.Decelerate(
+                attackParameters,
+                fixedDeltaTime);
+
+            return;
+        }
+
+        // ヒット中だけ実際の移動速度を遅くする。
+        // m_currentSlideSpeed自体は変更しない。
+        float movementSpeed =
+            m_currentSlideSpeed;
+
+        if (Owner.AttackController.IsHittingAnyTarget())
+        {
+            movementSpeed *=
+                Owner.MovementParameterAsset
+                    .AttackHitMovementSpeedMultiplier;
+        }
+
+        Owner.Motor.MoveAtFixedWorldDirection(
+            m_slideDirection,
+            movementSpeed,
+            ATTACK_ROTATION_SPEED,
+            fixedDeltaTime,
+            applyObstacleAvoidance: false);
     }
 
     /// <summary>
-    /// 一定周期で多段ヒット判定を実行します。
+    /// 攻撃速度に応じた多段ヒット判定を実行します。
+    /// 攻撃開始時を基準として、速度が低下するほど
+    /// 1秒あたりのヒット回数も減少します。
     /// </summary>
-    /// <param name="fixedDeltaTime">物理更新の経過時間。</param>
-    /// <returns>
-    /// true：攻撃対象に命中している。
-    /// false：攻撃対象に命中していない。
-    /// </returns>
-    private bool UpdateHitCycle(float fixedDeltaTime)
+    /// <param name="fixedDeltaTime">物理更新時間。</param>
+    private void UpdateHitCycle(float fixedDeltaTime)
     {
-        float hitInterval =
-            Owner.AttackController.BaseHitIntervalSeconds;
+        float speedRate =
+            Mathf.Clamp01(
+                m_currentSlideSpeed /
+                m_initialSlideSpeed);
 
-        // TODO: Vブースト中はここでhitIntervalに倍率（例:1/1.5）をかけて
-        //       ヒットレートを引き上げる（今回未実装）
+        float currentHitsPerSecond =
+            Owner.AttackController.BaseHitsPerSecond *
+            speedRate;
+
+        float hitInterval =
+            1.0f /
+            Mathf.Max(
+                currentHitsPerSecond,
+                0.0001f);
 
         m_hitTimer += fixedDeltaTime;
 
-        bool hasEvaluatedThisFrame = false;
-        bool wasLastEvaluationHit = false;
-
-        // 1周期で複数タイミング分経過した場合も取りこぼさないよう消化する
         while (m_hitTimer >= hitInterval)
         {
             m_hitTimer -= hitInterval;
 
-            wasLastEvaluationHit =
-                Owner.AttackController.ApplyContinuousHitTick();
-
-            hasEvaluatedThisFrame = true;
+            // 空振りしても攻撃状態は終了しない。
+            // 押している間は継続して判定する。
+            Owner.AttackController
+                .ApplyContinuousHitTick();
         }
+    }
 
-        // このフレームでヒット判定が発生していない場合は、
-        // 直前の判定結果を使用する。
-        if (!hasEvaluatedThisFrame)
-        {
-            return wasLastEvaluationHit;
-        }
+    /// <summary>
+    /// 攻撃状態を終了します。
+    /// </summary>
+    protected override void OnExitState()
+    {
+        Owner.AnimationPresenter
+            .StopAttackAnimation();
 
-        return wasLastEvaluationHit;
+        Owner.AttackController
+            .DisableAttackHitboxes();
+
+        Owner.ClearSpeedDisplayOverride();
     }
 }

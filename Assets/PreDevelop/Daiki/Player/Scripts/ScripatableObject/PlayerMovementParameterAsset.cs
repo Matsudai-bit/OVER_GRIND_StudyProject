@@ -74,6 +74,41 @@ public sealed class PlayerMovementParameterAsset : ScriptableObject
     [Min(0.0f)]
     private float m_maxFallSpeed = 20.0f;
 
+// ============================================================
+// 攻撃
+// ============================================================
+
+// 攻撃中、移動入力がない場合の減速倍率
+// 1.0 = 通常と同じ
+// 2.0 = 通常の2倍の時間をかけて減速
+// 3.0 = 通常の3倍の時間をかけて減速
+[SerializeField, Header("攻撃")]
+[Tooltip("攻撃中、移動入力がない場合に通常より緩やかに減速する倍率です。")]
+[Min(1.0f)]
+private float m_attackDecelerationMultiplier = 3.0f;
+
+    // 攻撃ヒット中の実際の移動速度倍率
+    // 1.0 = 通常速度
+    // 0.5 = 半分の速度
+    [SerializeField]
+    [Tooltip("攻撃が対象にヒットしている間の実際の移動速度倍率です。")]
+    [Range(0.0f, 1.0f)]
+    private float m_attackHitMovementSpeedMultiplier = 0.5f;
+
+    /// <summary>
+    /// 攻撃中、移動入力がない場合の減速倍率を取得します。
+    /// </summary>
+    public float AttackDecelerationMultiplier =>
+        m_attackDecelerationMultiplier;
+
+    /// <summary>
+    /// 攻撃ヒット中の実際の移動速度倍率を取得します。
+    /// </summary>
+    public float AttackHitMovementSpeedMultiplier =>
+        m_attackHitMovementSpeedMultiplier;
+
+
+
     /// <summary>
     /// ジャンプ力を取得します。
     /// </summary>
