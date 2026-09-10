@@ -6,7 +6,7 @@ public class ButtonSelector : MonoBehaviour
 {
     // ボタン
     [SerializeField]
-    private IButton[] m_buttons;
+    private SelectButton[] m_buttons;
 
     // カーソルオブジェクト
     [SerializeField]

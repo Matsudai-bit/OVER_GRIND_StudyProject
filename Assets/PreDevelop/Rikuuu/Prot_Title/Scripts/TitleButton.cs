@@ -1,3 +1,4 @@
+using TMPro;
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.UI;
@@ -8,10 +9,11 @@ public class TitleButton : MonoBehaviour
     // 画像の最大スケール
     const float MAX_TEXTURE_SCALE = 1.0f;
     // 画像の最小スケール
-    const float MIN_TEXTURE_SCALE = 0.7f;
+    const float MIN_TEXTURE_SCALE = 0.6f;
 
     // スケールの変化量
-    const float SCALE_SPEED = 1.0f;
+    [SerializeField]
+    const float SCALE_SPEED = 2.0f;
 
     // 通常状態で表示する画像
     [SerializeField]
@@ -24,6 +26,14 @@ public class TitleButton : MonoBehaviour
     // 現在表示している画像を入れるコンポーネント
     [SerializeField]
     private UnityEngine.UI.Image m_texture;
+
+    // 表示する文字列
+    [SerializeField]
+    private string m_string = "null";
+
+    // テキストコンポーネント
+    [SerializeField]
+    private TextMeshProUGUI m_text;
 
     // 初期の画像サイズ（カーソル状態）
     private Vector2 m_textureSize;
@@ -84,6 +94,9 @@ public class TitleButton : MonoBehaviour
 
         // 画像サイズの変更
         m_currentScale = MIN_TEXTURE_SCALE;
+
+        // 文字の置き換え
+        m_text.text = m_string;
     }
 
     public void OnCursorExit()
@@ -94,6 +107,9 @@ public class TitleButton : MonoBehaviour
 
         // 画像サイズの変更
         m_currentScale = MAX_TEXTURE_SCALE;
+
+
+
     }
 
     // ----------------------------------------------------------
