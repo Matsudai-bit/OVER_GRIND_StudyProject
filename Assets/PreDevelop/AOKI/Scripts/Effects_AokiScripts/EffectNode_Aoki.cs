@@ -4,93 +4,61 @@ using System;
 [RequireComponent(typeof(ParticleSystem))]
 public class EffectNode_Aoki : MonoBehaviour
 {
-    private ParticleSystem m_targetParticle;
-    private Action<EffectNode_Aoki> m_returnAction; // プールへ帰還する用
-
-    private bool m_isLooping;
-    private bool m_isPaused;
+    private ParticleSystem m_particle;
+    private Action<EffectNode_Aoki> m_onComplete;
+    public int HandleID { get; private set; } // 管理用の識別ID
 
     private void Awake()
     {
-        // 子要素を含めたパーティクルを一括制御できるようにするキャッシュ
-        m_targetParticle = GetComponent<ParticleSystem>();
+        m_particle = GetComponent<ParticleSystem>();
     }
 
-    /// <summary>
-    /// エフェクト再生開始関数
-    /// </summary>
-    public void EffectsPlayer(bool loop, Action<EffectNode_Aoki> onReturnTopool)
+    public void Init(int handleID, Action<EffectNode_Aoki> onComplete)
     {
-        m_isLooping = loop;
-        m_returnAction = onReturnTopool;
-
-        // 再生開始時はポーズ状態ではないのでfalse
-        m_isPaused = false;
-
-        // プレハブの設定ミスを防ぐため、コードからループ設定を上書き
-        var main = m_targetParticle.main;
-        main.loop = loop;
-        m_targetParticle.Play(true);
+        HandleID = handleID;
+        m_onComplete = onComplete;
     }
 
-    /// <summary>
-    /// エフェクト再生停止関数
-    /// </summary>
-    public void EffectsStop()
+    public void Play()
     {
-        if (m_targetParticle != null)
-        {
-            m_targetParticle.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
-        }
-        ReturnToPool();
+        m_particle.Play(true);
     }
 
-    /// <summary>
-    /// 一時停止関数
-    /// </summary>
+    public void Stop()
+    {
+        m_particle.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+        OnFinished();
+    }
+
     public void Pause()
     {
-        if (m_targetParticle != null && !m_isPaused)
-        {
-            m_targetParticle.Pause(true); // 実際にポーズさせる
-            m_isPaused = true;
-        }
+        m_particle.Pause(true);
     }
 
-    /// <summary>
-    /// 再開開始関数
-    /// </summary>
     public void Resume()
     {
-        if (m_targetParticle != null && m_isPaused)
-        {
-            m_targetParticle.Play(true);
-            m_isPaused = false;
-        }
+        m_particle.Play(true);
     }
 
-    /// <summary>
-    /// 更新処理
-    /// </summary>
     private void Update()
     {
-        // すべてのパーティクルが消滅したかを監視
-        if (!m_isLooping && !m_isPaused)
+        // ループしていない単発系で、再生が終わったらマネージャーへ返却通知
+        if (m_particle != null && !m_particle.main.loop)
         {
-            // 子要素も含めて生きているパーティクルが無いか確認
-            if (m_targetParticle != null && !m_targetParticle.IsAlive(true))
+            if (!m_particle.IsAlive(true))
             {
-                ReturnToPool();
+                OnFinished();
             }
         }
     }
 
-    private void ReturnToPool()
+    private void OnFinished()
     {
-        if (m_returnAction != null)
+        if (m_onComplete != null)
         {
-            m_returnAction.Invoke(this);
-            m_returnAction = null;
+            var action = m_onComplete;
+            m_onComplete = null;
+            action.Invoke(this);
         }
     }
 }

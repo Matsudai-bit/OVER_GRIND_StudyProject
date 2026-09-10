@@ -6,10 +6,8 @@ using System.Collections.Generic;
 
 public class EffectDatabaseUpdater
 {
-    // エフェクトのプレハブを入れておくフォルダのパス
-    private const string TARGET_FOLDER = "Assets/Prefabs/Effects";
-    // データベース（ScriptableObject）の保存先
-    private const string DATABASE_PATH = "Assets/Resources/EffectDatabase.asset";
+    // データベース（ScriptableObject）の保存先だけを残します
+    private const string DATABASE_PATH = "Assets/PreDevelop/AOKI/EffectDatabase.asset";
 
     [MenuItem("Tools/VFX/エフェクトを自動登録する (Enum連携)")]
     public static void UpdateDatabase()
@@ -19,7 +17,6 @@ public class EffectDatabaseUpdater
         if (db == null)
         {
             db = ScriptableObject.CreateInstance<EffectDatabase>();
-            // フォルダが無ければエラーになるので、必要に応じて手動でResourcesフォルダを作ってください
             AssetDatabase.CreateAsset(db, DATABASE_PATH);
         }
 
@@ -30,10 +27,10 @@ public class EffectDatabaseUpdater
 
         foreach (EffectID id in enumValues)
         {
-            string enumName = id.ToString(); 
+            string enumName = id.ToString();
 
-            // Enum名と同じ名前のプレハブを検索
-            string[] guids = AssetDatabase.FindAssets($"{enumName} t:GameObject", new[] { TARGET_FOLDER });
+            // 【修正】フォルダ指定を削除し、プロジェクト全体から検索するように変更
+            string[] guids = AssetDatabase.FindAssets($"{enumName} t:GameObject");
 
             if (guids.Length > 0)
             {

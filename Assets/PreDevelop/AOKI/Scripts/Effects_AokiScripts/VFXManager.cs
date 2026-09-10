@@ -1,97 +1,211 @@
 using UnityEngine;
+using System.Collections;
 using System.Collections.Generic;
 
 public class VFXManager : MonoBehaviour
 {
-    public static VFXManager Instance { get; private set; }
+    private static VFXManager m_instance;
 
-    [SerializeField] private EffectDatabase m_database;
+    // [System.Obsolete] <- 削除
+    public static VFXManager Instance
+    {
+        get
+        {
+            if (m_instance == null)
+            {
+                m_instance = FindFirstObjectByType<VFXManager>();
+            }
+            return m_instance;
+        }
+    }
+    [SerializeField]
+    private EffectDatabase m_database;
 
-    // プール管理用辞書
+    // プール管理（非アクティブなオブジェクト）
     private Dictionary<EffectID, Queue<EffectNode_Aoki>> m_poolDict = new Dictionary<EffectID, Queue<EffectNode_Aoki>>();
+
+    // 再生中エフェクトの追跡管理（アクティブなオブジェクト）
+    private Dictionary<EffectID, List<EffectNode_Aoki>> m_activeDict = new Dictionary<EffectID, List<EffectNode_Aoki>>();
+
+    private int m_handleCounter = 0;
 
     private void Awake()
     {
-        if (Instance == null)
+        if (m_instance != null && m_instance != this)
         {
-            Instance = this;
-            if (m_database != null)
+            Destroy(gameObject);
+            return;
+        }
+        m_instance = this;
+        DontDestroyOnLoad(gameObject);
+    }
+
+    // --- 【再生】 ---
+    /// <summary>
+    /// エフェクト再生（ID指定）
+    /// </summary>
+    /// <returns>個別に識別したい場合に使用するHandleID（不要なら無視してOK）</returns>
+    public int Play(EffectID id, Vector3 position, Quaternion rotation = default, Transform parent = null)
+    {
+        EffectNode_Aoki node = GetFromPool(id);
+        if (node == null) return -1;
+
+        int handle = ++m_handleCounter;
+
+        node.transform.SetParent(parent);
+        node.transform.SetPositionAndRotation(position, rotation == default ? Quaternion.identity : rotation);
+        node.gameObject.SetActive(true);
+
+        // アクティブリストに登録
+        if (!m_activeDict.ContainsKey(id))
+        {
+            m_activeDict[id] = new List<EffectNode_Aoki>();
+        }
+        m_activeDict[id].Add(node);
+
+        node.Init(handle, (completedNode) => ReturnToPool(id, completedNode));
+        node.Play();
+
+        return handle;
+    }
+
+ 
+    /// <summary>
+    /// 指定したEffectIDの再生中エフェクトをすべて停止
+    /// </summary>
+    public void Stop(EffectID id)
+    {
+        if (m_activeDict.TryGetValue(id, out var list))
+        {
+            // Stop呼び出し中にリストが変更されるのを防ぐため逆順処理
+            for (int i = list.Count - 1; i >= 0; i--)
             {
-                m_database.Initialize();
+                list[i].Stop();
             }
-            else
+        }
+    }
+
+    /// <summary>
+    /// 画面上の全エフェクトを停止
+    /// </summary>
+    public void StopAll()
+    {
+        foreach (var pair in m_activeDict)
+        {
+            for (int i = pair.Value.Count - 1; i >= 0; i--)
             {
-                Debug.LogError("VFXManagerにEffectDatabaseがセットされていません！");
+                pair.Value[i].Stop();
             }
+        }
+    }
+
+    /// <summary>
+    /// 指定したEffectIDのエフェクトを一時停止
+    /// </summary>
+    public void Pause(EffectID id)
+    {
+        if (m_activeDict.TryGetValue(id, out var list))
+        {
+            foreach (var node in list) node.Pause();
+        }
+    }
+
+    /// <summary>
+    /// 指定したEffectIDのエフェクトを再開
+    /// </summary>
+    public void Resume(EffectID id)
+    {
+        if (m_activeDict.TryGetValue(id, out var list))
+        {
+            foreach (var node in list) node.Resume();
+        }
+    }
+
+    /// <summary>
+    /// 全エフェクトを一括一時停止（ポーズ画面用）
+    /// </summary>
+    public void PauseAll()
+    {
+        foreach (var pair in m_activeDict)
+        {
+            foreach (var node in pair.Value) node.Pause();
+        }
+    }
+
+    /// <summary>
+    /// 全エフェクトを一括再開（ポーズ解除用）
+    /// </summary>
+    public void ResumeAll()
+    {
+        foreach (var pair in m_activeDict)
+        {
+            foreach (var node in pair.Value) node.Resume();
+        }
+    }
+
+    // --- プール内部処理 ---
+    private EffectNode_Aoki GetFromPool(EffectID id)
+    {
+        if (m_database == null)
+        {
+            Debug.LogError("[VFXManager] EffectDatabaseがアタッチされていません。");
+            return null;
+        }
+
+        if (!m_poolDict.TryGetValue(id, out var pool))
+        {
+            pool = new Queue<EffectNode_Aoki>();
+            m_poolDict[id] = pool;
+        }
+
+        if (pool.Count > 0)
+        {
+            return pool.Dequeue();
         }
         else
         {
-            Destroy(gameObject);
-        }
-    }
+            EffectNode_Aoki prefab = m_database.GetPrefab(id);
+            if (prefab == null) return null;
 
-    /// <summary>
-    /// 単発再生
-    /// 終わったら自動で消えるエフェクト用。呼び出し元は戻り値を気にしなくてOKです。
-    /// </summary>
-    public void PlayOneShot(EffectID id, Vector3 position)
-    {
-        EffectNode_Aoki node = GetFromPool(id);
-        if (node == null) return;
-
-        node.transform.position = position;
-        node.gameObject.SetActive(true);
-
-        // ループをfalseにして再生し、終了時にReturnToPoolを呼ぶようにActionを渡す
-        node.EffectsPlayer(false, (n) => ReturnToPool(id, n));
-    }
-
-    /// <summary>
-    /// ループ再生
-    /// 手動で止めるまで消えないエフェクト用。呼び出し元が後で停止できるように参照を返します。
-    /// </summary>
-    public EffectNode_Aoki PlayLoop(EffectID id, Vector3 position)
-    {
-        EffectNode_Aoki node = GetFromPool(id);
-        if (node == null) return null;
-
-        node.transform.position = position;
-        node.gameObject.SetActive(true);
-
-        // ループをtrueにして再生
-        node.EffectsPlayer(true, (n) => ReturnToPool(id, n));
-
-        return node;
-    }
-
-    private EffectNode_Aoki GetFromPool(EffectID id)
-    {
-        if (!m_poolDict.ContainsKey(id))
-        {
-            m_poolDict[id] = new Queue<EffectNode_Aoki>();
-        }
-
-        // プールに待機中のものがあれば取り出す
-        if (m_poolDict[id].Count > 0)
-        {
-            return m_poolDict[id].Dequeue();
-        }
-
-        // なければデータベースからプレハブを取得して新規生成
-        EffectNode_Aoki prefab = m_database.GetPrefab(id);
-        if (prefab != null)
-        {
-            // マネージャー自身の子オブジェクトとして生成し、ヒエラルキーを綺麗に保つ
             return Instantiate(prefab, transform);
         }
-
-        return null;
     }
 
     private void ReturnToPool(EffectID id, EffectNode_Aoki node)
     {
-        // オブジェクトを非表示にしてプール（Queue）に戻す
         node.gameObject.SetActive(false);
-        m_poolDict[id].Enqueue(node);
+
+        // アクティブリストから削除
+        if (m_activeDict.TryGetValue(id, out var list))
+        {
+            list.Remove(node);
+        }
+
+        if (!m_poolDict.TryGetValue(id, out var pool))
+        {
+            pool = new Queue<EffectNode_Aoki>();
+            m_poolDict[id] = pool;
+        }
+        pool.Enqueue(node);
+    }
+
+    /// <summary>
+    /// 指定した個別のエフェクトだけを停止する（Play時に受け取ったハンドルIDを使用）
+    /// </summary>
+    public void Stop(int handle)
+    {
+        if (handle <= 0) return;
+
+        foreach (var pair in m_activeDict)
+        {
+            foreach (var node in pair.Value)
+            {
+                if (node.HandleID == handle)
+                {
+                    node.Stop();
+                    return; // 見つかったら終了
+                }
+            }
+        }
     }
 }

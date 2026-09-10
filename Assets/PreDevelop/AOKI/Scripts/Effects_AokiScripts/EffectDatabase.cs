@@ -5,9 +5,7 @@ using System.Linq;
 // エフェクトの識別子
 public enum EffectID
 {
-    Explosion,
-    Slash,
-    MagicAura
+    Explosion
 }
 
 [CreateAssetMenu(fileName = "EffectDatabase", menuName = "Data/EffectDatabase")]
@@ -34,7 +32,13 @@ public class EffectDatabase : ScriptableObject
 
     public EffectNode_Aoki GetPrefab(EffectID id)
     {
-        if (m_dict != null && m_dict.TryGetValue(id, out var prefab))
+        // 辞書がまだ作られていなければ、自動で初期化する
+        if (m_dict == null)
+        {
+            Initialize();
+        }
+
+        if (m_dict.TryGetValue(id, out var prefab))
         {
             return prefab;
         }
