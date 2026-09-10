@@ -6,123 +6,153 @@ using UnityEngine.UIElements;
 
 public class TitleButton : MonoBehaviour
 {
-    // 画像の最大スケール
-    const float MAX_TEXTURE_SCALE = 1.0f;
-    // 画像の最小スケール
-    const float MIN_TEXTURE_SCALE = 0.6f;
-
+    [Header("定数設定")]
     // スケールの変化量
     [SerializeField]
-    const float SCALE_SPEED = 2.0f;
+    float SCALE_SPEED = 2.0f;
 
-    // 通常状態で表示する画像
+    // 文字サイズ
     [SerializeField]
-    private Sprite m_defaultTexture;
-
-    // カーソルが乗っているときに表示する画像
+    float FONT_SIZE = 36;
+    // 画像の最大スケール
     [SerializeField]
-    private Sprite m_onCursorTexture;
-
-    // 現在表示している画像を入れるコンポーネント
+    float MAX_FONT_SCALE = 1.4f;
+    // 画像の最小スケール
     [SerializeField]
-    private UnityEngine.UI.Image m_texture;
+    float MIN_FONT_SCALE = 1.0f;
 
+    // 細字の大きさ
+    [SerializeField]
+    float MIN_FACE_DILATE = 0.0f;
+    // 太字の大きさ
+    [SerializeField]
+    float MAX_FACE_DILATE = 0.15f;
+
+
+    [Header("ラベル設定")]
+    // ラベルテキストコンポーネント
+    [SerializeField]
+    private TextMeshProUGUI m_label;
+
+    // ラベルに表示する文字のフォント
+    [SerializeField]
+    private TMP_FontAsset m_labelFont;
+
+    // ラベルに表示する内容
+    [SerializeField]
+    private string m_labelText = "null";
+
+    // ラベルの文字色（通常）
+    [SerializeField]
+    private Color m_defaultLabelColor = new Color32(180, 175, 165, 255);
+    // ラベルの文字色（カーソル時）
+    [SerializeField]
+    private Color m_onCursorLabelColor = new Color32(255, 255, 255, 255);
+
+
+    [Header("説明文設定")]
     // 表示する文字列
     [SerializeField]
-    private string m_string = "null";
-
+    private string m_tooltip = "null";
     // テキストコンポーネント
     [SerializeField]
-    private TextMeshProUGUI m_text;
+    private TextMeshProUGUI m_tipText;
 
-    // 初期の画像サイズ（カーソル状態）
-    private Vector2 m_textureSize;
-    // 現在表示してる画像サイズ
-    private float m_currentScale = MAX_TEXTURE_SCALE;
+
+    // 現在表示してる文字サイズ
+    private float m_currentScale;
+    // カーソルで選択されているかどうか
+    private bool m_onCursor = false;
+
+    // 文字専用のマテリアルインスタンス
+    private Material m_labelMaterial;
 
     private void Awake()
     {
-        // 通常状態画像を表示する
-        m_texture.sprite = m_defaultTexture;
-        m_texture.SetNativeSize();
+        // ラベルの設定
+        m_label.font = m_labelFont;             // フォント
+        m_label.text = m_labelText;             // テキスト
+        m_label.color = m_defaultLabelColor;    // 文字色
 
-        // 画像サイズを取得する
-        m_textureSize.x = m_texture.rectTransform.sizeDelta.x;
-        m_textureSize.y = m_texture.rectTransform.sizeDelta.y;
+        //// 文字専用のマテリアルインスタンスを取得
+        //m_labelMaterial = m_label.fontMaterial;
 
-        // 拡縮の基準点を決める
-        Vector2 oldSize = m_texture.rectTransform.sizeDelta;
-        Vector2 oldPivot = m_texture.rectTransform.pivot;
-        m_texture.rectTransform.pivot = new Vector2(1.0f, 0.5f);
-
-        // Pivot変更によるズレを補正
-        m_texture.rectTransform.anchoredPosition += new Vector2(
-            (m_texture.rectTransform.pivot.x - oldPivot.x) * oldSize.x,
-            (m_texture.rectTransform.pivot.y - oldPivot.y) * oldSize.y
-        );
+        // 文字サイズの初期化
+        m_currentScale = MIN_FONT_SCALE;
     }
 
     private void Update()
     {
         // カーソルで選択されている場合
-        if(m_texture.sprite == m_onCursorTexture)
+        if(m_onCursor)
         {
-
             // 変更
             m_currentScale += SCALE_SPEED * Time.deltaTime;
-            
-
         }
 
         // スケールを範囲内に収める
         Clamp();
 
-        // サイズを適用させる
-        m_texture.rectTransform.sizeDelta = new Vector2(
-            m_textureSize.x * m_currentScale,
-            m_textureSize.y * m_currentScale
-        );
+        // サイズを適用する
+        m_label.fontSize = m_currentScale * FONT_SIZE;
+
+        //// 太さを適用する
+        //ApplyFontWeight();
     }
 
     // 押されたときの処理 ---------------------------------------
 
     public void OnCursor()
     {
-        // カーソル状態の画像を表示する
-        m_texture.sprite = m_onCursorTexture;
-        m_texture.SetNativeSize();
+        //// 太字にする
+        //m_label.fontStyle = FontStyles.Bold;
 
-        // 画像サイズの変更
-        m_currentScale = MIN_TEXTURE_SCALE;
+        // ラベルの設定
+        m_label.font = m_labelFont;             // フォント
+        m_label.color = m_onCursorLabelColor;   // 文字色
+        // 状態の変更
+        m_onCursor = true;
 
         // 文字の置き換え
-        m_text.text = m_string;
+        m_tipText.text = m_tooltip;
     }
 
     public void OnCursorExit()
     {
-        // 通常状態画像を表示する
-        m_texture.sprite = m_defaultTexture;
-        m_texture.SetNativeSize();
+        //// 通常の太さに戻す
+        //m_label.fontStyle = FontStyles.Normal;
 
+        // ラベルの設定
+        m_label.font = m_labelFont;             // フォント
+        m_label.color = m_defaultLabelColor;    // 文字色
+        // 状態の変更
+        m_onCursor = false;
+        
         // 画像サイズの変更
-        m_currentScale = MAX_TEXTURE_SCALE;
-
-
-
+        m_currentScale = MIN_FONT_SCALE;
     }
 
     // ----------------------------------------------------------
 
     private void Clamp()
     {
-        if(m_currentScale > MAX_TEXTURE_SCALE)
+        if(m_currentScale > MAX_FONT_SCALE)
         {
-            m_currentScale = MAX_TEXTURE_SCALE;
+            m_currentScale = MAX_FONT_SCALE;
         }
-        if(m_currentScale < MIN_TEXTURE_SCALE)
+        if(m_currentScale < MIN_FONT_SCALE)
         {
-            m_currentScale = MIN_TEXTURE_SCALE;
+            m_currentScale = MIN_FONT_SCALE;
         }
+    }
+
+    private void ApplyFontWeight()
+    {
+        // スケールの進行度(0～1)を求める
+        float progress = Mathf.InverseLerp(MIN_FONT_SCALE, MAX_FONT_SCALE, m_currentScale);
+        // 進行度に応じてFace Dilateを補間
+        float dilate = Mathf.Lerp(MIN_FACE_DILATE, MAX_FACE_DILATE, progress);
+        // マテリアルに反映
+        m_labelMaterial.SetFloat(ShaderUtilities.ID_FaceDilate, dilate);
     }
 }
