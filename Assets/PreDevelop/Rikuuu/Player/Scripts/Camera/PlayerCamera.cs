@@ -1,45 +1,37 @@
-using UnityEngine;
+using DG.Tweening;
 using Unity.Cinemachine;
+using UnityEngine;
 
 /// <summary>
 /// プレイヤーのカメラ制御を行います。
-/// 通常時はCinemachineOrbitalFollowが
-/// プレイヤー操作（マウス・スティック）による
-/// フリールック回転を行いますが、
-/// ブーストチャージ中などは外部（Stateなど）から
-/// 「進行方向オーバーライド」を有効にすることで、
-/// OrbitalFollowの水平角度を、
-/// 「オーバーライド開始時の角度」と
-/// 「プレイヤーの向き」の間を一定割合で見るように
-/// 向かせることができます。
-/// また、ブーストダッシュ開始時などに、
-/// 一度だけ進行方向へ視点をリセットすることもできます。
+/// 通常時はCinemachineInputAxisControllerによる
+/// マウス・スティック操作を受け付けます。
+/// ロックオン中はCinemachineRotationComposerを使用して
+/// 指定されたターゲット方向へカメラを向けます。
 /// </summary>
 public class PlayerCamera : MonoBehaviour
 {
+    private const float MIN_TARGET_DISTANCE = 0.0001f;
+
+    [Header("Camera")]
+
     [SerializeField, Min(0.1f)]
     private float sensitivity = 1.0f;
 
-    // カメラの軌道・向きを制御しているCinemachineコンポーネント
     [SerializeField]
     private CinemachineCamera m_cinemachineCamera;
 
-    // 通常のフリールック入力を担うコンポーネント
-    // 進行方向オーバーライド中はこれを無効化し、
-    // 通常操作との回転の競合を防ぎます
     [SerializeField]
     private CinemachineInputAxisController m_inputAxisController;
 
-    // CinemachineCameraから取得したOrbitalFollowへの参照
-    // （水平角度を直接操作する対象）
     private CinemachineOrbitalFollow m_orbitalFollow;
+    private CinemachineRotationComposer m_rotationComposer;
 
-    // 進行方向オーバーライドが有効か
     private bool m_isDriftOverrideActive;
-
-    // オーバーライド開始時点でのカメラの水平角度（度数）
-    // ここを基準点として、プレイヤーの向きとのブレンドに使用します
     private float m_overrideStartAngle;
+
+    private Transform m_targetLookTransform;
+    private Tween m_targetLookTween;
 
     /// <summary>
     /// 進行方向オーバーライドが有効かどうかを取得します。
@@ -48,17 +40,18 @@ public class PlayerCamera : MonoBehaviour
         m_isDriftOverrideActive;
 
     /// <summary>
-    /// OrbitalFollowへの参照を解決します。
+    /// 初期化を行います。
     /// </summary>
     private void Awake()
     {
-        ResolveOrbitalFollow();
+        ResolveCameraComponents();
+        CreateTargetLookTransform();
     }
 
     /// <summary>
-    /// CinemachineCameraからCinemachineOrbitalFollowを取得します。
+    /// Cinemachineの各コンポーネントへの参照を取得します。
     /// </summary>
-    private void ResolveOrbitalFollow()
+    private void ResolveCameraComponents()
     {
         if (m_cinemachineCamera == null)
         {
@@ -71,8 +64,7 @@ public class PlayerCamera : MonoBehaviour
         }
 
         m_orbitalFollow =
-            m_cinemachineCamera
-                .GetComponent<CinemachineOrbitalFollow>();
+            m_cinemachineCamera.GetComponent<CinemachineOrbitalFollow>();
 
         if (m_orbitalFollow == null)
         {
@@ -81,12 +73,39 @@ public class PlayerCamera : MonoBehaviour
                 $"{nameof(CinemachineOrbitalFollow)}が見つかりません。",
                 this);
         }
+
+        m_rotationComposer =
+            m_cinemachineCamera.GetComponent<CinemachineRotationComposer>();
+
+        if (m_rotationComposer == null)
+        {
+            Debug.LogError(
+                $"[{nameof(PlayerCamera)}] " +
+                $"{nameof(CinemachineRotationComposer)}が見つかりません。",
+                this);
+        }
+    }
+
+    /// <summary>
+    /// ロックオン時にカメラが見るためのTransformを作成します。
+    /// </summary>
+    private void CreateTargetLookTransform()
+    {
+        GameObject targetLookObject =
+            new GameObject("TargetCameraLookPoint");
+
+        targetLookObject.transform.SetParent(transform);
+        targetLookObject.transform.localPosition = Vector3.zero;
+        targetLookObject.transform.localRotation = Quaternion.identity;
+
+        m_targetLookTransform =
+            targetLookObject.transform;
+
+        targetLookObject.SetActive(false);
     }
 
     /// <summary>
     /// 進行方向を向かせるオーバーライドを開始します。
-    /// 通常のフリールック入力を一時的に無効化し、
-    /// 開始時点の角度をブレンドの基準点として記憶します。
     /// </summary>
     public void BeginDriftLookOverride()
     {
@@ -106,7 +125,7 @@ public class PlayerCamera : MonoBehaviour
 
     /// <summary>
     /// 進行方向オーバーライドを終了し、
-    /// 通常のフリールック入力へ戻します。
+    /// 通常のカメラ操作へ戻します。
     /// </summary>
     public void EndDriftLookOverride()
     {
@@ -119,25 +138,11 @@ public class PlayerCamera : MonoBehaviour
     }
 
     /// <summary>
-    /// カメラの水平角度（OrbitalFollowのHorizontal Axis）を、
-    /// 「オーバーライド開始時点の角度」と
-    /// 「指定したワールド方向」の間をblendRateの割合で見た角度へ、
-    /// 指定した速度で近づけます。
-    /// BeginDriftLookOverride()呼び出し後、
-    /// 毎フレーム（チャージ中など）呼び出してください。
+    /// 進行方向へカメラを向けます。
     /// </summary>
-    /// <param name="worldDirection">
-    /// プレイヤーの向きなど、ブレンド先となるワールド方向
-    /// （水平成分のみ使用します）。
-    /// </param>
-    /// <param name="blendRate">
-    /// ブレンド割合（0～1）。
-    /// 0で開始時の角度のまま、1で完全にworldDirectionを向く。
-    /// 0.5でその中間を見る。
-    /// </param>
-    /// <param name="turnSpeedDegreesPerSecond">
-    /// 1秒間の最大回転角度。
-    /// </param>
+    /// <param name="worldDirection">向かせたいワールド方向。</param>
+    /// <param name="blendRate">ブレンド割合。</param>
+    /// <param name="turnSpeedDegreesPerSecond">回転速度。</param>
     /// <param name="deltaTime">経過時間。</param>
     public void UpdateDriftLookDirection(
         Vector3 worldDirection,
@@ -153,7 +158,7 @@ public class PlayerCamera : MonoBehaviour
 
         worldDirection.y = 0.0f;
 
-        if (worldDirection.sqrMagnitude <= 0.0001f)
+        if (worldDirection.sqrMagnitude <= MIN_TARGET_DISTANCE)
         {
             return;
         }
@@ -177,7 +182,7 @@ public class PlayerCamera : MonoBehaviour
                     Mathf.DeltaAngle(
                         m_overrideStartAngle,
                         directionAngle)) *
-                    clampedBlendRate);
+                clampedBlendRate);
 
         float currentAngle =
             m_orbitalFollow.HorizontalAxis.Value;
@@ -194,18 +199,10 @@ public class PlayerCamera : MonoBehaviour
     }
 
     /// <summary>
-    /// カメラの水平角度を、指定したワールド方向へ
-    /// 一度だけ即座にリセットします。
-    /// 通常のフリールック操作（CinemachineInputAxisController）は
-    /// 無効化せず、そのまま維持します。
-    /// ブーストダッシュ開始時など、視点をリセットしたい
-    /// 一瞬だけ呼び出してください。
+    /// カメラの水平角度を指定したワールド方向へ即座に向けます。
     /// </summary>
-    /// <param name="worldDirection">
-    /// 向かせたいワールド方向（水平成分のみ使用します）。
-    /// </param>
-    public void SnapLookDirectionOnce(
-        Vector3 worldDirection)
+    /// <param name="worldDirection">向かせたいワールド方向。</param>
+    public void SnapLookDirectionOnce(Vector3 worldDirection)
     {
         if (m_orbitalFollow == null)
         {
@@ -214,7 +211,7 @@ public class PlayerCamera : MonoBehaviour
 
         worldDirection.y = 0.0f;
 
-        if (worldDirection.sqrMagnitude <= 0.0001f)
+        if (worldDirection.sqrMagnitude <= MIN_TARGET_DISTANCE)
         {
             return;
         }
@@ -229,5 +226,215 @@ public class PlayerCamera : MonoBehaviour
 
         m_orbitalFollow.HorizontalAxis.Value =
             targetAngle;
+    }
+
+    /// <summary>
+    /// 指定したターゲットへカメラをロックオンします。
+    /// プレイヤーを追従対象にしたまま、
+    /// Rotation Composerだけをターゲット方向へ向けます。
+    /// </summary>
+    /// <param name="target">ロックオン対象。</param>
+    /// <param name="duration">カメラ移動時間。</param>
+    public void BeginTargetLock(
+        Transform target,
+        float duration)
+    {
+        if (target == null ||
+            m_cinemachineCamera == null ||
+            m_rotationComposer == null ||
+            m_targetLookTransform == null)
+        {
+            return;
+        }
+
+        m_targetLookTween?.Kill();
+
+        Vector3 startPosition =
+            m_targetLookTransform.position;
+
+        m_targetLookTransform.gameObject.SetActive(true);
+
+        SetCameraLookTarget(m_targetLookTransform);
+
+        m_targetLookTween =
+            DOTween.To(
+                () => 0.0f,
+                progress =>
+                {
+                    if (target == null)
+                    {
+                        return;
+                    }
+
+                    m_targetLookTransform.position =
+                        Vector3.Lerp(
+                            startPosition,
+                            target.position,
+                            progress);
+                },
+                1.0f,
+                Mathf.Max(duration, 0.0f))
+            .SetEase(Ease.OutCubic);
+    }
+
+    /// <summary>
+    /// ロックオン中のカメラターゲットを更新します。
+    /// </summary>
+    /// <param name="target">現在のターゲット。</param>
+    public void UpdateTargetLock(Transform target)
+    {
+        if (target == null ||
+            m_targetLookTransform == null)
+        {
+            return;
+        }
+
+        m_targetLookTransform.position =
+            Vector3.Lerp(
+                m_targetLookTransform.position,
+                target.position,
+                Time.deltaTime * 12.0f);
+    }
+
+    /// <summary>
+    /// ロックオンを解除します。
+    /// カメラを別方向へ移動させず、
+    /// 現在のカメラ状態から直接通常操作へ戻します。
+    /// </summary>
+    /// <param name="duration">互換性のために保持している引数です。</param>
+    public void EndTargetLock(float duration)
+    {
+        m_targetLookTween?.Kill();
+        m_targetLookTween = null;
+
+        ClearCameraLookTarget();
+    }
+
+    /// <summary>
+    /// CinemachineCameraのLook Atターゲットを設定します。
+    /// </summary>
+    /// <param name="target">Look Atターゲット。</param>
+    private void SetCameraLookTarget(Transform target)
+    {
+        CameraTarget cameraTarget =
+            m_cinemachineCamera.Target;
+
+        cameraTarget.CustomLookAtTarget = true;
+        cameraTarget.LookAtTarget = target;
+
+        m_cinemachineCamera.Target =
+            cameraTarget;
+
+        if (m_inputAxisController != null)
+        {
+            m_inputAxisController.enabled = false;
+        }
+    }
+
+    /// <summary>
+    /// CinemachineCameraのLook Atターゲットを解除します。
+    /// </summary>
+    private void ClearCameraLookTarget()
+    {
+        CameraTarget cameraTarget =
+            m_cinemachineCamera.Target;
+
+        cameraTarget.CustomLookAtTarget = false;
+        cameraTarget.LookAtTarget = null;
+
+        m_cinemachineCamera.Target =
+            cameraTarget;
+
+        m_targetLookTransform.gameObject.SetActive(false);
+
+        if (m_inputAxisController != null)
+        {
+            m_inputAxisController.enabled = true;
+        }
+    }
+    /// <summary>
+    /// 指定したターゲットへの注視を開始します。
+    /// Xボタンを押している間はターゲットを注視し続けます。
+    /// </summary>
+    /// <param name="target">注視するターゲット。</param>
+    /// <param name="duration">注視方向へ移動する時間。</param>
+    public void BeginTargetFocus(
+        Transform target,
+        float duration)
+    {
+        if (target == null ||
+            m_cinemachineCamera == null ||
+            m_targetLookTransform == null)
+        {
+            return;
+        }
+
+        m_targetLookTween?.Kill();
+
+        m_targetLookTransform.gameObject.SetActive(true);
+
+        SetCameraLookTarget(m_targetLookTransform);
+
+        Vector3 startPosition =
+            m_targetLookTransform.position;
+
+        m_targetLookTween =
+            DOTween.To(
+                () => 0.0f,
+                progress =>
+                {
+                    if (target == null)
+                    {
+                        return;
+                    }
+
+                    m_targetLookTransform.position =
+                        Vector3.Lerp(
+                            startPosition,
+                            target.position,
+                            progress);
+                },
+                1.0f,
+                Mathf.Max(duration, 0.0f))
+            .SetEase(Ease.OutCubic);
+    }
+
+    /// <summary>
+    /// 注視中のターゲットを追従します。
+    /// </summary>
+    /// <param name="target">現在のターゲット。</param>
+    public void UpdateTargetFocus(Transform target)
+    {
+        if (target == null ||
+            m_targetLookTransform == null ||
+            !m_targetLookTransform.gameObject.activeSelf)
+        {
+            return;
+        }
+
+        m_targetLookTransform.position =
+            Vector3.Lerp(
+                m_targetLookTransform.position,
+                target.position,
+                Time.deltaTime * 15.0f);
+    }
+
+    /// <summary>
+    /// ターゲットへの注視を終了し、
+    /// 通常のカメラ操作へ戻します。
+    /// </summary>
+    public void EndTargetFocus()
+    {
+        m_targetLookTween?.Kill();
+        m_targetLookTween = null;
+
+        ClearCameraLookTarget();
+    }
+    /// <summary>
+    /// オブジェクト破棄時にTweenを停止します。
+    /// </summary>
+    private void OnDestroy()
+    {
+        m_targetLookTween?.Kill();
     }
 }
