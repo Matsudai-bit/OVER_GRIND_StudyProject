@@ -4,13 +4,23 @@ using System;
 [RequireComponent(typeof(ParticleSystem))]
 public class EffectNode_Aoki : MonoBehaviour
 {
+    [Header("エフェクト識別子（自動設定されます）")]
+    [SerializeField] private EffectID m_effectID;
+    public EffectID EffectID => m_effectID;
+
     private ParticleSystem m_particle;
     private Action<EffectNode_Aoki> m_onComplete;
-    public int HandleID { get; private set; } // 管理用の識別ID
+    public int HandleID { get; private set; }
 
     private void Awake()
     {
         m_particle = GetComponent<ParticleSystem>();
+    }
+
+    // 自動登録ツールから ID をセットするためのメソッド
+    public void SetEffectID(EffectID id)
+    {
+        m_effectID = id;
     }
 
     public void Init(int handleID, Action<EffectNode_Aoki> onComplete)
@@ -18,7 +28,6 @@ public class EffectNode_Aoki : MonoBehaviour
         HandleID = handleID;
         m_onComplete = onComplete;
     }
-
     public void Play()
     {
         m_particle.Play(true);

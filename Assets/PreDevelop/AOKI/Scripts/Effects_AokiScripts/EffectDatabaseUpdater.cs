@@ -40,7 +40,10 @@ public class EffectDatabaseUpdater
                 EffectNode_Aoki node = obj.GetComponent<EffectNode_Aoki>();
                 if (node != null)
                 {
-                    // 見つかったらリストに追加
+                    // プレハブ側に EffectID を自動セットして保存
+                    node.SetEffectID(id);
+                    EditorUtility.SetDirty(node.gameObject);
+
                     db.m_effectList.Add(new EffectDatabase.EffectData
                     {
                         m_id = id,
