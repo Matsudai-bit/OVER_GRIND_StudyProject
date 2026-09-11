@@ -50,6 +50,65 @@ public sealed class PlayerMovementParameterAsset : ScriptableObject
     [Min(MIN_TIME)]
     private float m_jumpInputDuration = 0.5f;
 
+    // 空中移動時の空気抵抗
+    [SerializeField, Header("空中移動")]
+    [Tooltip("空中で水平方向の速度が減衰する強さです。0で速度を維持します。")]
+    [Min(0.0f)]
+    private float m_airResistance = 1.0f;
+
+    // 落下中の重力倍率
+    [SerializeField]
+    [Tooltip("落下中に適用する重力倍率です。大きいほど早く落下します。")]
+    [Min(1.0f)]
+    private float m_fallGravityMultiplier = 2.5f;
+
+    // ジャンプ早期解除時の重力倍率
+    [SerializeField]
+    [Tooltip("上昇中にジャンプ入力を離した際に適用する重力倍率です。")]
+    [Min(1.0f)]
+    private float m_lowJumpMultiplier = 4.0f;
+
+    // 落下速度の上限
+    [SerializeField]
+    [Tooltip("落下速度の上限(絶対値)です。")]
+    [Min(0.0f)]
+    private float m_maxFallSpeed = 20.0f;
+
+// ============================================================
+// 攻撃
+// ============================================================
+
+// 攻撃中、移動入力がない場合の減速倍率
+// 1.0 = 通常と同じ
+// 2.0 = 通常の2倍の時間をかけて減速
+// 3.0 = 通常の3倍の時間をかけて減速
+[SerializeField, Header("攻撃")]
+[Tooltip("攻撃中、移動入力がない場合に通常より緩やかに減速する倍率です。")]
+[Min(1.0f)]
+private float m_attackDecelerationMultiplier = 3.0f;
+
+    // 攻撃ヒット中の実際の移動速度倍率
+    // 1.0 = 通常速度
+    // 0.5 = 半分の速度
+    [SerializeField]
+    [Tooltip("攻撃が対象にヒットしている間の実際の移動速度倍率です。")]
+    [Range(0.0f, 1.0f)]
+    private float m_attackHitMovementSpeedMultiplier = 0.5f;
+
+    /// <summary>
+    /// 攻撃中、移動入力がない場合の減速倍率を取得します。
+    /// </summary>
+    public float AttackDecelerationMultiplier =>
+        m_attackDecelerationMultiplier;
+
+    /// <summary>
+    /// 攻撃ヒット中の実際の移動速度倍率を取得します。
+    /// </summary>
+    public float AttackHitMovementSpeedMultiplier =>
+        m_attackHitMovementSpeedMultiplier;
+
+
+
     /// <summary>
     /// ジャンプ力を取得します。
     /// </summary>
@@ -59,6 +118,26 @@ public sealed class PlayerMovementParameterAsset : ScriptableObject
     /// ジャンプ入力の最大反映時間を取得します。
     /// </summary>
     public float JumpInputDuration => m_jumpInputDuration;
+
+    /// <summary>
+    /// 空中移動時の空気抵抗を取得します。
+    /// </summary>
+    public float AirResistance => m_airResistance;
+
+    /// <summary>
+    /// 落下中に適用する重力倍率を取得します。
+    /// </summary>
+    public float FallGravityMultiplier => m_fallGravityMultiplier;
+
+    /// <summary>
+    /// ジャンプ入力を早期に離した際に適用する重力倍率を取得します。
+    /// </summary>
+    public float LowJumpMultiplier => m_lowJumpMultiplier;
+
+    /// <summary>
+    /// 落下速度の上限(絶対値)を取得します。
+    /// </summary>
+    public float MaxFallSpeed => m_maxFallSpeed;
 
     /// <summary>
     /// 通常移動パラメータを生成します。

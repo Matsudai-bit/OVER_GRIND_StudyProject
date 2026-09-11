@@ -1,14 +1,22 @@
+#if UNITY_EDITOR
+
 using UnityEditor;
 using UnityEngine;
 
 /// <summary>
-/// 通常移動パラメータのInspector表示を管理します。
+/// プレイヤーの通常移動パラメータをInspectorに表示・編集します。
 /// </summary>
 [CustomEditor(typeof(PlayerMovementParameterAsset))]
 public sealed class PlayerMovementParameterAssetEditor : Editor
 {
-    // Inspector上の余白
+    // Inspector内のセクション間隔
     private const float SECTION_SPACE = 8.0f;
+
+    // 時間パラメータの最小値
+    private const float MIN_TIME = 0.01f;
+
+    // 加速度・減速度の最小値
+    private const float MIN_ACCELERATION = 0.01f;
 
     // 通常移動の最高速度
     private SerializedProperty m_maxMoveSpeedProperty;
@@ -25,8 +33,26 @@ public sealed class PlayerMovementParameterAssetEditor : Editor
     // ジャンプ力
     private SerializedProperty m_jumpPowerProperty;
 
-    // ジャンプ入力の最大反映時間
+    // ジャンプ入力反映時間
     private SerializedProperty m_jumpInputDurationProperty;
+
+    // 落下重力倍率
+    private SerializedProperty m_fallGravityMultiplierProperty;
+
+    // ジャンプ早期解除時の重力倍率
+    private SerializedProperty m_lowJumpMultiplierProperty;
+
+    // 最大落下速度
+    private SerializedProperty m_maxFallSpeedProperty;
+
+    // 空中移動時の空気抵抗
+    private SerializedProperty m_airResistanceProperty;
+
+    // 攻撃中の減速倍率
+    private SerializedProperty m_attackDecelerationMultiplierProperty; 
+
+    // 攻撃ヒット中の移動速度倍率
+    private SerializedProperty m_attackHitMovementSpeedMultiplierProperty;
 
     /// <summary>
     /// SerializedPropertyを取得します。
@@ -50,6 +76,25 @@ public sealed class PlayerMovementParameterAssetEditor : Editor
 
         m_jumpInputDurationProperty =
             serializedObject.FindProperty("m_jumpInputDuration");
+
+        m_fallGravityMultiplierProperty =
+            serializedObject.FindProperty("m_fallGravityMultiplier");
+
+        m_lowJumpMultiplierProperty =
+            serializedObject.FindProperty("m_lowJumpMultiplier");
+
+        m_maxFallSpeedProperty =
+            serializedObject.FindProperty("m_maxFallSpeed");
+        m_airResistanceProperty =
+    serializedObject.FindProperty("m_airResistance");
+
+        m_attackDecelerationMultiplierProperty = 
+            serializedObject.FindProperty("m_attackDecelerationMultiplier"); 
+
+
+        m_attackHitMovementSpeedMultiplierProperty = 
+            serializedObject.FindProperty("m_attackHitMovementSpeedMultiplier");
+
     }
 
     /// <summary>
@@ -72,6 +117,10 @@ public sealed class PlayerMovementParameterAssetEditor : Editor
         EditorGUILayout.Space(SECTION_SPACE);
 
         DrawMovementPreview();
+
+        EditorGUILayout.Space(SECTION_SPACE);
+
+        DrawJumpPreview();
 
         serializedObject.ApplyModifiedProperties();
     }
@@ -108,13 +157,13 @@ public sealed class PlayerMovementParameterAssetEditor : Editor
             m_timeToMaxSpeedProperty,
             new GUIContent(
                 "最高速度到達時間",
-                "停止状態から最高速度へ到達するまでの時間です。"));
+                "現在の最高速度に到達するまでの時間です。"));
 
         EditorGUILayout.PropertyField(
             m_timeToStopProperty,
             new GUIContent(
                 "停止時間",
-                "現在速度から停止するまでの時間です。"));
+                "移動入力を離してから停止するまでの時間です。"));
 
         EditorGUILayout.Space();
 
@@ -128,6 +177,21 @@ public sealed class PlayerMovementParameterAssetEditor : Editor
                 "回転速度",
                 "1秒間に回転できる最大角度です。"));
 
+        EditorGUILayout.LabelField(
+            "攻撃",
+            EditorStyles.boldLabel);
+
+        EditorGUILayout.PropertyField(
+            m_attackDecelerationMultiplierProperty,
+            new GUIContent(
+                "攻撃中の減速倍率",
+                "攻撃中に移動入力がない場合の減速時間倍率です。"));
+
+        EditorGUILayout.PropertyField(
+            m_attackHitMovementSpeedMultiplierProperty,
+            new GUIContent(
+                "ヒット中の移動速度倍率",
+                "攻撃が対象にヒットしている間の実際の移動速度倍率です。"));
         EditorGUILayout.EndVertical();
     }
 
@@ -146,7 +210,7 @@ public sealed class PlayerMovementParameterAssetEditor : Editor
             m_jumpPowerProperty,
             new GUIContent(
                 "ジャンプ力",
-                "ジャンプ中に上方向へ適用する移動力です。"));
+                "ジャンプ中に使用する上方向の移動力です。"));
 
         EditorGUILayout.PropertyField(
             m_jumpInputDurationProperty,
@@ -154,11 +218,45 @@ public sealed class PlayerMovementParameterAssetEditor : Editor
                 "入力反映時間",
                 "ジャンプ入力を上方向の移動へ反映する最大時間です。"));
 
+        EditorGUILayout.Space();
+
+        EditorGUILayout.LabelField(
+            "空中移動",
+            EditorStyles.boldLabel);
+
+        EditorGUILayout.PropertyField(
+            m_airResistanceProperty,
+            new GUIContent(
+                "空気抵抗",
+                "空中で水平方向の速度が減衰する強さです。0で速度を維持します。"));
+
+        EditorGUILayout.LabelField(
+            "落下調整",
+            EditorStyles.boldLabel);
+
+        EditorGUILayout.PropertyField(
+            m_fallGravityMultiplierProperty,
+            new GUIContent(
+                "落下重力倍率",
+                "落下中に適用する重力倍率です。大きいほど早く落下します。"));
+
+        EditorGUILayout.PropertyField(
+            m_lowJumpMultiplierProperty,
+            new GUIContent(
+                "早期解除重力倍率",
+                "上昇中にジャンプ入力を離した際に適用する重力倍率です。"));
+
+        EditorGUILayout.PropertyField(
+            m_maxFallSpeedProperty,
+            new GUIContent(
+                "最大落下速度",
+                "落下速度の上限です。"));
+
         EditorGUILayout.EndVertical();
     }
 
     /// <summary>
-    /// 通常移動の計算結果を表示します。
+    /// 通常移動の加速度・減速度を表示・編集します。
     /// </summary>
     private void DrawMovementPreview()
     {
@@ -169,33 +267,128 @@ public sealed class PlayerMovementParameterAssetEditor : Editor
             EditorStyles.boldLabel);
 
         float maxMoveSpeed =
-            m_maxMoveSpeedProperty.floatValue;
-
-        float timeToMaxSpeed =
-            m_timeToMaxSpeedProperty.floatValue;
-
-        float timeToStop =
-            m_timeToStopProperty.floatValue;
+            Mathf.Max(
+                m_maxMoveSpeedProperty.floatValue,
+                0.0f);
 
         float acceleration =
             CalculateAcceleration(
                 maxMoveSpeed,
-                timeToMaxSpeed);
+                m_timeToMaxSpeedProperty.floatValue);
 
         float deceleration =
             CalculateAcceleration(
                 maxMoveSpeed,
-                timeToStop);
+                m_timeToStopProperty.floatValue);
+
+        EditorGUI.BeginChangeCheck();
+
+        acceleration =
+            EditorGUILayout.FloatField(
+                new GUIContent(
+                    "加速度",
+                    "1秒間に増加する移動速度です。値を大きくすると最高速度まで速く到達します。"),
+                acceleration);
+
+        if (EditorGUI.EndChangeCheck())
+        {
+            SetTimeFromAcceleration(
+                m_timeToMaxSpeedProperty,
+                maxMoveSpeed,
+                acceleration);
+        }
+
+        EditorGUI.BeginChangeCheck();
+
+        deceleration =
+            EditorGUILayout.FloatField(
+                new GUIContent(
+                    "減速度",
+                    "1秒間に減少する移動速度です。値を大きくすると短時間で停止します。"),
+                deceleration);
+
+        if (EditorGUI.EndChangeCheck())
+        {
+            SetTimeFromAcceleration(
+                m_timeToStopProperty,
+                maxMoveSpeed,
+                deceleration);
+        }
+
+        EditorGUILayout.HelpBox(
+            "加速度・減速度を変更すると、対応する" +
+            "「最高速度到達時間」「停止時間」が自動的に更新されます。",
+            MessageType.Info);
+
+        EditorGUILayout.EndVertical();
+    }
+
+    /// <summary>
+    /// ジャンプの計算結果を表示します。
+    /// </summary>
+    private void DrawJumpPreview()
+    {
+        EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+
+        EditorGUILayout.LabelField(
+            "ジャンプ調整確認",
+            EditorStyles.boldLabel);
+
+        float jumpPower =
+            m_jumpPowerProperty.floatValue;
+
+        float gravity =
+            Mathf.Abs(Physics.gravity.y);
+
+        float fallGravityMultiplier =
+            m_fallGravityMultiplierProperty.floatValue;
+
+        // 上昇中の重力を使用した頂点までの時間
+        float timeToApex =
+            gravity > 0.0f
+                ? jumpPower / gravity
+                : 0.0f;
+
+        float maxHeight =
+            (jumpPower * jumpPower) /
+            Mathf.Max(
+                2.0f * gravity,
+                0.0001f);
+
+        // 落下時の実効重力を使用した落下時間
+        float effectiveFallGravity =
+            gravity *
+            Mathf.Max(
+                fallGravityMultiplier,
+                0.0001f);
+
+        float timeToFall =
+            effectiveFallGravity > 0.0f
+                ? Mathf.Sqrt(
+                    2.0f *
+                    maxHeight /
+                    effectiveFallGravity)
+                : 0.0f;
 
         DrawReadOnlyFloat(
-            "加速度",
-            acceleration,
-            " units/s?");
+            "最大到達高さ",
+            maxHeight,
+            " m");
 
         DrawReadOnlyFloat(
-            "減速度",
-            deceleration,
-            " units/s?");
+            "頂点到達時間",
+            timeToApex,
+            " s");
+
+        DrawReadOnlyFloat(
+            "落下時間（目安）",
+            timeToFall,
+            " s");
+
+        EditorGUILayout.HelpBox(
+            "最大到達高さ・頂点到達時間はジャンプ力と重力から、" +
+            "落下時間は落下重力倍率から計算されます。",
+            MessageType.Info);
 
         EditorGUILayout.EndVertical();
     }
@@ -220,7 +413,7 @@ public sealed class PlayerMovementParameterAssetEditor : Editor
     }
 
     /// <summary>
-    /// 目標速度と時間から加速度を計算します。
+    /// 最高速度と到達時間から加速度を計算します。
     /// </summary>
     /// <param name="targetSpeed">目標速度。</param>
     /// <param name="requiredTime">到達時間。</param>
@@ -236,4 +429,34 @@ public sealed class PlayerMovementParameterAssetEditor : Editor
 
         return targetSpeed / requiredTime;
     }
+
+    /// <summary>
+    /// 指定した加速度から到達時間を計算して設定します。
+    /// </summary>
+    /// <param name="timeProperty">更新対象の時間パラメータ。</param>
+    /// <param name="targetSpeed">目標速度。</param>
+    /// <param name="acceleration">設定する加速度。</param>
+    private void SetTimeFromAcceleration(
+        SerializedProperty timeProperty,
+        float targetSpeed,
+        float acceleration)
+    {
+        acceleration =
+            Mathf.Max(
+                acceleration,
+                MIN_ACCELERATION);
+
+        if (targetSpeed <= 0.0f)
+        {
+            timeProperty.floatValue = MIN_TIME;
+            return;
+        }
+
+        timeProperty.floatValue =
+            Mathf.Max(
+                targetSpeed / acceleration,
+                MIN_TIME);
+    }
 }
+
+#endif
