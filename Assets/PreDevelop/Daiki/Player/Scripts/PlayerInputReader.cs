@@ -35,6 +35,9 @@ public sealed class PlayerInputReader : MonoBehaviour
     // 攻撃入力があるか
     private bool m_hasAttackInput;
 
+    // 攻撃入力が押され続けているか
+    private bool m_isAttackHeld;
+
     // ジャンプ入力中か
     private bool m_hasJumpInput;
 
@@ -71,6 +74,12 @@ public sealed class PlayerInputReader : MonoBehaviour
     public bool HasMoveInput =>
         m_moveInput.sqrMagnitude >
         MOVE_INPUT_SQR_THRESHOLD;
+
+    /// <summary>
+    /// 攻撃入力が押され続けているかどうかを取得します。
+    /// 地上攻撃など、押している間継続する攻撃の判定に使用します。
+    /// </summary>
+    public bool IsAttackHeld => m_isAttackHeld;
 
     /// <summary>
     /// ジャンプ入力中かどうかを取得します。
@@ -220,6 +229,9 @@ public sealed class PlayerInputReader : MonoBehaviour
             attackAction.performed +=
                 HandleAttackPerformed;
 
+            attackAction.canceled +=
+                HandleAttackCanceled;
+
             attackAction.Enable();
         }
 
@@ -282,6 +294,9 @@ public sealed class PlayerInputReader : MonoBehaviour
         {
             attackAction.performed -=
                 HandleAttackPerformed;
+
+            attackAction.canceled -=
+                HandleAttackCanceled;
 
             attackAction.Disable();
         }
@@ -393,6 +408,17 @@ public sealed class PlayerInputReader : MonoBehaviour
         InputAction.CallbackContext context)
     {
         m_hasAttackInput = true;
+        m_isAttackHeld = true;
+    }
+
+    /// <summary>
+    /// 攻撃入力が離されたことを記録します。
+    /// </summary>
+    /// <param name="context">入力情報。</param>
+    private void HandleAttackCanceled(
+        InputAction.CallbackContext context)
+    {
+        m_isAttackHeld = false;
     }
 
     /// <summary>
@@ -462,6 +488,7 @@ public sealed class PlayerInputReader : MonoBehaviour
     {
         m_moveInput = Vector2.zero;
         m_hasAttackInput = false;
+        m_isAttackHeld = false;
         m_hasJumpInput = false;
         m_hasVBoostStarted = false;
         m_isVBoostHeld = false;
