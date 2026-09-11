@@ -26,6 +26,12 @@ public class PlayerAttackController : MonoBehaviour
     [Header("攻撃用ヒットボックス")]
     private List<AttackHitbox> m_attackHitboxes = new();
 
+    // 多段ヒット攻撃の基本ヒットレート（1秒あたりのヒット回数）
+    [SerializeField]
+    [Header("多段ヒット設定")]
+    [Min(0.1f)]
+    private float m_baseHitsPerSecond = 40.0f;
+
     // コンボ段階ごとに受信済みイベントを記録する
     private readonly Dictionary<int, HashSet<AttackAnimationEventType>> m_eventMap = new();
 
@@ -36,6 +42,17 @@ public class PlayerAttackController : MonoBehaviour
     /// 攻撃ヒットボックスの有効化要求を取得します。
     /// </summary>
     public bool IsAttackHitboxEnableRequested => m_requestEnableHitbox;
+
+    /// <summary>
+    /// 多段ヒット攻撃の基本ヒットレート（1秒あたりのヒット回数）を取得します。
+    /// </summary>
+    public float BaseHitsPerSecond => m_baseHitsPerSecond;
+
+    /// <summary>
+    /// 多段ヒット攻撃の基本ヒット間隔（秒）を取得します。
+    /// </summary>
+    public float BaseHitIntervalSeconds =>
+        1.0f / Mathf.Max(m_baseHitsPerSecond, 0.0001f);
 
     private void OnEnable()
     {
@@ -49,7 +66,7 @@ public class PlayerAttackController : MonoBehaviour
     }
 
     /// <summary>
-    /// すべての攻撃ヒットボックスを有効化します。
+    /// すべての攻撃ヒットボックスを単発ヒットモードで有効化します。
     /// </summary>
     public void EnableAttackHitboxes()
     {
@@ -62,6 +79,124 @@ public class PlayerAttackController : MonoBehaviour
 
             attackHitbox.EnableHitbox();
         }
+    }
+
+    /// <summary>
+    /// すべての攻撃ヒットボックスを多段ヒットモードで有効化します。
+    /// 地上攻撃など、押しっぱなしで継続ヒットさせる攻撃で使用します。
+    /// </summary>
+    public void EnableContinuousAttackHitboxes()
+    {
+        foreach (AttackHitbox attackHitbox in m_attackHitboxes)
+        {
+            if (attackHitbox == null)
+            {
+                continue;
+            }
+
+            attackHitbox.EnableContinuousHitbox();
+        }
+    }
+
+    /// <summary>
+    /// すべての攻撃ヒットボックスについて、
+    /// 多段ヒット判定（現在重なっている対象へのダメージ適用）を1回分実行します。
+    /// 一定周期（<see cref="BaseHitIntervalSeconds"/>）ごとに呼び出してください。
+    /// </summary>
+    /// <returns>
+    /// true：いずれかのヒットボックスが1体以上の対象に命中した。
+    /// false：どのヒットボックスも対象に命中しなかった（空振り）。
+    /// </returns>
+    public bool ApplyContinuousHitTick()
+    {
+        bool hasHitAnyTarget = false;
+
+        foreach (AttackHitbox attackHitbox in m_attackHitboxes)
+        {
+            if (attackHitbox == null)
+            {
+                continue;
+            }
+
+            // 短絡評価でApplyContinuousDamage()自体が
+            // 呼ばれなくなることを避けるため、
+            // 先に呼び出してから結果をOR合成する
+            bool hasHit = attackHitbox.ApplyContinuousDamage();
+            hasHitAnyTarget = hasHitAnyTarget || hasHit;
+        }
+
+        return hasHitAnyTarget;
+    }
+
+    /// <summary>
+    /// いずれかの攻撃ヒットボックスが、現在1体以上の対象と重なっているかどうかを判定します。
+    /// 攻撃中の前進を止めるかどうかの判定などに使用します。
+    /// </summary>
+    /// <returns>
+    /// true：いずれかのヒットボックスが対象と重なっている。
+    /// false：どのヒットボックスも対象と重なっていない。
+    /// </returns>
+    public bool IsHittingAnyTarget()
+    {
+        foreach (AttackHitbox attackHitbox in m_attackHitboxes)
+        {
+            if (attackHitbox == null)
+            {
+                continue;
+            }
+
+            if (attackHitbox.HasOverlappingTargets)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// すべての攻撃ヒットボックスの中で、
+    /// 最も深く貫通している対象についての貫通解消方向・距離を取得します。
+    /// </summary>
+    /// <param name="direction">貫通を解消する方向（正規化済み）。</param>
+    /// <param name="distance">貫通している距離。</param>
+    /// <returns>
+    /// true：貫通している対象があり、direction・distanceが有効です。
+    /// false：貫通している対象がありません。
+    /// </returns>
+    public bool TryGetMaxPenetration(
+        out Vector3 direction,
+        out float distance)
+    {
+        direction = Vector3.zero;
+        distance = 0.0f;
+
+        bool hasFoundPenetration = false;
+
+        foreach (AttackHitbox attackHitbox in m_attackHitboxes)
+        {
+            if (attackHitbox == null)
+            {
+                continue;
+            }
+
+            if (!attackHitbox.TryGetMaxPenetration(
+                    out Vector3 hitboxDirection,
+                    out float hitboxDistance))
+            {
+                continue;
+            }
+
+            if (!hasFoundPenetration ||
+                hitboxDistance > distance)
+            {
+                direction = hitboxDirection;
+                distance = hitboxDistance;
+                hasFoundPenetration = true;
+            }
+        }
+
+        return hasFoundPenetration;
     }
 
     /// <summary>
