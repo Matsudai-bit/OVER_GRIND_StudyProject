@@ -7,89 +7,199 @@ using System.Text;
 using System.Collections.Generic;
 
 /// <summary>
-/// ParticleSystem付きプレハブ専用：EffectIDの追加・削除・データベース登録ツール
+/// ParticleSystem付きプレハブ専用：EffectIDの一括追加・個別に編集・データベース登録ツール
 /// </summary>
 public class EffectIDGeneratorWindow : EditorWindow
 {
-    private string m_newIDName = "";
+    // 一括追加用のデータ構造
+    [Serializable]
+    private class AddItem
+    {
+        public string idName = "";
+        public GameObject prefab = null;
+    }
+
+    [Serializable]
+    private class PendingEntry
+    {
+        public string idName;
+        public string prefabPath;
+    }
+
+    [Serializable]
+    private class PendingPackage
+    {
+        public List<PendingEntry> entries = new List<PendingEntry>();
+    }
+
+    private List<AddItem> m_addList = new List<AddItem>();
+    private Vector2 m_scrollPos;
+
+    // 個別プレハブ確認・編集用
     private int m_assignIndex = 0;
-    private int m_selectedIndex = 0;
     private GameObject m_assignPrefab;
+    private string m_lastCheckedID = "";
+    private int m_selectedIndex = 0;
 
     [MenuItem("Tools/VFX/EffectID 編集・追加ツール")]
     public static void ShowWindow()
     {
         var window = GetWindow<EffectIDGeneratorWindow>("EffectID 編集");
-        window.minSize = new Vector2(350, 380);
+        window.minSize = new Vector2(400, 500);
+    }
+
+    private void OnEnable()
+    {
+        // 初期状態として1行用意
+        if (m_addList.Count == 0)
+        {
+            m_addList.Add(new AddItem());
+        }
+        m_lastCheckedID = "";
     }
 
     private void OnGUI()
     {
         EditorGUILayout.Space(10);
 
-        //識別子の追加
-        EditorGUILayout.LabelField("識別子の追加", EditorStyles.boldLabel);
-        m_newIDName = EditorGUILayout.TextField("Effect名:", m_newIDName);
-        if (GUILayout.Button("IDを追加する", GUILayout.Height(25)))
+        //識別子 ＆ プレハブ の一括追加      
+        EditorGUILayout.LabelField("識別子 ＆ プレハブ の一括追加", EditorStyles.boldLabel);
+
+        // ＋ 行を追加ボタン
+        EditorGUILayout.BeginHorizontal();
+        GUILayout.FlexibleSpace();
+        if (GUILayout.Button("＋ 行を追加", GUILayout.Width(100), GUILayout.Height(24)))
         {
-            AddID();
+            m_addList.Add(new AddItem());
         }
+        EditorGUILayout.EndHorizontal();
 
-        EditorGUILayout.Space(15);
+        EditorGUILayout.Space(5);
 
-        // プレハブの登録
-        string[] currentNames = Enum.GetNames(typeof(EffectID));
-        EditorGUILayout.LabelField("プレハブの登録", EditorStyles.boldLabel);
-        if (currentNames.Length > 0)
+        // 動的な追加リストを表示
+        int removeIndex = -1;
+        for (int i = 0; i < m_addList.Count; i++)
         {
-            m_assignIndex = EditorGUILayout.Popup("対象のID:", m_assignIndex, currentNames);
+            EditorGUILayout.BeginHorizontal(EditorStyles.helpBox);
 
-            EditorGUILayout.Space(5);
-            EditorGUILayout.LabelField("パーティクルプレハブ:", EditorStyles.boldLabel);
+            //識別子名 入力
+            EditorGUILayout.BeginVertical(GUILayout.Width(130));
+            EditorGUILayout.LabelField("識別子:", EditorStyles.miniLabel);
+            m_addList[i].idName = EditorGUILayout.TextField(m_addList[i].idName);
+            EditorGUILayout.EndVertical();
 
-            // 専用選択ウィンドウを開く枠
+            //プレハブ 選択
+            EditorGUILayout.BeginVertical();
+            EditorGUILayout.LabelField("プレハブ:", EditorStyles.miniLabel);
+
             EditorGUILayout.BeginHorizontal();
-
             GUIContent labelContent = new GUIContent(
-                m_assignPrefab != null ? m_assignPrefab.name : "None (Particle Prefab)",
-                m_assignPrefab != null ? AssetPreview.GetMiniThumbnail(m_assignPrefab) : null
+                m_addList[i].prefab != null ? m_addList[i].prefab.name : "None (Prefab)",
+                m_addList[i].prefab != null ? AssetPreview.GetMiniThumbnail(m_addList[i].prefab) : null
             );
 
+            int captureIndex = i;
             if (GUILayout.Button(labelContent, EditorStyles.objectField, GUILayout.Height(20)))
             {
                 ParticlePickerWindow.ShowWindow((selected) => {
-                    m_assignPrefab = selected;
+                    m_addList[captureIndex].prefab = selected;
                     Repaint();
                 });
             }
-
             if (GUILayout.Button("", GUI.skin.GetStyle("ObjectFieldButton"), GUILayout.Width(19), GUILayout.Height(18)))
             {
                 ParticlePickerWindow.ShowWindow((selected) => {
-                    m_assignPrefab = selected;
+                    m_addList[captureIndex].prefab = selected;
                     Repaint();
                 });
             }
             EditorGUILayout.EndHorizontal();
 
-            // Projectウィンドウからのドラッグ＆ドロップ受け入れ処理
-            Rect lastRect = GUILayoutUtility.GetLastRect();
-            HandleDragAndDrop(lastRect);
+            // ドラッグ＆ドロップ受け入れ
+            HandleDragAndDrop(GUILayoutUtility.GetLastRect(), ref m_addList[i].prefab);
 
-            bool isValidParticle = m_assignPrefab != null && m_assignPrefab.GetComponentInChildren<ParticleSystem>() != null;
+            EditorGUILayout.EndVertical();
+
+            // 削除 (－) ボタン
+            if (m_addList.Count > 1)
+            {
+                EditorGUILayout.BeginVertical(GUILayout.Width(25));
+                EditorGUILayout.Space(14);
+                if (GUILayout.Button("X", GUILayout.Width(22), GUILayout.Height(20)))
+                {
+                    removeIndex = i;
+                }
+                EditorGUILayout.EndVertical();
+            }
+
+            EditorGUILayout.EndHorizontal();
+        }
+
+        if (removeIndex != -1)
+        {
+            m_addList.RemoveAt(removeIndex);
+        }
+
+        EditorGUILayout.Space(8);
+
+        // 一括追加するボタン
+        if (GUILayout.Button("一 括 追 加 す る", GUILayout.Height(35)))
+        {
+            BatchAddProcess();
+        }
+
+        EditorGUILayout.Space(15);
+        Rect lineRect = EditorGUILayout.GetControlRect(false, 1);
+        EditorGUI.DrawRect(lineRect, new Color(0.5f, 0.5f, 0.5f, 0.5f));
+        EditorGUILayout.Space(15);
+
+      
+        // 登録済みデータの確認・個別更新
+        EditorGUILayout.LabelField("登録済みデータの確認・更新", EditorStyles.boldLabel);
+        string[] currentNames = Enum.GetNames(typeof(EffectID));
+
+        if (currentNames.Length > 0)
+        {
+            EditorGUI.BeginChangeCheck();
+            m_assignIndex = EditorGUILayout.Popup("対象のID:", m_assignIndex, currentNames);
+            if (m_assignIndex >= currentNames.Length) m_assignIndex = 0;
+            string currentID = currentNames[m_assignIndex];
+
+            if (EditorGUI.EndChangeCheck() || m_lastCheckedID != currentID)
+            {
+                m_lastCheckedID = currentID;
+                LoadAssignedPrefab(currentID);
+                GUI.FocusControl(null);
+            }
 
             EditorGUILayout.Space(5);
 
-            EditorGUI.BeginDisabledGroup(!isValidParticle);
-            if (GUILayout.Button("データベースに登録 / 更新", GUILayout.Height(30)))
+            EditorGUILayout.BeginHorizontal();
+            GUIContent singleLabel = new GUIContent(
+                m_assignPrefab != null ? m_assignPrefab.name : "None (Particle Prefab)",
+                m_assignPrefab != null ? AssetPreview.GetMiniThumbnail(m_assignPrefab) : null
+            );
+
+            if (GUILayout.Button(singleLabel, EditorStyles.objectField, GUILayout.Height(20)))
             {
-                RegisterPrefab(currentNames[m_assignIndex], m_assignPrefab);
+                ParticlePickerWindow.ShowWindow((selected) => { m_assignPrefab = selected; Repaint(); });
+            }
+            if (GUILayout.Button("", GUI.skin.GetStyle("ObjectFieldButton"), GUILayout.Width(19), GUILayout.Height(18)))
+            {
+                ParticlePickerWindow.ShowWindow((selected) => { m_assignPrefab = selected; Repaint(); });
+            }
+            EditorGUILayout.EndHorizontal();
+            HandleDragAndDrop(GUILayoutUtility.GetLastRect(), ref m_assignPrefab);
+
+            bool isValidSingle = m_assignPrefab != null && m_assignPrefab.GetComponentInChildren<ParticleSystem>() != null;
+
+            EditorGUILayout.Space(5);
+            EditorGUI.BeginDisabledGroup(!isValidSingle);
+            if (GUILayout.Button("選択中のプレハブを更新", GUILayout.Height(25)))
+            {
+                RegisterSinglePrefab(currentID, m_assignPrefab);
             }
             EditorGUI.EndDisabledGroup();
-        }
-        else
-        {
-            EditorGUILayout.HelpBox("EffectIDの読み込みに失敗しました。", MessageType.Warning);
         }
 
         EditorGUILayout.Space(15);
@@ -98,7 +208,9 @@ public class EffectIDGeneratorWindow : EditorWindow
         EditorGUILayout.LabelField("識別子の削除", EditorStyles.boldLabel);
         if (currentNames.Length > 0)
         {
-            m_selectedIndex = EditorGUILayout.Popup("対象のEffect:", m_selectedIndex, currentNames);
+            m_selectedIndex = EditorGUILayout.Popup("削除するEffect:", m_selectedIndex, currentNames);
+            if (m_selectedIndex >= currentNames.Length) m_selectedIndex = 0;
+
             if (GUILayout.Button("削除", GUILayout.Height(25)))
             {
                 DeleteID(currentNames[m_selectedIndex]);
@@ -106,7 +218,7 @@ public class EffectIDGeneratorWindow : EditorWindow
         }
     }
 
-    private void HandleDragAndDrop(Rect dropArea)
+    private void HandleDragAndDrop(Rect dropArea, ref GameObject targetObject)
     {
         Event evt = Event.current;
         if (evt.type == EventType.DragUpdated || evt.type == EventType.DragPerform)
@@ -114,7 +226,6 @@ public class EffectIDGeneratorWindow : EditorWindow
             if (!dropArea.Contains(evt.mousePosition)) return;
 
             DragAndDrop.visualMode = DragAndDropVisualMode.Copy;
-
             if (evt.type == EventType.DragPerform)
             {
                 DragAndDrop.AcceptDrag();
@@ -123,7 +234,7 @@ public class EffectIDGeneratorWindow : EditorWindow
                     GameObject go = draggedObject as GameObject;
                     if (go != null && go.GetComponentInChildren<ParticleSystem>() != null)
                     {
-                        m_assignPrefab = go;
+                        targetObject = go;
                         GUI.changed = true;
                         break;
                     }
@@ -133,48 +244,173 @@ public class EffectIDGeneratorWindow : EditorWindow
         }
     }
 
-    private void RegisterPrefab(string idName, GameObject prefabObj)
+    private void BatchAddProcess()
     {
-        if (prefabObj == null)
+        List<string> existingNames = new List<string>(Enum.GetNames(typeof(EffectID)));
+        PendingPackage package = new PendingPackage();
+
+        List<string> newIDsToGenerate = new List<string>(existingNames);
+
+        for (int i = 0; i < m_addList.Count; i++)
         {
-            EditorUtility.DisplayDialog("エラー", "プレハブをセットしてください。", "OK");
-            return;
+            var item = m_addList[i];
+            if (string.IsNullOrWhiteSpace(item.idName))
+            {
+                EditorUtility.DisplayDialog("エラー", $"{i + 1} 行目の識別子名が空欄です。", "OK");
+                return;
+            }
+
+            string sanitizedID = System.Text.RegularExpressions.Regex.Replace(item.idName.Trim(), @"[^\w]", "");
+
+            if (newIDsToGenerate.Contains(sanitizedID))
+            {
+                EditorUtility.DisplayDialog("エラー", $"'{sanitizedID}' は既に存在するか、重複しています。", "OK");
+                return;
+            }
+
+            if (item.prefab == null || item.prefab.GetComponentInChildren<ParticleSystem>() == null)
+            {
+                EditorUtility.DisplayDialog("エラー", $"'{sanitizedID}' に有効なパーティクルプレハブがセットされていません。", "OK");
+                return;
+            }
+
+            if (!EditorUtility.IsPersistent(item.prefab))
+            {
+                EditorUtility.DisplayDialog("エラー", $"'{sanitizedID}' のプレハブはProjectウィンドウ内のものを指定してください。", "OK");
+                return;
+            }
+
+            newIDsToGenerate.Add(sanitizedID);
+            package.entries.Add(new PendingEntry
+            {
+                idName = sanitizedID,
+                prefabPath = AssetDatabase.GetAssetPath(item.prefab)
+            });
         }
 
-        if (idName == "None")
-        {
-            EditorUtility.DisplayDialog("エラー", "'None' 以外のIDを選択してください。", "OK");
-            return;
-        }
+        if (package.entries.Count == 0) return;
 
-        if (!EditorUtility.IsPersistent(prefabObj))
-        {
-            EditorUtility.DisplayDialog("エラー", "Hierarchyのオブジェクトではなく、Projectウィンドウ内にある「プレハブファイル」をセットしてください。", "OK");
-            return;
-        }
+        // JSON化してSessionStateに保存（コンパイル後へ引き継ぎ）
+        string json = JsonUtility.ToJson(package);
+        SessionState.SetString("PendingVFX_BatchPackage", json);
 
-        EffectNode_Aoki node = prefabObj.GetComponent<EffectNode_Aoki>();
-        if (node == null)
+        // Enumの生成とコンパイル開始
+        GenerateEnumFile(newIDsToGenerate);
+
+        m_addList.Clear();
+        m_addList.Add(new AddItem());
+        GUI.FocusControl(null);
+
+        AssetDatabase.Refresh();
+    }
+
+    [UnityEditor.Callbacks.DidReloadScripts]
+    private static void OnScriptsReloaded()
+    {
+        string json = SessionState.GetString("PendingVFX_BatchPackage", "");
+        if (string.IsNullOrEmpty(json)) return;
+
+        SessionState.EraseString("PendingVFX_BatchPackage");
+
+        PendingPackage package = JsonUtility.FromJson<PendingPackage>(json);
+        if (package == null || package.entries.Count == 0) return;
+
+        EffectDatabase db = GetDatabaseStatic();
+        if (db == null) return;
+
+        Undo.RecordObject(db, "Batch Add Effects");
+
+        foreach (var entry in package.entries)
         {
-            string path = AssetDatabase.GetAssetPath(prefabObj);
-            GameObject contents = PrefabUtility.LoadPrefabContents(path);
-            node = contents.AddComponent<EffectNode_Aoki>();
-            PrefabUtility.SaveAsPrefabAsset(contents, path);
+            GameObject prefabObj = AssetDatabase.LoadAssetAtPath<GameObject>(entry.prefabPath);
+            if (prefabObj == null) continue;
+
+            // プレハブへのEffectNode付与・ID設定
+            GameObject contents = PrefabUtility.LoadPrefabContents(entry.prefabPath);
+            EffectNode_Aoki node = contents.GetComponent<EffectNode_Aoki>();
+            if (node == null) node = contents.AddComponent<EffectNode_Aoki>();
+
+            EffectID targetID = (EffectID)Enum.Parse(typeof(EffectID), entry.idName);
+            node.SetEffectID(targetID);
+
+            PrefabUtility.SaveAsPrefabAsset(contents, entry.prefabPath);
             PrefabUtility.UnloadPrefabContents(contents);
 
-            prefabObj = AssetDatabase.LoadAssetAtPath<GameObject>(path);
-            node = prefabObj.GetComponent<EffectNode_Aoki>();
+            // データベースに書き込み
+            GameObject updatedPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(entry.prefabPath);
+            EffectNode_Aoki finalNode = updatedPrefab.GetComponent<EffectNode_Aoki>();
+
+            bool isUpdated = false;
+            for (int i = 0; i < db.m_effectList.Count; i++)
+            {
+                if (db.m_effectList[i].m_id == targetID)
+                {
+                    var data = db.m_effectList[i];
+                    data.m_prefab = finalNode;
+                    db.m_effectList[i] = data;
+                    isUpdated = true;
+                    break;
+                }
+            }
+
+            if (!isUpdated)
+            {
+                db.m_effectList.Add(new EffectDatabase.EffectData { m_id = targetID, m_prefab = finalNode });
+            }
         }
 
-        EffectDatabase db = GetDatabase();
-        if (db == null)
+        EditorUtility.SetDirty(db);
+        AssetDatabase.SaveAssets();
+
+        Debug.Log($"[VFXManager] {package.entries.Count} 件の識別子とプレハブを一括登録完了しました！");
+    }
+
+    private void LoadAssignedPrefab(string idName)
+    {
+        m_assignPrefab = null;
+        if (idName == "None") return;
+
+        EffectDatabase db = GetDatabaseStatic();
+        if (db == null) return;
+
+        try
         {
-            EditorUtility.DisplayDialog("エラー", "EffectDatabaseが見つかりません。", "OK");
-            return;
+            EffectID targetID = (EffectID)Enum.Parse(typeof(EffectID), idName);
+            foreach (var data in db.m_effectList)
+            {
+                if (data.m_id == targetID && data.m_prefab != null)
+                {
+                    m_assignPrefab = data.m_prefab.gameObject;
+                    break;
+                }
+            }
         }
+        catch { }
+        Repaint();
+    }
+
+    private void RegisterSinglePrefab(string idName, GameObject prefabObj)
+    {
+        if (prefabObj == null || idName == "None") return;
+        string path = AssetDatabase.GetAssetPath(prefabObj);
+
+        GameObject contents = PrefabUtility.LoadPrefabContents(path);
+        EffectNode_Aoki node = contents.GetComponent<EffectNode_Aoki>();
+        if (node == null) node = contents.AddComponent<EffectNode_Aoki>();
 
         EffectID targetID = (EffectID)Enum.Parse(typeof(EffectID), idName);
         node.SetEffectID(targetID);
+
+        PrefabUtility.SaveAsPrefabAsset(contents, path);
+        PrefabUtility.UnloadPrefabContents(contents);
+
+        GameObject updatedPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+        EffectNode_Aoki finalNode = updatedPrefab.GetComponent<EffectNode_Aoki>();
+
+        EffectDatabase db = GetDatabaseStatic();
+        if (db == null) return;
+
+        Undo.RecordObject(db, "Update Single EffectDatabase");
 
         bool isUpdated = false;
         for (int i = 0; i < db.m_effectList.Count; i++)
@@ -182,7 +418,7 @@ public class EffectIDGeneratorWindow : EditorWindow
             if (db.m_effectList[i].m_id == targetID)
             {
                 var data = db.m_effectList[i];
-                data.m_prefab = node;
+                data.m_prefab = finalNode;
                 db.m_effectList[i] = data;
                 isUpdated = true;
                 break;
@@ -191,39 +427,24 @@ public class EffectIDGeneratorWindow : EditorWindow
 
         if (!isUpdated)
         {
-            db.m_effectList.Add(new EffectDatabase.EffectData { m_id = targetID, m_prefab = node });
+            db.m_effectList.Add(new EffectDatabase.EffectData { m_id = targetID, m_prefab = finalNode });
         }
 
         EditorUtility.SetDirty(db);
         AssetDatabase.SaveAssets();
 
-        m_assignPrefab = null;
-        EditorUtility.DisplayDialog("完了", $"'{idName}' に '{prefabObj.name}' を登録しました！", "OK");
+        LoadAssignedPrefab(idName);
+        EditorUtility.DisplayDialog("完了", $"'{idName}' を更新しました！", "OK");
     }
 
-    private EffectDatabase GetDatabase()
+    private static EffectDatabase GetDatabaseStatic()
     {
         string[] guids = AssetDatabase.FindAssets("t:EffectDatabase");
         if (guids.Length > 0)
         {
-            string path = AssetDatabase.GUIDToAssetPath(guids[0]);
-            return AssetDatabase.LoadAssetAtPath<EffectDatabase>(path);
+            return AssetDatabase.LoadAssetAtPath<EffectDatabase>(AssetDatabase.GUIDToAssetPath(guids[0]));
         }
         return null;
-    }
-
-    private void AddID()
-    {
-        if (string.IsNullOrWhiteSpace(m_newIDName)) return;
-        string sanitizedID = System.Text.RegularExpressions.Regex.Replace(m_newIDName.Trim(), @"[^\w]", "");
-        List<string> existingNames = new List<string>(Enum.GetNames(typeof(EffectID)));
-        if (existingNames.Contains(sanitizedID)) return;
-
-        existingNames.Add(sanitizedID);
-        GenerateEnumFile(existingNames);
-        m_newIDName = "";
-        GUI.FocusControl(null);
-        AssetDatabase.Refresh();
     }
 
     private void DeleteID(string targetID)
@@ -237,10 +458,11 @@ public class EffectIDGeneratorWindow : EditorWindow
             m_selectedIndex = 0;
             GUI.FocusControl(null);
             AssetDatabase.Refresh();
+            m_lastCheckedID = "";
         }
     }
 
-    private void GenerateEnumFile(List<string> idList)
+    private static void GenerateEnumFile(List<string> idList)
     {
         StringBuilder sb = new StringBuilder();
         sb.AppendLine("// 自動生成されたファイルです。手動で直接編集しないでください。");
@@ -260,9 +482,6 @@ public class EffectIDGeneratorWindow : EditorWindow
     }
 }
 
-/// <summary>
-/// ParticleSystem付きプレハブだけをリスト形式で綺麗に表示する専用ウィンドウ
-/// </summary>
 public class ParticlePickerWindow : EditorWindow
 {
     private Action<GameObject> m_onSelect;
@@ -273,7 +492,7 @@ public class ParticlePickerWindow : EditorWindow
     public static void ShowWindow(Action<GameObject> onSelect)
     {
         var win = CreateInstance<ParticlePickerWindow>();
-        win.titleContent = new GUIContent("パーティクルプレハブを選択");
+        win.titleContent = new GUIContent("プレハブを選択");
         win.minSize = new Vector2(380, 420);
         win.m_onSelect = onSelect;
         win.LoadParticlePrefabs();
@@ -298,16 +517,12 @@ public class ParticlePickerWindow : EditorWindow
     private void OnGUI()
     {
         EditorGUILayout.Space(8);
-
-        // 検索ボックス
         EditorGUILayout.BeginHorizontal();
         EditorGUILayout.LabelField("検索:", GUILayout.Width(40));
         m_searchQuery = EditorGUILayout.TextField(m_searchQuery);
         EditorGUILayout.EndHorizontal();
-
         EditorGUILayout.Space(8);
 
-        // クリアボタン
         if (GUILayout.Button("None (選択解除)", EditorStyles.miniButton, GUILayout.Height(22)))
         {
             m_onSelect?.Invoke(null);
@@ -315,47 +530,32 @@ public class ParticlePickerWindow : EditorWindow
         }
 
         EditorGUILayout.Space(5);
-
         m_scrollPos = EditorGUILayout.BeginScrollView(m_scrollPos);
 
         foreach (var prefab in m_particlePrefabs)
         {
             if (prefab == null) continue;
-            if (!string.IsNullOrEmpty(m_searchQuery) && !prefab.name.ToLower().Contains(m_searchQuery.ToLower()))
-            {
-                continue;
-            }
+            if (!string.IsNullOrEmpty(m_searchQuery) && !prefab.name.ToLower().Contains(m_searchQuery.ToLower())) continue;
 
             Texture2D icon = AssetPreview.GetMiniThumbnail(prefab);
             string path = AssetDatabase.GetAssetPath(prefab);
 
-            // リスト1行の表示枠
             EditorGUILayout.BeginHorizontal(EditorStyles.helpBox);
+            if (icon != null) GUILayout.Label(icon, GUILayout.Width(24), GUILayout.Height(24));
 
-            // ミニアイコン
-            if (icon != null)
-            {
-                GUILayout.Label(icon, GUILayout.Width(24), GUILayout.Height(24));
-            }
-
-            // 名前と保存パスを縦並びで表示
             EditorGUILayout.BeginVertical();
             GUILayout.Label(prefab.name, EditorStyles.boldLabel);
             GUILayout.Label(path, EditorStyles.miniLabel);
             EditorGUILayout.EndVertical();
-
             GUILayout.FlexibleSpace();
 
-            // 選択ボタン
             if (GUILayout.Button("選択", GUILayout.Width(55), GUILayout.Height(26)))
             {
                 m_onSelect?.Invoke(prefab);
                 Close();
             }
-
             EditorGUILayout.EndHorizontal();
         }
-
         EditorGUILayout.EndScrollView();
     }
 }
