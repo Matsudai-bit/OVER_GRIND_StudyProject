@@ -169,8 +169,24 @@ public sealed class PlayerBoostChargingState
 
 
         if (Owner.Monitor.IsGrounded &&
-            Owner.InputReader.HasJumpInput)
+    Owner.InputReader.HasJumpInput)
         {
+            // チャージを中断するため、保持しているゲージを破棄する
+            Owner.CarriedBoostGaugeRate = 0.0f;
+            Owner.SuspendedBoostGaugeRate = 0.0f;
+
+            // UIのチャージゲージも0にする
+            if (Owner.VGaugeUI != null)
+            {
+                Owner.VGaugeUI.SetGaugeRate(0.0f);
+                Owner.VGaugeUI.SetCharging(false);
+            }
+
+            Debug.Log(
+                "[PlayerBoostChargingState] " +
+                "ジャンプによりチャージを中断しました。チャージゲージを0%にします。",
+                Owner);
+
             Machine.ChangeState<PlayerJumpingState>();
             return;
         }
