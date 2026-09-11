@@ -461,25 +461,26 @@ public sealed class PlayerInputReader : MonoBehaviour
         m_isVBoostHeld = true;
     }
 
-    /// <summary>
-    /// Vブースト入力を終了します。
-    /// </summary>
-    /// <param name="context">入力情報。</param>
-    private void HandleVBoostCanceled(
-        InputAction.CallbackContext context)
+
+/// <summary>
+/// Vブースト入力を終了します。
+/// </summary>
+/// <param name="context">入力情報。</param>
+private void HandleVBoostCanceled(
+    InputAction.CallbackContext context)
     {
         m_isVBoostHeld = false;
         m_hasVBoostReleased = true;
 
-        // 長押し成立前に離した場合は
-        // 長押し開始フラグを残さない
-        if (m_vBoostHoldTime < V_BOOST_HOLD_TIME)
-        {
-            m_hasVBoostHoldStarted = false;
-        }
+        // ボタンを離した時点で長押し成立フラグを消費する。
+        // 長押し成立はすでにチャージ開始に使用されているため、
+        // 次のWalkingStateで再度チャージが始まることを防ぐ。
+        m_hasVBoostHoldStarted = false;
 
         m_vBoostHoldTime = 0.0f;
     }
+
+
 
     /// <summary>
     /// 現在の入力状態をリセットします。

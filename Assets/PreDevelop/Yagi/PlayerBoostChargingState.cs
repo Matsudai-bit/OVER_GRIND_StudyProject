@@ -6,21 +6,16 @@ using UnityEngine;
 /// チャージ中は現在の移動方向を維持しながら、
 /// スティック入力によって少しずつ移動方向を変更できます。
 ///
-/// チャージが進むほど移動方向の曲がりやすさが増していきます
-/// （PlayerBoostChargingParameterAssetで調整可能）。
-///
-/// プレイヤーの向きは、現在の移動方向へ
-/// ゆっくり追従します。
-///
-/// また、カメラはマリオカートのドリフトのように、
-/// プレイヤーの見た目の向きの一部を向くようになります。
+/// チャージ開始時に移動していたか停止していたかによって、
+/// チャージ時間とステアリングの挙動を変更します。
 /// </summary>
 public sealed class PlayerBoostChargingState
     : StateBase<PlayerStateMachineComponent>
 {
-    // ============================================================
+    // 停止状態と判定する速度のしきい値
+    private const float STATIONARY_SPEED_THRESHOLD = 0.01f;
+
     // 状態
-    // ============================================================
 
     // 使用するパラメータアセット
     private PlayerBoostChargingParameterAsset m_parameterAsset;
@@ -43,13 +38,20 @@ public sealed class PlayerBoostChargingState
     // 現在のプレイヤーの向き
     private Vector3 m_currentFacingDirection;
 
+    // 停止中にチャージを開始したか
+    private bool m_startedFromStationary;
+
+    // 現在使用している最大チャージ時間
+    private float m_currentMaxChargeTime;
+
 
     /// <summary>
     /// 現在のチャージ割合を取得します。
     /// </summary>
     private float ChargeRate =>
         Mathf.Clamp01(
-            m_chargeTime / m_parameterAsset.MaxChargeTime);
+            m_chargeTime /
+            m_currentMaxChargeTime);
 
 
     /// <summary>
@@ -73,8 +75,25 @@ public sealed class PlayerBoostChargingState
         float currentSpeedAtChargeStart =
             Owner.Motor.HorizontalSpeed;
 
+        // チャージ開始時に停止していたか判定
+        m_startedFromStationary =
+            currentSpeedAtChargeStart <=
+            STATIONARY_SPEED_THRESHOLD;
+
+        // 開始状態に応じてチャージ時間を選択
+        m_currentMaxChargeTime =
+            m_startedFromStationary
+                ? m_parameterAsset.StationaryStartChargeTime
+                : m_parameterAsset.MovingStartChargeTime;
+
+        // 停止中から開始した場合は通常の最大速度を基準にする
+        float chargeBaseSpeed =
+            m_startedFromStationary
+                ? normalParameters.MaxMoveSpeed
+                : currentSpeedAtChargeStart;
+
         float chargeMoveSpeed =
-            currentSpeedAtChargeStart *
+            chargeBaseSpeed *
             m_parameterAsset.ChargeMoveSpeedRate;
 
         m_moveParameters =
@@ -116,6 +135,8 @@ public sealed class PlayerBoostChargingState
         Debug.Log(
             $"[PlayerBoostChargingState] チャージ開始 " +
             $"開始時実速度={currentSpeedAtChargeStart:F2} " +
+            $"停止開始={m_startedFromStationary} " +
+            $"最大チャージ時間={m_currentMaxChargeTime:F2}秒 " +
             $"チャージ速度={m_moveParameters.MaxMoveSpeed:F2}",
             Owner);
 
@@ -174,24 +195,32 @@ public sealed class PlayerBoostChargingState
         // 移動入力チェック
         // --------------------------------------------------------
 
-        if (Owner.InputReader.HasMoveInput)
+        // 歩き開始のチャージ中に移動入力がなくなった場合、
+        // 立ちチャージへ移行してチャージを継続する
+        if (!m_startedFromStationary)
         {
-            m_noMoveInputElapsedTime = 0.0f;
-        }
-        else
-        {
-            m_noMoveInputElapsedTime += Time.fixedDeltaTime;
-
-            if (m_noMoveInputElapsedTime >=
-                m_parameterAsset.NoMoveInputGraceTime)
+            if (Owner.InputReader.HasMoveInput)
             {
-                Debug.Log(
-                    "[PlayerBoostChargingState] " +
-                    "移動入力がなくなったため待機状態へ遷移します。",
-                    Owner);
+                m_noMoveInputElapsedTime = 0.0f;
+            }
+            else
+            {
+                m_noMoveInputElapsedTime +=
+                    Time.fixedDeltaTime;
 
-                Machine.ChangeState<PlayerIdlingState>();
-                return;
+                if (m_noMoveInputElapsedTime >=
+                    m_parameterAsset.NoMoveInputGraceTime)
+                {
+                    // 立ちチャージへ移行するが、
+                    // m_chargeTimeはリセットせず現在のチャージ率を維持する
+                    m_startedFromStationary = true;
+
+                    Debug.Log(
+                        $"[PlayerBoostChargingState] " +
+                        $"移動入力がなくなったため立ちチャージへ移行します。 " +
+                        $"現在のチャージ率={ChargeRate:P1}",
+                        Owner);
+                }
             }
         }
 
@@ -202,9 +231,10 @@ public sealed class PlayerBoostChargingState
 
         m_chargeTime += Time.fixedDeltaTime;
 
-        if (m_chargeTime >= m_parameterAsset.MaxChargeTime)
+        if (m_chargeTime >= m_currentMaxChargeTime)
         {
-            m_chargeTime = m_parameterAsset.MaxChargeTime;
+            m_chargeTime =
+                m_currentMaxChargeTime;
         }
 
 
@@ -237,32 +267,34 @@ public sealed class PlayerBoostChargingState
         // チャージ中の移動方向を更新
         // --------------------------------------------------------
 
-        UpdateDriftVelocityDirection(
-            inputDirection,
-            currentDriftTurnSpeed);
+        // 停止中開始の場合はチャージ開始時の方向を維持する
+        if (!m_startedFromStationary)
+        {
+            UpdateDriftVelocityDirection(
+                inputDirection,
+                currentDriftTurnSpeed);
 
-
-        // --------------------------------------------------------
-        // プレイヤーの向きを移動方向へ追従させる
-        // --------------------------------------------------------
-
-        UpdateFacingDirection();
+            UpdateFacingDirection();
+        }
 
 
         // --------------------------------------------------------
         // チャージ中の移動
         // --------------------------------------------------------
 
-        Owner.Motor.MoveWithDriftAtFixedSpeed(
-            m_currentVelocityDirection,
-            m_moveParameters.MaxMoveSpeed,
-            m_currentFacingDirection,
-            m_parameterAsset.FacingRotationSpeed,
-            Time.fixedDeltaTime);
+        if (!m_startedFromStationary)
+        {
+            Owner.Motor.MoveWithDriftAtFixedSpeed(
+                m_currentVelocityDirection,
+                m_moveParameters.MaxMoveSpeed,
+                m_currentFacingDirection,
+                m_parameterAsset.FacingRotationSpeed,
+                Time.fixedDeltaTime);
+        }
 
 
         // --------------------------------------------------------
-        // カメラを、開始時の向きとプレイヤーの向きの中間へ追従させる
+        // カメラを、開始時の向きとプレイヤーの向きの中間へ追従
         // --------------------------------------------------------
 
         if (Owner.PlayerCamera != null)
@@ -289,7 +321,8 @@ public sealed class PlayerBoostChargingState
         // デバッグログ
         // --------------------------------------------------------
 
-        m_speedLogElapsedTime += Time.fixedDeltaTime;
+        m_speedLogElapsedTime +=
+            Time.fixedDeltaTime;
 
         if (m_speedLogElapsedTime >=
             m_parameterAsset.SpeedLogInterval)
@@ -313,9 +346,6 @@ public sealed class PlayerBoostChargingState
     /// スティック入力に対して移動方向を徐々に追従させます。
     /// turnSpeedDegreesPerSecondが小さいほど曲がりにくく、
     /// 大きいほど曲がりやすくなります。
-    ///
-    /// 現在の移動方向より後ろ側への入力は無視します。
-    /// これにより、チャージ中に後退することを防ぎます。
     /// </summary>
     /// <param name="inputDirection">カメラ基準の入力方向。</param>
     /// <param name="turnSpeedDegreesPerSecond">
@@ -337,22 +367,6 @@ public sealed class PlayerBoostChargingState
         }
 
         inputDirection.Normalize();
-
-
-        // --------------------------------------------------------
-        // 後ろ方向への入力を禁止
-        // --------------------------------------------------------
-
-        float forwardDot =
-            Vector3.Dot(
-                m_currentVelocityDirection,
-                inputDirection);
-
-        // 現在の移動方向より後ろを向いている入力は無視
-        if (forwardDot <= 0.0f)
-        {
-            return;
-        }
 
 
         // --------------------------------------------------------
@@ -431,13 +445,13 @@ public sealed class PlayerBoostChargingState
     /// </summary>
     private void ReleaseCharge()
     {
-        if (ChargeRate >= m_parameterAsset.MinBoostChargeRate)
+        if (ChargeRate >=
+            m_parameterAsset.MinBoostChargeRate)
         {
             // ----------------------------------------------------
             // チャージ終了時のプレイヤーの向きを保存
             // ----------------------------------------------------
-            // この方向がVRunningStateのブーストダッシュ中、
-            // 固定のダッシュ方向として使用されます。
+
             Owner.BoostDashDirection =
                 m_currentFacingDirection;
 

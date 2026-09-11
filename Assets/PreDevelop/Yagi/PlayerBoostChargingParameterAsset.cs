@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 
 /// <summary>
 /// ブーストチャージ状態(PlayerBoostChargingState)で使用する
@@ -11,9 +12,15 @@ public sealed class PlayerBoostChargingParameterAsset : ScriptableObject
 {
     [Header("チャージ設定")]
 
-    // 最大チャージ時間
+    // 移動中にチャージを開始した場合の最大チャージ時間
+    // 既存の最大チャージ時間の値を引き継ぐ
     [SerializeField, Min(0.01f)]
-    private float m_maxChargeTime = 4.0f;
+    [FormerlySerializedAs("m_maxChargeTime")]
+    private float m_movingStartChargeTime = 4.0f;
+
+    // 停止中にチャージを開始した場合の最大チャージ時間
+    [SerializeField, Min(0.01f)]
+    private float m_stationaryStartChargeTime = 4.0f;
 
     // ブーストダッシュに必要な最低チャージ割合
     [SerializeField, Range(0.0f, 1.0f)]
@@ -66,19 +73,28 @@ public sealed class PlayerBoostChargingParameterAsset : ScriptableObject
     private float m_speedLogInterval = 0.25f;
 
     /// <summary>
-    /// 最大チャージ時間を取得します。
+    /// 移動中にチャージを開始した場合の最大チャージ時間を取得します。
     /// </summary>
-    public float MaxChargeTime => m_maxChargeTime;
+    public float MovingStartChargeTime =>
+        m_movingStartChargeTime;
+
+    /// <summary>
+    /// 停止中にチャージを開始した場合の最大チャージ時間を取得します。
+    /// </summary>
+    public float StationaryStartChargeTime =>
+        m_stationaryStartChargeTime;
 
     /// <summary>
     /// ブーストダッシュに必要な最低チャージ割合を取得します。
     /// </summary>
-    public float MinBoostChargeRate => m_minBoostChargeRate;
+    public float MinBoostChargeRate =>
+        m_minBoostChargeRate;
 
     /// <summary>
     /// チャージ中の移動速度倍率を取得します。
     /// </summary>
-    public float ChargeMoveSpeedRate => m_chargeMoveSpeedRate;
+    public float ChargeMoveSpeedRate =>
+        m_chargeMoveSpeedRate;
 
     /// <summary>
     /// チャージ開始直後の曲がりやすさ（度/秒）を取得します。
@@ -95,12 +111,14 @@ public sealed class PlayerBoostChargingParameterAsset : ScriptableObject
     /// <summary>
     /// プレイヤーの見た目の向きを変更する速度（度/秒）を取得します。
     /// </summary>
-    public float FacingRotationSpeed => m_facingRotationSpeed;
+    public float FacingRotationSpeed =>
+        m_facingRotationSpeed;
 
     /// <summary>
     /// スティック入力のデッドゾーンを取得します。
     /// </summary>
-    public float SteeringDeadZone => m_steeringDeadZone;
+    public float SteeringDeadZone =>
+        m_steeringDeadZone;
 
     /// <summary>
     /// カメラの追従速度（度/秒）を取得します。
@@ -117,10 +135,12 @@ public sealed class PlayerBoostChargingParameterAsset : ScriptableObject
     /// <summary>
     /// 移動入力の猶予時間を取得します。
     /// </summary>
-    public float NoMoveInputGraceTime => m_noMoveInputGraceTime;
+    public float NoMoveInputGraceTime =>
+        m_noMoveInputGraceTime;
 
     /// <summary>
     /// 速度ログの出力間隔を取得します。
     /// </summary>
-    public float SpeedLogInterval => m_speedLogInterval;
+    public float SpeedLogInterval =>
+        m_speedLogInterval;
 }

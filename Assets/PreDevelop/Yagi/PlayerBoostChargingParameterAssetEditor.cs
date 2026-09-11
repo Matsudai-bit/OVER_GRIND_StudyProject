@@ -33,20 +33,28 @@ public sealed class PlayerBoostChargingParameterAssetEditor : Editor
         // 計算値
         // --------------------------------------------------------
 
-        float maxChargeTime =
-            parameterAsset.MaxChargeTime;
+        float movingStartChargeTime =
+            parameterAsset.MovingStartChargeTime;
+
+        float stationaryStartChargeTime =
+            parameterAsset.StationaryStartChargeTime;
 
         float minBoostChargeRate =
             parameterAsset.MinBoostChargeRate;
 
-        // 最低チャージ率に到達するまでの時間
-        float minimumChargeTime =
-            maxChargeTime *
+        // 移動中開始時の最低チャージ率到達時間
+        float movingMinimumChargeTime =
+            movingStartChargeTime *
             minBoostChargeRate;
 
-        // チャージ開始時の移動速度倍率
+        // 停止中開始時の最低チャージ率到達時間
+        float stationaryMinimumChargeTime =
+            stationaryStartChargeTime *
+            minBoostChargeRate;
+
         float chargeMoveSpeedRate =
             parameterAsset.ChargeMoveSpeedRate;
+
 
         // --------------------------------------------------------
         // プレビュー表示
@@ -70,12 +78,20 @@ public sealed class PlayerBoostChargingParameterAssetEditor : Editor
                 EditorStyles.boldLabel);
 
             EditorGUILayout.FloatField(
-                "最大チャージ時間",
-                maxChargeTime);
+                "移動中開始 最大チャージ時間",
+                movingStartChargeTime);
 
             EditorGUILayout.FloatField(
-                "最低チャージ時間",
-                minimumChargeTime);
+                "移動中開始 最低チャージ時間",
+                movingMinimumChargeTime);
+
+            EditorGUILayout.FloatField(
+                "停止中開始 最大チャージ時間",
+                stationaryStartChargeTime);
+
+            EditorGUILayout.FloatField(
+                "停止中開始 最低チャージ時間",
+                stationaryMinimumChargeTime);
 
             EditorGUILayout.FloatField(
                 "最低チャージ割合",
@@ -174,8 +190,9 @@ public sealed class PlayerBoostChargingParameterAssetEditor : Editor
         EditorGUILayout.Space();
 
         EditorGUILayout.HelpBox(
-            "最低チャージ時間は、最大チャージ時間 × 最低チャージ割合で計算されます。\n" +
-            "ドリフト旋回速度は、チャージ開始時からフルチャージ時にかけて徐々に変化します。",
+            "移動中開始と停止中開始で最大チャージ時間を個別に設定できます。\n" +
+            "最低チャージ時間は、それぞれの最大チャージ時間 × 最低チャージ割合で計算されます。\n" +
+            "停止中からチャージを開始した場合、チャージ中のステアリングはできません。",
             MessageType.Info);
     }
 }
