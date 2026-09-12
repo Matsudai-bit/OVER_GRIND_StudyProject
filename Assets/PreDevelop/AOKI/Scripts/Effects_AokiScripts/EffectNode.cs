@@ -1,14 +1,14 @@
 using UnityEngine;
 using System;
 
-public class EffectNode : MonoBehaviour
+public class EffectNode_Aoki : MonoBehaviour
 {
     [Header("エフェクト識別子（自動設定されます）")]
     [SerializeField] private EffectID m_effectID;
     public EffectID EffectID => m_effectID;
 
     private ParticleSystem m_particle;
-    private Action<EffectNode> m_onComplete;
+    private Action<EffectNode_Aoki> m_onComplete;
     private bool m_isPlaying = false; // 再生完了の誤発火を防ぐフラグ
 
     public int HandleID { get; private set; }
@@ -25,7 +25,7 @@ public class EffectNode : MonoBehaviour
         m_effectID = id;
     }
 
-    public void Init(int handleID, Action<EffectNode> onComplete)
+    public void Init(int handleID, Action<EffectNode_Aoki> onComplete)
     {
         HandleID = handleID;
         m_onComplete = onComplete;

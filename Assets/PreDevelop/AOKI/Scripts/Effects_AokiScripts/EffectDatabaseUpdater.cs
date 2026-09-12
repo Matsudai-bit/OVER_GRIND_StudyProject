@@ -37,7 +37,7 @@ public class EffectDatabaseUpdater
                 string path = AssetDatabase.GUIDToAssetPath(guids[0]);
                 GameObject obj = AssetDatabase.LoadAssetAtPath<GameObject>(path);
 
-                EffectNode_Aoki node = obj.GetComponent<EffectNode_Aoki>();
+                EffectNode node = obj.GetComponent<EffectNode>();
                 if (node != null)
                 {
                     // プレハブ側に EffectID を自動セットして保存
@@ -52,7 +52,7 @@ public class EffectDatabaseUpdater
                 }
                 else
                 {
-                    Debug.LogWarning($"プレハブ '{enumName}' に EffectNode_Aoki がアタッチされていません。");
+                    Debug.LogWarning($"プレハブ '{enumName}' に EffectNode がアタッチされていません。");
                 }
             }
             else
