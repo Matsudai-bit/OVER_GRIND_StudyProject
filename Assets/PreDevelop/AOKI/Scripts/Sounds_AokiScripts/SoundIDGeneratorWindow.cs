@@ -1,18 +1,17 @@
 #if UNITY_EDITOR
-/// @ using :: システム・エンジン・エディタ拡張の使用
-using UnityEngine;
-using UnityEditor;
 using System;
-using System.IO;
-using System.Text;
 using System.Collections.Generic;
+using System.IO;
+using System.Reflection;
+using System.Text;
+using UnityEditor;
+using UnityEngine;
 
-/// @ className :: サウンドID自動生成＆データベース一括登録ウインドウ
+/// @ className :: SoundIDGeneratorWindow
 /// @ name :: Aoki Hayate
-/// @ date :: 2026/09/12
+/// @ date :: 2026/09/13
 public class SoundIDGeneratorWindow : EditorWindow
 {
-    /// @ className :: GUI用の一時データクラス
     [Serializable]
     private class AddItem
     {
@@ -22,7 +21,6 @@ public class SoundIDGeneratorWindow : EditorWindow
         public bool loop = false;
     }
 
-    /// @ className :: コンパイル待機用の一時保存データ
     [Serializable]
     private class PendingEntry
     {
@@ -38,19 +36,25 @@ public class SoundIDGeneratorWindow : EditorWindow
         public List<PendingEntry> entries = new List<PendingEntry>();
     }
 
-    private List<AddItem> m_addList = new List<AddItem>(); // 追加予定リスト
-    private int m_selectedIndex = 0;                       // 削除用プルダウンのインデックス
+    private List<AddItem> m_addList = new List<AddItem>();
+    private int m_deleteSelectedIndex = 0;
+    private int m_previewSelectedIndex = 0;
 
     [MenuItem("Tools/Audio/SoundID_Aoki 編集・追加ツール")]
     public static void ShowWindow()
     {
         var window = GetWindow<SoundIDGeneratorWindow>("SoundID_Aoki 編集");
-        window.minSize = new Vector2(450, 500);
+        window.minSize = new Vector2(450, 600);
     }
 
     private void OnEnable()
     {
         if (m_addList.Count == 0) m_addList.Add(new AddItem());
+    }
+
+    private void OnDisable()
+    {
+        StopAllPreviewClips();
     }
 
     private void OnGUI()
@@ -69,8 +73,6 @@ public class SoundIDGeneratorWindow : EditorWindow
         EditorGUILayout.Space(5);
 
         int removeIndex = -1;
-
-        // 登録用リストの描画ループ
         for (int i = 0; i < m_addList.Count; i++)
         {
             EditorGUILayout.BeginHorizontal(EditorStyles.helpBox);
@@ -94,7 +96,7 @@ public class SoundIDGeneratorWindow : EditorWindow
             {
                 EditorGUILayout.BeginVertical(GUILayout.Width(25));
                 EditorGUILayout.Space(10);
-                if (GUILayout.Button("X", GUILayout.Width(22), GUILayout.Height(20)))
+                if (GUILayout.Button("×", GUILayout.Width(22), GUILayout.Height(20)))
                 {
                     removeIndex = i;
                 }
@@ -107,35 +109,100 @@ public class SoundIDGeneratorWindow : EditorWindow
         if (removeIndex != -1) m_addList.RemoveAt(removeIndex);
 
         EditorGUILayout.Space(8);
-
-        // 一括処理の実行ボタン
         if (GUILayout.Button("一 括 追 加 す る", GUILayout.Height(35)))
         {
             BatchAddProcess();
         }
 
-        EditorGUILayout.Space(15);
-        Rect lineRect = EditorGUILayout.GetControlRect(false, 1);
-        EditorGUI.DrawRect(lineRect, new Color(0.5f, 0.5f, 0.5f, 0.5f));
-        EditorGUILayout.Space(15);
+        DrawSeparator();
 
-        EditorGUILayout.LabelField("識別子の削除", EditorStyles.boldLabel);
-
-        // 既存IDの取得と削除UI描画
+        // ------------------------------------
+        // サウンド試聴 (プレビュー機能)
+        // ------------------------------------
+        EditorGUILayout.LabelField("サウンド試聴", EditorStyles.boldLabel);
         string[] currentNames = Enum.GetNames(typeof(SoundID_Aoki));
+
         if (currentNames.Length > 0)
         {
-            m_selectedIndex = EditorGUILayout.Popup("削除するID:", m_selectedIndex, currentNames);
-            if (m_selectedIndex >= currentNames.Length) m_selectedIndex = 0;
+            EditorGUILayout.BeginHorizontal(EditorStyles.helpBox);
+
+            int newPreviewIndex = EditorGUILayout.Popup("試聴するID:", m_previewSelectedIndex, currentNames);
+            if (newPreviewIndex != m_previewSelectedIndex)
+            {
+                m_previewSelectedIndex = newPreviewIndex;
+                // IDを選択したら自動で流す
+                PlaySelectedSound(currentNames[m_previewSelectedIndex]);
+            }
+
+            if (GUILayout.Button("再生", GUILayout.Width(60), GUILayout.Height(20)))
+            {
+                PlaySelectedSound(currentNames[m_previewSelectedIndex]);
+            }
+
+            if (GUILayout.Button("停止", GUILayout.Width(60), GUILayout.Height(20)))
+            {
+                StopAllPreviewClips();
+            }
+
+            EditorGUILayout.EndHorizontal();
+        }
+        else
+        {
+            EditorGUILayout.HelpBox("登録されているサウンドIDがありません。", MessageType.Info);
+        }
+
+        DrawSeparator();
+
+        // ------------------------------------
+        // 識別子の削除
+        // ------------------------------------
+        EditorGUILayout.LabelField("識別子の削除", EditorStyles.boldLabel);
+        if (currentNames.Length > 0)
+        {
+            m_deleteSelectedIndex = EditorGUILayout.Popup("削除するID:", m_deleteSelectedIndex, currentNames);
+            if (m_deleteSelectedIndex >= currentNames.Length) m_deleteSelectedIndex = 0;
 
             if (GUILayout.Button("削除", GUILayout.Height(25)))
             {
-                DeleteID(currentNames[m_selectedIndex]);
+                DeleteID(currentNames[m_deleteSelectedIndex]);
             }
         }
     }
 
-    // 追加処理：Enum生成とデータキャッシュ
+    private void DrawSeparator()
+    {
+        EditorGUILayout.Space(15);
+        Rect lineRect = EditorGUILayout.GetControlRect(false, 1);
+        EditorGUI.DrawRect(lineRect, new Color(0.5f, 0.5f, 0.5f, 0.5f));
+        EditorGUILayout.Space(15);
+    }
+
+    private void PlaySelectedSound(string idName)
+    {
+        StopAllPreviewClips();
+        if (idName == "None") return;
+
+        SoundDatabase db = GetDatabaseStatic();
+        if (db == null)
+        {
+            Debug.LogWarning("[SoundIDGeneratorWindow] SoundDatabase が見つかりません。");
+            return;
+        }
+
+        if (Enum.TryParse<SoundID_Aoki>(idName, out var targetID))
+        {
+            var data = db.GetSoundData(targetID);
+            if (data != null && data.m_clip != null)
+            {
+                PlayPreviewClip(data.m_clip, 0, data.m_loop);
+            }
+            else
+            {
+                Debug.LogWarning($"[SoundIDGeneratorWindow] {idName} に対応する AudioClip が設定されていません。");
+            }
+        }
+    }
+
     private void BatchAddProcess()
     {
         List<string> existingNames = new List<string>(Enum.GetNames(typeof(SoundID_Aoki)));
@@ -161,7 +228,6 @@ public class SoundIDGeneratorWindow : EditorWindow
             });
         }
 
-        // リロード後に登録処理を再開できるよう一時保存
         SessionState.SetString("PendingAudio_BatchPackage", JsonUtility.ToJson(package));
         GenerateEnumFile(newIDs);
         m_addList.Clear();
@@ -169,7 +235,6 @@ public class SoundIDGeneratorWindow : EditorWindow
         AssetDatabase.Refresh();
     }
 
-    // Enumコンパイル完了後に呼ばれるフック：データベースへの紐づけ
     [UnityEditor.Callbacks.DidReloadScripts]
     private static void OnScriptsReloaded()
     {
@@ -221,14 +286,12 @@ public class SoundIDGeneratorWindow : EditorWindow
         AssetDatabase.SaveAssets();
     }
 
-    // プロジェクト内のSoundDatabaseを検索取得する
     private static SoundDatabase GetDatabaseStatic()
     {
         string[] guids = AssetDatabase.FindAssets("t:SoundDatabase");
         return guids.Length > 0 ? AssetDatabase.LoadAssetAtPath<SoundDatabase>(AssetDatabase.GUIDToAssetPath(guids[0])) : null;
     }
 
-    // EnumファイルからIDを削除して再構築
     private void DeleteID(string targetID)
     {
         if (targetID == "None") return;
@@ -238,11 +301,10 @@ public class SoundIDGeneratorWindow : EditorWindow
         AssetDatabase.Refresh();
     }
 
-    // Enumスクリプトファイルの書き出し処理
     private static void GenerateEnumFile(List<string> idList)
     {
         StringBuilder sb = new StringBuilder();
-        sb.AppendLine("// 自動生成されるファイルです。絶対触るな!!!!");
+        sb.AppendLine("// 自動生成用ファイルです。直接編集しないでください。");
         sb.AppendLine("public enum SoundID_Aoki");
         sb.AppendLine("{");
         if (!idList.Contains("None")) sb.AppendLine("    None = 0,");
@@ -256,6 +318,31 @@ public class SoundIDGeneratorWindow : EditorWindow
         string[] guids = AssetDatabase.FindAssets("SoundID_Aoki t:MonoScript");
         string path = guids.Length > 0 ? AssetDatabase.GUIDToAssetPath(guids[0]) : "Assets/SoundID_Aoki.cs";
         File.WriteAllText(path, sb.ToString(), Encoding.UTF8);
+    }
+
+    private static void PlayPreviewClip(AudioClip clip, int startSample = 0, bool loop = false)
+    {
+        Assembly unityEditorAssembly = typeof(AudioImporter).Assembly;
+        Type audioUtilClass = unityEditorAssembly.GetType("UnityEditor.AudioUtil");
+        MethodInfo method = audioUtilClass.GetMethod(
+            "PlayPreviewClip",
+            BindingFlags.Static | BindingFlags.Public,
+            null,
+            new Type[] { typeof(AudioClip), typeof(int), typeof(bool) },
+            null
+        );
+        method?.Invoke(null, new object[] { clip, startSample, loop });
+    }
+
+    private static void StopAllPreviewClips()
+    {
+        Assembly unityEditorAssembly = typeof(AudioImporter).Assembly;
+        Type audioUtilClass = unityEditorAssembly.GetType("UnityEditor.AudioUtil");
+        MethodInfo method = audioUtilClass.GetMethod(
+            "StopAllPreviewClips",
+            BindingFlags.Static | BindingFlags.Public
+        );
+        method?.Invoke(null, null);
     }
 }
 #endif

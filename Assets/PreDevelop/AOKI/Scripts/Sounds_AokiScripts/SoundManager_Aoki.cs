@@ -4,10 +4,10 @@ using System.Collections.Generic;
 
 /// @ className :: サウンドの全体管理およびプールシステム
 /// @ name :: Aoki Hayate
-/// @ date :: 2026/09/12
+/// @ date :: 2026/09/13
 public class SoundManager_Aoki : MonoBehaviour
 {
-    private static SoundManager_Aoki m_instance; // シングルトン用インスタンス
+    private static SoundManager_Aoki m_instance;
 
     public static SoundManager_Aoki Instance
     {
@@ -21,15 +21,14 @@ public class SoundManager_Aoki : MonoBehaviour
         }
     }
 
-    [SerializeField] private SoundDatabase m_database; // 参照するサウンドデータベース
+    [SerializeField] private SoundDatabase m_database;
 
-    private Dictionary<SoundID_Aoki, Queue<SoundNode_Aoki>> m_poolDict = new Dictionary<SoundID_Aoki, Queue<SoundNode_Aoki>>(); // 待機中のプール
-    private Dictionary<SoundID_Aoki, List<SoundNode_Aoki>> m_activeDict = new Dictionary<SoundID_Aoki, List<SoundNode_Aoki>>(); // 再生中のリスト
-    private int m_handleCounter = 0; // 個別停止用のハンドルIDカウンター
+    private Dictionary<SoundID_Aoki, Queue<SoundNode_Aoki>> m_poolDict = new Dictionary<SoundID_Aoki, Queue<SoundNode_Aoki>>();
+    private Dictionary<SoundID_Aoki, List<SoundNode_Aoki>> m_activeDict = new Dictionary<SoundID_Aoki, List<SoundNode_Aoki>>();
+    private int m_handleCounter = 0;
 
     private void Awake()
     {
-        // 重複生成の防止
         if (m_instance != null && m_instance != this)
         {
             Destroy(gameObject);
@@ -37,14 +36,33 @@ public class SoundManager_Aoki : MonoBehaviour
         }
         m_instance = this;
         DontDestroyOnLoad(gameObject);
+
+        // インスペクターで未設定の場合、ResourcesフォルダからSoundDatabaseを自動ロード
+        if (m_database == null)
+        {
+            m_database = Resources.Load<SoundDatabase>("SoundDatabase");
+        }
     }
 
-    // 指定したIDのサウンドを再生し、個別のハンドルIDを返す
+    /// <summary>
+    /// 識別子(ID)を指定するだけで音を再生します（AudioClipの指定不要）
+    /// </summary>
     public int Play(SoundID_Aoki id, Vector3 position = default, Transform parent = null)
     {
         if (id == SoundID_Aoki.None) return -1;
 
-        SoundDatabase.SoundData data = m_database != null ? m_database.GetSoundData(id) : null;
+        // データベース自動ロードのバックアップ処理
+        if (m_database == null)
+        {
+            m_database = Resources.Load<SoundDatabase>("SoundDatabase");
+            if (m_database == null)
+            {
+                Debug.LogError("[SoundManager] SoundDatabase アセットが Resources フォルダ内に見つかりません。");
+                return -1;
+            }
+        }
+
+        SoundDatabase.SoundData data = m_database.GetSoundData(id);
         if (data == null || data.m_clip == null) return -1;
 
         SoundNode_Aoki node = GetFromPool(id);
@@ -65,7 +83,6 @@ public class SoundManager_Aoki : MonoBehaviour
         return handle;
     }
 
-    // 指定IDのサウンドを全て停止する
     public void Stop(SoundID_Aoki id)
     {
         if (m_activeDict.TryGetValue(id, out var list))
@@ -74,7 +91,6 @@ public class SoundManager_Aoki : MonoBehaviour
         }
     }
 
-    // ハンドルIDを指定して個別に停止する
     public void Stop(int handle)
     {
         if (handle <= 0) return;
@@ -116,7 +132,6 @@ public class SoundManager_Aoki : MonoBehaviour
         }
     }
 
-    // プールからノードを取得
     private SoundNode_Aoki GetFromPool(SoundID_Aoki id)
     {
         if (!m_poolDict.TryGetValue(id, out var pool))
@@ -134,7 +149,6 @@ public class SoundManager_Aoki : MonoBehaviour
         }
     }
 
-    // 再生が終了したノードをプールに返却する
     private void ReturnToPool(SoundID_Aoki id, SoundNode_Aoki node)
     {
         node.gameObject.SetActive(false);
