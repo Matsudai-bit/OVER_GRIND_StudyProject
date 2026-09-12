@@ -1,4 +1,5 @@
 #if UNITY_EDITOR
+/// @ using :: システム・エンジン・エディタ拡張の使用
 using UnityEngine;
 using UnityEditor;
 using System;
@@ -6,8 +7,12 @@ using System.IO;
 using System.Text;
 using System.Collections.Generic;
 
+/// @ className :: サウンドID自動生成＆データベース一括登録ウインドウ
+/// @ name :: Aoki Hayate
+/// @ date :: 2026/09/12
 public class SoundIDGeneratorWindow : EditorWindow
 {
+    /// @ className :: GUI用の一時データクラス
     [Serializable]
     private class AddItem
     {
@@ -17,6 +22,7 @@ public class SoundIDGeneratorWindow : EditorWindow
         public bool loop = false;
     }
 
+    /// @ className :: コンパイル待機用の一時保存データ
     [Serializable]
     private class PendingEntry
     {
@@ -32,8 +38,8 @@ public class SoundIDGeneratorWindow : EditorWindow
         public List<PendingEntry> entries = new List<PendingEntry>();
     }
 
-    private List<AddItem> m_addList = new List<AddItem>();
-    private int m_selectedIndex = 0;
+    private List<AddItem> m_addList = new List<AddItem>(); // 追加予定リスト
+    private int m_selectedIndex = 0;                       // 削除用プルダウンのインデックス
 
     [MenuItem("Tools/Audio/SoundID_Aoki 編集・追加ツール")]
     public static void ShowWindow()
@@ -63,6 +69,8 @@ public class SoundIDGeneratorWindow : EditorWindow
         EditorGUILayout.Space(5);
 
         int removeIndex = -1;
+
+        // 登録用リストの描画ループ
         for (int i = 0; i < m_addList.Count; i++)
         {
             EditorGUILayout.BeginHorizontal(EditorStyles.helpBox);
@@ -99,7 +107,9 @@ public class SoundIDGeneratorWindow : EditorWindow
         if (removeIndex != -1) m_addList.RemoveAt(removeIndex);
 
         EditorGUILayout.Space(8);
-        if (GUILayout.Button("一括追加", GUILayout.Height(35)))
+
+        // 一括処理の実行ボタン
+        if (GUILayout.Button("一 括 追 加 す る", GUILayout.Height(35)))
         {
             BatchAddProcess();
         }
@@ -110,6 +120,8 @@ public class SoundIDGeneratorWindow : EditorWindow
         EditorGUILayout.Space(15);
 
         EditorGUILayout.LabelField("識別子の削除", EditorStyles.boldLabel);
+
+        // 既存IDの取得と削除UI描画
         string[] currentNames = Enum.GetNames(typeof(SoundID_Aoki));
         if (currentNames.Length > 0)
         {
@@ -123,6 +135,7 @@ public class SoundIDGeneratorWindow : EditorWindow
         }
     }
 
+    // 追加処理：Enum生成とデータキャッシュ
     private void BatchAddProcess()
     {
         List<string> existingNames = new List<string>(Enum.GetNames(typeof(SoundID_Aoki)));
@@ -148,6 +161,7 @@ public class SoundIDGeneratorWindow : EditorWindow
             });
         }
 
+        // リロード後に登録処理を再開できるよう一時保存
         SessionState.SetString("PendingAudio_BatchPackage", JsonUtility.ToJson(package));
         GenerateEnumFile(newIDs);
         m_addList.Clear();
@@ -155,6 +169,7 @@ public class SoundIDGeneratorWindow : EditorWindow
         AssetDatabase.Refresh();
     }
 
+    // Enumコンパイル完了後に呼ばれるフック：データベースへの紐づけ
     [UnityEditor.Callbacks.DidReloadScripts]
     private static void OnScriptsReloaded()
     {
@@ -206,12 +221,14 @@ public class SoundIDGeneratorWindow : EditorWindow
         AssetDatabase.SaveAssets();
     }
 
+    // プロジェクト内のSoundDatabaseを検索取得する
     private static SoundDatabase GetDatabaseStatic()
     {
         string[] guids = AssetDatabase.FindAssets("t:SoundDatabase");
         return guids.Length > 0 ? AssetDatabase.LoadAssetAtPath<SoundDatabase>(AssetDatabase.GUIDToAssetPath(guids[0])) : null;
     }
 
+    // EnumファイルからIDを削除して再構築
     private void DeleteID(string targetID)
     {
         if (targetID == "None") return;
@@ -221,6 +238,7 @@ public class SoundIDGeneratorWindow : EditorWindow
         AssetDatabase.Refresh();
     }
 
+    // Enumスクリプトファイルの書き出し処理
     private static void GenerateEnumFile(List<string> idList)
     {
         StringBuilder sb = new StringBuilder();

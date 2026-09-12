@@ -1,19 +1,24 @@
+/// @ using :: システムとエンジンの使用
 using UnityEngine;
 using System;
 
+/// @ className :: 個別のサウンド再生・制御ノード
+/// @ name :: Aoki Hayate
+/// @ date :: 2026/09/12
 [RequireComponent(typeof(AudioSource))]
 public class SoundNode_Aoki : MonoBehaviour
 {
     [Header("サウンド識別子")]
-    [SerializeField] private SoundID_Aoki m_soundID;
+    [SerializeField] private SoundID_Aoki m_soundID; // このノードに割り当てられたID
     public SoundID_Aoki SoundID => m_soundID;
 
-    private AudioSource m_audioSource;
-    private Action<SoundNode_Aoki> m_onComplete;
-    private bool m_isPlaying = false;
+    private AudioSource m_audioSource;             // 再生コンポーネント
+    private Action<SoundNode_Aoki> m_onComplete;   // 再生終了時に呼ばれるコールバック
+    private bool m_isPlaying = false;              // 現在再生中かどうか
 
-    public int HandleID { get; private set; }
+    public int HandleID { get; private set; }      // 外部から個別に停止するためのハンドルID
 
+    // 再生前の初期設定を行う
     public void Init(int handleID, SoundDatabase.SoundData data, Action<SoundNode_Aoki> onComplete)
     {
         HandleID = handleID;
@@ -33,6 +38,7 @@ public class SoundNode_Aoki : MonoBehaviour
         }
     }
 
+    // 再生開始
     public void Play()
     {
         if (m_audioSource != null && m_audioSource.clip != null)
@@ -42,6 +48,7 @@ public class SoundNode_Aoki : MonoBehaviour
         }
     }
 
+    // 強制停止
     public void Stop()
     {
         if (m_audioSource != null) m_audioSource.Stop();
@@ -60,12 +67,14 @@ public class SoundNode_Aoki : MonoBehaviour
 
     private void Update()
     {
+        // ループ再生でない場合、再生が終了したかを監視する
         if (m_isPlaying && m_audioSource != null && !m_audioSource.loop)
         {
             if (!m_audioSource.isPlaying) OnFinished();
         }
     }
 
+    // 再生終了時の処理
     private void OnFinished()
     {
         m_isPlaying = false;
