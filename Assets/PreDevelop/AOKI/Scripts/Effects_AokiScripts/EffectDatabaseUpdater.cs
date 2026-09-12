@@ -12,7 +12,7 @@ public class EffectDatabaseUpdater
     [MenuItem("Tools/VFX/エフェクトを自動登録する (Enum連携)")]
     public static void UpdateDatabase()
     {
-        // 1. データベースファイルを読み込む（無ければ作る）
+        //  データベースファイルを読み込む（無ければ作る）
         EffectDatabase db = AssetDatabase.LoadAssetAtPath<EffectDatabase>(DATABASE_PATH);
         if (db == null)
         {
@@ -29,7 +29,7 @@ public class EffectDatabaseUpdater
         {
             string enumName = id.ToString();
 
-            // 【修正】フォルダ指定を削除し、プロジェクト全体から検索するように変更
+            // フォルダ指定を削除し、プロジェクト全体から検索するように変更
             string[] guids = AssetDatabase.FindAssets($"{enumName} t:GameObject");
 
             if (guids.Length > 0)
