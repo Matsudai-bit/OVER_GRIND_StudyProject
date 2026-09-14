@@ -55,6 +55,55 @@ MonoBehaviour:
   components:
   - {fileID: -804566877379787440}
   - {fileID: 7936713564737623550}
+  - {fileID: 6189450044443703667}
+  - {fileID: 5614858475892050173}
+--- !u!114 &5614858475892050173
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 81180773991d8724ab7f2d216912b564, type: 3}
+  m_Name: ChromaticAberration
+  m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.ChromaticAberration
+  active: 1
+  intensity:
+    m_OverrideState: 0
+    m_Value: 0
+--- !u!114 &6189450044443703667
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c34c300c450147498b10ee564307c12, type: 3}
+  m_Name: RadialBlurVolume
+  m_EditorClassIdentifier: Assembly-CSharp::RadialBlurVolume
+  active: 1
+  blurStrength:
+    m_OverrideState: 1
+    m_Value: 0.17
+  sampleCount:
+    m_OverrideState: 1
+    m_Value: 13
+  maskRadius:
+    m_OverrideState: 1
+    m_Value: 0
+  maskContrast:
+    m_OverrideState: 0
+    m_Value: 2.5
+  ditherStrength:
+    m_OverrideState: 1
+    m_Value: 1
+  blurCenter:
+    m_OverrideState: 0
+    m_Value: {x: 0.5, y: 0.5}
 --- !u!114 &7936713564737623550
 MonoBehaviour:
   m_ObjectHideFlags: 3
