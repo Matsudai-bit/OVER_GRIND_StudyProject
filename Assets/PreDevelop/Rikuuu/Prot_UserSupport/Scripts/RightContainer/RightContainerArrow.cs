@@ -6,6 +6,7 @@ public class RightContainerArrow : MonoBehaviour
     UnityEngine.UI.Image cursor,
     Vector3 targetPosition)
     {
+        // YÀ•W‚Ì‚İ‚ğˆÚ“®‚³‚¹‚é
         Vector3 result = cursor.transform.position;
         result.y = targetPosition.y;
 
