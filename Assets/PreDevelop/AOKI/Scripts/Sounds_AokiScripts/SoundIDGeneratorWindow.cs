@@ -40,11 +40,18 @@ public class SoundIDGeneratorWindow : EditorWindow
     private int m_deleteSelectedIndex = 0;
     private int m_previewSelectedIndex = 0;
 
+    // 更新機能用の変数
+    private int m_updateSelectedIndex = 0;
+    private AudioClip m_updateClip = null;
+    private bool m_updateIs3D = false;
+    private bool m_updateLoop = false;
+    private string m_lastUpdateSelectedID = "";
+
     [MenuItem("Tools/Audio/SoundID_Aoki 編集・追加ツール")]
     public static void ShowWindow()
     {
         var window = GetWindow<SoundIDGeneratorWindow>("SoundID_Aoki 編集");
-        window.minSize = new Vector2(450, 600);
+        window.minSize = new Vector2(450, 750); // ウィンドウが少し大きくなるよう調整
     }
 
     private void OnEnable()
@@ -116,9 +123,8 @@ public class SoundIDGeneratorWindow : EditorWindow
 
         DrawSeparator();
 
-        // ------------------------------------
-        // サウンド試聴 (プレビュー機能)
-        // ------------------------------------
+
+        // サウンド試聴
         EditorGUILayout.LabelField("サウンド試聴", EditorStyles.boldLabel);
         string[] currentNames = Enum.GetNames(typeof(SoundID_Aoki));
 
@@ -130,7 +136,6 @@ public class SoundIDGeneratorWindow : EditorWindow
             if (newPreviewIndex != m_previewSelectedIndex)
             {
                 m_previewSelectedIndex = newPreviewIndex;
-                // IDを選択したら自動で流す
                 PlaySelectedSound(currentNames[m_previewSelectedIndex]);
             }
 
@@ -153,9 +158,40 @@ public class SoundIDGeneratorWindow : EditorWindow
 
         DrawSeparator();
 
-        // ------------------------------------
+
+        // 登録済みデータの確認・更新
+        EditorGUILayout.LabelField("登録済みデータの確認・更新", EditorStyles.boldLabel);
+        if (currentNames.Length > 0)
+        {
+            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+
+            int newUpdateIndex = EditorGUILayout.Popup("対象のID:", m_updateSelectedIndex, currentNames);
+
+            // 選択が切り替わった時にデータベースから現在の設定を読み込む
+            if (newUpdateIndex != m_updateSelectedIndex || (newUpdateIndex < currentNames.Length && currentNames[newUpdateIndex] != m_lastUpdateSelectedID))
+            {
+                m_updateSelectedIndex = newUpdateIndex;
+                m_lastUpdateSelectedID = currentNames[m_updateSelectedIndex];
+                LoadSoundDataForUpdate(m_lastUpdateSelectedID);
+            }
+
+            m_updateClip = (AudioClip)EditorGUILayout.ObjectField("AudioClip:", m_updateClip, typeof(AudioClip), false);
+            m_updateIs3D = EditorGUILayout.Toggle("3D音響:", m_updateIs3D);
+            m_updateLoop = EditorGUILayout.Toggle("ループ:", m_updateLoop);
+
+            EditorGUILayout.Space(5);
+            if (GUILayout.Button("選択中のサウンドを更新", GUILayout.Height(25)))
+            {
+                UpdateExistingSound(currentNames[m_updateSelectedIndex]);
+            }
+
+            EditorGUILayout.EndVertical();
+        }
+
+        DrawSeparator();
+
+
         // 識別子の削除
-        // ------------------------------------
         EditorGUILayout.LabelField("識別子の削除", EditorStyles.boldLabel);
         if (currentNames.Length > 0)
         {
@@ -296,18 +332,15 @@ public class SoundIDGeneratorWindow : EditorWindow
     {
         if (targetID == "None") return;
 
-        // 1. SoundDatabase から該当する ID の要素を削除する
         SoundDatabase db = GetDatabaseStatic();
         if (db != null)
         {
             Undo.RecordObject(db, "Delete Sound ID");
-            // リストの中から ID 名が一致する要素を削除
             db.m_soundList.RemoveAll(x => x.m_id.ToString() == targetID);
             EditorUtility.SetDirty(db);
             AssetDatabase.SaveAssets();
         }
 
-        // 2. Enum ファイルの再生成
         List<string> existingNames = new List<string>(Enum.GetNames(typeof(SoundID_Aoki)));
         existingNames.Remove(targetID);
         GenerateEnumFile(existingNames);
@@ -321,12 +354,10 @@ public class SoundIDGeneratorWindow : EditorWindow
         sb.AppendLine("public enum SoundID_Aoki");
         sb.AppendLine("{");
 
-        // 無条件で先頭に None = 0 を出力
         sb.AppendLine("    None = 0,");
 
         foreach (var id in idList)
         {
-            // None や 空白文字列は重複しないようスキップ
             if (id == "None" || string.IsNullOrWhiteSpace(id)) continue;
             sb.AppendLine($"    {id},");
         }
@@ -360,6 +391,56 @@ public class SoundIDGeneratorWindow : EditorWindow
             BindingFlags.Static | BindingFlags.Public
         );
         method?.Invoke(null, null);
+    }
+
+    // 更新用のデータを読み込む処理
+    private void LoadSoundDataForUpdate(string idName)
+    {
+        if (idName == "None")
+        {
+            m_updateClip = null; m_updateIs3D = false; m_updateLoop = false;
+            return;
+        }
+
+        SoundDatabase db = GetDatabaseStatic();
+        if (db == null) return;
+
+        if (Enum.TryParse<SoundID_Aoki>(idName, out var targetID))
+        {
+            var data = db.m_soundList.Find(x => x.m_id == targetID);
+            if (data != null)
+            {
+                m_updateClip = data.m_clip;
+                m_updateIs3D = data.m_is3D;
+                m_updateLoop = data.m_loop;
+            }
+        }
+    }
+
+    // 更新ボタンを押したときの処理
+    private void UpdateExistingSound(string idName)
+    {
+        if (idName == "None") return;
+
+        SoundDatabase db = GetDatabaseStatic();
+        if (db == null) return;
+
+        Undo.RecordObject(db, "Update Sound Data");
+
+        if (Enum.TryParse<SoundID_Aoki>(idName, out var targetID))
+        {
+            var data = db.m_soundList.Find(x => x.m_id == targetID);
+            if (data != null)
+            {
+                data.m_clip = m_updateClip;
+                data.m_is3D = m_updateIs3D;
+                data.m_loop = m_updateLoop;
+
+                EditorUtility.SetDirty(db);
+                AssetDatabase.SaveAssets();
+                Debug.Log($"[SoundIDGeneratorWindow] {idName} のサウンド設定を更新しました。");
+            }
+        }
     }
 }
 #endif
