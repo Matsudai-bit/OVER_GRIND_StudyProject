@@ -4,6 +4,9 @@ using UnityEngine.InputSystem;
 
 public class ButtonSelector : MonoBehaviour
 {
+    // 上下判定のしきい値
+    private const float NAVIGATE_THRESHOLD = 0.75f;
+
     // ボタン
     [SerializeField]
     private SelectButton[] m_buttons;
@@ -18,6 +21,7 @@ public class ButtonSelector : MonoBehaviour
     [SerializeField]
     private UnityEngine.Events.UnityEvent<UnityEngine.UI.Image, Vector3> m_moveAction = null;
 
+    // カーソルが外れたときに自信を残したままにするかどうか
     [SerializeField]
     private bool m_keepSelectionWhenLocked = false;
 
@@ -26,6 +30,42 @@ public class ButtonSelector : MonoBehaviour
     // カーソルの固定・解除の予約
     private bool m_cursorLockRequested;
     private bool m_cursorUnlockRequested;
+
+    [Header("入力判定関連")]
+    // 上キーが押される判定
+    [SerializeField] 
+    private InputActionReference m_navigateActionRef;
+    // 決定キーが押される判定
+    [SerializeField]
+    private InputActionReference m_enterActionRef;
+
+    // 前フレームからのスティック移動距離
+    private Vector2 m_previousNav = Vector2.zero;
+
+    private void OnEnable()
+    {
+        if(m_navigateActionRef == null)
+        {
+            Debug.LogWarning($"{gameObject.name}: {m_navigateActionRef} が設定されていません。Inspectorで割り当ててください。", this);
+            return;
+        }
+        if(m_enterActionRef == null)
+        {
+            Debug.LogWarning($"{gameObject.name}: {m_enterActionRef} が設定されていません。Inspectorで割り当ててください。", this);
+            return;
+        }
+
+        // 有効にする
+        m_navigateActionRef?.action.Enable();
+        m_enterActionRef?.action.Enable();
+    }
+
+    private void OnDisable()
+    {
+        // 無効にする
+        m_navigateActionRef?.action.Disable();
+        m_enterActionRef?.action.Disable();
+    }
 
     private void Start()
     {
@@ -48,27 +88,30 @@ public class ButtonSelector : MonoBehaviour
 
     private void Update()
     {
+        // 入力方向
+        Vector2 nav = m_navigateActionRef.action.ReadValue<Vector2>();
+
         // 上下キーどちらかが押されていたら || カーソルが固定されていなかったら
         if (wasPressedUpOrDown() && !m_isLockCursor)
         {
             // カーソルを離れるときの関数を実行する
             m_buttons[m_selectButtonNumber].OnCursorExit();
-
+            
             // 上キーが押されたら
-            if (Keyboard.current.upArrowKey.wasPressedThisFrame)
+            if (nav.y > NAVIGATE_THRESHOLD && 
+                m_previousNav.y <= NAVIGATE_THRESHOLD)
             {
                 // カーソルを一つ上に移動させる
                 m_selectButtonNumber--;
-
-                Debug.Log("MoveUP");
+                //Debug.Log("MoveUP");
             }
             // 下キーが押されたら
-            if (Keyboard.current.downArrowKey.wasPressedThisFrame)
+            if (nav.y < -NAVIGATE_THRESHOLD && 
+                m_previousNav.y >= -NAVIGATE_THRESHOLD)
             {
                 // カーソルを一つ下に移動させる
                 m_selectButtonNumber++;
-
-                Debug.Log("MoveDOWN");
+                //Debug.Log("MoveDOWN");
             }
 
             // 範囲内に収める
@@ -97,18 +140,21 @@ public class ButtonSelector : MonoBehaviour
             }
 
             // 決定ボタンが押されたら
-            if (Keyboard.current.spaceKey.wasPressedThisFrame)
+            if (m_enterActionRef != null && m_enterActionRef.action.WasPressedThisFrame())
             {
                 // キーが押されたときの処理を実行する
                 m_buttons[m_selectButtonNumber].OnClick();
             }
             // 決定ボタンが離されたら
-            if (Keyboard.current.spaceKey.wasReleasedThisFrame)
+            if (m_enterActionRef != null && m_enterActionRef.action.WasReleasedThisFrame())
             {
                 // キーが押されたときの処理を実行する
                 m_buttons[m_selectButtonNumber].OnClickExit();
             }
         }
+
+        // 今フレームの値を保存し、次フレームの比較に使う
+        m_previousNav = nav;
     }
 
     private void LateUpdate()
@@ -160,8 +206,11 @@ public class ButtonSelector : MonoBehaviour
     // 上キーまたは下キーが押されているか
     private bool wasPressedUpOrDown()
     {
-        return (Keyboard.current.upArrowKey.wasPressedThisFrame ||
-                Keyboard.current.downArrowKey.wasPressedThisFrame);
+        // 入力方向
+        Vector2 nav = m_navigateActionRef.action.ReadValue<Vector2>();
+
+        return (nav.y > NAVIGATE_THRESHOLD && m_previousNav.y <= NAVIGATE_THRESHOLD ||
+                nav.y < -NAVIGATE_THRESHOLD && m_previousNav.y >= -NAVIGATE_THRESHOLD);
     }
 
     // カーソル番号を範囲内に収める 

@@ -43,6 +43,29 @@ public class ContainerController : MonoBehaviour
     [SerializeField]
     private ButtonSelector[] m_buttonSelectorR;
 
+    [Header("入力判定関連")]
+    // 上キーが押される判定
+    [SerializeField]
+    private InputActionReference m_backActionRef;
+
+    private void OnEnable()
+    {
+        if (m_backActionRef == null)
+        {
+            Debug.LogWarning($"{gameObject.name}: {m_backActionRef} が設定されていません。Inspectorで割り当ててください。", this);
+            return;
+        }
+
+        // 有効にする
+        m_backActionRef?.action.Enable();
+    }
+
+    private void OnDisable()
+    {
+        // 無効にする
+        m_backActionRef?.action.Disable();
+    }
+
     private void Start()
     {
         // 選択状態の初期化
@@ -54,8 +77,9 @@ public class ContainerController : MonoBehaviour
     private void Update()
     {
         // escキーが押されたら
-        if(m_choseState == ChoseState.RIGHT &&
-            Keyboard.current.escapeKey.wasPressedThisFrame)
+        if (m_choseState == ChoseState.RIGHT &&
+            m_backActionRef != null && 
+            m_backActionRef.action.WasPressedThisFrame())
         {
             // 左にカーソルを合わせる
             ChangeToLeft();

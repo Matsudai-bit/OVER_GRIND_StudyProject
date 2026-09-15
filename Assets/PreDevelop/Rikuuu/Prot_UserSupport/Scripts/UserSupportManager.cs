@@ -40,6 +40,38 @@ public class UserSupportManager : MonoBehaviour
     // 選択されているボタン番号
     private int m_selectedIndex = 0;
 
+    [Header("入力判定関連")]
+    // ページ切り替えキーが押される判定
+    [SerializeField]
+    private InputActionReference m_changePageLeftActionRef;
+    [SerializeField]
+    private InputActionReference m_changePageRightActionRef;
+
+    private void OnEnable()
+    {
+        if (m_changePageLeftActionRef == null)
+        {
+            Debug.LogWarning($"{gameObject.name}: {m_changePageLeftActionRef} が設定されていません。Inspectorで割り当ててください。", this);
+            return;
+        }
+        if (m_changePageRightActionRef == null)
+        {
+            Debug.LogWarning($"{gameObject.name}: {m_changePageRightActionRef} が設定されていません。Inspectorで割り当ててください。", this);
+            return;
+        }
+
+        // 有効にする
+        m_changePageLeftActionRef?.action.Enable();
+        m_changePageRightActionRef?.action.Enable();
+    }
+
+    private void OnDisable()
+    {
+        // 無効にする
+        m_changePageLeftActionRef?.action.Disable();
+        m_changePageRightActionRef?.action.Disable();
+    }
+
     private void Start()
     {
         // オプションページを表示する
@@ -122,7 +154,7 @@ public class UserSupportManager : MonoBehaviour
 
     private bool WasPressedChangeKey()
     {
-        return (Keyboard.current.qKey.wasPressedThisFrame ||
-                Keyboard.current.eKey.wasPressedThisFrame);
+        return ((m_changePageLeftActionRef != null && m_changePageLeftActionRef.action.WasPressedThisFrame()) ||
+                (m_changePageRightActionRef != null && m_changePageRightActionRef.action.WasPressedThisFrame()));
     }
 }
