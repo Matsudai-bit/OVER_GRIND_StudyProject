@@ -52,6 +52,12 @@ public sealed class PlayerBoostChargingParameterAsset : ScriptableObject
     [SerializeField, Range(0.0f, 1.0f)]
     private float m_steeringDeadZone = 0.1f;
 
+    // 停止中チャージ時の回転速度（度/秒）
+    // チャージ率による補正は行わず、常に一定の速度で回転する
+    [Tooltip("停止中チャージ時の回転速度（度/秒）。チャージ率によって変化しません。")]
+    [SerializeField, Min(0.0f)]
+    private float m_stationaryChargeRotationSpeed = 90.0f;
+
     [Header("カメラ設定")]
 
     // チャージ中、カメラが目標角度へ追従する速度（度/秒）
@@ -119,6 +125,12 @@ public sealed class PlayerBoostChargingParameterAsset : ScriptableObject
     /// </summary>
     public float SteeringDeadZone =>
         m_steeringDeadZone;
+
+    /// <summary>
+    /// 停止中チャージ時の回転速度（度/秒）を取得します。
+    /// </summary>
+    public float StationaryChargeRotationSpeed =>
+        m_stationaryChargeRotationSpeed;
 
     /// <summary>
     /// カメラの追従速度（度/秒）を取得します。

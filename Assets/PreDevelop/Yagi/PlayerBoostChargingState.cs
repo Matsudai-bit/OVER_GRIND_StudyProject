@@ -39,6 +39,7 @@ public sealed class PlayerBoostChargingState
     // 現在使用している最大チャージ時間
     private float m_currentMaxChargeTime;
 
+
     /// <summary>
     /// 現在のチャージ割合を取得します。
     /// </summary>
@@ -46,6 +47,7 @@ public sealed class PlayerBoostChargingState
         Mathf.Clamp01(
             m_chargeTime /
             m_currentMaxChargeTime);
+
 
     /// <summary>
     /// 状態開始時に呼ばれます。
@@ -95,7 +97,11 @@ public sealed class PlayerBoostChargingState
                 normalParameters.TimeToStop,
                 m_parameterAsset.FacingRotationSpeed);
 
+
+        // --------------------------------------------------------
         // チャージ開始時の移動方向を取得
+        // --------------------------------------------------------
+
         m_currentVelocityDirection =
             Owner.Motor.HorizontalDirection;
 
@@ -111,9 +117,14 @@ public sealed class PlayerBoostChargingState
 
         m_currentVelocityDirection.Normalize();
 
+
+        // --------------------------------------------------------
         // プレイヤーの向きを初期化
+        // --------------------------------------------------------
+
         m_currentFacingDirection =
             m_currentVelocityDirection;
+
 
         Debug.Log(
             $"[PlayerBoostChargingState] チャージ開始 " +
@@ -122,6 +133,7 @@ public sealed class PlayerBoostChargingState
             $"最大チャージ時間={m_currentMaxChargeTime:F2}秒 " +
             $"チャージ速度={m_moveParameters.MaxMoveSpeed:F2}",
             Owner);
+
 
         if (Owner.VGaugeUI != null)
         {
@@ -137,6 +149,7 @@ public sealed class PlayerBoostChargingState
         Owner.AnimationPresenter.PlayWalkAnimation();
     }
 
+
     /// <summary>
     /// 一定間隔の更新処理を行います。
     /// </summary>
@@ -147,6 +160,7 @@ public sealed class PlayerBoostChargingState
             Machine.ChangeState<PlayerAttackingState>();
             return;
         }
+
 
         if (Owner.Monitor.IsGrounded &&
             Owner.InputReader.HasJumpInput)
@@ -171,6 +185,7 @@ public sealed class PlayerBoostChargingState
             return;
         }
 
+
         if (Owner.InputReader.ConsumeVBoostReleased())
         {
             Debug.Log(
@@ -185,7 +200,11 @@ public sealed class PlayerBoostChargingState
             return;
         }
 
+
+        // --------------------------------------------------------
         // チャージ時間更新
+        // --------------------------------------------------------
+
         m_chargeTime += Time.fixedDeltaTime;
 
         if (m_chargeTime >= m_currentMaxChargeTime)
@@ -194,7 +213,11 @@ public sealed class PlayerBoostChargingState
                 m_currentMaxChargeTime;
         }
 
+
+        // --------------------------------------------------------
         // 入力方向取得
+        // --------------------------------------------------------
+
         Vector2 normalizedInput =
             Vector2.ClampMagnitude(
                 Owner.InputReader.MoveInput,
@@ -204,25 +227,42 @@ public sealed class PlayerBoostChargingState
             Owner.Motor.CalculateCameraRelativeDirection(
                 normalizedInput);
 
+
+        // --------------------------------------------------------
         // チャージ率に応じた、現在の曲がりやすさを計算
+        // --------------------------------------------------------
+
         float currentDriftTurnSpeed =
             Mathf.Lerp(
                 m_parameterAsset.DriftTurnSpeedAtChargeStart,
                 m_parameterAsset.DriftTurnSpeedAtFullCharge,
                 ChargeRate);
 
+
+        // --------------------------------------------------------
         // チャージ中の移動方向を更新
-        // 停止中開始の場合はチャージ開始時の方向を維持する
+        // --------------------------------------------------------
+
         if (!m_startedFromStationary)
         {
+            // 移動中開始の場合は従来通りドリフトする
             UpdateDriftVelocityDirection(
                 inputDirection,
                 currentDriftTurnSpeed);
 
             UpdateFacingDirection();
         }
+        else
+        {
+            // 停止中開始の場合は左右入力によってその場で回転する
+            UpdateStationaryChargeRotation(normalizedInput);
+        }
 
+
+        // --------------------------------------------------------
         // チャージ中の移動
+        // --------------------------------------------------------
+
         // 停止中開始の場合は移動しない
         if (!m_startedFromStationary)
         {
@@ -234,7 +274,11 @@ public sealed class PlayerBoostChargingState
                 Time.fixedDeltaTime);
         }
 
+
+        // --------------------------------------------------------
         // カメラを、開始時の向きとプレイヤーの向きの中間へ追従
+        // --------------------------------------------------------
+
         if (Owner.PlayerCamera != null)
         {
             Owner.PlayerCamera.UpdateDriftLookDirection(
@@ -244,13 +288,21 @@ public sealed class PlayerBoostChargingState
                 Time.fixedDeltaTime);
         }
 
+
+        // --------------------------------------------------------
         // ゲージ更新
+        // --------------------------------------------------------
+
         if (Owner.VGaugeUI != null)
         {
             Owner.VGaugeUI.SetGaugeRate(ChargeRate);
         }
 
+
+        // --------------------------------------------------------
         // デバッグログ
+        // --------------------------------------------------------
+
         m_speedLogElapsedTime +=
             Time.fixedDeltaTime;
 
@@ -268,6 +320,50 @@ public sealed class PlayerBoostChargingState
                 Owner);
         }
     }
+
+
+    /// <summary>
+    /// 停止中チャージ時の回転処理を行います。
+    ///
+    /// 左右のスティック入力に応じてプレイヤーをその場で回転させます。
+    /// 回転速度はチャージ率によって変化せず、常に一定です。
+    /// </summary>
+    /// <param name="input">正規化された移動入力。</param>
+    private void UpdateStationaryChargeRotation(
+        Vector2 input)
+    {
+        if (Mathf.Abs(input.x) <=
+            m_parameterAsset.SteeringDeadZone)
+        {
+            return;
+        }
+
+        float rotationAmount =
+            input.x *
+            m_parameterAsset.StationaryChargeRotationSpeed *
+            Time.fixedDeltaTime;
+
+        Owner.transform.Rotate(
+            0.0f,
+            rotationAmount,
+            0.0f,
+            Space.World);
+
+        m_currentFacingDirection =
+            Owner.transform.forward;
+
+        m_currentFacingDirection.y = 0.0f;
+
+        if (m_currentFacingDirection.sqrMagnitude >
+            0.0001f)
+        {
+            m_currentFacingDirection.Normalize();
+        }
+
+        m_currentVelocityDirection =
+            m_currentFacingDirection;
+    }
+
 
     /// <summary>
     /// チャージ中の移動方向を更新します。
@@ -297,7 +393,6 @@ public sealed class PlayerBoostChargingState
 
         inputDirection.Normalize();
 
-        // 入力方向へ徐々に移動方向を変更
         float maxRadiansDelta =
             turnSpeedDegreesPerSecond *
             Mathf.Deg2Rad *
@@ -318,6 +413,7 @@ public sealed class PlayerBoostChargingState
             m_currentVelocityDirection.Normalize();
         }
     }
+
 
     /// <summary>
     /// プレイヤーの向きを現在の移動方向へ徐々に変更します。
@@ -345,6 +441,7 @@ public sealed class PlayerBoostChargingState
         }
     }
 
+
     /// <summary>
     /// 状態終了時に呼ばれます。
     /// </summary>
@@ -361,6 +458,7 @@ public sealed class PlayerBoostChargingState
 
         Owner.AnimationPresenter.StopWalkAnimation();
     }
+
 
     /// <summary>
     /// チャージを解除したときの遷移を行います。
