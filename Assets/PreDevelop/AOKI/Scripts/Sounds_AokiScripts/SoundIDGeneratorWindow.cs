@@ -295,6 +295,19 @@ public class SoundIDGeneratorWindow : EditorWindow
     private void DeleteID(string targetID)
     {
         if (targetID == "None") return;
+
+        // 1. SoundDatabase から該当する ID の要素を削除する
+        SoundDatabase db = GetDatabaseStatic();
+        if (db != null)
+        {
+            Undo.RecordObject(db, "Delete Sound ID");
+            // リストの中から ID 名が一致する要素を削除
+            db.m_soundList.RemoveAll(x => x.m_id.ToString() == targetID);
+            EditorUtility.SetDirty(db);
+            AssetDatabase.SaveAssets();
+        }
+
+        // 2. Enum ファイルの再生成
         List<string> existingNames = new List<string>(Enum.GetNames(typeof(SoundID_Aoki)));
         existingNames.Remove(targetID);
         GenerateEnumFile(existingNames);
@@ -307,10 +320,14 @@ public class SoundIDGeneratorWindow : EditorWindow
         sb.AppendLine("// 自動生成用ファイルです。直接編集しないでください。");
         sb.AppendLine("public enum SoundID_Aoki");
         sb.AppendLine("{");
-        if (!idList.Contains("None")) sb.AppendLine("    None = 0,");
+
+        // 無条件で先頭に None = 0 を出力
+        sb.AppendLine("    None = 0,");
+
         foreach (var id in idList)
         {
-            if (id == "None") continue;
+            // None や 空白文字列は重複しないようスキップ
+            if (id == "None" || string.IsNullOrWhiteSpace(id)) continue;
             sb.AppendLine($"    {id},");
         }
         sb.AppendLine("}");

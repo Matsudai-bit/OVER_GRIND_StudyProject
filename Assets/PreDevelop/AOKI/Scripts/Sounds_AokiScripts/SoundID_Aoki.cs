@@ -1,7 +1,9 @@
-﻿// 自動生成されるファイルです。絶対触るな!!!!
+﻿// 自動生成用ファイルです。直接編集しないでください。
 public enum SoundID_Aoki
 {
-    None,
+    None = 0,
     Aoki,
     Hayate,
+    K,
+    ki,
 }
