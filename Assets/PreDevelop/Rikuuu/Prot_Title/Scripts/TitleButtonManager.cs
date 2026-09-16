@@ -6,8 +6,8 @@ public class TitleButtonManager : MonoBehaviour
 {
     Vector3 pos = Vector3.zero;
     public void MoveCursor(
-        UnityEngine.UI.Image cursor,             // �J�[�\��
-        Vector3 targetPosition)     // �ڕW���W
+        UnityEngine.UI.Image cursor,
+        Vector3 targetPosition)
     {
         if (pos == targetPosition)
         {
