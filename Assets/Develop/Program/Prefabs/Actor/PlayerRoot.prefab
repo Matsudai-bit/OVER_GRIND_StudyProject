@@ -79,6 +79,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerCamera
   sensitivity: 1
+  m_cinemachineCamera: {fileID: 1812006397312950562}
+  m_inputAxisController: {fileID: 1163282603766494091}
 --- !u!1 &415096441624393917
 GameObject:
   m_ObjectHideFlags: 0
@@ -101,6 +103,7 @@ GameObject:
   - component: {fileID: 2124101661379444245}
   - component: {fileID: 1405796748971180126}
   - component: {fileID: 2107488902007010570}
+  - component: {fileID: 233749692720938519}
   m_Layer: 8
   m_Name: Player
   m_TagString: Player
@@ -117,7 +120,7 @@ Transform:
   m_GameObject: {fileID: 415096441624393917}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0.9693168, z: 0, w: 0.2458151}
-  m_LocalPosition: {x: -53.05, y: 2.38, z: 57.61}
+  m_LocalPosition: {x: -55.3, y: 2.38, z: 58.4}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -293,6 +296,18 @@ MonoBehaviour:
       m_Calls: []
     m_ActionId: a05a368d-8eaa-47f8-b243-36f13442a49a
     m_ActionName: 'QTE/EscapeAction[/Keyboard/space]'
+  - m_PersistentCalls:
+      m_Calls: []
+    m_ActionId: 5d5fbb0c-592d-4662-b647-4e68340c92f1
+    m_ActionName: Player/Target
+  - m_PersistentCalls:
+      m_Calls: []
+    m_ActionId: d110ac65-7ac1-49aa-95f6-693dbf47aa6e
+    m_ActionName: Player/TargetLeft
+  - m_PersistentCalls:
+      m_Calls: []
+    m_ActionId: 6e573908-d3ce-446e-8e8a-ab0cded4d056
+    m_ActionName: Player/TargetRight
   m_NeverAutoSwitchControlSchemes: 0
   m_DefaultControlScheme: 
   m_DefaultActionMap: Player
@@ -305,7 +320,7 @@ BoxCollider:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 415096441624393917}
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 13400000, guid: a0aada7f94d9e4d49b3aee7d5675f473, type: 2}
   m_IncludeLayers:
     serializedVersion: 2
     m_Bits: 0
@@ -368,6 +383,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerMotor
   m_movementReference: {fileID: 3994456450058773638}
+  m_obstacleSkinWidth: 0.05
+  m_obstacleDecelerationPerSecond: 20
 --- !u!114 &7831071542829783627
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -394,14 +411,18 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerRootController
   m_movementParameterAsset: {fileID: 11400000, guid: ffef782441d77c84ab444d12ef66cf45, type: 2}
   m_vBoostMovementParameterAsset: {fileID: 11400000, guid: 8cab05a74b786e8408497af5277c643d, type: 2}
-  m_playerRigidbody: {fileID: 0}
-  m_inputReader: {fileID: 0}
-  m_monitor: {fileID: 0}
-  m_motor: {fileID: 0}
-  m_animationPresenter: {fileID: 0}
-  m_stateMachineComponent: {fileID: 0}
-  m_attackController: {fileID: 0}
-  m_splineGrindController: {fileID: 0}
+  m_boostChargingParameterAsset: {fileID: 11400000, guid: 9d7f3e42838ee0c4ab216216db4d5332, type: 2}
+  m_playerRigidbody: {fileID: 2496564107683638181}
+  m_inputReader: {fileID: 5952939905318482039}
+  m_monitor: {fileID: 5667916083665077385}
+  m_motor: {fileID: 4683833250410149521}
+  m_animationPresenter: {fileID: 8122269946311702765}
+  m_stateMachineComponent: {fileID: 7831071542829783627}
+  m_attackController: {fileID: 8572377566809189294}
+  m_splineGrindController: {fileID: 2124101661379444245}
+  m_vGaugeUI: {fileID: 0}
+  m_vSpeedUI: {fileID: 0}
+  m_playerCamera: {fileID: 7282053601130355310}
 --- !u!114 &8122269946311702765
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -432,6 +453,7 @@ MonoBehaviour:
   m_attackHitboxes:
   - {fileID: 1648880091018026142}
   - {fileID: 3549696624835808098}
+  m_baseHitsPerSecond: 40
 --- !u!114 &2124101661379444245
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -476,6 +498,27 @@ MonoBehaviour:
   m_damageReceiverComponent: {fileID: 1405796748971180126}
   m_damageMultiplier: 1
   m_canReceiveDamage: 1
+--- !u!114 &233749692720938519
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 415096441624393917}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 684248461fd5bc24ca54a907b3ebabd8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerTargetingController
+  m_targetSearchRadius: 20000
+  m_targetLayer:
+    serializedVersion: 2
+    m_Bits: 128
+  m_targetReticlePrefab: {fileID: 8253040603594533536, guid: b03b2f127382e0146afd089d9d61cf4b, type: 3}
+  m_reticleDistanceFromTarget: 2
+  m_reticleMoveDuration: 0.2
+  m_playerCamera: {fileID: 7282053601130355310}
+  m_cameraFocusDuration: 0.25
 --- !u!1 &1015944288172727084
 GameObject:
   m_ObjectHideFlags: 0
@@ -678,6 +721,8 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 128
   m_defaultDamage: 10
+  m_currentDamage: 0
+  m_hasDamageOverride: 0
 --- !u!114 &6733003110939143491
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1015,6 +1060,8 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 128
   m_defaultDamage: 10
+  m_currentDamage: 0
+  m_hasDamageOverride: 0
 --- !u!114 &470257582867974146
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1591,7 +1638,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 7062408735567409990}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -1727,7 +1774,7 @@ Transform:
   m_GameObject: {fileID: 7634725366974383490}
   serializedVersion: 2
   m_LocalRotation: {x: -0.03502939, y: 0.8727481, z: 0.06332493, w: 0.48277715}
-  m_LocalPosition: {x: -146.24248, y: 8.658109, z: -75.357574}
+  m_LocalPosition: {x: -148.49248, y: 8.658109, z: -74.56758}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -2150,7 +2197,7 @@ Transform:
   m_GameObject: {fileID: 8690278387845699989}
   serializedVersion: 2
   m_LocalRotation: {x: -0.035029385, y: 0.872748, z: 0.06332492, w: 0.48277718}
-  m_LocalPosition: {x: -146.24248, y: 8.658109, z: -75.357574}
+  m_LocalPosition: {x: -148.49248, y: 8.658109, z: -74.56758}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
