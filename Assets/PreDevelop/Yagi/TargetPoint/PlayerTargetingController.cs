@@ -40,6 +40,12 @@ public sealed class PlayerTargetingController : MonoBehaviour
     [SerializeField, Min(0.0f)]
     private float m_cameraFocusDuration = 0.25f;
 
+    [SerializeField]
+    [Tooltip("Playerの移動方向を取得するためのMotor参照。" +
+             "カメラがTarget方向だけでなくPlayerの移動方向も考慮して" +
+             "位置を決定できるようにするために使用します。未設定の場合は移動方向を渡しません。")]
+    private PlayerMotor m_playerMotor;
+
     private readonly List<TargetableEnemy> m_candidates =
         new List<TargetableEnemy>();
 
@@ -69,6 +75,19 @@ public sealed class PlayerTargetingController : MonoBehaviour
 
             m_targetReticle.gameObject.SetActive(false);
         }
+    }
+
+    /// <summary>
+    /// 現在のPlayerの移動方向を取得します。
+    /// m_playerMotorが未設定の場合はVector3.zeroを返し、
+    /// PlayerCamera側はTarget方向のみで角度を決定します。
+    /// </summary>
+    private Vector3 GetPlayerMoveDirection()
+    {
+        return
+            m_playerMotor != null
+                ? m_playerMotor.HorizontalDirection
+                : Vector3.zero;
     }
 
     /// <summary>
@@ -105,8 +124,11 @@ public sealed class PlayerTargetingController : MonoBehaviour
 
         if (m_playerCamera != null)
         {
+            // ★修正点: Playerの移動方向を渡すことで、
+            // 後退・斜め後退移動時にもカメラがPlayerの背後寄りへ回り込みやすくする
             m_playerCamera.UpdateTargetFocus(
-                targetPoint.transform);
+                targetPoint.transform,
+                GetPlayerMoveDirection());
         }
     }
 
@@ -218,9 +240,11 @@ public sealed class PlayerTargetingController : MonoBehaviour
 
         if (m_playerCamera != null)
         {
+            // ★修正点: 開始時点の移動方向も渡し、カメラ軌道の初期スナップに反映する
             m_playerCamera.BeginTargetFocus(
-    targetPoint.transform,
-    m_cameraFocusDuration);
+                targetPoint.transform,
+                m_cameraFocusDuration,
+                GetPlayerMoveDirection());
         }
     }
 
@@ -314,9 +338,11 @@ public sealed class PlayerTargetingController : MonoBehaviour
 
         if (m_playerCamera != null)
         {
+            // ★修正点: TargetPoint切り替え時も移動方向を渡す
             m_playerCamera.BeginTargetFocus(
-     targetPoint.transform,
-     m_cameraFocusDuration);
+                targetPoint.transform,
+                m_cameraFocusDuration,
+                GetPlayerMoveDirection());
         }
     }
 
