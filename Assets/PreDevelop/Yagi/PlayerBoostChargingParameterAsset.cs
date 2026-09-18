@@ -58,6 +58,13 @@ public sealed class PlayerBoostChargingParameterAsset : ScriptableObject
     [SerializeField, Min(0.0f)]
     private float m_stationaryChargeRotationSpeed = 90.0f;
 
+    // 移動中開始のチャージ中、モデルが移動方向に対して
+    // どれだけ真横を向くかの角度（度）
+    // 旋回入力がある側へこの角度分だけモデルを向ける
+    [Tooltip("移動中開始のチャージ中、旋回入力側へモデルを向ける角度（度）。90で真横。")]
+    [SerializeField, Range(0.0f, 180.0f)]
+    private float m_movingChargeSidewaysLookAngle = 90.0f;
+
     [Header("カメラ設定")]
 
     // チャージ中、カメラが目標角度へ追従する速度（度/秒）
@@ -131,6 +138,12 @@ public sealed class PlayerBoostChargingParameterAsset : ScriptableObject
     /// </summary>
     public float StationaryChargeRotationSpeed =>
         m_stationaryChargeRotationSpeed;
+
+    /// <summary>
+    /// 移動中開始のチャージ中、旋回入力側へモデルを向ける角度（度）を取得します。
+    /// </summary>
+    public float MovingChargeSidewaysLookAngle =>
+        m_movingChargeSidewaysLookAngle;
 
     /// <summary>
     /// カメラの追従速度（度/秒）を取得します。

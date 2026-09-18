@@ -4306,6 +4306,18 @@ PrefabInstance:
       propertyPath: m_LocalPosition.z
       value: -74.56758
       objectReference: {fileID: 0}
+    - target: {fileID: 3632387017047789862, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
+      propertyPath: TrackerSettings.PositionDamping.x
+      value: 0.2
+      objectReference: {fileID: 0}
+    - target: {fileID: 3632387017047789862, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
+      propertyPath: TrackerSettings.PositionDamping.y
+      value: 0.2
+      objectReference: {fileID: 0}
+    - target: {fileID: 3632387017047789862, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
+      propertyPath: TrackerSettings.PositionDamping.z
+      value: 0.2
+      objectReference: {fileID: 0}
     - target: {fileID: 3994456450058773638, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
       propertyPath: m_LocalPosition.x
       value: -148.49248
@@ -4366,6 +4378,18 @@ PrefabInstance:
       propertyPath: m_Name
       value: PlayerRoot
       objectReference: {fileID: 0}
+    - target: {fileID: 7072488265624140057, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
+      propertyPath: Damping.x
+      value: 0.1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7072488265624140057, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
+      propertyPath: Damping.y
+      value: 0.1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7282053601130355310, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
+      propertyPath: m_maxRadius
+      value: 5
+      objectReference: {fileID: 0}
     - target: {fileID: 7282053601130355310, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
       propertyPath: m_cinemachineCamera
       value: 
@@ -4374,6 +4398,10 @@ PrefabInstance:
       propertyPath: m_inputAxisController
       value: 
       objectReference: {fileID: 741512076}
+    - target: {fileID: 7831071542829783627, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
+      propertyPath: m_playerModel
+      value: 
+      objectReference: {fileID: 443965369}
     - target: {fileID: 8790272020204068037, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
       propertyPath: m_Material
       value: 
@@ -5456,7 +5484,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 684248461fd5bc24ca54a907b3ebabd8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerTargetingController
-  m_targetSearchRadius: 20000
+  m_targetSearchRadius: 70
   m_targetLayer:
     serializedVersion: 2
     m_Bits: 128
@@ -5465,6 +5493,7 @@ MonoBehaviour:
   m_reticleMoveDuration: 0.2
   m_playerCamera: {fileID: 1176562384}
   m_cameraFocusDuration: 0.25
+  m_playerMotor: {fileID: 0}
 --- !u!4 &1012648358 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -3815376024065445369, guid: 4586a0511fbe72c4bacda86ebb308e01, type: 3}

@@ -37,6 +37,10 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
     // プレイヤーカメラ機能
     private PlayerCamera m_playerCamera;
 
+    // 見た目のモデルオブジェクト
+    // （トップ階層とは独立して見た目の向きだけを制御したい場合に使用）
+    private Transform m_modelTransform;
+
     // 通常移動パラメータ
     private PlayerMovementParameterAsset
         m_movementParameterAsset;
@@ -111,6 +115,13 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
     /// </summary>
     public PlayerCamera PlayerCamera =>
         m_playerCamera;
+
+    /// <summary>
+    /// 見た目のモデルオブジェクトを取得します。
+    /// 未設定の場合はnullを返すことがあります。
+    /// </summary>
+    public Transform ModelTransform =>
+        m_modelTransform;
 
     /// <summary>
     /// 通常移動パラメータを取得します。
@@ -273,7 +284,8 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
             boostChargingParameterAsset,
         VGaugeUI vGaugeUI,
         VSpeedUI vSpeedUI,
-        PlayerCamera playerCamera)
+        PlayerCamera playerCamera,
+        Transform modelTransform)
     {
         if (inputReader == null ||
             monitor == null ||
@@ -294,7 +306,7 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
             return;
         }
 
-        // VGaugeUI・VSpeedUI・PlayerCameraはUI/演出側の用途のため、
+        // VGaugeUI・VSpeedUI・PlayerCamera・ModelTransformはUI/演出側の用途のため、
         // 未設定でも初期化失敗とはしない
         if (vGaugeUI == null)
         {
@@ -320,6 +332,15 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
                 $"[{nameof(PlayerStateMachineComponent)}] " +
                 $"{nameof(PlayerCamera)}が設定されていません。" +
                 "チャージ中のカメラ演出は行われません。",
+                this);
+        }
+
+        if (modelTransform == null)
+        {
+            Debug.LogWarning(
+                $"[{nameof(PlayerStateMachineComponent)}] " +
+                $"{nameof(ModelTransform)}が設定されていません。" +
+                "モデルの向きを個別制御する演出は行われません。",
                 this);
         }
 
@@ -349,6 +370,7 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
         m_vGaugeUI = vGaugeUI;
         m_vSpeedUI = vSpeedUI;
         m_playerCamera = playerCamera;
+        m_modelTransform = modelTransform;
 
         m_stateMachine =
             new StateMachine<PlayerStateMachineComponent>(
