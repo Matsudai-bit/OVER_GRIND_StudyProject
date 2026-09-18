@@ -129,6 +129,7 @@ GameObject:
   m_Component:
   - component: {fileID: 415424402}
   - component: {fileID: 415424403}
+  - component: {fileID: 415424404}
   m_Layer: 5
   m_Name: SplashManager
   m_TagString: Untagged
@@ -167,7 +168,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 95e5aa38605f8e6418928de582b6b8ae, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LogoSequenceManager
-  m_fadeManager: {fileID: 1040817671}
+  m_fadeController: {fileID: 1040817671}
   m_logoImage: {fileID: 686433058}
   m_fadeInDuration: 3
   m_fadeOutDuration: 3
@@ -177,6 +178,36 @@ MonoBehaviour:
   - m_sprite: {fileID: 21300000, guid: a6410d304cbe06844b6aa25c0f4c1a7f, type: 3}
     m_displayTime: 3
   m_titleSceneName: TitleScene
+--- !u!114 &415424404
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 415424401}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 62899f850307741f2a39c98a8b639597, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.InputSystem::UnityEngine.InputSystem.PlayerInput
+  m_Actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
+  m_NotificationBehavior: 0
+  m_UIInputModule: {fileID: 0}
+  m_DeviceLostEvent:
+    m_PersistentCalls:
+      m_Calls: []
+  m_DeviceRegainedEvent:
+    m_PersistentCalls:
+      m_Calls: []
+  m_ControlsChangedEvent:
+    m_PersistentCalls:
+      m_Calls: []
+  m_ActionEvents: []
+  m_NeverAutoSwitchControlSchemes: 0
+  m_DefaultControlScheme: 
+  m_DefaultActionMap: UI
+  m_SplitScreenIndex: -1
+  m_Camera: {fileID: 0}
 --- !u!1 &525723924
 GameObject:
   m_ObjectHideFlags: 0

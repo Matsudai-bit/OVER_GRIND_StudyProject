@@ -2,22 +2,29 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-public class FadeManager : MonoBehaviour
+public class FadeController : MonoBehaviour
 {
     private CanvasGroup m_canvasGroup;
+    private bool m_isSkipped = false;
 
     private void Awake()
     {
         m_canvasGroup = GetComponent<CanvasGroup>();
     }
 
+    // 外部からスキップフラグを設定・初期化するためのプロパティ
+    public bool IsSkipped
+    {
+        get => m_isSkipped;
+        set => m_isSkipped = value;
+    }
     public IEnumerator FadeOut(float duration)
     {
 
         float time = 0;
         while (time < duration)
         {
-            if (Keyboard.current.enterKey.wasPressedThisFrame)
+            if (m_isSkipped)
             {
                 
                 break;
@@ -39,7 +46,7 @@ public class FadeManager : MonoBehaviour
         float time = 0;
         while (time < duration)
         {
-            if (Keyboard.current.enterKey.wasPressedThisFrame)
+            if (m_isSkipped)
             {
           
                 break;
@@ -51,8 +58,5 @@ public class FadeManager : MonoBehaviour
         m_canvasGroup.alpha = 0;
     }
 
-    public void SkipLogo()
-    {
-        m_canvasGroup.alpha = 1;
-    }
+
 }

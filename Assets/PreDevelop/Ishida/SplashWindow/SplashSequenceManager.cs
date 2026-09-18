@@ -15,7 +15,7 @@ public class SplashSequenceManager : MonoBehaviour
     }
 
     [Header("コンポーネント設定")]
-    [SerializeField] private FadeManager m_fadeManager; // 最初のFadeManagerを指定
+    [SerializeField] private FadeController m_fadeController; // 最初のFadeManagerを指定
     [SerializeField] private Image m_logoImage;         // ロゴ表示用のImage
 
     [Header("フェード設定")]
@@ -28,11 +28,26 @@ public class SplashSequenceManager : MonoBehaviour
     [Header("遷移先のタイトルシーン")]
     [SerializeField] private string m_titleSceneName = "TitleScene";
 
+    private bool m_isSkipped = false;
 
     private void Start()
     {
         StartCoroutine(PlayLogoSequence());
     }
+
+    private void OnSubmit(InputValue value)
+    {
+        if(value.isPressed)
+        {
+            Debug.Log("呼ばれた");  
+            m_isSkipped=true;
+            if (m_fadeController != null)
+            {
+                m_fadeController.IsSkipped = true; // プロパティ経由で渡す
+            }
+        }
+    }
+
 
     private IEnumerator PlayLogoSequence()
     {
@@ -43,13 +58,16 @@ public class SplashSequenceManager : MonoBehaviour
             m_logoImage.sprite = logo.m_sprite;
             Debug.Log("1");
             // 2. フェードイン（画面を明るくする）完了まで待機
-            yield return m_fadeManager.FadeIn(m_fadeInDuration);
+            yield return m_fadeController.FadeIn(m_fadeInDuration);
+            ResetSkipFlag();
             Debug.Log("2");
             // 3. 指定時間だけロゴを表示維持
-            yield return new WaitForSeconds(SkipLogoTime(logo.m_displayTime));
+            yield return WaitDisplayTime(logo.m_displayTime);
+            ResetSkipFlag();
             Debug.Log("3");
             // 4. フェードアウト（画面を暗くする）完了まで待機
-            yield return m_fadeManager.FadeOut(m_fadeInDuration);
+            yield return m_fadeController.FadeOut(m_fadeInDuration);
+            ResetSkipFlag();
             Debug.Log("4");
             // 3. 指定時間だけロゴを表示維持
             yield return new WaitForSeconds(1.0f);
@@ -59,13 +77,23 @@ public class SplashSequenceManager : MonoBehaviour
         SceneManager.LoadScene(m_titleSceneName);
     }
 
-    private float SkipLogoTime(float logoDisplayTime)
+    private IEnumerable WaitDisplayTime(float displayTime)
     {
-        float skipTime = logoDisplayTime;
-        if (Keyboard.current.enterKey.wasPressedThisFrame)
+        float timer = 0.0f;
+        while(timer < displayTime && !m_isSkipped)
         {
-            skipTime = 0.0f;
+            timer += Time.deltaTime;
+            yield return null;
         }
-        return skipTime;
+        
+    }
+
+    private void ResetSkipFlag()
+    {
+        m_isSkipped = false;
+        if (m_fadeController != null)
+        {
+            m_fadeController.IsSkipped = false;
+        }
     }
 }
