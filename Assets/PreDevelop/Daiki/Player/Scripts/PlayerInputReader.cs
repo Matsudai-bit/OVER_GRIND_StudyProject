@@ -537,4 +537,9 @@ public sealed class PlayerInputReader : MonoBehaviour
 
         return true;
     }
+    /// <summary>入力アクションの有効状態を変更せず、被弾中の入力を破棄します。</summary>
+    public void DiscardInput()
+    {
+        ClearInput();
+    }
 }

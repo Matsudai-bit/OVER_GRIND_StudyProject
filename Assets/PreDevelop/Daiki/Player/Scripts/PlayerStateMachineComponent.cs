@@ -497,4 +497,75 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
         m_stateMachine = null;
         m_isInitialized = false;
     }
+    [SerializeField, Header("被弾ノックバック"), Min(0.0f)]
+    private float m_knockbackSpeed = 12.0f;
+    [SerializeField, Min(0.0f)]
+    private float m_knockbackLiftSpeed = 5.0f;
+    [SerializeField, Min(0.01f)]
+    private float m_knockbackDuration = 0.8f;
+    [SerializeField, Min(0.0f)]
+    private float m_hitRecoveryDuration = 0.2f;
+    [SerializeField, Tooltip("吹き飛びを終了させる地形・壁のレイヤー")]
+    private LayerMask m_hitEnvironmentLayerMask = ~0;
+
+    /// <summary>被弾中の無敵状態を取得します。</summary>
+    public bool IsHitReacting { get; private set; }
+    /// <summary>被弾中に地形へ衝突したかを取得します。</summary>
+    public bool HasHitEnvironment { get; private set; }
+    /// <summary>吹き飛びの水平速度を取得します。</summary>
+    public float KnockbackSpeed => Mathf.Max(0.0f, m_knockbackSpeed);
+    /// <summary>吹き飛び開始時の上向き速度を取得します。</summary>
+    public float KnockbackLiftSpeed => Mathf.Max(0.0f, m_knockbackLiftSpeed);
+    /// <summary>吹き飛びの最大時間を取得します。</summary>
+    public float KnockbackDuration => Mathf.Max(0.01f, m_knockbackDuration);
+    /// <summary>吹き飛び後の復帰待機時間を取得します。</summary>
+    public float HitRecoveryDuration => Mathf.Max(0.0f, m_hitRecoveryDuration);
+
+    /// <summary>既存の遷移予約より優先して被弾状態を開始します。</summary>
+    public bool TryStartHitReaction(Vector3 attackCenter)
+    {
+        if (!m_isInitialized || !isActiveAndEnabled || IsHitReacting) return false;
+
+        IsHitReacting = true;
+        HasHitEnvironment = false;
+        m_stateMachine.ChangeState<PlayerHitState>(attackCenter);
+        // 通常の遷移はUpdateまで保留されるため、被弾時は直ちに適用します。
+        // これにより次のFixedUpdateで古い移動や攻撃が継続することを防ぎます。
+        m_stateMachine.Update(0.0f);
+        return true;
+    }
+
+    /// <summary>被弾状態の終了時に無敵と衝突記録を解除します。</summary>
+    public void EndHitReaction()
+    {
+        IsHitReacting = false;
+        HasHitEnvironment = false;
+    }
+
+    /// <summary>地形との新たな接触を被弾終了判定へ渡します。</summary>
+    private void OnCollisionEnter(Collision collision)
+    {
+        CheckHitEnvironment(collision);
+    }
+
+    /// <summary>既に壁に触れている場合も被弾終了を検知します。</summary>
+    private void OnCollisionStay(Collision collision)
+    {
+        CheckHitEnvironment(collision);
+    }
+
+    /// <summary>発射直後の床接触を除外し、地形・壁への衝突を記録します。</summary>
+    private void CheckHitEnvironment(Collision collision)
+    {
+        if (!IsHitReacting || (m_hitEnvironmentLayerMask.value & (1 << collision.gameObject.layer)) == 0)
+            return;
+
+        for (int i = 0; i < collision.contactCount; i++)
+        {
+            Vector3 normal = collision.GetContact(i).normal;
+            if (normal.y > 0.5f && m_motor.VerticalVelocity > 0.0f) continue;
+            HasHitEnvironment = true;
+            return;
+        }
+    }
 }

@@ -102,6 +102,8 @@ GameObject:
   - component: {fileID: 8572377566809189294}
   - component: {fileID: 2124101661379444245}
   - component: {fileID: 1405796748971180126}
+  - component: {fileID: 7405796748971180126}
+  - component: {fileID: 7405796748971180127}
   - component: {fileID: 2107488902007010570}
   - component: {fileID: 233749692720938519}
   m_Layer: 8
@@ -397,6 +399,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 57fd4ddafe7cfc7408b9dd19920404a8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerStateMachineComponent
+  m_knockbackSpeed: 12
+  m_knockbackLiftSpeed: 5
+  m_knockbackDuration: 0.8
+  m_hitRecoveryDuration: 0.2
+  m_hitEnvironmentLayerMask:
+    serializedVersion: 2
+    m_Bits: 73
 --- !u!114 &453875386572099116
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -495,7 +504,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 588d23141549917469ee97909cad195c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Hurtbox
-  m_damageReceiverComponent: {fileID: 1405796748971180126}
+  m_damageReceiverComponent: {fileID: 7405796748971180126}
   m_damageMultiplier: 1
   m_canReceiveDamage: 1
 --- !u!114 &233749692720938519
@@ -2390,3 +2399,32 @@ MonoBehaviour:
         DecelTime: 0
   PlayerIndex: -1
   AutoEnableInputs: 1
+--- !u!114 &7405796748971180126
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 415096441624393917}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cb9370fcbea932049abc9789f0cd1b0b, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerHealth
+  m_hurtbox: {fileID: 2107488902007010570}
+--- !u!114 &7405796748971180127
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 415096441624393917}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b4e306724d304bf994410f3ace0bfb9f, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerHitDebugInput
+  m_attackCenter: {fileID: 0}
+  m_localAttackCenterOffset: {x: 0, y: 0, z: 2}
+  m_applyDamage: 0
+  m_damage: 1
