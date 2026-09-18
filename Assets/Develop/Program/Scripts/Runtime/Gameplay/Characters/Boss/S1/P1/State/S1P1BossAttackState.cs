@@ -1,3 +1,4 @@
+using NUnit.Framework.Internal.Commands;
 using UnityEngine;
 
 /// <summary>
@@ -6,10 +7,9 @@ using UnityEngine;
 public sealed class S1P1BossAttackState : StateBase<BossController>
 {
     // Animator Trigger名
-    private readonly string m_animationTriggerName;
 
     // 攻撃ID
-    private readonly AttackIdentifier m_attackIdentifier;
+    private  AttackIdentifier m_attackIdentifier;
 
     // Animator Trigger ID
     private int m_animationTriggerID;
@@ -17,51 +17,44 @@ public sealed class S1P1BossAttackState : StateBase<BossController>
     // 使用中のAnimationEventReceiver
     private AnimationEventReceiver m_animationEventReceiver;
 
-    /// <summary>
-    /// 攻撃ステートを生成します。
-    /// </summary>
-    /// <param name="animationTriggerName">Animator Trigger名。</param>
-    /// <param name="attackIdentifier">攻撃ID。</param>
-    public S1P1BossAttackState(
-        string animationTriggerName,
-        AttackIdentifier attackIdentifier)
-    {
-        m_animationTriggerName = animationTriggerName;
-        m_attackIdentifier = attackIdentifier;
-    }
+    private S1P1BossReferences m_references;
 
     /// <summary>
     /// 攻撃を開始します。
     /// </summary>
     protected override void OnStartState()
     {
-        if (string.IsNullOrEmpty(m_animationTriggerName) ||
-            m_attackIdentifier == null ||
+        if (!Owner.PhaseController.TryGetCurrentPhaseComponent(
+                     out m_references))
+        {
+            Debug.LogError("リファレンスが取得できません");
+        }
+        // 攻撃の適用
+        ApplyAttackSetting(GetAttackType());
+
+        if (m_attackIdentifier == null ||
             Owner.AnimationController == null)
         {
+            Debug.LogError("設定ミス");
             Owner.SetStateExecutionStatus(
                 StateExecutionStatus.FAILED);
             return;
         }
+
 
         m_animationEventReceiver =
             Owner.AnimationController.CurrentAnimationEventReceiver;
 
         if (m_animationEventReceiver == null)
         {
+            Debug.LogError("設定ミス");
+
             Owner.SetStateExecutionStatus(
                 StateExecutionStatus.FAILED);
             return;
         }
-
-        m_animationTriggerID =
-            Animator.StringToHash(m_animationTriggerName);
-
         Owner.SetStateExecutionStatus(
             StateExecutionStatus.RUNNING);
-
-        m_animationEventReceiver.AttackEventReceived +=
-            HandleAttackEvent;
 
         Owner.AnimationController.SetTrigger(
             m_animationTriggerID);
@@ -114,4 +107,66 @@ public sealed class S1P1BossAttackState : StateBase<BossController>
                 StateExecutionStatus.FAILED);
         }
     }
+
+    private S1P1BossAttackType GetAttackType()
+    {
+        if (
+            Vector3.Distance(m_references.LeftLegTransform.position, m_references.PlayerTransform.position) 
+            >
+            Vector3.Distance(m_references.RightLegTransform.position, m_references.PlayerTransform.position))
+        {
+            return S1P1BossAttackType.RIGHT_LEG;
+        }
+        return S1P1BossAttackType.LEFT_LEG;
+    }
+
+    private bool ApplyAttackSetting(S1P1BossAttackType attackType)
+    {
+        S1P1BossAttackSettings attackSettings =
+          Owner.GetComponentInChildren<
+              S1P1BossAttackSettings>(true);
+
+        if (attackSettings == null)
+        {
+            Debug.LogError(
+                $"{nameof(S1P1BossAttackSettings)}が見つかりません。");
+
+            return false;
+        }
+
+        if (!attackSettings.TryGetAttackSetting(
+                attackType,
+                out m_attackIdentifier,
+                out string animationTriggerName))
+        {
+            Debug.LogError(
+                $"{attackType}の攻撃設定がありません。");
+
+            return false;
+        }
+
+
+        if (string.IsNullOrEmpty(animationTriggerName) ||
+           m_attackIdentifier == null ||
+           Owner.AnimationController == null)
+        {
+
+            return false;
+        }
+        m_animationTriggerID =
+            Animator.StringToHash(animationTriggerName);
+
+        Owner.SetStateExecutionStatus(
+            StateExecutionStatus.RUNNING);
+
+        Owner.AnimationController.CurrentAnimationEventReceiver.AttackEventReceived +=
+            HandleAttackEvent;
+
+        Owner.AnimationController.SetTrigger(
+            m_animationTriggerID);
+
+        return true;
+
+    }
 }
+

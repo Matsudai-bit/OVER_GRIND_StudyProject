@@ -59,9 +59,9 @@ public partial class ChangeBossStateAction_S1P1 : Action
                 break;
 
             case S1BossStateID.P1_STOMP:
-                return ChangeS1P1AttackState(
-                    bossController,
-                    S1P1BossAttackType.RIGHT_LEG);
+                bossController.StateMachine.ChangeState<S1P1BossAttackState>();
+                break;
+
 
             //case S1BossStateID.P1_STOMP:
             //    return ChangeS1P1AttackState(
@@ -113,9 +113,6 @@ public partial class ChangeBossStateAction_S1P1 : Action
             return Status.Failure;
         }
 
-        bossController.StateMachine.ChangeState<S1P1BossAttackState>(
-            animationTriggerName,
-            attackIdentifier);
 
         return Status.Success;
     }
