@@ -23,7 +23,7 @@ public sealed class BossNavigation : MonoBehaviour
     [SerializeField, Min(MIN_SAMPLE_DISTANCE)]
     private float m_sampleDistance = 2.0f;
 
-    public void SetNavMeshSurface(NavMeshSurface navMesh)
+    private void SetNavMeshSurface(NavMeshSurface navMesh)
     {
         m_navMeshSurface = navMesh;
     }
@@ -41,13 +41,6 @@ public sealed class BossNavigation : MonoBehaviour
         if (m_navigationOrigin == null)
         {
             m_navigationOrigin = transform;
-        }
-
-        if (m_navMeshSurface == null)
-        {
-            Debug.LogError(
-                $"{nameof(NavMeshSurface)}Ç™ê›íËÇ≥ÇÍÇƒÇ¢Ç‹ÇπÇÒÅB",
-                this);
         }
     }
 
@@ -211,5 +204,17 @@ public sealed class BossNavigation : MonoBehaviour
             movableDistance - Mathf.Max(0.0f, stopMargin),
             0.0f,
             maxDistance);
+    }
+
+    public void ReplaceSurface(NavMeshSurface navMeshSurface)
+    {
+        if (navMeshSurface)
+        {
+            if (m_navMeshSurface)
+                m_navMeshSurface.gameObject.SetActive(false);
+            SetNavMeshSurface(navMeshSurface);
+            
+            m_navMeshSurface.gameObject.SetActive(true);
+        }
     }
 }

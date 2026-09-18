@@ -28,6 +28,12 @@ public sealed class S1P1BossWalkState :
     // 停止状態への変更を要求したか
     private bool m_isIdleRequested;
 
+    // 攻撃ID
+    private AttackIdentifier m_attackIdentifier;
+
+    // Animator Trigger ID
+    private int m_animationTriggerID;
+
     /// <summary>
     /// 歩行を開始します。
     /// </summary>
@@ -56,6 +62,11 @@ public sealed class S1P1BossWalkState :
 
         Owner.SetStateExecutionStatus(
             StateExecutionStatus.RUNNING);
+
+        if (!ApplyAttackSetting())
+        {
+            Debug.LogError("歩き攻撃が設定できませんでした");
+        }
     }
 
     /// <summary>
@@ -108,6 +119,11 @@ public sealed class S1P1BossWalkState :
     {
         Owner.Motor?.StopHorizontalMovement();
 
+        Owner.AnimationController.CurrentAnimationEventReceiver.AttackEventReceived -= HandleAttackEvent;
+
+        Owner.AttackHitboxRegistry?.DisableHitboxes(
+              m_attackIdentifier);
+
         Owner.AnimationController?.SetBool(
             WALK_PARAMETER_ID,
             false);
@@ -156,5 +172,78 @@ public sealed class S1P1BossWalkState :
 
         Machine.ChangeState<BossIdleState>(
             IDLE_DURATION);
+    }
+    private bool ApplyAttackSetting()
+    {
+        S1P1BossAttackSettings attackSettings =
+          Owner.GetComponentInChildren<
+              S1P1BossAttackSettings>(true);
+
+        if (attackSettings == null)
+        {
+            Debug.LogError(
+                $"{nameof(S1P1BossAttackSettings)}が見つかりません。");
+
+            return false;
+        }
+
+        if (!attackSettings.TryGetAttackSetting(
+                S1P1BossAttackType.WALKING,
+                out m_attackIdentifier,
+                out string animationTriggerName))
+        {
+            Debug.LogError(
+                $"{S1P1BossAttackType.WALKING}の攻撃設定がありません。");
+
+            return false;
+        }
+
+
+        if (string.IsNullOrEmpty(animationTriggerName) ||
+           m_attackIdentifier == null ||
+           Owner.AnimationController == null)
+        {
+          
+            return false;
+        }
+        m_animationTriggerID =
+            Animator.StringToHash(animationTriggerName);
+
+        Owner.SetStateExecutionStatus(
+            StateExecutionStatus.RUNNING);
+
+        Owner.AnimationController.CurrentAnimationEventReceiver.AttackEventReceived +=
+            HandleAttackEvent;
+
+        Owner.AnimationController.SetTrigger(
+            m_animationTriggerID);
+
+        return true;
+
+    }
+
+    /// <summary>
+    /// 攻撃AnimationEventを処理します。
+    /// </summary>
+    /// <param name="attackEventData">攻撃イベント情報。</param>
+    private void HandleAttackEvent(AttackEventData attackEventData)
+    {
+
+        switch (attackEventData.AttackEventType)
+        {
+            case AttackEventType.HITBOX_ENABLE:
+                Owner.EnableAttackHitboxes(m_attackIdentifier);
+                break;
+
+            case AttackEventType.HITBOX_DISABLE:
+                Owner.AttackHitboxRegistry?.DisableHitboxes(
+                    m_attackIdentifier);
+                break;
+
+            case AttackEventType.ANIMATION_END:
+                Owner.SetStateExecutionStatus(
+                    StateExecutionStatus.SUCCEEDED);
+                break;
+        }
     }
 }

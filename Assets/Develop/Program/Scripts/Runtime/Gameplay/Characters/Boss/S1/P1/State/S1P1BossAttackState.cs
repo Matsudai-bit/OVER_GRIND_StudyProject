@@ -73,11 +73,7 @@ public sealed class S1P1BossAttackState : StateBase<BossController>
     /// <param name="attackEventData">攻撃イベント情報。</param>
     private void HandleAttackEvent(AttackEventData attackEventData)
     {
-        if (attackEventData == null ||
-            attackEventData.AttackIdentifier != m_attackIdentifier)
-        {
-            return;
-        }
+
 
         switch (attackEventData.AttackEventType)
         {
