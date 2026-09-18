@@ -13,7 +13,7 @@ public class VGageController : MonoBehaviour
     [SerializeField] private Image digitDecimalImage; // 小数第一位
 
     [Header("その他のUI要素")]
-    [SerializeField] private Image gaugeFillImage;   // Vgauge_bar (Filled Image)
+    [SerializeField] private Image gaugeFillImage;   // Vgauge_bar 
 
     [Header("スピード(数字)の設定パラメータ")]
     [SerializeField] private float maxSpeed = 40.0f;       // 最高速度
@@ -30,7 +30,7 @@ public class VGageController : MonoBehaviour
     {
         if (Keyboard.current == null) return;
 
-        // --- 1. スピードの計算 (Zキーで数字が上がる) ---
+        // スピードの計算 
         if (Keyboard.current.zKey.isPressed)
         {
             currentSpeed += speedAccelerate * Time.deltaTime;
@@ -45,10 +45,10 @@ public class VGageController : MonoBehaviour
         UpdateSpeedDisplay(currentSpeed);
 
 
-        // --- 2. ゲージの計算 (Xキーでゲージが伸びる) ---
+        //  ゲージの計算 
         if (Keyboard.current.xKey.isPressed)
         {
-            // chargeDuration(1.5秒) かけて 0 から 1 になるように足す
+            // chargeDurationかけて 0 から 1 になるように足す
             currentCharge += Time.deltaTime / chargeDuration;
         }
         else
@@ -66,7 +66,7 @@ public class VGageController : MonoBehaviour
     {
         if (numberSprites == null || numberSprites.Length < 10) return;
 
-        // 整数部分と小数第一位を取得 (例: 39.8 -> 十の位:3, 一の位:9, 小数:8)
+        // 整数部分と小数第一位を取得 
         int speedInt = Mathf.FloorToInt(speed);
         int digit10 = (speedInt / 10) % 10;
         int digit1 = speedInt % 10;
