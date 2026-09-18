@@ -6,7 +6,7 @@ public class TimerUIController : MonoBehaviour
     [Header("数字スプライト素材 (0～9の順番)")]
     [SerializeField] private Sprite[] numberSprites = new Sprite[10];
 
-    [Header("タイマー表示用Image (桁ごとのUI)")]
+    [Header("タイマー表示用Image ")]
     [SerializeField] private Image min10Image; // 分 
     [SerializeField] private Image min1Image;  // 分 
     [SerializeField] private Image sec10Image; // 秒 
