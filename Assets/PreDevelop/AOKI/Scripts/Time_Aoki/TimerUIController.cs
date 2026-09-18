@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-public class TimerController : MonoBehaviour
+public class TimerUIController : MonoBehaviour
 {
     [Header("数字スプライト素材 (0～9の順番)")]
     [SerializeField] private Sprite[] numberSprites = new Sprite[10];

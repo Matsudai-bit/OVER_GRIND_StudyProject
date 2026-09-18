@@ -2,7 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.InputSystem;
 
-public class VGageController : MonoBehaviour
+public class VGaugeUIController : MonoBehaviour
 {
     [Header("数字スプライト素材 (0～9の順番でアタッチ)")]
     [SerializeField] private Sprite[] numberSprites = new Sprite[10];

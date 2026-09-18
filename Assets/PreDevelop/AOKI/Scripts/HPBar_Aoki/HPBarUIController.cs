@@ -3,12 +3,13 @@ using UnityEngine.UI;
 using DG.Tweening;
 using UnityEngine.InputSystem;
 
-public class HPBarController : MonoBehaviour
+public class HPBarUIController : MonoBehaviour
 {
-    [Header("数字スプライト素材 ")]
+    [Header("数字スプライト素材 (0～9の順番)")]
     [SerializeField] private Sprite[] numberSprites = new Sprite[10];
 
-    [Header("HP表示用Image ")]
+    [Header("HP表示用Image (桁ごとのUI)")]
+    [SerializeField] private Image digit100Image; // 百の位
     [SerializeField] private Image digit10Image;  // 十の位
     [SerializeField] private Image digit1Image;   // 一の位
 
@@ -17,7 +18,7 @@ public class HPBarController : MonoBehaviour
     [SerializeField] private Image redGauge;         // 赤ゲージ 
 
     [Header("アニメーション設定")]
-    [SerializeField] private float maxHP = 99f;          // 最大HP
+    [SerializeField] private float maxHP = 100f;        // 最大HP
     [SerializeField] private float greenDuration = 0.2f; // 緑ゲージが減る速度
     [SerializeField] private float redDelay = 0.4f;      // 赤ゲージが減り始めるまでの待ち時間
     [SerializeField] private float redDuration = 0.6f;   // 赤ゲージが追従して減る速度
@@ -57,7 +58,7 @@ public class HPBarController : MonoBehaviour
                 .SetEase(Ease.OutCubic);
         }
 
-        // HP数字スプライトのカウントダウンアニメーション
+        // HP数字スプライトのカウントダウンアニメーション (赤ゲージの遅延・速度に同期)
         if (textTween != null && textTween.IsActive()) textTween.Kill();
         textTween = DOVirtual.Float(previousHP, currentHP, redDuration, value =>
         {
@@ -79,21 +80,23 @@ public class HPBarController : MonoBehaviour
     }
 
     /// <summary>
-    /// HPの数字スプライト更新処理 
+    /// HPの数字スプライト更新処理 (3桁対応)
     /// </summary>
     private void UpdateHPDisplay(float hp)
     {
         if (numberSprites == null || numberSprites.Length < 10) return;
 
         int hpInt = Mathf.RoundToInt(hp);
+        int digit100 = (hpInt / 100) % 10;
         int digit10 = (hpInt / 10) % 10;
         int digit1 = hpInt % 10;
 
+        if (digit100Image != null) digit100Image.sprite = numberSprites[digit100];
         if (digit10Image != null) digit10Image.sprite = numberSprites[digit10];
         if (digit1Image != null) digit1Image.sprite = numberSprites[digit1];
     }
 
-    // デバッグ用
+    // デバッグ用 (Spaceキーを押すと15ダメージ)
     void Update()
     {
         if (Keyboard.current != null && Keyboard.current.spaceKey.wasPressedThisFrame)
