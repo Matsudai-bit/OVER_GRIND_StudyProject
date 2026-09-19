@@ -17,7 +17,9 @@ public sealed class S1P1BossReferences : BossPhaseParameterProvider
     // プレイヤーの座標
     [SerializeField, Header("プレイヤーの座標")]
     private Transform m_playerTransform;
-
+    // プレイヤーの占有範囲
+    [SerializeField, Header("プレイヤーの占有範囲")]
+    private BossNavMeshFootprint m_bossNavMeshFootprint;
 
 
     // 左足の座標
@@ -25,7 +27,7 @@ public sealed class S1P1BossReferences : BossPhaseParameterProvider
     // 右足の座標
     public Transform RightLegTransform => m_rightLegTransform;
     public Transform PlayerTransform => m_playerTransform;
-
+    public BossNavMeshFootprint BossNavMeshFootprint => m_bossNavMeshFootprint;
 
 
     public override BossPhaseParameters CreatePhaseParameters()

@@ -24,15 +24,34 @@ public sealed class S1P1BossTurnState : StateBase<BossController>
     // 回転速度
     private float m_rotateSpeed;
 
+    S1P1BossReferences m_reference;
+    BossPhaseReferences m_commonReference;
+
     /// <summary>
     /// 方向転換を開始します。
     /// </summary>
     protected override void OnStartState()
     {
-        m_targetRotation =
-            Owner.transform.rotation *
-            Quaternion.Euler(0.0f, ROTATE_ANGLE, 0.0f);
 
+        if (!Owner.PhaseController.TryGetCurrentPhaseComponent(out m_reference))
+        {
+            Debug.LogError("リファレンスが取得できません");
+        }
+        if (!Owner.PhaseController.TryGetCurrentPhaseComponent(out m_commonReference))
+        {
+            Debug.LogError("リファレンスが取得できません");
+        }
+
+        Vector3 turnDirection = GetTurnDirection();
+
+        if (turnDirection.sqrMagnitude <= Mathf.Epsilon)
+        {
+            return;
+        }
+
+        m_targetRotation = Quaternion.LookRotation(
+            turnDirection,
+            Vector3.up);
         m_rotateSpeed = ROTATE_ANGLE / ROTATE_DURATION;
 
         Owner.AnimationController?.SetBool(
@@ -84,5 +103,55 @@ public sealed class S1P1BossTurnState : StateBase<BossController>
             Owner.SetStateExecutionStatus(
                 StateExecutionStatus.FAILED);
         }
+    }
+
+    /// <summary>
+    /// 方向転換する方向を取得します。
+    /// </summary>
+    /// <returns>方向転換する方向。</returns>
+    private Vector3 GetTurnDirection()
+    {
+    
+  
+
+        BossNavMeshFootprint bossNavMeshFootprint = m_reference.BossNavMeshFootprint;
+        if (bossNavMeshFootprint == null)
+        {
+            Debug.LogError("bossNavMeshFootprintが取得できません");
+
+        }
+
+        var playerTransform = m_reference.PlayerTransform;
+        var originTransform = m_commonReference.Origin;
+
+        // ボスがNavMeshからはみ出している場合は内側を向く
+        if (!Owner.Navigation.IsFootprintInsideNavMesh(
+            bossNavMeshFootprint))
+        {
+            if (Owner.Navigation.TryGetNavMeshInsideDirection(
+                    bossNavMeshFootprint,
+                    out Vector3 insideDirection))
+            {
+                return insideDirection;
+            }
+        }
+        
+        // 通常時はPlayerの方向を向く
+        if (playerTransform == null)
+        {
+            return originTransform.forward;
+        }
+
+        Vector3 playerDirection =
+            playerTransform.position - originTransform.position;
+
+        playerDirection.y = 0.0f;
+
+        if (playerDirection.sqrMagnitude <= Mathf.Epsilon)
+        {
+            return originTransform.forward;
+        }
+
+        return playerDirection.normalized;
     }
 }

@@ -217,4 +217,145 @@ public sealed class BossNavigation : MonoBehaviour
             m_navMeshSurface.gameObject.SetActive(true);
         }
     }
+
+    // FootprintがNavMesh内にあるとみなす許容距離
+    private const float FOOTPRINT_NAVMESH_TOLERANCE = 0.1f;
+    // NavMesh内側方向を探索する最大距離
+    [SerializeField, Min(MIN_SAMPLE_DISTANCE)]
+    private float m_insideDirectionSampleDistance = 10.0f;
+
+    /// <summary>
+    /// FootprintがNavMeshからはみ出している場合の内側方向を取得します。
+    /// </summary>
+    /// <param name="footprint">確認するボスのNavMesh占有範囲。</param>
+    /// <param name="insideDirection">NavMesh内側を向く方向。</param>
+    /// <returns>
+    /// true：内側方向を取得できました。
+    /// false：FootprintがNavMesh内、または方向を取得できませんでした。
+    /// </returns>
+    public bool TryGetNavMeshInsideDirection(
+        BossNavMeshFootprint footprint,
+        out Vector3 insideDirection)
+    {
+        insideDirection = Vector3.zero;
+
+        if (footprint == null)
+        {
+            return false;
+        }
+
+        Vector3[] corners = footprint.GetWorldCorners();
+
+        if (corners == null ||
+            corners.Length == 0)
+        {
+            return false;
+        }
+
+        NavMeshQueryFilter queryFilter =
+            CreateQueryFilter();
+
+        Vector3 correctionDirection = Vector3.zero;
+        int outsideCornerCount = 0;
+
+        foreach (Vector3 corner in corners)
+        {
+            // 内側方向を求めるため、通常より広い範囲から
+            // 最寄りのNavMesh位置を取得する
+            if (!NavMesh.SamplePosition(
+                    corner,
+                    out NavMeshHit hit,
+                    m_insideDirectionSampleDistance,
+                    queryFilter))
+            {
+                continue;
+            }
+
+            Vector3 difference =
+                hit.position - corner;
+
+            difference.y = 0.0f;
+
+            // NavMesh上にある点は方向計算に使用しない
+            if (difference.sqrMagnitude <=
+                FOOTPRINT_NAVMESH_TOLERANCE *
+                FOOTPRINT_NAVMESH_TOLERANCE)
+            {
+                continue;
+            }
+
+            correctionDirection += difference;
+            outsideCornerCount++;
+        }
+
+        if (outsideCornerCount == 0)
+        {
+            return false;
+        }
+
+        if (correctionDirection.sqrMagnitude <= Mathf.Epsilon)
+        {
+            return false;
+        }
+
+        insideDirection =
+            correctionDirection.normalized;
+
+        return true;
+    }
+
+    /// <summary>
+    /// 指定したFootprintが現在使用中のNavMesh内に収まっているか確認します。
+    /// </summary>
+    /// <param name="footprint">確認するボスのNavMesh占有範囲。</param>
+    /// <returns>
+    /// true：Footprintの底面4隅がNavMesh内にあります。
+    /// false：1点以上NavMesh外にあります。
+    /// </returns>
+    public bool IsFootprintInsideNavMesh(
+        BossNavMeshFootprint footprint)
+    {
+        if (footprint == null)
+        {
+            return false;
+        }
+
+        Vector3[] corners = footprint.GetWorldCorners();
+
+        if (corners == null ||
+            corners.Length == 0)
+        {
+            return false;
+        }
+
+        NavMeshQueryFilter queryFilter =
+            CreateQueryFilter();
+
+        foreach (Vector3 corner in corners)
+        {
+            if (!NavMesh.SamplePosition(
+                    corner,
+                    out NavMeshHit hit,
+                    m_sampleDistance,
+                    queryFilter))
+            {
+                return false;
+            }
+
+            // NavMesh外の地点が境界へ吸着されていないか確認する
+            Vector3 difference =
+                hit.position - corner;
+
+            difference.y = 0.0f;
+
+            if (difference.sqrMagnitude >
+                FOOTPRINT_NAVMESH_TOLERANCE *
+                FOOTPRINT_NAVMESH_TOLERANCE)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
 }
