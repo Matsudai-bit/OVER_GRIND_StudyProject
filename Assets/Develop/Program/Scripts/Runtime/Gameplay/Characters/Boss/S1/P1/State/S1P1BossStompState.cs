@@ -4,7 +4,7 @@ using UnityEngine;
 /// <summary>
 /// ステージ1フェーズ1のアニメーション攻撃を実行します。
 /// </summary>
-public sealed class S1P1BossAttackState : StateBase<BossController>
+public sealed class S1P1BossStompState : StateBase<BossController>
 {
     // Animator Trigger名
 

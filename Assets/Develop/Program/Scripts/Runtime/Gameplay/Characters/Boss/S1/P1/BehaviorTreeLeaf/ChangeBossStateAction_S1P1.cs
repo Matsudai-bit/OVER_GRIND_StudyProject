@@ -59,7 +59,7 @@ public partial class ChangeBossStateAction_S1P1 : Action
                 break;
 
             case S1BossStateID.P1_STOMP:
-                bossController.StateMachine.ChangeState<S1P1BossAttackState>();
+                bossController.StateMachine.ChangeState<S1P1BossStompState>();
                 break;
 
 
