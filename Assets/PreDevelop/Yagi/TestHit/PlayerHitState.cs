@@ -4,14 +4,23 @@ using UnityEngine;
 public sealed class PlayerHitState : StateBase<PlayerStateMachineComponent>
 {
     private readonly Vector3 m_attackCenter;
+    private readonly float m_horizontalSpeed;
+    private readonly float m_liftSpeed;
+    private readonly float m_duration;
+    private readonly float m_recoveryDuration;
     private float m_elapsedTime;
     private float m_recoveryElapsedTime;
     private bool m_isRecovering;
 
-    /// <summary>被弾時点の攻撃中心を保持します。</summary>
-    public PlayerHitState(Vector3 attackCenter)
+    /// <summary>被弾時点の中心と確定済みの速度・時間を保持します。</summary>
+    public PlayerHitState(Vector3 attackCenter, float horizontalSpeed, float liftSpeed,
+        float duration, float recoveryDuration)
     {
         m_attackCenter = attackCenter;
+        m_horizontalSpeed = horizontalSpeed;
+        m_liftSpeed = liftSpeed;
+        m_duration = duration;
+        m_recoveryDuration = recoveryDuration;
     }
 
     /// <summary>攻撃やグラインドを中断し、攻撃中心から離れる速度を適用します。</summary>
@@ -33,7 +42,9 @@ public sealed class PlayerHitState : StateBase<PlayerStateMachineComponent>
         }
         Owner.InputReader.DiscardInput();
         Owner.AnimationPresenter.PlayHitAnimation();
-        Owner.Motor.ApplyKnockback(m_attackCenter, Owner.KnockbackSpeed, Owner.KnockbackLiftSpeed);
+        Owner.Motor.ApplyKnockback(m_attackCenter, m_horizontalSpeed, m_liftSpeed);
+        // 倍率0でも被弾・無敵・復帰待機は発生させ、吹き飛びだけを省略します。
+        m_isRecovering = m_horizontalSpeed <= 0.0f && m_liftSpeed <= 0.0f;
     }
 
     /// <summary>被弾中の入力を破棄し、復帰後への先行入力を防ぎます。</summary>
@@ -49,7 +60,7 @@ public sealed class PlayerHitState : StateBase<PlayerStateMachineComponent>
         {
             m_elapsedTime += Time.fixedDeltaTime;
             bool hasLanded = Owner.Monitor.IsGrounded && Owner.Motor.VerticalVelocity <= 0.0f;
-            if (!hasLanded && !Owner.HasHitEnvironment && m_elapsedTime < Owner.KnockbackDuration)
+            if (!hasLanded && !Owner.HasHitEnvironment && m_elapsedTime < m_duration)
             {
                 return;
             }
@@ -61,7 +72,7 @@ public sealed class PlayerHitState : StateBase<PlayerStateMachineComponent>
         // 空中で時間切れになった場合も、重力による落下は継続します。
         Owner.Motor.StopImmediately();
         m_recoveryElapsedTime += Time.fixedDeltaTime;
-        if (m_recoveryElapsedTime >= Owner.HitRecoveryDuration)
+        if (m_recoveryElapsedTime >= m_recoveryDuration)
         {
             Machine.ChangeState<PlayerIdlingState>();
         }

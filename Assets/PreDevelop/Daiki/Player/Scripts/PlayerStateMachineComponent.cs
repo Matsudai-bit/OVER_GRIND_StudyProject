@@ -499,6 +499,10 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
     }
     [SerializeField, Header("被弾ノックバック"), Min(0.0f)]
     private float m_knockbackSpeed = 12.0f;
+    [SerializeField, Min(0.0f), Tooltip("全攻撃共通のノックバック倍率。攻撃固有の倍率と乗算します。")]
+    private float m_knockbackRate = 1.0f;
+    [SerializeField, Tooltip("攻撃別設定が渡されなかった場合の設定。未設定なら従来の速度・時間を使用します。")]
+    private PlayerKnockbackProfile m_defaultKnockbackProfile;
     [SerializeField, Min(0.0f)]
     private float m_knockbackLiftSpeed = 5.0f;
     [SerializeField, Min(0.01f)]
@@ -524,11 +528,34 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
     /// <summary>既存の遷移予約より優先して被弾状態を開始します。</summary>
     public bool TryStartHitReaction(Vector3 attackCenter)
     {
+        return TryStartHitReaction(attackCenter, null);
+    }
+
+    /// <summary>攻撃別設定を使って被弾を開始します。未指定時は標準設定を使用します。</summary>
+    public bool TryStartHitReaction(Vector3 attackCenter, PlayerKnockbackProfile profile)
+    {
         if (!m_isInitialized || !isActiveAndEnabled || IsHitReacting) return false;
 
         IsHitReacting = true;
         HasHitEnvironment = false;
-        m_stateMachine.ChangeState<PlayerHitState>(attackCenter);
+        PlayerKnockbackProfile selectedProfile = profile != null ? profile : m_defaultKnockbackProfile;
+        float rate = Mathf.Max(0.0f, m_knockbackRate);
+        float horizontalSpeed = KnockbackSpeed;
+        float liftSpeed = KnockbackLiftSpeed;
+        float duration = KnockbackDuration;
+        float recoveryDuration = HitRecoveryDuration;
+        if (selectedProfile != null)
+        {
+            rate *= selectedProfile.KnockbackRate;
+            horizontalSpeed = selectedProfile.HorizontalSpeed;
+            liftSpeed = selectedProfile.LiftSpeed;
+            duration = selectedProfile.Duration;
+            recoveryDuration = selectedProfile.RecoveryDuration;
+        }
+
+        // 被弾開始時に値を確定し、共有アセットの変更で飛行途中の設定が変わることを防ぎます。
+        m_stateMachine.ChangeState<PlayerHitState>(attackCenter,
+            horizontalSpeed * rate, liftSpeed * rate, duration, recoveryDuration);
         // 通常の遷移はUpdateまで保留されるため、被弾時は直ちに適用します。
         // これにより次のFixedUpdateで古い移動や攻撃が継続することを防ぎます。
         m_stateMachine.Update(0.0f);

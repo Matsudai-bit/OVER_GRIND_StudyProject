@@ -13,6 +13,8 @@ public sealed class PlayerHitDebugInput : MonoBehaviour
     [SerializeField, Tooltip("OFFならHPを減らさず、繰り返し被弾動作を確認できます。")]
     private bool m_applyDamage;
     [SerializeField, Min(1)] private int m_damage = 1;
+    [SerializeField, Tooltip("再現する攻撃の設定。未設定時はプレイヤーの標準設定を使用します。")]
+    private PlayerKnockbackProfile m_knockbackProfile;
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
     private PlayerHealth m_health;
@@ -80,12 +82,12 @@ public sealed class PlayerHitDebugInput : MonoBehaviour
         bool accepted;
         if (m_applyDamage)
         {
-            accepted = m_health != null && m_health.TryTakeDamage(Mathf.Max(1, m_damage), attackCenter);
+            accepted = m_health != null && m_health.TryTakeDamage(Mathf.Max(1, m_damage), attackCenter, m_knockbackProfile);
         }
         else
         {
             // 動作だけの確認は通常入力の有効状態やHPに依存させません。
-            accepted = m_stateMachine.TryStartHitReaction(attackCenter);
+            accepted = m_stateMachine.TryStartHitReaction(attackCenter, m_knockbackProfile);
         }
 
         if (accepted)
