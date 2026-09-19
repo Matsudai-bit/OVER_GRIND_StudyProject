@@ -8,7 +8,7 @@ using UnityEngine;
 [Serializable, Unity.Properties.GeneratePropertyBag]
 [Condition(
     name: "ShouldUseP1Stomp",
-    story: "[BossController] がS1P1踏みつけ攻撃を [StompDistance]m以内なら [NearProbability]、それ以外なら [DefaultProbability] の確率で選択する",
+    story: "[BossController] が [DecisionParameterAsset] の設定を使用してS1P1踏みつけ攻撃を選択する",
     category: "Conditions",
     id: "e588ca320e4cc599c92887fe5e4ad388")]
 public partial class ShouldUseP1StompCondition
@@ -18,17 +18,10 @@ public partial class ShouldUseP1StompCondition
     [SerializeReference]
     public BlackboardVariable<BossController> BossController;
 
-    // 足元と判定する距離
+    // S1P1行動選択パラメータ
     [SerializeReference]
-    public BlackboardVariable<float> StompDistance;
-
-    // Playerが足元にいる場合の選択確率
-    [SerializeReference]
-    public BlackboardVariable<float> NearProbability;
-
-    // 通常時の選択確率
-    [SerializeReference]
-    public BlackboardVariable<float> DefaultProbability;
+    public BlackboardVariable<S1P1BossDecisionParameterAsset>
+        DecisionParameterAsset;
 
     /// <summary>
     /// 踏みつけ攻撃を使用するか判定します。
@@ -39,6 +32,11 @@ public partial class ShouldUseP1StompCondition
     /// </returns>
     public override bool IsTrue()
     {
+        if (DecisionParameterAsset?.Value == null)
+        {
+            return false;
+        }
+
         if (!TryGetReferences(
                 out BossPhaseReferences commonReferences,
                 out S1P1BossReferences phaseReferences))
@@ -46,17 +44,20 @@ public partial class ShouldUseP1StompCondition
             return false;
         }
 
+        S1P1BossDecisionParameterAsset.StompParameters parameters =
+            DecisionParameterAsset.Value.Stomp;
+
         float distance = GetHorizontalDistance(
             commonReferences.Origin.position,
             phaseReferences.PlayerTransform.position);
 
         bool isPlayerNearFeet =
-            distance <= StompDistance.Value;
+            distance <= parameters.Distance;
 
         float probability =
             isPlayerNearFeet
-                ? NearProbability.Value
-                : DefaultProbability.Value;
+                ? parameters.NearProbability
+                : parameters.DefaultProbability;
 
         return CheckProbability(probability);
     }
