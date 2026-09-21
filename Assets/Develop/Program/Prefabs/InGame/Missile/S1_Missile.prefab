@@ -11,8 +11,8 @@ GameObject:
   - component: {fileID: 4500738614122688609}
   - component: {fileID: 5332759154581319641}
   - component: {fileID: 8737631651222246208}
-  - component: {fileID: 1849761805123300996}
-  m_Layer: 0
+  - component: {fileID: 7039260786037825744}
+  m_Layer: 11
   m_Name: Capsule
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -67,7 +67,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 31321ba15b8f8eb4c954353edc038b1d, type: 2}
+  - {fileID: 2100000, guid: 3f7889d08da703645b646338830fdd9a, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -91,7 +91,7 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!136 &1849761805123300996
+--- !u!136 &7039260786037825744
 CapsuleCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -106,12 +106,12 @@ CapsuleCollider:
     serializedVersion: 2
     m_Bits: 0
   m_LayerOverridePriority: 0
-  m_IsTrigger: 1
+  m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 2
-  m_Radius: 0.5
-  m_Height: 2
+  m_Radius: 0.50000006
+  m_Height: 2.0000005
   m_Direction: 1
   m_Center: {x: 0, y: 0, z: 0}
 --- !u!1 &5328733572600670664
@@ -128,7 +128,8 @@ GameObject:
   - component: {fileID: 6964268770702320537}
   - component: {fileID: 2849404875027574385}
   - component: {fileID: 4995137648185141793}
-  m_Layer: 0
+  - component: {fileID: 8121440969338930524}
+  m_Layer: 11
   m_Name: S1_Missile
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -143,14 +144,14 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 5328733572600670664}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.7071068, y: 0, z: 0, w: 0.7071068}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: -0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 4500738614122688609}
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: -90, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!54 &4554717066801226957
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -227,3 +228,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 500954f3c09b6324f844aab7df1a9f93, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MissileHoming
+--- !u!114 &8121440969338930524
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5328733572600670664}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4d58aa8af28db3643b3680beb37b0941, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MissileExplosion
+  m_explosionPrefab: {fileID: 2755565108841255944, guid: e9015bc78e8448c42a80018732c48983, type: 3}

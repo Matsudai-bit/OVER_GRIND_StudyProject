@@ -25,8 +25,13 @@ public sealed class S1P1BossMissileState :
     // 停止状態への変更を要求したか
     private bool m_isIdleRequested;
 
+    private bool m_canLunch; // 発射可能かどうか
+
     // Animator Trigger ID
     private int m_animationTriggerID;
+
+    private AnimationEventReceiver m_animationEventReceiver;
+
 
     /// <summary>
     /// ミサイル攻撃を開始します。
@@ -36,6 +41,7 @@ public sealed class S1P1BossMissileState :
         m_nextLaunchSiteIndex = 0;
         m_launchElapsedTime = 0.0f;
         m_isIdleRequested = false;
+        m_canLunch = false;
 
         // ミサイル攻撃中はその場で停止する
         Owner.Motor?.StopHorizontalMovement();
@@ -61,13 +67,6 @@ public sealed class S1P1BossMissileState :
         Owner.SetStateExecutionStatus(
             StateExecutionStatus.RUNNING);
 
-        // 最初の1発は攻撃開始時に発射する
-        if (!TryLaunchNextMissile())
-        {
-            RequestFailedIdleState();
-            return;
-        }
-
         // 1発のみの場合はそのまま攻撃終了
         if (HasFinishedLaunching())
         {
@@ -81,7 +80,8 @@ public sealed class S1P1BossMissileState :
     /// <param name="deltaTime">前フレームからの経過時間。</param>
     protected override void OnUpdate(float deltaTime)
     {
-        if (m_isIdleRequested ||
+        if (!m_canLunch ||
+            m_isIdleRequested ||
             HasFinishedLaunching())
         {
             return;
@@ -116,6 +116,8 @@ public sealed class S1P1BossMissileState :
     /// </summary>
     protected override void OnExitState()
     {
+        m_animationEventReceiver.AttackEventReceived -= HandleAttackEvent;
+
         Owner.Motor?.StopHorizontalMovement();
 
         if (Owner.GetStateExecutionStatus() ==
@@ -124,6 +126,7 @@ public sealed class S1P1BossMissileState :
             Owner.SetStateExecutionStatus(
                 StateExecutionStatus.FAILED);
         }
+
 
         m_missileReferences = null;
         m_playerTransform = null;
@@ -311,6 +314,7 @@ public sealed class S1P1BossMissileState :
             return false;
         }
 
+        m_animationEventReceiver = Owner.AnimationController.CurrentAnimationEventReceiver;
         if (string.IsNullOrEmpty(
                 animationTriggerName) ||
             Owner.AnimationController == null)
@@ -325,6 +329,44 @@ public sealed class S1P1BossMissileState :
         Owner.AnimationController.SetTrigger(
             m_animationTriggerID);
 
+        m_animationEventReceiver.AttackEventReceived += HandleAttackEvent;
+
         return true;
+    }
+
+    /// <summary>
+    /// 攻撃AnimationEventを処理します。
+    /// </summary>
+    /// <param name="attackEventData">攻撃イベント情報。</param>
+    private void HandleAttackEvent(AttackEventData attackEventData)
+    {
+
+
+        switch (attackEventData.AttackEventType)
+        {
+            case AttackEventType.HITBOX_ENABLE:
+                // 最初の1発は攻撃開始時に発射する
+                if (!TryLaunchNextMissile())
+                {
+                    RequestFailedIdleState();
+                    return;
+                }
+
+                // 1発のみの場合はそのまま攻撃終了
+                if (HasFinishedLaunching())
+                {
+                    CompleteMissileAttack();
+                }
+                m_canLunch = true;
+                break;
+
+            case AttackEventType.HITBOX_DISABLE:
+               
+                break;
+
+            case AttackEventType.ANIMATION_END:
+           
+                break;
+        }
     }
 }

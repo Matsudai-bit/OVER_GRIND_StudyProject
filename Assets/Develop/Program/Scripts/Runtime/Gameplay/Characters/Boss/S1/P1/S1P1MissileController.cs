@@ -37,11 +37,16 @@ public sealed class S1P1MissileController : MonoBehaviour
     // èâä˙âªçœÇ›Ç©
     private bool m_isInitialized;
 
+    private MissileExplosion m_explosion;
+
+
     private void Awake()
     {
         m_motor = GetComponent<MissileMotor>();
         m_steering = GetComponent<MissileSteering>();
         m_homing = GetComponent<MissileHoming>();
+        m_explosion = GetComponent<MissileExplosion>();
+
     }
 
     private void FixedUpdate()
@@ -167,5 +172,15 @@ public sealed class S1P1MissileController : MonoBehaviour
 
         m_motor.AddAcceleration(
             steeringAcceleration);
+    }
+
+    private void OnCollisionEnter(Collision collision)
+    {
+        Explode();
+    }
+
+    private void Explode()
+    {
+        m_explosion.Explode(transform.parent);
     }
 }
