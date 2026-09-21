@@ -1240,6 +1240,91 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 1308298741386237893, guid: 7cf12db45689a1441928c1a8fb14d7a2, type: 3}
   m_PrefabInstance: {fileID: 1556773147}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1680198885
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1680198886}
+  - component: {fileID: 1680198888}
+  - component: {fileID: 1680198887}
+  m_Layer: 0
+  m_Name: Missile
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1680198886
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1680198885}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 20.33, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 1979279746}
+  m_Father: {fileID: 2025398886}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1680198887
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1680198885}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f112baf0f0b9b434aa96b62574375990, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::S1P1MissileController
+  m_target: {fileID: 326726324}
+  m_initialSpeed: 5
+  m_maxSpeed: 25
+  m_acceleration: 10
+  m_minSteeringAcceleration: 10
+  m_maxSteeringAcceleration: 100
+  m_steeringAccelerationRate: 9
+  m_steeringDecelerationRate: 20
+  m_sameSteeringDirectionThreshold: 0.8
+  m_verticalSteeringRatio: 1
+  m_gravityAcceleration: 0.61
+  m_rotationSpeed: 360
+--- !u!54 &1680198888
+Rigidbody:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1680198885}
+  serializedVersion: 5
+  m_Mass: 1
+  m_LinearDamping: 0
+  m_AngularDamping: 0.05
+  m_CenterOfMass: {x: 0, y: 0, z: 0}
+  m_InertiaTensor: {x: 1, y: 1, z: 1}
+  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ImplicitCom: 1
+  m_ImplicitTensor: 1
+  m_UseGravity: 1
+  m_IsKinematic: 0
+  m_Interpolate: 0
+  m_Constraints: 0
+  m_CollisionDetection: 0
 --- !u!1 &1682373784
 GameObject:
   m_ObjectHideFlags: 0
@@ -1500,9 +1585,7 @@ GameObject:
   - component: {fileID: 1979279746}
   - component: {fileID: 1979279751}
   - component: {fileID: 1979279750}
-  - component: {fileID: 1979279747}
   - component: {fileID: 1979279749}
-  - component: {fileID: 1979279748}
   m_Layer: 0
   m_Name: Capsule
   m_TagString: Untagged
@@ -1518,56 +1601,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1979279745}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 15.81, z: 0}
-  m_LocalScale: {x: 0.44138, y: 0.8378717, z: 0.44138}
+  m_LocalRotation: {x: 0.7071068, y: 0, z: 0, w: 0.7071068}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 0.44138002, y: 0.83787173, z: 0.44138002}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 2025398886}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1979279747
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1979279745}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f112baf0f0b9b434aa96b62574375990, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::S1P1MissileController
-  m_target: {fileID: 326726324}
-  m_speed: 1
-  m_time: 0
-  m_gravity: -0.49
---- !u!54 &1979279748
-Rigidbody:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1979279745}
-  serializedVersion: 5
-  m_Mass: 1
-  m_LinearDamping: 0
-  m_AngularDamping: 0.05
-  m_CenterOfMass: {x: 0, y: 0, z: 0}
-  m_InertiaTensor: {x: 1, y: 1, z: 1}
-  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ImplicitCom: 1
-  m_ImplicitTensor: 1
-  m_UseGravity: 1
-  m_IsKinematic: 0
-  m_Interpolate: 0
-  m_Constraints: 112
-  m_CollisionDetection: 0
+  m_Father: {fileID: 1680198886}
+  m_LocalEulerAnglesHint: {x: 90, y: 0, z: 0}
 --- !u!136 &1979279749
 CapsuleCollider:
   m_ObjectHideFlags: 0
@@ -1583,7 +1623,7 @@ CapsuleCollider:
     serializedVersion: 2
     m_Bits: 0
   m_LayerOverridePriority: 0
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 2
@@ -1677,7 +1717,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 1979279746}
+  - {fileID: 1680198886}
   m_Father: {fileID: 161453512}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2050945656
