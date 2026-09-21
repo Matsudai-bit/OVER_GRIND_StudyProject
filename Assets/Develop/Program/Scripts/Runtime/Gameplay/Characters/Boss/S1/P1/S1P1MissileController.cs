@@ -9,8 +9,15 @@ using UnityEngine;
 [RequireComponent(typeof(MissileHoming))]
 public sealed class S1P1MissileController : MonoBehaviour
 {
-    [SerializeField, Header("ミサイルパラメータ")]
-    private MissileParameterAsset m_parameterAsset;
+    private enum MissileState
+    {
+        NONE,
+        LAUNCH_UPWARD,
+        HOMING
+    }
+
+    [SerializeField, Header("発射直後の上昇時間")]
+    private float m_upwardDuration = 0.5f;
 
     // ミサイル移動
     private MissileMotor m_motor;
@@ -21,93 +28,136 @@ public sealed class S1P1MissileController : MonoBehaviour
     // ホーミング制御
     private MissileHoming m_homing;
 
-    // ホーミング中か
-    private bool m_isHoming;
+    // 現在の状態
+    private MissileState m_currentState;
+
+    // 上昇経過時間
+    private float m_upwardElapsedTime;
+
+    // 初期化済みか
+    private bool m_isInitialized;
 
     private void Awake()
     {
         m_motor = GetComponent<MissileMotor>();
         m_steering = GetComponent<MissileSteering>();
         m_homing = GetComponent<MissileHoming>();
-
-        ApplyParameters();
-    }
-
-    private void OnEnable()
-    {
-        m_isHoming = true;
-
-        m_steering.ResetSteering();
-
-        m_motor.Launch(transform.forward);
     }
 
     private void FixedUpdate()
     {
-        if (!m_isHoming || !m_homing.HasTarget)
+        if (!m_isInitialized)
         {
             return;
         }
 
-        UpdateHoming();
+        switch (m_currentState)
+        {
+            case MissileState.LAUNCH_UPWARD:
+                UpdateUpwardLaunch();
+                break;
+
+            case MissileState.HOMING:
+                UpdateHoming();
+                break;
+        }
     }
 
     /// <summary>
-    /// 追尾対象を設定します。
+    /// ミサイルを初期化します。
     /// </summary>
-    public void SetTarget(Transform target)
+    public void Initialize(
+        MissileParameterAsset parameterAsset,
+        Transform target,
+        float upwardDuration)
     {
-        m_homing.SetTarget(target);
-    }
-
-    /// <summary>
-    /// ホーミングを開始します。
-    /// </summary>
-    public void StartHoming()
-    {
-        m_isHoming = true;
-
-        m_steering.ResetSteering();
-    }
-
-    /// <summary>
-    /// ホーミングを停止します。
-    /// </summary>
-    public void StopHoming()
-    {
-        m_isHoming = false;
-
-        m_steering.ResetSteering();
-    }
-
-    /// <summary>
-    /// ミサイルパラメータを各機能へ適用します。
-    /// </summary>
-    private void ApplyParameters()
-    {
-        if (m_parameterAsset == null)
+        if (parameterAsset == null)
         {
             Debug.LogError(
-                $"{nameof(MissileParameterAsset)}が設定されていません。",
+                $"{nameof(MissileParameterAsset)}がnullです。",
                 this);
 
             return;
         }
 
         m_motor.SetParameters(
-            m_parameterAsset.MotorParameters);
+            parameterAsset.MotorParameters);
 
         m_steering.SetParameters(
-            m_parameterAsset.SteeringParameters);
+            parameterAsset.SteeringParameters);
+
+        m_homing.SetTarget(target);
+
+        m_upwardDuration = upwardDuration;
+
+        m_isInitialized = true;
     }
 
     /// <summary>
-    /// ホーミングによる操舵を更新します。
+    /// ミサイルを発射します。
+    /// </summary>
+    public void Launch()
+    {
+        if (!m_isInitialized)
+        {
+            Debug.LogError(
+                "ミサイルが初期化されていません。",
+                this);
+
+            return;
+        }
+
+        m_upwardElapsedTime = 0.0f;
+
+        m_steering.ResetSteering();
+
+        // 発射時に一度だけ上方向へ初速度を与える
+        m_motor.Launch(Vector3.up);
+
+        m_currentState =
+            MissileState.LAUNCH_UPWARD;
+    }
+
+    /// <summary>
+    /// 発射直後の上昇状態を更新します。
+    /// </summary>
+    private void UpdateUpwardLaunch()
+    {
+        m_upwardElapsedTime +=
+            Time.fixedDeltaTime;
+
+        if (m_upwardElapsedTime < m_upwardDuration)
+        {
+            return;
+        }
+
+        StartHoming();
+    }
+
+    /// <summary>
+    /// ホーミングを開始します。
+    /// </summary>
+    private void StartHoming()
+    {
+        m_steering.ResetSteering();
+
+        m_currentState =
+            MissileState.HOMING;
+    }
+
+    /// <summary>
+    /// ホーミングを更新します。
     /// </summary>
     private void UpdateHoming()
     {
+        if (!m_homing.HasTarget)
+        {
+            return;
+        }
+
         Vector3 desiredDirection =
-            m_homing.GetDirection(transform.position);
+            m_homing.GetDirection(
+                transform.position);
 
         Vector3 steeringAcceleration =
             m_steering.CalculateSteering(
@@ -118,14 +168,4 @@ public sealed class S1P1MissileController : MonoBehaviour
         m_motor.AddAcceleration(
             steeringAcceleration);
     }
-
-    /// <summary>
-    /// 指定方向へ飛ばす
-    /// </summary>
-    /// <param name="direction">飛ばす方向</param>
-    public void Launch(Vector3 direction)
-    {
-        m_motor.Launch(direction);
-    }
-
 }

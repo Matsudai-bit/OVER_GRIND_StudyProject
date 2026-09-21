@@ -21,6 +21,10 @@ public sealed class S1P1BossReferences : BossPhaseParameterProvider
     [SerializeField, Header("プレイヤーの占有範囲")]
     private BossNavMeshFootprint m_bossNavMeshFootprint;
 
+    // ミサイルの発射地点
+    [SerializeField, Header("ミサイルリファレンス")]
+    private S1P1BossMissileReferences m_missileReferences;
+
 
     // 左足の座標
     public Transform LeftLegTransform => m_leftLegTransform;
@@ -28,7 +32,7 @@ public sealed class S1P1BossReferences : BossPhaseParameterProvider
     public Transform RightLegTransform => m_rightLegTransform;
     public Transform PlayerTransform => m_playerTransform;
     public BossNavMeshFootprint BossNavMeshFootprint => m_bossNavMeshFootprint;
-
+    public S1P1BossMissileReferences MissileReferences => m_missileReferences;
 
     public override BossPhaseParameters CreatePhaseParameters()
     {

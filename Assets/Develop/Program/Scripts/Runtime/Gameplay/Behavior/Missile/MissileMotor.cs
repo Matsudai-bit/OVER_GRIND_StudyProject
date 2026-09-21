@@ -7,13 +7,13 @@ using UnityEngine;
 [RequireComponent(typeof(Rigidbody))]
 public sealed class MissileMotor : MonoBehaviour
 {
+    // 速度ベクトルが有効か判定する閾値
     private const float VELOCITY_SQR_THRESHOLD = 0.0001f;
 
     // Rigidbody
     private Rigidbody m_rigidbody;
 
-    // 使用する移動パラメータ
-    [SerializeField]
+    // 移動パラメータ
     private MissileMotorParameters m_parameters;
 
     // 現在の目標速度
@@ -33,7 +33,7 @@ public sealed class MissileMotor : MonoBehaviour
     {
         m_rigidbody = GetComponent<Rigidbody>();
 
-        // ミサイル固有の重力を使用する
+        // 独自重力を使用する
         m_rigidbody.useGravity = false;
     }
 
@@ -56,10 +56,11 @@ public sealed class MissileMotor : MonoBehaviour
     public void SetParameters(MissileMotorParameters parameters)
     {
         m_parameters = parameters;
+        m_currentSpeed = parameters.InitialSpeed;
     }
 
     /// <summary>
-    /// 指定方向へミサイルを発射します。
+    /// 指定方向へ初速度を与えます。
     /// </summary>
     public void Launch(Vector3 direction)
     {
@@ -90,7 +91,7 @@ public sealed class MissileMotor : MonoBehaviour
     }
 
     /// <summary>
-    /// 現在速度を最大速度まで加速させます。
+    /// 目標速度を最大速度まで加速させます。
     /// </summary>
     private void UpdateSpeed()
     {
@@ -101,7 +102,7 @@ public sealed class MissileMotor : MonoBehaviour
     }
 
     /// <summary>
-    /// ミサイル固有の重力加速度を適用します。
+    /// ミサイル固有の重力を適用します。
     /// </summary>
     private void ApplyGravity()
     {
@@ -117,7 +118,6 @@ public sealed class MissileMotor : MonoBehaviour
     private void LimitSpeed()
     {
         Vector3 velocity = m_rigidbody.linearVelocity;
-
         float maxSpeed = m_parameters.MaxSpeed;
 
         if (velocity.sqrMagnitude <= maxSpeed * maxSpeed)

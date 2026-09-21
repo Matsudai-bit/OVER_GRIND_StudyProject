@@ -6,7 +6,7 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public sealed class MissileHoming : MonoBehaviour
 {
-    [SerializeField, Header("’Ç”ö‘ÎÛ")]
+    // ’Ç”ö‘ÎÛ
     private Transform m_target;
 
     /// <summary>

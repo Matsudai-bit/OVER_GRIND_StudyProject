@@ -1,15 +1,15 @@
 using UnityEngine;
 
 /// <summary>
-/// ミサイルの操舵挙動を計算します。
+/// ミサイルの操舵挙動を制御します。
 /// </summary>
 [DisallowMultipleComponent]
 public sealed class MissileSteering : MonoBehaviour
 {
+    // 方向ベクトルが有効か判定する閾値
     private const float DIRECTION_SQR_THRESHOLD = 0.0001f;
 
-    // 使用する操舵パラメータ
-    [SerializeField]
+    // 操舵パラメータ
     private MissileSteeringParameters m_parameters;
 
     // 現在の操舵加速度
@@ -30,7 +30,7 @@ public sealed class MissileSteering : MonoBehaviour
     }
 
     /// <summary>
-    /// 指定方向へ向かうための操舵加速度を計算します。
+    /// 指定方向へ向かう操舵加速度を計算します。
     /// </summary>
     public Vector3 CalculateSteering(
         Vector3 desiredDirection,
@@ -51,6 +51,7 @@ public sealed class MissileSteering : MonoBehaviour
         Vector3 desiredVelocity =
             desiredDirection.normalized * desiredSpeed;
 
+        // 理想速度と現在速度との差を操舵方向とする
         Vector3 steering =
             desiredVelocity - currentVelocity;
 
@@ -63,13 +64,16 @@ public sealed class MissileSteering : MonoBehaviour
         Vector3 steeringDirection =
             steering.normalized;
 
-        UpdateSteeringAcceleration(steeringDirection);
+        UpdateSteeringAcceleration(
+            steeringDirection);
 
         Vector3 steeringAcceleration =
-            steeringDirection * m_currentSteeringAcceleration;
+            steeringDirection *
+            m_currentSteeringAcceleration;
 
         steeringAcceleration =
-            AdjustVerticalSteering(steeringAcceleration);
+            AdjustVerticalSteering(
+                steeringAcceleration);
 
         m_previousSteeringDirection =
             steeringDirection;
@@ -95,7 +99,7 @@ public sealed class MissileSteering : MonoBehaviour
     }
 
     /// <summary>
-    /// 操舵方向に応じて操舵力を更新します。
+    /// 操舵方向に応じて操舵加速度を更新します。
     /// </summary>
     private void UpdateSteeringAcceleration(
         Vector3 steeringDirection)
@@ -123,27 +127,27 @@ public sealed class MissileSteering : MonoBehaviour
     }
 
     /// <summary>
-    /// 操舵力を増加させます。
+    /// 操舵加速度を増加させます。
     /// </summary>
     private void AccelerateSteering()
     {
         m_currentSteeringAcceleration = Mathf.MoveTowards(
             m_currentSteeringAcceleration,
             m_parameters.MaxSteeringAcceleration,
-            m_parameters.SteeringAccelerationRate
-                * Time.fixedDeltaTime);
+            m_parameters.SteeringAccelerationRate *
+            Time.fixedDeltaTime);
     }
 
     /// <summary>
-    /// 操舵力を減少させます。
+    /// 操舵加速度を減少させます。
     /// </summary>
     private void DecelerateSteering()
     {
         m_currentSteeringAcceleration = Mathf.MoveTowards(
             m_currentSteeringAcceleration,
             m_parameters.MinSteeringAcceleration,
-            m_parameters.SteeringDecelerationRate
-                * Time.fixedDeltaTime);
+            m_parameters.SteeringDecelerationRate *
+            Time.fixedDeltaTime);
     }
 
     /// <summary>
@@ -152,10 +156,9 @@ public sealed class MissileSteering : MonoBehaviour
     private Vector3 AdjustVerticalSteering(
         Vector3 steeringAcceleration)
     {
-        Vector3 verticalSteering =
-            Vector3.Project(
-                steeringAcceleration,
-                Vector3.up);
+        Vector3 verticalSteering = Vector3.Project(
+            steeringAcceleration,
+            Vector3.up);
 
         Vector3 horizontalSteering =
             steeringAcceleration - verticalSteering;

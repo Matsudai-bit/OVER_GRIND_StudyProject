@@ -8,5 +8,6 @@ public enum S1P1BossAttackType
 {
     RIGHT_LEG,
     LEFT_LEG,
-    WALKING
+    WALKING,
+        MISSILE,
 }

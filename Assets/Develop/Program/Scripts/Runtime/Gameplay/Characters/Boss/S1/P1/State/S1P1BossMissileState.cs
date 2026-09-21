@@ -1,249 +1,330 @@
-//using UnityEngine;
+using System.Collections.Generic;
+using UnityEngine;
 
-///// <summary>
-///// ステージ1フェーズ1の歩行を実行します。
-///// </summary>
-//public sealed class S1P1BossWalkState :
-//    StateBase<BossController>
-//{
-//    // 歩行時間
-//    private const float WALK_DURATION = 3.0f;
+/// <summary>
+/// ステージ1フェーズ1のミサイル攻撃を実行します。
+/// </summary>
+public sealed class S1P1BossMissileState :
+    StateBase<BossController>
+{
+    // ミサイル攻撃後の停止時間
+    private const float IDLE_DURATION = 3.0f;
 
-//    // 前方の通行可能判定を行う距離
-//    private const float FORWARD_CHECK_DISTANCE = 5.0f;
+    // ミサイル攻撃参照
+    private S1P1BossMissileReferences m_missileReferences;
 
-//    // 通行不能時に移行する停止時間
-//    private const float IDLE_DURATION = 3.0f;
+    // ミサイルの攻撃対象
+    private Transform m_playerTransform;
 
-//    // Animatorパラメータ名
-//    private const string WALK_PARAMETER_NAME = "Walk";
+    // 次に使用する発射地点のIndex
+    private int m_nextLaunchSiteIndex;
 
-//    // AnimatorパラメータID
-//    private static readonly int WALK_PARAMETER_ID =
-//        Animator.StringToHash(WALK_PARAMETER_NAME);
+    // 前回の発射からの経過時間
+    private float m_launchElapsedTime;
 
-//    // 歩行経過時間
-//    private float m_elapsedTime;
+    // 停止状態への変更を要求したか
+    private bool m_isIdleRequested;
 
-//    // 停止状態への変更を要求したか
-//    private bool m_isIdleRequested;
+    // Animator Trigger ID
+    private int m_animationTriggerID;
 
-//    // 攻撃ID
-//    private AttackIdentifier m_attackIdentifier;
+    /// <summary>
+    /// ミサイル攻撃を開始します。
+    /// </summary>
+    protected override void OnStartState()
+    {
+        m_nextLaunchSiteIndex = 0;
+        m_launchElapsedTime = 0.0f;
+        m_isIdleRequested = false;
 
-//    // Animator Trigger ID
-//    private int m_animationTriggerID;
+        // ミサイル攻撃中はその場で停止する
+        Owner.Motor?.StopHorizontalMovement();
 
-//    /// <summary>
-//    /// 歩行を開始します。
-//    /// </summary>
-//    protected override void OnStartState()
-//    {
-//        m_elapsedTime = 0.0f;
-//        m_isIdleRequested = false;
+        if (!TryGetReferences())
+        {
+            Debug.LogError(
+                "ミサイル攻撃に必要な参照を取得できませんでした。");
 
-//        if (Owner.Navigation == null ||
-//            Owner.Motor == null)
-//        {
-//            RequestIdleState();
-//            return;
-//        }
+            RequestFailedIdleState();
+            return;
+        }
 
-//        // 開始時点で前方へ進めるか確認します。
-//        if (!CanMoveForward())
-//        {
-//            RequestIdleState();
-//            return;
-//        }
+        if (!ApplyAttackSetting())
+        {
+            Debug.LogError(
+                "ミサイル攻撃のAnimation設定を取得できませんでした。");
 
-//        Owner.AnimationController?.SetBool(
-//            WALK_PARAMETER_ID,
-//            true);
+            RequestFailedIdleState();
+            return;
+        }
 
-//        Owner.SetStateExecutionStatus(
-//            StateExecutionStatus.RUNNING);
+        Owner.SetStateExecutionStatus(
+            StateExecutionStatus.RUNNING);
 
-//        if (!ApplyAttackSetting())
-//        {
-//            Debug.LogError("歩き攻撃が設定できませんでした");
-//        }
-//    }
+        // 最初の1発は攻撃開始時に発射する
+        if (!TryLaunchNextMissile())
+        {
+            RequestFailedIdleState();
+            return;
+        }
 
-//    /// <summary>
-//    /// 歩行時間を更新します。
-//    /// </summary>
-//    /// <param name="deltaTime">前フレームからの経過時間。</param>
-//    protected override void OnUpdate(float deltaTime)
-//    {
-//        if (m_isIdleRequested)
-//        {
-//            return;
-//        }
+        // 1発のみの場合はそのまま攻撃終了
+        if (HasFinishedLaunching())
+        {
+            CompleteMissileAttack();
+        }
+    }
 
-//        m_elapsedTime += deltaTime;
+    /// <summary>
+    /// ミサイルの連続発射を更新します。
+    /// </summary>
+    /// <param name="deltaTime">前フレームからの経過時間。</param>
+    protected override void OnUpdate(float deltaTime)
+    {
+        if (m_isIdleRequested ||
+            HasFinishedLaunching())
+        {
+            return;
+        }
 
-//        if (m_elapsedTime < WALK_DURATION)
-//        {
-//            return;
-//        }
+        m_launchElapsedTime += deltaTime;
 
-//        Owner.SetStateExecutionStatus(
-//            StateExecutionStatus.SUCCEEDED);
-//    }
+        if (m_launchElapsedTime <
+            m_missileReferences.LaunchInterval)
+        {
+            return;
+        }
 
-//    /// <summary>
-//    /// 前方への物理移動を実行します。
-//    /// </summary>
-//    protected override void OnFixedUpdate()
-//    {
-//        if (m_isIdleRequested)
-//        {
-//            return;
-//        }
+        // 同一フレームに複数発射しないよう時間をリセットする
+        m_launchElapsedTime = 0.0f;
 
-//        // 前方へ直進できなくなった場合は停止状態へ移行します。
-//        if (!CanMoveForward())
-//        {
-//            RequestIdleState();
-//            return;
-//        }
+        if (!TryLaunchNextMissile())
+        {
+            RequestFailedIdleState();
+            return;
+        }
 
-//        Owner.Motor.MoveForward(
-//            Time.fixedDeltaTime);
-//    }
+        // 最後のミサイルを発射したら停止状態へ移行する
+        if (HasFinishedLaunching())
+        {
+            CompleteMissileAttack();
+        }
+    }
 
-//    /// <summary>
-//    /// 歩行を終了します。
-//    /// </summary>
-//    protected override void OnExitState()
-//    {
-//        Owner.Motor?.StopHorizontalMovement();
+    /// <summary>
+    /// ミサイル攻撃を終了します。
+    /// </summary>
+    protected override void OnExitState()
+    {
+        Owner.Motor?.StopHorizontalMovement();
 
-//        Owner.AnimationController.CurrentAnimationEventReceiver.AttackEventReceived -= HandleAttackEvent;
+        if (Owner.GetStateExecutionStatus() ==
+            StateExecutionStatus.RUNNING)
+        {
+            Owner.SetStateExecutionStatus(
+                StateExecutionStatus.FAILED);
+        }
 
-//        Owner.AttackHitboxRegistry?.DisableHitboxes(
-//              m_attackIdentifier);
+        m_missileReferences = null;
+        m_playerTransform = null;
+    }
 
-//        Owner.AnimationController?.SetBool(
-//            WALK_PARAMETER_ID,
-//            false);
+    /// <summary>
+    /// 次の発射地点からミサイルを1発発射します。
+    /// </summary>
+    /// <returns>
+    /// true：ミサイルを発射しました。
+    /// false：発射できませんでした。
+    /// </returns>
+    private bool TryLaunchNextMissile()
+    {
+        IReadOnlyList<Transform> launchSites =
+            m_missileReferences.LaunchSites;
 
-//        if (Owner.GetStateExecutionStatus() ==
-//            StateExecutionStatus.RUNNING)
-//        {
-//            Owner.SetStateExecutionStatus(
-//                StateExecutionStatus.FAILED);
-//        }
-//    }
+        while (m_nextLaunchSiteIndex <
+               launchSites.Count)
+        {
+            Transform launchSite =
+                launchSites[m_nextLaunchSiteIndex];
 
-//    /// <summary>
-//    /// ボスの前方へ直進できるか確認します。
-//    /// </summary>
-//    /// <returns>
-//    /// true：前方へ直進できます。
-//    /// false：前方へ直進できません。
-//    /// </returns>
-//    private bool CanMoveForward()
-//    {
-//        if (Owner.Navigation == null)
-//        {
-//            return false;
-//        }
+            m_nextLaunchSiteIndex++;
 
-//        return Owner.Navigation.CanMoveStraight(
-//            Owner.transform.forward,
-//            FORWARD_CHECK_DISTANCE);
-//    }
+            if (launchSite == null)
+            {
+                Debug.LogWarning(
+                    $"ミサイル発射地点 " +
+                    $"{m_nextLaunchSiteIndex - 1} がnullです。");
 
-//    /// <summary>
-//    /// 停止状態への変更を要求します。
-//    /// </summary>
-//    private void RequestIdleState()
-//    {
-//        if (m_isIdleRequested)
-//        {
-//            return;
-//        }
+                continue;
+            }
 
-//        m_isIdleRequested = true;
+            S1P1MissileController missile =
+                UnityEngine.Object.Instantiate(
+                    m_missileReferences.MissilePrefab,
+                    launchSite.position,
+                    launchSite.rotation, m_missileReferences.MissileParent);
 
-//        // State切り替えまでの間も進まないよう即座に停止します。
-//        Owner.Motor?.StopHorizontalMovement();
+            missile.Initialize(
+                m_missileReferences.MissileParameter,
+                m_playerTransform,
+                m_missileReferences.MissileUpwardDuration);
 
-//        Machine.ChangeState<BossIdleState>(
-//            IDLE_DURATION);
-//    }
-//    private bool ApplyAttackSetting()
-//    {
-//        S1P1BossAttackSettings attackSettings =
-//          Owner.GetComponentInChildren<
-//              S1P1BossAttackSettings>(true);
+            missile.Launch();
 
-//        if (attackSettings == null)
-//        {
-//            Debug.LogError(
-//                $"{nameof(S1P1BossAttackSettings)}が見つかりません。");
+            return true;
+        }
 
-//            return false;
-//        }
+        return false;
+    }
 
-//        if (!attackSettings.TryGetAttackSetting(
-//                S1P1BossAttackType.WALKING,
-//                out m_attackIdentifier,
-//                out string animationTriggerName))
-//        {
-//            Debug.LogError(
-//                $"{S1P1BossAttackType.WALKING}の攻撃設定がありません。");
+    /// <summary>
+    /// すべてのミサイルを発射したか確認します。
+    /// </summary>
+    /// <returns>
+    /// true：すべて発射しました。
+    /// false：未発射のミサイルがあります。
+    /// </returns>
+    private bool HasFinishedLaunching()
+    {
+        if (m_missileReferences == null ||
+            m_missileReferences.LaunchSites == null)
+        {
+            return true;
+        }
 
-//            return false;
-//        }
+        return m_nextLaunchSiteIndex >=
+               m_missileReferences.LaunchSites.Count;
+    }
 
+    /// <summary>
+    /// ミサイル攻撃を正常終了します。
+    /// </summary>
+    private void CompleteMissileAttack()
+    {
+        Owner.SetStateExecutionStatus(
+            StateExecutionStatus.SUCCEEDED);
 
-//        if (string.IsNullOrEmpty(animationTriggerName) ||
-//           m_attackIdentifier == null ||
-//           Owner.AnimationController == null)
-//        {
-          
-//            return false;
-//        }
-//        m_animationTriggerID =
-//            Animator.StringToHash(animationTriggerName);
+        RequestIdleState();
+    }
 
-//        Owner.SetStateExecutionStatus(
-//            StateExecutionStatus.RUNNING);
+    /// <summary>
+    /// 停止状態へ移行します。
+    /// </summary>
+    private void RequestIdleState()
+    {
+        if (m_isIdleRequested)
+        {
+            return;
+        }
 
-//        Owner.AnimationController.CurrentAnimationEventReceiver.AttackEventReceived +=
-//            HandleAttackEvent;
+        m_isIdleRequested = true;
 
-//        Owner.AnimationController.SetTrigger(
-//            m_animationTriggerID);
+        Owner.Motor?.StopHorizontalMovement();
 
-//        return true;
+        Machine.ChangeState<BossIdleState>(
+            IDLE_DURATION);
+    }
 
-//    }
+    /// <summary>
+    /// 攻撃失敗として停止状態へ移行します。
+    /// </summary>
+    private void RequestFailedIdleState()
+    {
+        Owner.SetStateExecutionStatus(
+            StateExecutionStatus.FAILED);
 
-//    /// <summary>
-//    /// 攻撃AnimationEventを処理します。
-//    /// </summary>
-//    /// <param name="attackEventData">攻撃イベント情報。</param>
-//    private void HandleAttackEvent(AttackEventData attackEventData)
-//    {
+        RequestIdleState();
+    }
 
-//        switch (attackEventData.AttackEventType)
-//        {
-//            case AttackEventType.HITBOX_ENABLE:
-//                Owner.EnableAttackHitboxes(m_attackIdentifier);
-//                break;
+    /// <summary>
+    /// 現在フェーズからミサイル攻撃に必要な参照を取得します。
+    /// </summary>
+    /// <returns>
+    /// true：必要な参照を取得できました。
+    /// false：取得できませんでした。
+    /// </returns>
+    private bool TryGetReferences()
+    {
+        if (Owner.PhaseController == null)
+        {
+            return false;
+        }
 
-//            case AttackEventType.HITBOX_DISABLE:
-//                Owner.AttackHitboxRegistry?.DisableHitboxes(
-//                    m_attackIdentifier);
-//                break;
+        if (!Owner.PhaseController
+                .TryGetCurrentPhaseComponent(
+                    out S1P1BossReferences references))
+        {
+            return false;
+        }
 
-//            case AttackEventType.ANIMATION_END:
-//                Owner.SetStateExecutionStatus(
-//                    StateExecutionStatus.SUCCEEDED);
-//                break;
-//        }
-//    }
-//}
+        m_missileReferences = references.MissileReferences;
+        if (!m_missileReferences
+                .HasRequiredReferences())
+        {
+            return false;
+        }
+
+        
+
+        if (references.PlayerTransform == null)
+        {
+            return false;
+        }
+
+        m_playerTransform =
+            references.PlayerTransform;
+
+        return true;
+    }
+
+    /// <summary>
+    /// ミサイル攻撃のAnimation設定を適用します。
+    /// </summary>
+    /// <returns>
+    /// true：設定できました。
+    /// false：設定できませんでした。
+    /// </returns>
+    private bool ApplyAttackSetting()
+    {
+        S1P1BossAttackSettings attackSettings =
+            Owner.GetComponentInChildren<
+                S1P1BossAttackSettings>(true);
+
+        if (attackSettings == null)
+        {
+            Debug.LogError(
+                $"{nameof(S1P1BossAttackSettings)}" +
+                "が見つかりません。");
+
+            return false;
+        }
+
+        if (!attackSettings.TryGetAttackSetting(
+                S1P1BossAttackType.MISSILE,
+                out _,
+                out string animationTriggerName))
+        {
+            Debug.LogError(
+                $"{S1P1BossAttackType.MISSILE}" +
+                "の攻撃設定がありません。");
+
+            return false;
+        }
+
+        if (string.IsNullOrEmpty(
+                animationTriggerName) ||
+            Owner.AnimationController == null)
+        {
+            return false;
+        }
+
+        m_animationTriggerID =
+            Animator.StringToHash(
+                animationTriggerName);
+
+        Owner.AnimationController.SetTrigger(
+            m_animationTriggerID);
+
+        return true;
+    }
+}
