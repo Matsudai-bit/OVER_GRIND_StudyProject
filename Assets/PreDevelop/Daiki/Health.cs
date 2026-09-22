@@ -18,6 +18,9 @@ public sealed class Health : MonoBehaviour, IDamageable
     [SerializeField, Header("Œ»İ‚ÌHP")]
     private int m_currentHealth;
 
+    [SerializeField, Header("HPƒpƒ‰ƒ[ƒ^")]
+    HealthValueParameterAsset m_healthValueParameterAsset;
+
     // ‰Šú‰»‚ªŠ®—¹‚µ‚Ä‚¢‚é‚©
     private bool m_isInitialized;
 
@@ -148,6 +151,11 @@ public sealed class Health : MonoBehaviour, IDamageable
     /// </summary>
     private void InitializeHealth()
     {
+        if (m_healthValueParameterAsset)
+        {
+            m_maxHealth = m_healthValueParameterAsset.HpValue;
+        }
+
         m_currentHealth = m_maxHealth;
         m_isInitialized = true;
 

@@ -55,7 +55,7 @@ public partial class ChangeBossStateAction_S1P2 : Action
                     IDLE_DURATION);
                 break;
 
-            case S1BossStateID.P2_ATTACK_CHARGING:
+            case S1BossStateID.P2_CHARGE:
                 bossController.StateMachine.ChangeState<
                     S1P2BossChargingAttackState>();
                 break;
