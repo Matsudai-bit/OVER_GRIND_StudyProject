@@ -45,7 +45,7 @@ public sealed class S1P1BossLegsCollapsingState :
         Owner.SetStateExecutionStatus(
             StateExecutionStatus.RUNNING);
 
-        m_legsController.CollapseLegs();
+        //m_legsController.CollapseLegs();
     }
 
     /// <summary>
@@ -68,14 +68,14 @@ public sealed class S1P1BossLegsCollapsingState :
             return;
         }
 
-        Owner.SetStateExecutionStatus(
-            StateExecutionStatus.SUCCEEDED);
 
         if (!Owner.PhaseController.AdvancePhase())
         {
             Owner.SetStateExecutionStatus(
                 StateExecutionStatus.FAILED);
         }
+        Owner.SetStateExecutionStatus(
+            StateExecutionStatus.SUCCEEDED);
     }
 
     /// <summary>

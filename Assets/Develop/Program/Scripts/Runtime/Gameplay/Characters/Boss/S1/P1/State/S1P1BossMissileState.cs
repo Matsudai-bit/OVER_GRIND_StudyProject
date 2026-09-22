@@ -139,6 +139,9 @@ public sealed class S1P1BossMissileState :
         m_parameters = null;
         m_playerTransform = null;
         m_animationEventReceiver = null;
+
+        Owner.SetStateExecutionStatus(
+      StateExecutionStatus.SUCCEEDED);
     }
 
     /// <summary>
@@ -240,8 +243,7 @@ public sealed class S1P1BossMissileState :
     /// </summary>
     private void CompleteMissileAttack()
     {
-        Owner.SetStateExecutionStatus(
-            StateExecutionStatus.SUCCEEDED);
+  
 
         RequestIdleState();
     }
