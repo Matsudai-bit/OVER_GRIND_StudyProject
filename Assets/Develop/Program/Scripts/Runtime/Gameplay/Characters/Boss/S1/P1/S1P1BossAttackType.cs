@@ -9,5 +9,6 @@ public enum S1P1BossAttackType
     RIGHT_LEG,
     LEFT_LEG,
     WALKING,
-        MISSILE,
+    MISSILE,
+    HEAT_VENT, // 排熱攻撃
 }
