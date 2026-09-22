@@ -71,6 +71,12 @@
         },
         {
             "m_Id": "cae77ef92d624139858ace09f3ac08f7"
+        },
+        {
+            "m_Id": "e9f495c4e7a54b0dbe4b030b5bf18c29"
+        },
+        {
+            "m_Id": "e3f04b28bdcb45fc853a5b6c283ca1f6"
         }
     ],
     "m_GroupDatas": [],
@@ -200,6 +206,34 @@
                     "m_Id": "62b73ed8ce89475b95d5c2ab196ff9e6"
                 },
                 "m_SlotId": 1
+            }
+        },
+        {
+            "m_OutputSlot": {
+                "m_Node": {
+                    "m_Id": "e3f04b28bdcb45fc853a5b6c283ca1f6"
+                },
+                "m_SlotId": 0
+            },
+            "m_InputSlot": {
+                "m_Node": {
+                    "m_Id": "e9f495c4e7a54b0dbe4b030b5bf18c29"
+                },
+                "m_SlotId": 0
+            }
+        },
+        {
+            "m_OutputSlot": {
+                "m_Node": {
+                    "m_Id": "e9f495c4e7a54b0dbe4b030b5bf18c29"
+                },
+                "m_SlotId": 1
+            },
+            "m_InputSlot": {
+                "m_Node": {
+                    "m_Id": "9b2a51e006d245939c87872116a91ca6"
+                },
+                "m_SlotId": 0
             }
         },
         {
@@ -833,6 +867,29 @@
 
 {
     "m_SGVersion": 0,
+    "m_Type": "UnityEditor.ShaderGraph.Vector3MaterialSlot",
+    "m_ObjectId": "4957601488a24491a533703dc05a4996",
+    "m_Id": 0,
+    "m_DisplayName": "Out",
+    "m_SlotType": 1,
+    "m_Hidden": false,
+    "m_ShaderOutputName": "Out",
+    "m_StageCapability": 3,
+    "m_Value": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "m_DefaultValue": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "m_Labels": []
+}
+
+{
+    "m_SGVersion": 0,
     "m_Type": "UnityEditor.ShaderGraph.DynamicValueMaterialSlot",
     "m_ObjectId": "49b78b0f6e7b429aabad36af6761ead9",
     "m_Id": 0,
@@ -1145,6 +1202,29 @@
 }
 
 {
+    "m_SGVersion": 0,
+    "m_Type": "UnityEditor.ShaderGraph.Vector3MaterialSlot",
+    "m_ObjectId": "7c8a80a5045a4af2ad401d68d32cf0c3",
+    "m_Id": 0,
+    "m_DisplayName": "Position",
+    "m_SlotType": 0,
+    "m_Hidden": false,
+    "m_ShaderOutputName": "Position",
+    "m_StageCapability": 3,
+    "m_Value": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "m_DefaultValue": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "m_Labels": []
+}
+
+{
     "m_SGVersion": 1,
     "m_Type": "UnityEditor.Rendering.Universal.ShaderGraph.UniversalTarget",
     "m_ObjectId": "7fdd0a1212834087b8e14f61d17223cc",
@@ -1202,6 +1282,29 @@
         "m_SerializableColors": []
     },
     "m_SerializedDescriptor": "SurfaceDescription.Alpha"
+}
+
+{
+    "m_SGVersion": 0,
+    "m_Type": "UnityEditor.ShaderGraph.Vector3MaterialSlot",
+    "m_ObjectId": "852d286b90de49c5b63c8acdf9804a90",
+    "m_Id": 1,
+    "m_DisplayName": "Out",
+    "m_SlotType": 1,
+    "m_Hidden": false,
+    "m_ShaderOutputName": "Out",
+    "m_StageCapability": 3,
+    "m_Value": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "m_DefaultValue": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "m_Labels": []
 }
 
 {
@@ -1825,6 +1928,87 @@
         "w": 0.0
     },
     "m_LiteralMode": false
+}
+
+{
+    "m_SGVersion": 1,
+    "m_Type": "UnityEditor.ShaderGraph.PositionNode",
+    "m_ObjectId": "e3f04b28bdcb45fc853a5b6c283ca1f6",
+    "m_Group": {
+        "m_Id": ""
+    },
+    "m_Name": "Position",
+    "m_DrawState": {
+        "m_Expanded": true,
+        "m_Position": {
+            "serializedVersion": "2",
+            "x": -683.0000610351563,
+            "y": -93.00000762939453,
+            "width": 206.00003051757813,
+            "height": 130.0000457763672
+        }
+    },
+    "m_Slots": [
+        {
+            "m_Id": "4957601488a24491a533703dc05a4996"
+        }
+    ],
+    "synonyms": [
+        "location"
+    ],
+    "m_Precision": 1,
+    "m_PreviewExpanded": false,
+    "m_DismissedVersion": 0,
+    "m_PreviewMode": 2,
+    "m_CustomColors": {
+        "m_SerializableColors": []
+    },
+    "m_Space": 0,
+    "m_PositionSource": 0
+}
+
+{
+    "m_SGVersion": 1,
+    "m_Type": "UnityEditor.ShaderGraph.CustomFunctionNode",
+    "m_ObjectId": "e9f495c4e7a54b0dbe4b030b5bf18c29",
+    "m_Group": {
+        "m_Id": ""
+    },
+    "m_Name": "MakeBillboard (Custom Function)",
+    "m_DrawState": {
+        "m_Expanded": true,
+        "m_Position": {
+            "serializedVersion": "2",
+            "x": -431.0000915527344,
+            "y": -93.00000762939453,
+            "width": 235.00010681152345,
+            "height": 77.00001525878906
+        }
+    },
+    "m_Slots": [
+        {
+            "m_Id": "7c8a80a5045a4af2ad401d68d32cf0c3"
+        },
+        {
+            "m_Id": "852d286b90de49c5b63c8acdf9804a90"
+        }
+    ],
+    "synonyms": [
+        "code",
+        "HLSL"
+    ],
+    "m_Precision": 0,
+    "m_PreviewExpanded": false,
+    "m_DismissedVersion": 0,
+    "m_PreviewMode": 0,
+    "m_CustomColors": {
+        "m_SerializableColors": []
+    },
+    "m_SourceType": 1,
+    "m_FunctionName": "MakeBillboard",
+    "m_FunctionSource": "",
+    "m_FunctionSourceUsePragmas": true,
+    "m_FunctionBody": "// オブジェクトのワールド座標の原点\r\nfloat3 centerWorld = UNITY_MATRIX_M._m03_m13_m23;\r\n\r\n// オブジェクトのスケールを抽出\r\nfloat2 scale = float2(\r\n    length(UNITY_MATRIX_M._m00_m10_m20),\r\n    length(UNITY_MATRIX_M._m01_m11_m21)\r\n);\r\n\r\n// ゴッドレイの軸（オブジェクトのローカルY軸をワールド空間に変換）\r\n// ※これにより、Sceneビューでのオブジェクトの回転(Rotation)が傾きになります\r\nfloat3 upDir = normalize(UNITY_MATRIX_M._m01_m11_m21);\r\n\r\n// カメラからオブジェクトへの方向ベクトル\r\nfloat3 cameraPos = GetCameraPositionWS();\r\nfloat3 viewDir = centerWorld - cameraPos;\r\n\r\n// カメラへの方向とゴッドレイの軸から、ビルボードの右(Right)方向を計算（外積）\r\nfloat3 rightDir = cross(viewDir, upDir);\r\n\r\n// 視線と軸が完全に重なった時のエラー（表示が消える現象）を回避\r\nif (length(rightDir) < 0.001) {\r\n    rightDir = UNITY_MATRIX_V._m00_m01_m02; // カメラの右ベクトルで代用\r\n} else {\r\n    rightDir = normalize(rightDir);\r\n}\r\n\r\n// 頂点のワールド座標を計算（Y軸は傾きを維持、X軸は常にカメラを向く）\r\nfloat3 worldPos = centerWorld + (rightDir * Position.x * scale.x) + (upDir * Position.y * scale.y);\r\n\r\n// MasterノードはObject Spaceを期待するので逆変換して出力\r\nOut = mul(UNITY_MATRIX_I_M, float4(worldPos, 1.0)).xyz;"
 }
 
 {

@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 97c23e3b12dc18c42a140437e53d3951, type: 3}
   m_Name: Tonemapping
   m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.Tonemapping
-  active: 0
+  active: 1
   mode:
     m_OverrideState: 1
     m_Value: 2
@@ -40,6 +40,40 @@ MonoBehaviour:
   maxNits:
     m_OverrideState: 0
     m_Value: 1000
+--- !u!114 &-334322523732285937
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 558a8e2b6826cf840aae193990ba9f2e, type: 3}
+  m_Name: ShadowsMidtonesHighlights
+  m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.ShadowsMidtonesHighlights
+  active: 1
+  shadows:
+    m_OverrideState: 1
+    m_Value: {x: 0.8288956, y: 0.92909485, z: 1, w: 0.08688097}
+  midtones:
+    m_OverrideState: 1
+    m_Value: {x: 1, y: 0.99699396, z: 0.96742886, w: 0}
+  highlights:
+    m_OverrideState: 1
+    m_Value: {x: 1, y: 1, z: 1, w: 0}
+  shadowsStart:
+    m_OverrideState: 1
+    m_Value: 0
+  shadowsEnd:
+    m_OverrideState: 1
+    m_Value: 0.3
+  highlightsStart:
+    m_OverrideState: 0
+    m_Value: 0.55
+  highlightsEnd:
+    m_OverrideState: 0
+    m_Value: 1
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -57,6 +91,7 @@ MonoBehaviour:
   - {fileID: 7936713564737623550}
   - {fileID: 6189450044443703667}
   - {fileID: 5614858475892050173}
+  - {fileID: -334322523732285937}
 --- !u!114 &5614858475892050173
 MonoBehaviour:
   m_ObjectHideFlags: 3
@@ -91,10 +126,10 @@ MonoBehaviour:
     m_Value: 0.17
   sampleCount:
     m_OverrideState: 1
-    m_Value: 13
+    m_Value: 32
   maskRadius:
     m_OverrideState: 1
-    m_Value: 0.137
+    m_Value: 0.116
   maskContrast:
     m_OverrideState: 0
     m_Value: 2.5
@@ -119,7 +154,7 @@ MonoBehaviour:
   active: 1
   postExposure:
     m_OverrideState: 1
-    m_Value: 0
+    m_Value: 0.37
   contrast:
     m_OverrideState: 1
     m_Value: 0
