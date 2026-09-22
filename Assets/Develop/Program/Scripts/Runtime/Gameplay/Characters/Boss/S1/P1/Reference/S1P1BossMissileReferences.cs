@@ -11,23 +11,17 @@ public sealed class S1P1BossMissileReferences : MonoBehaviour
     [SerializeField, Header("ミサイル")]
     private S1P1MissileController m_missilePrefab;
 
-    [SerializeField, Header("ミサイルを生成する親")]
+    // ミサイルを生成する親
+    [SerializeField]
     private Transform m_missileParent;
 
-
-    // ミサイルの移動パラメータ
-    [SerializeField]
-    private MissileParameterAsset m_missileParameter;
+    // ミサイル攻撃で使用するパラメータ
+    [SerializeField, Header("パラメータ")]
+    private S1P1BossMissileParameterAsset m_parameterAsset;
 
     // ミサイルの発射地点
     [SerializeField, Header("発射地点")]
     private Transform[] m_launchSites;
-
-    // ミサイルを順番に発射する間隔
-    [SerializeField, Header("発射設定"), Min(0.0f)]
-    private float m_launchInterval = 0.5f;
-    [SerializeField, Header("発射直後のミサイルの上昇時間")]
-    private float m_missileUpwardDuration = 1.5f;
 
     /// <summary>
     /// ミサイルPrefabを取得します。
@@ -36,34 +30,22 @@ public sealed class S1P1BossMissileReferences : MonoBehaviour
         m_missilePrefab;
 
     /// <summary>
-    /// ミサイルを生成する親を取得
+    /// ミサイルを生成する親を取得します。
     /// </summary>
     public Transform MissileParent =>
         m_missileParent;
 
     /// <summary>
-    /// ミサイルパラメータを取得します。
+    /// ミサイル攻撃パラメータを取得します。
     /// </summary>
-    public MissileParameterAsset MissileParameter =>
-        m_missileParameter;
+    public S1P1BossMissileParameterAsset ParameterAsset =>
+        m_parameterAsset;
 
     /// <summary>
     /// 発射地点一覧を取得します。
     /// </summary>
     public IReadOnlyList<Transform> LaunchSites =>
         m_launchSites;
-
-    /// <summary>
-    /// 発射間隔を取得します。
-    /// </summary>
-    public float LaunchInterval =>
-        m_launchInterval;
-
-    /// <summary>
-    /// ミサイルの上昇時間
-    /// </summary>
-    public float MissileUpwardDuration =>
-      m_missileUpwardDuration;
 
     /// <summary>
     /// ミサイル攻撃に必要な設定が存在するか確認します。
@@ -75,10 +57,11 @@ public sealed class S1P1BossMissileReferences : MonoBehaviour
     public bool HasRequiredReferences()
     {
         if (m_missilePrefab == null ||
-            m_missileParameter == null ||
+            m_missileParent == null ||
+            m_parameterAsset == null ||
+            !m_parameterAsset.HasRequiredParameters() ||
             m_launchSites == null ||
-            m_launchSites.Length == 0 ||
-            m_missileParent　== null)
+            m_launchSites.Length == 0)
         {
             return false;
         }

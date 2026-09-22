@@ -79,7 +79,8 @@ public sealed class S1P1BossDecisionParameterAssetEditor : Editor
     {
         EditorGUILayout.HelpBox(
             "S1P1 ボスの行動選択パラメータです。\n\n" +
-            "行動は以下の順番で判定され、選択された時点で後続の判定は行われません。\n\n" +
+            "行動は以下の順番で判定され、選択された時点で後続の判定は行われません。\n" +
+            "各行動は正常終了後、設定したクールタイムが経過するまで再選択されません。\n\n" +
             "1. 踏みつけ\n" +
             "2. ミサイル攻撃\n" +
             "3. 排熱攻撃\n" +
@@ -122,6 +123,10 @@ public sealed class S1P1BossDecisionParameterAssetEditor : Editor
                 m_stompProperty.FindPropertyRelative(
                     "m_defaultProbability");
 
+            SerializedProperty coolTime =
+                m_stompProperty.FindPropertyRelative(
+                    "m_coolTime");
+
             DrawDistance(
                 "足元判定距離",
                 distance);
@@ -137,6 +142,12 @@ public sealed class S1P1BossDecisionParameterAssetEditor : Editor
             DrawProbability(
                 "通常時の確率",
                 defaultProbability);
+
+            DrawSeparator();
+
+            DrawTime(
+                "クールタイム",
+                coolTime);
 
             EditorGUILayout.EndVertical();
         }
@@ -163,7 +174,8 @@ public sealed class S1P1BossDecisionParameterAssetEditor : Editor
                 MessageType.None);
 
             SerializedProperty distance =
-                m_missileProperty.FindPropertyRelative("m_distance");
+                m_missileProperty.FindPropertyRelative(
+                    "m_distance");
 
             SerializedProperty farProbability =
                 m_missileProperty.FindPropertyRelative(
@@ -172,6 +184,10 @@ public sealed class S1P1BossDecisionParameterAssetEditor : Editor
             SerializedProperty defaultProbability =
                 m_missileProperty.FindPropertyRelative(
                     "m_defaultProbability");
+
+            SerializedProperty coolTime =
+                m_missileProperty.FindPropertyRelative(
+                    "m_coolTime");
 
             DrawDistance(
                 "遠距離判定",
@@ -184,6 +200,12 @@ public sealed class S1P1BossDecisionParameterAssetEditor : Editor
             DrawProbability(
                 "通常時の確率",
                 defaultProbability);
+
+            DrawSeparator();
+
+            DrawTime(
+                "クールタイム",
+                coolTime);
 
             EditorGUILayout.EndVertical();
         }
@@ -222,6 +244,10 @@ public sealed class S1P1BossDecisionParameterAssetEditor : Editor
                 m_heatExhaustProperty.FindPropertyRelative(
                     "m_defaultProbability");
 
+            SerializedProperty coolTime =
+                m_heatExhaustProperty.FindPropertyRelative(
+                    "m_coolTime");
+
             DrawDistance(
                 "近距離判定",
                 distance);
@@ -233,6 +259,12 @@ public sealed class S1P1BossDecisionParameterAssetEditor : Editor
             DrawProbability(
                 "通常時の確率",
                 defaultProbability);
+
+            DrawSeparator();
+
+            DrawTime(
+                "クールタイム",
+                coolTime);
 
             EditorGUILayout.EndVertical();
         }
@@ -259,7 +291,8 @@ public sealed class S1P1BossDecisionParameterAssetEditor : Editor
                 MessageType.None);
 
             SerializedProperty distance =
-                m_turnProperty.FindPropertyRelative("m_distance");
+                m_turnProperty.FindPropertyRelative(
+                    "m_distance");
 
             SerializedProperty farProbability =
                 m_turnProperty.FindPropertyRelative(
@@ -268,6 +301,10 @@ public sealed class S1P1BossDecisionParameterAssetEditor : Editor
             SerializedProperty defaultProbability =
                 m_turnProperty.FindPropertyRelative(
                     "m_defaultProbability");
+
+            SerializedProperty coolTime =
+                m_turnProperty.FindPropertyRelative(
+                    "m_coolTime");
 
             DrawDistance(
                 "遠距離判定",
@@ -280,6 +317,12 @@ public sealed class S1P1BossDecisionParameterAssetEditor : Editor
             DrawProbability(
                 "通常時の確率",
                 defaultProbability);
+
+            DrawSeparator();
+
+            DrawTime(
+                "クールタイム",
+                coolTime);
 
             EditorGUILayout.EndVertical();
         }
@@ -309,9 +352,19 @@ public sealed class S1P1BossDecisionParameterAssetEditor : Editor
                 m_walkProperty.FindPropertyRelative(
                     "m_probability");
 
+            SerializedProperty coolTime =
+                m_walkProperty.FindPropertyRelative(
+                    "m_coolTime");
+
             DrawProbability(
                 "選択確率",
                 probability);
+
+            DrawSeparator();
+
+            DrawTime(
+                "クールタイム",
+                coolTime);
 
             EditorGUILayout.EndVertical();
         }
@@ -391,5 +444,28 @@ public sealed class S1P1BossDecisionParameterAssetEditor : Editor
 
         property.floatValue =
             percentage / 100.0f;
+    }
+
+    /// <summary>
+    /// パラメータグループ内に区切り線を描画します。
+    /// </summary>
+    private static void DrawSeparator()
+    {
+        EditorGUILayout.Space(4.0f);
+
+        Rect rect =
+            EditorGUILayout.GetControlRect(
+                false,
+                1.0f);
+
+        EditorGUI.DrawRect(
+            rect,
+            new Color(
+                0.4f,
+                0.4f,
+                0.4f,
+                0.5f));
+
+        EditorGUILayout.Space(4.0f);
     }
 }
