@@ -88,6 +88,12 @@ public sealed class S1P1BossMissileParameterAssetEditor : Editor
             "上昇時間",
             "発射直後に上方向へ進んでからホーミングへ移行するまでの時間です。");
 
+        DrawRelativeProperty(
+            m_stateParametersProperty,
+            "m_idleDuration",
+            "攻撃終了後の停止時間",
+            "すべてのミサイル発射後に停止状態へ移行する時間です。");
+
         EditorGUILayout.EndVertical();
     }
 
@@ -129,8 +135,6 @@ public sealed class S1P1BossMissileParameterAssetEditor : Editor
             return;
         }
 
-        // BeginFoldoutHeaderGroupは子Editor側でも使用しているため、
-        // 親側では通常のFoldoutを使用してネストを避けます。
         m_showMissileParameters =
             EditorGUILayout.Foldout(
                 m_showMissileParameters,
@@ -163,9 +167,7 @@ public sealed class S1P1BossMissileParameterAssetEditor : Editor
     /// <summary>
     /// ミサイルパラメータ用Editorを準備します。
     /// </summary>
-    /// <param name="missileParameterAsset">
-    /// 編集するミサイルパラメータ。
-    /// </param>
+    /// <param name="missileParameterAsset">編集するミサイルパラメータ。</param>
     private void EnsureMissileParameterEditor(
         MissileParameterAsset missileParameterAsset)
     {
@@ -204,7 +206,7 @@ public sealed class S1P1BossMissileParameterAssetEditor : Editor
     }
 
     /// <summary>
-    /// 子プロパティをラベルとツールチップ付きで描画します。
+    /// 子プロパティを描画します。
     /// </summary>
     /// <param name="parentProperty">親プロパティ。</param>
     /// <param name="propertyName">子プロパティ名。</param>
