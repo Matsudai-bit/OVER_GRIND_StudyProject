@@ -79,15 +79,51 @@ public class MapController : MonoBehaviour
         }
     }
 
-    void Zoom(float zoomSpeed)
+    private void Zoom(float zoomSpeed)
     {
-        m_currentZoom += zoomSpeed * Time.deltaTime;
-        m_currentZoom = Mathf.Clamp(m_currentZoom, MIN_ZOOM, MAX_ZOOM);
+        // 必要な参照がなければ何もしない
+        if (m_mapImage == null || m_frameRect == null)
+        {
+            return;
+        }
 
-        m_mapImage.rectTransform.localScale = new Vector3(m_currentZoom, m_currentZoom, 1f);
+        float oldZoom = m_currentZoom;
+        m_currentZoom = Mathf.Clamp(m_currentZoom + zoomSpeed * Time.deltaTime, MIN_ZOOM, MAX_ZOOM);
+
+        // 上限・下限で倍率が変わらなかった場合は何もしない
+        if (Mathf.Approximately(oldZoom, m_currentZoom))
+        {
+            return;
+        }
+
+        ApplyZoomAroundFrameCenter(m_currentZoom / oldZoom);
 
         // 倍率を表示する
-        m_magnificationText.text = "×" + m_currentZoom.ToString("F1");
+        if (m_magnificationText != null)
+        {
+            m_magnificationText.text = "×" + m_currentZoom.ToString("F1");
+        }
+    }
+
+    private void ApplyZoomAroundFrameCenter(float ratio)
+    {
+        RectTransform imgRect = m_mapImage.rectTransform;
+        RectTransform parentRect = imgRect.parent as RectTransform;
+        if (parentRect == null)
+        {
+            return;
+        }
+
+        // 枠の中心を、画像の親のローカル座標に変換する
+        Vector3 frameCenterWorld = m_frameRect.TransformPoint(m_frameRect.rect.center);
+        Vector2 frameCenter = parentRect.InverseTransformPoint(frameCenterWorld);
+
+        // 枠の中心から見た画像pivotの位置を、倍率の比率分だけ伸縮する
+        Vector2 pivotPos = imgRect.localPosition;
+        Vector2 newPos = frameCenter + (pivotPos - frameCenter) * ratio;
+
+        imgRect.localPosition = new Vector3(newPos.x, newPos.y, imgRect.localPosition.z);
+        imgRect.localScale = new Vector3(m_currentZoom, m_currentZoom, 1f);
     }
 
     private void MoveMap(Vector2 move)
@@ -97,6 +133,6 @@ public class MapController : MonoBehaviour
         // 移動量（Time.deltaTime を使って滑らかに）
         Vector2 delta = move * MOVE_SPEED * Time.deltaTime;
 
-        imgRect.anchoredPosition += delta;
+        imgRect.anchoredPosition -= delta;
     }
 }
