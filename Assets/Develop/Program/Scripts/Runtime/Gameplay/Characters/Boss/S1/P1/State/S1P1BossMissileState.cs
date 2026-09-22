@@ -7,20 +7,14 @@ using UnityEngine;
 public sealed class S1P1BossMissileState :
     StateBase<BossController>
 {
-    // ミサイル攻撃後の停止時間
-    private const float IDLE_DURATION = 3.0f;
-
     // S1P1固有参照
     private S1P1BossReferences m_references;
 
     // ミサイル攻撃参照
     private S1P1BossMissileReferences m_missileReferences;
 
-    // ミサイル本体のパラメータ
-    private MissileParameterAsset m_missileParameterAsset;
-
-    // ミサイル攻撃状態のパラメータ
-    private S1P1BossMissileStateParameters m_stateParameters;
+    // ミサイル状態のパラメータ
+    private S1P1BossMissileStateParameters m_parameters;
 
     // ミサイルの攻撃対象
     private Transform m_playerTransform;
@@ -53,13 +47,12 @@ public sealed class S1P1BossMissileState :
         m_isIdleRequested = false;
         m_canLaunch = false;
 
-        // ミサイル攻撃中はその場で停止する
         Owner.Motor?.StopHorizontalMovement();
 
-        if (!TryGetReferences())
+        if (!TryGetReferencesAndParameters())
         {
             Debug.LogError(
-                "ミサイル攻撃に必要な参照を取得できませんでした。");
+                "ミサイル攻撃に必要な参照またはパラメータを取得できませんでした。");
 
             RequestFailedIdleState();
             return;
@@ -77,7 +70,6 @@ public sealed class S1P1BossMissileState :
         Owner.SetStateExecutionStatus(
             StateExecutionStatus.RUNNING);
 
-        // 発射地点が存在しない場合は攻撃を終了する
         if (HasFinishedLaunching())
         {
             CompleteMissileAttack();
@@ -92,6 +84,7 @@ public sealed class S1P1BossMissileState :
     {
         if (!m_canLaunch ||
             m_isIdleRequested ||
+            m_parameters == null ||
             HasFinishedLaunching())
         {
             return;
@@ -100,12 +93,11 @@ public sealed class S1P1BossMissileState :
         m_launchElapsedTime += deltaTime;
 
         if (m_launchElapsedTime <
-            m_stateParameters.LaunchInterval)
+            m_parameters.LaunchInterval)
         {
             return;
         }
 
-        // 同一フレームに複数発射しないよう時間をリセットする
         m_launchElapsedTime = 0.0f;
 
         if (!TryLaunchNextMissile())
@@ -114,7 +106,6 @@ public sealed class S1P1BossMissileState :
             return;
         }
 
-        // 最後のミサイルを発射したら停止状態へ移行する
         if (HasFinishedLaunching())
         {
             CompleteMissileAttack();
@@ -143,13 +134,9 @@ public sealed class S1P1BossMissileState :
                 StateExecutionStatus.FAILED);
         }
 
-        Owner.SetStateExecutionStatus(
-            StateExecutionStatus.SUCCEEDED);
-
         m_references = null;
         m_missileReferences = null;
-        m_missileParameterAsset = null;
-        m_stateParameters = null;
+        m_parameters = null;
         m_playerTransform = null;
         m_animationEventReceiver = null;
     }
@@ -215,11 +202,11 @@ public sealed class S1P1BossMissileState :
                     launchSite.rotation,
                     m_missileReferences.MissileParent);
 
-            // ミサイル本体の設定はミサイルコントローラへ渡す
+            // StateParameterAssetから取得したミサイル本体設定を渡す
             missile.Initialize(
-                m_missileParameterAsset,
+                m_parameters.MissileParameterAsset,
                 m_playerTransform,
-                m_stateParameters.MissileUpwardDuration);
+                m_parameters.MissileUpwardDuration);
 
             missile.Launch();
 
@@ -253,6 +240,9 @@ public sealed class S1P1BossMissileState :
     /// </summary>
     private void CompleteMissileAttack()
     {
+        Owner.SetStateExecutionStatus(
+            StateExecutionStatus.SUCCEEDED);
+
         RequestIdleState();
     }
 
@@ -270,8 +260,11 @@ public sealed class S1P1BossMissileState :
 
         Owner.Motor?.StopHorizontalMovement();
 
+        float idleDuration =
+            m_parameters?.IdleDuration ?? 0.0f;
+
         Machine.ChangeState<BossIdleState>(
-            IDLE_DURATION);
+            idleDuration);
     }
 
     /// <summary>
@@ -286,29 +279,27 @@ public sealed class S1P1BossMissileState :
     }
 
     /// <summary>
-    /// 現在フェーズからミサイル攻撃に必要な参照を取得します。
+    /// 現在フェーズからミサイル攻撃に必要な参照とパラメータを取得します。
     /// </summary>
     /// <returns>
-    /// true：必要な参照を取得できました。
+    /// true：必要な情報を取得できました。
     /// false：取得できませんでした。
     /// </returns>
-    private bool TryGetReferences()
+    private bool TryGetReferencesAndParameters()
     {
         if (Owner.PhaseController == null)
         {
             return false;
         }
 
-        if (!Owner.PhaseController
-                .TryGetCurrentPhaseComponent(
-                    out m_references))
+        if (!Owner.PhaseController.TryGetCurrentPhaseComponent(
+                out m_references))
         {
             return false;
         }
 
-        if (!Owner.PhaseController
-                .TryGetCurrentPhaseComponent(
-                    out BossPhaseReferences commonReferences))
+        if (!Owner.PhaseController.TryGetCurrentPhaseComponent(
+                out BossPhaseReferences commonReferences))
         {
             return false;
         }
@@ -322,21 +313,20 @@ public sealed class S1P1BossMissileState :
             return false;
         }
 
-        S1P1BossMissileParameterAsset parameterAsset =
-            m_missileReferences.ParameterAsset;
-
-        if (parameterAsset == null ||
-            !parameterAsset.HasRequiredParameters())
+        if (m_references.StateParameterAsset == null ||
+            !m_references.StateParameterAsset.HasRequiredParameters())
         {
             return false;
         }
 
-        // 状態側でボス挙動とミサイル本体のパラメータを取得する
-        m_stateParameters =
-            parameterAsset.StateParameters;
+        m_parameters =
+            m_references.StateParameterAsset.Missile;
 
-        m_missileParameterAsset =
-            parameterAsset.MissileParameterAsset;
+        if (m_parameters == null ||
+            !m_parameters.HasRequiredParameters())
+        {
+            return false;
+        }
 
         if (commonReferences.PlayerTransform == null)
         {
@@ -362,12 +352,9 @@ public sealed class S1P1BossMissileState :
             Owner.GetComponentInChildren<
                 S1P1BossAttackSettings>(true);
 
-        if (attackSettings == null)
+        if (attackSettings == null ||
+            Owner.AnimationController == null)
         {
-            Debug.LogError(
-                $"{nameof(S1P1BossAttackSettings)}" +
-                "が見つかりません。");
-
             return false;
         }
 
@@ -375,15 +362,6 @@ public sealed class S1P1BossMissileState :
                 S1P1BossAttackType.MISSILE,
                 out _,
                 out string animationTriggerName))
-        {
-            Debug.LogError(
-                $"{S1P1BossAttackType.MISSILE}" +
-                "の攻撃設定がありません。");
-
-            return false;
-        }
-
-        if (Owner.AnimationController == null)
         {
             return false;
         }
@@ -421,7 +399,6 @@ public sealed class S1P1BossMissileState :
         switch (attackEventData.AttackEventType)
         {
             case AttackEventType.HITBOX_ENABLE:
-                // 最初の1発は攻撃開始イベントで発射する
                 if (!TryLaunchNextMissile())
                 {
                     RequestFailedIdleState();
@@ -431,6 +408,7 @@ public sealed class S1P1BossMissileState :
                 if (HasFinishedLaunching())
                 {
                     CompleteMissileAttack();
+                    return;
                 }
 
                 m_canLaunch = true;

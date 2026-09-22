@@ -22,6 +22,10 @@ public sealed class S1P1BossReferences : BossPhaseParameterProvider
     [SerializeField, Header("行動選択パラメータ")]
     private S1P1BossDecisionParameterAsset m_decisionParameterAsset;
 
+    // S1P1状態挙動パラメータ
+    [SerializeField, Header("状態挙動パラメータ")]
+    private S1P1BossStateParameterAsset m_stateParameterAsset;
+
     // Playerの足元滞在時間計測
     [SerializeField, Header("足元滞在時間計測")]
     private BossPlayerRangeStayTimer m_playerRangeStayTimer;
@@ -29,14 +33,15 @@ public sealed class S1P1BossReferences : BossPhaseParameterProvider
     /// <summary>
     /// 左足の座標を取得します。
     /// </summary>
-    public Transform LeftLegTransform => m_leftLegTransform;
+    public Transform LeftLegTransform =>
+        m_leftLegTransform;
 
     /// <summary>
     /// 右足の座標を取得します。
     /// </summary>
-    public Transform RightLegTransform => m_rightLegTransform;
+    public Transform RightLegTransform =>
+        m_rightLegTransform;
 
- 
     /// <summary>
     /// ミサイル攻撃で使用する参照を取得します。
     /// </summary>
@@ -48,6 +53,12 @@ public sealed class S1P1BossReferences : BossPhaseParameterProvider
     /// </summary>
     public S1P1BossDecisionParameterAsset DecisionParameterAsset =>
         m_decisionParameterAsset;
+
+    /// <summary>
+    /// 状態挙動パラメータを取得します。
+    /// </summary>
+    public S1P1BossStateParameterAsset StateParameterAsset =>
+        m_stateParameterAsset;
 
     /// <summary>
     /// Playerの足元滞在時間計測を取得します。

@@ -3,14 +3,9 @@ using UnityEngine;
 /// <summary>
 /// ステージ1フェーズ1の方向転換を実行します。
 /// </summary>
-public sealed class S1P1BossTurnState : StateBase<BossController>
+public sealed class S1P1BossTurnState :
+    StateBase<BossController>
 {
-    // 回転角度
-    private const float ROTATE_ANGLE = 90.0f;
-
-    // 回転時間
-    private const float ROTATE_DURATION = 2.0f;
-
     // Animatorパラメータ名
     private const string TURN_PARAMETER_NAME = "Turn";
 
@@ -21,38 +16,44 @@ public sealed class S1P1BossTurnState : StateBase<BossController>
     // 目標回転
     private Quaternion m_targetRotation;
 
-    // 回転速度
-    private float m_rotateSpeed;
+    // S1P1固有参照
+    private S1P1BossReferences m_references;
 
-    S1P1BossReferences m_reference;
-    BossPhaseReferences m_commonReference;
+    // フェーズ共通参照
+    private BossPhaseReferences m_commonReferences;
+
+    // 方向転換状態パラメータ
+    private S1P1BossTurnStateParameters m_parameters;
 
     /// <summary>
     /// 方向転換を開始します。
     /// </summary>
     protected override void OnStartState()
     {
-
-        if (!Owner.PhaseController.TryGetCurrentPhaseComponent(out m_reference))
+        if (!TryGetReferences())
         {
-            Debug.LogError("リファレンスが取得できません");
-        }
-        if (!Owner.PhaseController.TryGetCurrentPhaseComponent(out m_commonReference))
-        {
-            Debug.LogError("リファレンスが取得できません");
-        }
+            Owner.SetStateExecutionStatus(
+                StateExecutionStatus.FAILED);
 
-        Vector3 turnDirection = GetTurnDirection();
-
-        if (turnDirection.sqrMagnitude <= Mathf.Epsilon)
-        {
             return;
         }
 
-        m_targetRotation = Quaternion.LookRotation(
-            turnDirection,
-            Vector3.up);
-        m_rotateSpeed = ROTATE_ANGLE / ROTATE_DURATION;
+        Vector3 turnDirection =
+            GetTurnDirection();
+
+        if (turnDirection.sqrMagnitude <=
+            Mathf.Epsilon)
+        {
+            Owner.SetStateExecutionStatus(
+                StateExecutionStatus.FAILED);
+
+            return;
+        }
+
+        m_targetRotation =
+            Quaternion.LookRotation(
+                turnDirection,
+                Vector3.up);
 
         Owner.AnimationController?.SetBool(
             TURN_PARAMETER_ID,
@@ -67,17 +68,20 @@ public sealed class S1P1BossTurnState : StateBase<BossController>
     /// </summary>
     protected override void OnFixedUpdate()
     {
-        if (Owner.Motor == null)
+        if (Owner.Motor == null ||
+            m_parameters == null)
         {
             Owner.SetStateExecutionStatus(
                 StateExecutionStatus.FAILED);
+
             return;
         }
 
-        bool hasReachedTarget = Owner.Motor.RotateTowards(
-            m_targetRotation,
-            m_rotateSpeed,
-            Time.fixedDeltaTime);
+        bool hasReachedTarget =
+            Owner.Motor.RotateTowards(
+                m_targetRotation,
+                m_parameters.RotationSpeed,
+                Time.fixedDeltaTime);
 
         if (!hasReachedTarget)
         {
@@ -108,6 +112,45 @@ public sealed class S1P1BossTurnState : StateBase<BossController>
             Owner.SetStateExecutionStatus(
                 StateExecutionStatus.FAILED);
         }
+
+        m_references = null;
+        m_commonReferences = null;
+        m_parameters = null;
+    }
+
+    /// <summary>
+    /// 必要な参照とパラメータを取得します。
+    /// </summary>
+    /// <returns>
+    /// true：取得できました。
+    /// false：取得できませんでした。
+    /// </returns>
+    private bool TryGetReferences()
+    {
+        if (Owner.PhaseController == null)
+        {
+            return false;
+        }
+
+        if (!Owner.PhaseController.TryGetCurrentPhaseComponent(
+                out m_references) ||
+            !Owner.PhaseController.TryGetCurrentPhaseComponent(
+                out m_commonReferences))
+        {
+            return false;
+        }
+
+        if (m_references.StateParameterAsset == null ||
+            !m_references.StateParameterAsset.HasRequiredParameters())
+        {
+            return false;
+        }
+
+        m_parameters =
+            m_references.StateParameterAsset.Turn;
+
+        return m_parameters != null &&
+               m_commonReferences.Origin != null;
     }
 
     /// <summary>
@@ -117,8 +160,8 @@ public sealed class S1P1BossTurnState : StateBase<BossController>
     {
         if (Owner.GetStateExecutionStatus() !=
             StateExecutionStatus.SUCCEEDED ||
-            m_reference == null ||
-            m_reference.DecisionParameterAsset == null)
+            m_references == null ||
+            m_references.DecisionParameterAsset == null)
         {
             return;
         }
@@ -132,33 +175,33 @@ public sealed class S1P1BossTurnState : StateBase<BossController>
         }
 
         coolTimeManager.StartCoolTime<S1P1BossTurnState>(
-            m_reference.DecisionParameterAsset.Turn.CoolTime);
+            m_references.DecisionParameterAsset.Turn.CoolTime);
     }
-
 
     /// <summary>
     /// 方向転換する方向を取得します。
     /// </summary>
     /// <returns>方向転換する方向。</returns>
-
     private Vector3 GetTurnDirection()
     {
+        BossNavMeshFootprint bossNavMeshFootprint =
+            m_commonReferences.NavMeshFootprint;
 
+        Transform playerTransform =
+            m_commonReferences.PlayerTransform;
 
+        Transform originTransform =
+            m_commonReferences.Origin;
 
-        BossNavMeshFootprint bossNavMeshFootprint = m_commonReference.NavMeshFootprint;
-        if (bossNavMeshFootprint == null)
+        if (originTransform == null)
         {
-            Debug.LogError("bossNavMeshFootprintが取得できません");
-
+            return Vector3.zero;
         }
 
-        var playerTransform = m_commonReference.PlayerTransform;
-        var originTransform = m_commonReference.Origin;
-
-        // ボスがNavMeshからはみ出している場合は内側を向く
-        if (!Owner.Navigation.IsFootprintInsideNavMesh(
-            bossNavMeshFootprint))
+        if (bossNavMeshFootprint != null &&
+            Owner.Navigation != null &&
+            !Owner.Navigation.IsFootprintInsideNavMesh(
+                bossNavMeshFootprint))
         {
             if (Owner.Navigation.TryGetNavMeshInsideDirection(
                     bossNavMeshFootprint,
@@ -168,18 +211,19 @@ public sealed class S1P1BossTurnState : StateBase<BossController>
             }
         }
 
-        // 通常時はPlayerの方向を向く
         if (playerTransform == null)
         {
             return originTransform.forward;
         }
 
         Vector3 playerDirection =
-            playerTransform.position - originTransform.position;
+            playerTransform.position -
+            originTransform.position;
 
         playerDirection.y = 0.0f;
 
-        if (playerDirection.sqrMagnitude <= Mathf.Epsilon)
+        if (playerDirection.sqrMagnitude <=
+            Mathf.Epsilon)
         {
             return originTransform.forward;
         }

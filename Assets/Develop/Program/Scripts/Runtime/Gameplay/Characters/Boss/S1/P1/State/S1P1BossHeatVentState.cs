@@ -12,9 +12,9 @@ public sealed class S1P1BossHeatVentState :
     private enum HeatExhaustState
     {
         NONE,
-        PREPARATION,    // 待機状態
-        EXHAUSTING,     // 攻撃状態
-        ENDING          // 終了状態
+        PREPARATION,
+        EXHAUSTING,
+        ENDING
     }
 
     // 攻撃ID
@@ -26,6 +26,15 @@ public sealed class S1P1BossHeatVentState :
     // 現在の排熱攻撃状態
     private HeatExhaustState m_currentState;
 
+    // S1P1固有参照
+    private S1P1BossReferences m_references;
+
+    // 排熱状態パラメータ
+    private S1P1BossHeatVentStateParameters m_parameters;
+
+    // AnimationEvent受信
+    private AnimationEventReceiver m_animationEventReceiver;
+
     /// <summary>
     /// 排熱攻撃を開始します。
     /// </summary>
@@ -35,6 +44,17 @@ public sealed class S1P1BossHeatVentState :
             HeatExhaustState.NONE;
 
         Owner.Motor?.StopHorizontalMovement();
+
+        if (!TryGetParameters())
+        {
+            Debug.LogError(
+                "排熱状態のパラメータを取得できませんでした。");
+
+            Owner.SetStateExecutionStatus(
+                StateExecutionStatus.FAILED);
+
+            return;
+        }
 
         if (!ApplyAttackSetting())
         {
@@ -47,7 +67,6 @@ public sealed class S1P1BossHeatVentState :
             return;
         }
 
-        // アニメーション開始時点では予備動作
         m_currentState =
             HeatExhaustState.PREPARATION;
 
@@ -62,16 +81,12 @@ public sealed class S1P1BossHeatVentState :
     {
         StartCoolTimeIfSucceeded();
 
-        if (Owner.AnimationController != null &&
-            Owner.AnimationController.CurrentAnimationEventReceiver != null)
+        if (m_animationEventReceiver != null)
         {
-            Owner.AnimationController
-                .CurrentAnimationEventReceiver
-                .AttackEventReceived -=
+            m_animationEventReceiver.AttackEventReceived -=
                 HandleAttackEvent;
         }
 
-        // State途中で終了した場合でもHitboxを残さない
         if (m_attackIdentifier != null)
         {
             Owner.AttackHitboxRegistry?.DisableHitboxes(
@@ -87,6 +102,33 @@ public sealed class S1P1BossHeatVentState :
             Owner.SetStateExecutionStatus(
                 StateExecutionStatus.FAILED);
         }
+
+        m_references = null;
+        m_parameters = null;
+        m_animationEventReceiver = null;
+    }
+
+    /// <summary>
+    /// 現在フェーズの排熱状態パラメータを取得します。
+    /// </summary>
+    /// <returns>
+    /// true：取得できました。
+    /// false：取得できませんでした。
+    /// </returns>
+    private bool TryGetParameters()
+    {
+        if (Owner.PhaseController == null ||
+            !Owner.PhaseController.TryGetCurrentPhaseComponent(
+                out m_references) ||
+            m_references.StateParameterAsset == null)
+        {
+            return false;
+        }
+
+        m_parameters =
+            m_references.StateParameterAsset.HeatVent;
+
+        return m_parameters != null;
     }
 
     /// <summary>
@@ -96,14 +138,8 @@ public sealed class S1P1BossHeatVentState :
     {
         if (Owner.GetStateExecutionStatus() !=
             StateExecutionStatus.SUCCEEDED ||
-            Owner.PhaseController == null)
-        {
-            return;
-        }
-
-        if (!Owner.PhaseController.TryGetCurrentPhaseComponent(
-                out S1P1BossReferences references) ||
-            references.DecisionParameterAsset == null)
+            m_references == null ||
+            m_references.DecisionParameterAsset == null)
         {
             return;
         }
@@ -117,7 +153,7 @@ public sealed class S1P1BossHeatVentState :
         }
 
         coolTimeManager.StartCoolTime<S1P1BossHeatVentState>(
-            references.DecisionParameterAsset.HeatExhaust.CoolTime);
+            m_references.DecisionParameterAsset.HeatExhaust.CoolTime);
     }
 
     /// <summary>
@@ -135,9 +171,6 @@ public sealed class S1P1BossHeatVentState :
 
         if (attackSettings == null)
         {
-            Debug.LogError(
-                $"{nameof(S1P1BossAttackSettings)}が見つかりません。");
-
             return false;
         }
 
@@ -146,18 +179,20 @@ public sealed class S1P1BossHeatVentState :
                 out m_attackIdentifier,
                 out string animationTriggerName))
         {
-            Debug.LogError(
-                $"{S1P1BossAttackType.HEAT_VENT}" +
-                "の攻撃設定がありません。");
-
             return false;
         }
 
         if (string.IsNullOrEmpty(animationTriggerName) ||
             m_attackIdentifier == null ||
-            Owner.AnimationController == null ||
-            Owner.AnimationController
-                .CurrentAnimationEventReceiver == null)
+            Owner.AnimationController == null)
+        {
+            return false;
+        }
+
+        m_animationEventReceiver =
+            Owner.AnimationController.CurrentAnimationEventReceiver;
+
+        if (m_animationEventReceiver == null)
         {
             return false;
         }
@@ -166,9 +201,7 @@ public sealed class S1P1BossHeatVentState :
             Animator.StringToHash(
                 animationTriggerName);
 
-        Owner.AnimationController
-            .CurrentAnimationEventReceiver
-            .AttackEventReceived +=
+        m_animationEventReceiver.AttackEventReceived +=
             HandleAttackEvent;
 
         Owner.AnimationController.SetTrigger(
@@ -180,9 +213,7 @@ public sealed class S1P1BossHeatVentState :
     /// <summary>
     /// 排熱攻撃のAnimationEventを処理します。
     /// </summary>
-    /// <param name="attackEventData">
-    /// 攻撃イベント情報。
-    /// </param>
+    /// <param name="attackEventData">攻撃イベント情報。</param>
     private void HandleAttackEvent(
         AttackEventData attackEventData)
     {
@@ -221,7 +252,7 @@ public sealed class S1P1BossHeatVentState :
     }
 
     /// <summary>
-    /// 排熱を終了して終了動作へ移行します。
+    /// 排熱を終了します。
     /// </summary>
     private void EndHeatExhaust()
     {
@@ -243,8 +274,6 @@ public sealed class S1P1BossHeatVentState :
     /// </summary>
     private void FinishAttack()
     {
-        // AnimationEventの設定ミスでも
-        // Hitboxが残らないよう明示的に無効化する
         Owner.AttackHitboxRegistry?.DisableHitboxes(
             m_attackIdentifier);
 

@@ -1,13 +1,14 @@
 /// <summary>
 /// ステージ1フェーズ1の脚崩壊とフェーズ移行を実行します。
 /// </summary>
-public sealed class S1P1BossLegsCollapsingState : StateBase<BossController>
+public sealed class S1P1BossLegsCollapsingState :
+    StateBase<BossController>
 {
     // 脚管理
     private readonly S1P1BossLegsController m_legsController;
 
-    // フェーズ移行までの待機時間
-    private readonly float m_transitionDuration;
+    // フェーズ移行待機時間
+    private float m_transitionDuration;
 
     // 経過時間
     private float m_elapsedTime;
@@ -16,15 +17,11 @@ public sealed class S1P1BossLegsCollapsingState : StateBase<BossController>
     /// 脚崩壊ステートを生成します。
     /// </summary>
     /// <param name="legsController">脚管理。</param>
-    /// <param name="transitionDuration">フェーズ移行までの待機時間。</param>
     public S1P1BossLegsCollapsingState(
-        S1P1BossLegsController legsController,
-        float transitionDuration)
+        S1P1BossLegsController legsController)
     {
-        m_legsController = legsController;
-        m_transitionDuration =
-            transitionDuration > 0.0f ?
-            transitionDuration : 0.0f;
+        m_legsController =
+            legsController;
     }
 
     /// <summary>
@@ -33,10 +30,13 @@ public sealed class S1P1BossLegsCollapsingState : StateBase<BossController>
     protected override void OnStartState()
     {
         if (m_legsController == null ||
-            Owner.PhaseController == null)
+            Owner.PhaseController == null ||
+            !TryGetTransitionDuration(
+                out m_transitionDuration))
         {
             Owner.SetStateExecutionStatus(
                 StateExecutionStatus.FAILED);
+
             return;
         }
 
@@ -60,12 +60,13 @@ public sealed class S1P1BossLegsCollapsingState : StateBase<BossController>
             return;
         }
 
-        //m_elapsedTime += deltaTime;
+        m_elapsedTime += deltaTime;
 
-        //if (m_elapsedTime < m_transitionDuration)
-        //{
-        //    return;
-        //}
+        if (m_elapsedTime <
+            m_transitionDuration)
+        {
+            return;
+        }
 
         Owner.SetStateExecutionStatus(
             StateExecutionStatus.SUCCEEDED);
@@ -75,5 +76,34 @@ public sealed class S1P1BossLegsCollapsingState : StateBase<BossController>
             Owner.SetStateExecutionStatus(
                 StateExecutionStatus.FAILED);
         }
+    }
+
+    /// <summary>
+    /// フェーズ移行待機時間を取得します。
+    /// </summary>
+    /// <param name="transitionDuration">取得した待機時間。</param>
+    /// <returns>
+    /// true：取得できました。
+    /// false：取得できませんでした。
+    /// </returns>
+    private bool TryGetTransitionDuration(
+        out float transitionDuration)
+    {
+        transitionDuration = 0.0f;
+
+        if (!Owner.PhaseController.TryGetCurrentPhaseComponent(
+                out S1P1BossReferences references) ||
+            references.StateParameterAsset == null ||
+            references.StateParameterAsset.LegsCollapsing == null)
+        {
+            return false;
+        }
+
+        transitionDuration =
+            references.StateParameterAsset
+                .LegsCollapsing
+                .TransitionDuration;
+
+        return true;
     }
 }
