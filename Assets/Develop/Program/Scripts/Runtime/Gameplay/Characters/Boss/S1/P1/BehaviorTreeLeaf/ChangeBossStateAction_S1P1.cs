@@ -70,6 +70,10 @@ public partial class ChangeBossStateAction_S1P1 : Action
                 bossController.StateMachine.ChangeState<S1P1BossTurnState>();
                 break;
 
+            case S1BossStateID.P1_HEAT_EXHAUST:
+                bossController.StateMachine.ChangeState<S1P1BossHeatVentState>();
+                break;
+
             default:
                 LogFailure("未対応のState IDです。");
                 return Status.Failure;
