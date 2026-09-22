@@ -146,7 +146,7 @@ public sealed class S1P1BossTurnState : StateBase<BossController>
 
 
 
-        BossNavMeshFootprint bossNavMeshFootprint = m_reference.BossNavMeshFootprint;
+        BossNavMeshFootprint bossNavMeshFootprint = m_commonReference.NavMeshFootprint;
         if (bossNavMeshFootprint == null)
         {
             Debug.LogError("bossNavMeshFootprintが取得できません");

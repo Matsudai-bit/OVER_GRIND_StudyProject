@@ -14,10 +14,6 @@ public sealed class S1P1BossReferences : BossPhaseParameterProvider
     [SerializeField, Header("右足の座標")]
     private Transform m_rightLegTransform;
 
-    // ボスのNavMesh占有範囲
-    [SerializeField, Header("NavMesh占有範囲")]
-    private BossNavMeshFootprint m_bossNavMeshFootprint;
-
     // ミサイル攻撃で使用する参照
     [SerializeField, Header("ミサイルリファレンス")]
     private S1P1BossMissileReferences m_missileReferences;
@@ -40,12 +36,7 @@ public sealed class S1P1BossReferences : BossPhaseParameterProvider
     /// </summary>
     public Transform RightLegTransform => m_rightLegTransform;
 
-    /// <summary>
-    /// ボスのNavMesh占有範囲を取得します。
-    /// </summary>
-    public BossNavMeshFootprint BossNavMeshFootprint =>
-        m_bossNavMeshFootprint;
-
+ 
     /// <summary>
     /// ミサイル攻撃で使用する参照を取得します。
     /// </summary>
