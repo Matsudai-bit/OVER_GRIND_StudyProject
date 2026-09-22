@@ -136,7 +136,8 @@ public sealed class S1P1BossMissileState :
                 StateExecutionStatus.FAILED);
         }
 
-
+        Owner.SetStateExecutionStatus(
+     StateExecutionStatus.SUCCEEDED);
         m_references = null;
         m_missileReferences = null;
         m_playerTransform = null;
@@ -241,8 +242,6 @@ public sealed class S1P1BossMissileState :
     /// </summary>
     private void CompleteMissileAttack()
     {
-        Owner.SetStateExecutionStatus(
-            StateExecutionStatus.SUCCEEDED);
 
         RequestIdleState();
     }
