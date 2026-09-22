@@ -117,9 +117,16 @@ public sealed class S1P1BossWalkState :
     /// </summary>
     protected override void OnExitState()
     {
+        StartCoolTimeIfSucceeded();
+
         Owner.Motor?.StopHorizontalMovement();
 
-        Owner.AnimationController.CurrentAnimationEventReceiver.AttackEventReceived -= HandleAttackEvent;
+        if (Owner.AnimationController != null &&
+            Owner.AnimationController.CurrentAnimationEventReceiver != null)
+        {
+            Owner.AnimationController.CurrentAnimationEventReceiver
+                .AttackEventReceived -= HandleAttackEvent;
+        }
 
         Owner.AttackHitboxRegistry?.DisableHitboxes(
               m_attackIdentifier);
@@ -137,12 +144,45 @@ public sealed class S1P1BossWalkState :
     }
 
     /// <summary>
+    /// 正常終了した歩行のクールタイムを開始します。
+    /// </summary>
+    private void StartCoolTimeIfSucceeded()
+    {
+        if (Owner.GetStateExecutionStatus() !=
+            StateExecutionStatus.SUCCEEDED ||
+            Owner.PhaseController == null)
+        {
+            return;
+        }
+
+        if (!Owner.PhaseController.TryGetCurrentPhaseComponent(
+                out S1P1BossReferences references) ||
+            references.DecisionParameterAsset == null)
+        {
+            return;
+        }
+
+        BossStateCoolTimeManager coolTimeManager =
+            Owner.GetComponent<BossStateCoolTimeManager>();
+
+        if (coolTimeManager == null)
+        {
+            return;
+        }
+
+        coolTimeManager.StartCoolTime<S1P1BossWalkState>(
+            references.DecisionParameterAsset.Walk.CoolTime);
+    }
+
+
+    /// <summary>
     /// ボスの前方へ直進できるか確認します。
     /// </summary>
     /// <returns>
     /// true：前方へ直進できます。
     /// false：前方へ直進できません。
     /// </returns>
+
     private bool CanMoveForward()
     {
         if (Owner.Navigation == null)
@@ -203,7 +243,7 @@ public sealed class S1P1BossWalkState :
            m_attackIdentifier == null ||
            Owner.AnimationController == null)
         {
-          
+
             return false;
         }
         m_animationTriggerID =

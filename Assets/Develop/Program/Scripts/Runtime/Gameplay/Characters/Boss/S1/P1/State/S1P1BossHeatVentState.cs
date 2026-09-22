@@ -60,6 +60,8 @@ public sealed class S1P1BossHeatVentState :
     /// </summary>
     protected override void OnExitState()
     {
+        StartCoolTimeIfSucceeded();
+
         if (Owner.AnimationController != null &&
             Owner.AnimationController.CurrentAnimationEventReceiver != null)
         {
@@ -85,6 +87,37 @@ public sealed class S1P1BossHeatVentState :
             Owner.SetStateExecutionStatus(
                 StateExecutionStatus.FAILED);
         }
+    }
+
+    /// <summary>
+    /// 正常終了した排熱攻撃のクールタイムを開始します。
+    /// </summary>
+    private void StartCoolTimeIfSucceeded()
+    {
+        if (Owner.GetStateExecutionStatus() !=
+            StateExecutionStatus.SUCCEEDED ||
+            Owner.PhaseController == null)
+        {
+            return;
+        }
+
+        if (!Owner.PhaseController.TryGetCurrentPhaseComponent(
+                out S1P1BossReferences references) ||
+            references.DecisionParameterAsset == null)
+        {
+            return;
+        }
+
+        BossStateCoolTimeManager coolTimeManager =
+            Owner.GetComponent<BossStateCoolTimeManager>();
+
+        if (coolTimeManager == null)
+        {
+            return;
+        }
+
+        coolTimeManager.StartCoolTime<S1P1BossHeatVentState>(
+            references.DecisionParameterAsset.HeatExhaust.CoolTime);
     }
 
     /// <summary>

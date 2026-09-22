@@ -18,6 +18,10 @@ public sealed class BossPhaseReferences : MonoBehaviour
     [SerializeField, Header("原点")]
     private Transform m_bossOrigin;
 
+    // プレイヤーの座標
+    [SerializeField, Header("プレイヤーの座標")]
+    private Transform m_playerTransform;
+
     /// <summary>
     /// フェーズで使用する地面Colliderを取得します。
     /// </summary>
@@ -29,6 +33,7 @@ public sealed class BossPhaseReferences : MonoBehaviour
     public NavMeshSurface NavMeshSurface => m_navMeshSurface;
 
     public Transform Origin => m_bossOrigin;
+    public Transform PlayerTransform => m_playerTransform;
 
     /// <summary>
     /// 必須参照が設定されているか確認します。

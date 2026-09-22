@@ -11,8 +11,8 @@ using UnityEngine;
     story: "[BossController] が [DecisionParameterAsset] の設定を使用してS1P1踏みつけ攻撃を選択する",
     category: "Conditions",
     id: "e588ca320e4cc599c92887fe5e4ad388")]
-public partial class ShouldUseP1StompCondition
-    : BossActionDecisionCondition
+public partial class ShouldUseP1StompCondition :
+    BossActionDecisionCondition
 {
     // ボスコントローラ
     [SerializeReference]
@@ -32,14 +32,28 @@ public partial class ShouldUseP1StompCondition
     /// </returns>
     public override bool IsTrue()
     {
-        if (DecisionParameterAsset?.Value == null)
+        if (BossController?.Value == null ||
+            DecisionParameterAsset?.Value == null)
         {
             return false;
         }
 
-        if (!TryGetReferences(
-                out BossPhaseReferences commonReferences,
+        if (!IsStateReady<S1P1BossStompState>(
+                BossController.Value))
+        {
+            return false;
+        }
+
+        if (!TryGetPhaseReferences(
                 out S1P1BossReferences phaseReferences))
+        {
+            return false;
+        }
+
+        BossPlayerRangeStayTimer stayTimer =
+            phaseReferences.PlayerRangeStayTimer;
+
+        if (stayTimer == null)
         {
             return false;
         }
@@ -47,15 +61,11 @@ public partial class ShouldUseP1StompCondition
         S1P1BossDecisionParameterAsset.StompParameters parameters =
             DecisionParameterAsset.Value.Stomp;
 
-        float distance = GetHorizontalDistance(
-            commonReferences.Origin.position,
-            phaseReferences.PlayerTransform.position);
-
-        bool isPlayerNearFeet =
-            distance <= parameters.Distance;
+        bool hasStayedLongEnough =
+            stayTimer.StayTime >= parameters.RequiredStayDuration;
 
         float probability =
-            isPlayerNearFeet
+            hasStayedLongEnough
                 ? parameters.NearProbability
                 : parameters.DefaultProbability;
 
@@ -63,19 +73,16 @@ public partial class ShouldUseP1StompCondition
     }
 
     /// <summary>
-    /// 現在のフェーズから必要な参照情報を取得します。
+    /// S1P1固有参照を取得します。
     /// </summary>
-    /// <param name="commonReferences">ボス共通参照情報。</param>
-    /// <param name="phaseReferences">S1P1固有参照情報。</param>
+    /// <param name="phaseReferences">S1P1固有参照。</param>
     /// <returns>
-    /// true：必要な参照情報を取得できました。
+    /// true：参照を取得できました。
     /// false：取得できませんでした。
     /// </returns>
-    private bool TryGetReferences(
-        out BossPhaseReferences commonReferences,
+    private bool TryGetPhaseReferences(
         out S1P1BossReferences phaseReferences)
     {
-        commonReferences = null;
         phaseReferences = null;
 
         if (BossController?.Value == null ||
@@ -84,37 +91,8 @@ public partial class ShouldUseP1StompCondition
             return false;
         }
 
-        if (!BossController.Value.PhaseController
-                .TryGetCurrentPhaseComponent(
-                    out commonReferences))
-        {
-            return false;
-        }
-
-        if (!BossController.Value.PhaseController
-                .TryGetCurrentPhaseComponent(
-                    out phaseReferences))
-        {
-            return false;
-        }
-
-        return commonReferences.Origin != null &&
-               phaseReferences.PlayerTransform != null;
-    }
-
-    /// <summary>
-    /// XZ平面上の距離を取得します。
-    /// </summary>
-    /// <param name="from">開始位置。</param>
-    /// <param name="to">終了位置。</param>
-    /// <returns>水平距離。</returns>
-    private static float GetHorizontalDistance(
-        Vector3 from,
-        Vector3 to)
-    {
-        Vector3 difference = to - from;
-        difference.y = 0.0f;
-
-        return difference.magnitude;
+        return BossController.Value.PhaseController
+            .TryGetCurrentPhaseComponent(
+                out phaseReferences);
     }
 }

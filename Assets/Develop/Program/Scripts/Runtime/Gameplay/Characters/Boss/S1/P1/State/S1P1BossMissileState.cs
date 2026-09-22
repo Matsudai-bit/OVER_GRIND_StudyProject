@@ -10,6 +10,9 @@ public sealed class S1P1BossMissileState :
     // ミサイル攻撃後の停止時間
     private const float IDLE_DURATION = 3.0f;
 
+    // S1P1固有参照
+    private S1P1BossReferences m_references;
+
     // ミサイル攻撃参照
     private S1P1BossMissileReferences m_missileReferences;
 
@@ -116,7 +119,13 @@ public sealed class S1P1BossMissileState :
     /// </summary>
     protected override void OnExitState()
     {
-        m_animationEventReceiver.AttackEventReceived -= HandleAttackEvent;
+        StartCoolTimeIfSucceeded();
+
+        if (m_animationEventReceiver != null)
+        {
+            m_animationEventReceiver.AttackEventReceived -=
+                HandleAttackEvent;
+        }
 
         Owner.Motor?.StopHorizontalMovement();
 
@@ -128,9 +137,36 @@ public sealed class S1P1BossMissileState :
         }
 
 
+        m_references = null;
         m_missileReferences = null;
         m_playerTransform = null;
     }
+
+    /// <summary>
+    /// 正常終了したミサイル攻撃のクールタイムを開始します。
+    /// </summary>
+    private void StartCoolTimeIfSucceeded()
+    {
+        if (Owner.GetStateExecutionStatus() !=
+            StateExecutionStatus.SUCCEEDED ||
+            m_references == null ||
+            m_references.DecisionParameterAsset == null)
+        {
+            return;
+        }
+
+        BossStateCoolTimeManager coolTimeManager =
+            Owner.GetComponent<BossStateCoolTimeManager>();
+
+        if (coolTimeManager == null)
+        {
+            return;
+        }
+
+        coolTimeManager.StartCoolTime<S1P1BossMissileState>(
+            m_references.DecisionParameterAsset.Missile.CoolTime);
+    }
+
 
     /// <summary>
     /// 次の発射地点からミサイルを1発発射します。
@@ -139,6 +175,7 @@ public sealed class S1P1BossMissileState :
     /// true：ミサイルを発射しました。
     /// false：発射できませんでした。
     /// </returns>
+
     private bool TryLaunchNextMissile()
     {
         IReadOnlyList<Transform> launchSites =
@@ -255,27 +292,35 @@ public sealed class S1P1BossMissileState :
 
         if (!Owner.PhaseController
                 .TryGetCurrentPhaseComponent(
-                    out S1P1BossReferences references))
+                    out m_references))
         {
             return false;
         }
 
-        m_missileReferences = references.MissileReferences;
+
+        if (!Owner.PhaseController
+                .TryGetCurrentPhaseComponent(
+                    out BossPhaseReferences commonReferences))
+        {
+            return false;
+        }
+
+        m_missileReferences = m_references.MissileReferences;
         if (!m_missileReferences
                 .HasRequiredReferences())
         {
             return false;
         }
 
-        
 
-        if (references.PlayerTransform == null)
+
+        if (commonReferences.PlayerTransform == null)
         {
             return false;
         }
 
         m_playerTransform =
-            references.PlayerTransform;
+            commonReferences.PlayerTransform;
 
         return true;
     }
@@ -361,11 +406,11 @@ public sealed class S1P1BossMissileState :
                 break;
 
             case AttackEventType.HITBOX_DISABLE:
-               
+
                 break;
 
             case AttackEventType.ANIMATION_END:
-           
+
                 break;
         }
     }

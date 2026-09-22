@@ -86,6 +86,9 @@ public sealed class S1P1BossTurnState : StateBase<BossController>
 
         Owner.SetStateExecutionStatus(
             StateExecutionStatus.SUCCEEDED);
+
+        // 方向転換後はそのまま歩行へ移行する
+        Machine.ChangeState<S1P1BossWalkState>();
     }
 
     /// <summary>
@@ -93,6 +96,8 @@ public sealed class S1P1BossTurnState : StateBase<BossController>
     /// </summary>
     protected override void OnExitState()
     {
+        StartCoolTimeIfSucceeded();
+
         Owner.AnimationController?.SetBool(
             TURN_PARAMETER_ID,
             false);
@@ -106,13 +111,40 @@ public sealed class S1P1BossTurnState : StateBase<BossController>
     }
 
     /// <summary>
+    /// 正常終了した方向転換のクールタイムを開始します。
+    /// </summary>
+    private void StartCoolTimeIfSucceeded()
+    {
+        if (Owner.GetStateExecutionStatus() !=
+            StateExecutionStatus.SUCCEEDED ||
+            m_reference == null ||
+            m_reference.DecisionParameterAsset == null)
+        {
+            return;
+        }
+
+        BossStateCoolTimeManager coolTimeManager =
+            Owner.GetComponent<BossStateCoolTimeManager>();
+
+        if (coolTimeManager == null)
+        {
+            return;
+        }
+
+        coolTimeManager.StartCoolTime<S1P1BossTurnState>(
+            m_reference.DecisionParameterAsset.Turn.CoolTime);
+    }
+
+
+    /// <summary>
     /// 方向転換する方向を取得します。
     /// </summary>
     /// <returns>方向転換する方向。</returns>
+
     private Vector3 GetTurnDirection()
     {
-    
-  
+
+
 
         BossNavMeshFootprint bossNavMeshFootprint = m_reference.BossNavMeshFootprint;
         if (bossNavMeshFootprint == null)
@@ -121,7 +153,7 @@ public sealed class S1P1BossTurnState : StateBase<BossController>
 
         }
 
-        var playerTransform = m_reference.PlayerTransform;
+        var playerTransform = m_commonReference.PlayerTransform;
         var originTransform = m_commonReference.Origin;
 
         // ボスがNavMeshからはみ出している場合は内側を向く
@@ -135,7 +167,7 @@ public sealed class S1P1BossTurnState : StateBase<BossController>
                 return insideDirection;
             }
         }
-        
+
         // 通常時はPlayerの方向を向く
         if (playerTransform == null)
         {

@@ -18,6 +18,7 @@ public sealed class S1P1BossStompState : StateBase<BossController>
     private AnimationEventReceiver m_animationEventReceiver;
 
     private S1P1BossReferences m_references;
+    private BossPhaseReferences m_commonReferences;
 
     /// <summary>
     /// 攻撃を開始します。
@@ -26,6 +27,11 @@ public sealed class S1P1BossStompState : StateBase<BossController>
     {
         if (!Owner.PhaseController.TryGetCurrentPhaseComponent(
                      out m_references))
+        {
+            Debug.LogError("リファレンスが取得できません");
+        }       
+        if (!Owner.PhaseController.TryGetCurrentPhaseComponent(
+                     out m_commonReferences))
         {
             Debug.LogError("リファレンスが取得できません");
         }
@@ -91,6 +97,9 @@ public sealed class S1P1BossStompState : StateBase<BossController>
     /// </summary>
     protected override void OnExitState()
     {
+        StartCoolTimeIfSucceeded();
+
+
         if (m_animationEventReceiver != null)
         {
             m_animationEventReceiver.AttackEventReceived -=
@@ -111,9 +120,9 @@ public sealed class S1P1BossStompState : StateBase<BossController>
     private S1P1BossAttackType GetAttackType()
     {
         if (
-            Vector3.Distance(m_references.LeftLegTransform.position, m_references.PlayerTransform.position) 
+            Vector3.Distance(m_references.LeftLegTransform.position, m_commonReferences.PlayerTransform.position) 
             >
-            Vector3.Distance(m_references.RightLegTransform.position, m_references.PlayerTransform.position))
+            Vector3.Distance(m_references.RightLegTransform.position, m_commonReferences.PlayerTransform.position))
         {
             return S1P1BossAttackType.RIGHT_LEG;
         }
@@ -167,6 +176,31 @@ public sealed class S1P1BossStompState : StateBase<BossController>
 
         return true;
 
+    }
+
+    /// <summary>
+    /// 正常終了した踏みつけ攻撃のクールタイムを開始します。
+    /// </summary>
+    private void StartCoolTimeIfSucceeded()
+    {
+        if (Owner.GetStateExecutionStatus() !=
+            StateExecutionStatus.SUCCEEDED ||
+            m_references == null ||
+            m_references.DecisionParameterAsset == null)
+        {
+            return;
+        }
+
+        BossStateCoolTimeManager coolTimeManager =
+            Owner.GetComponent<BossStateCoolTimeManager>();
+
+        if (coolTimeManager == null)
+        {
+            return;
+        }
+
+        coolTimeManager.StartCoolTime<S1P1BossStompState>(
+            m_references.DecisionParameterAsset.Stomp.CoolTime);
     }
 }
 

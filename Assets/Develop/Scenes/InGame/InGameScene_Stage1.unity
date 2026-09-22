@@ -255,6 +255,7 @@ Transform:
   - {fileID: 809889090}
   - {fileID: 1462967022}
   - {fileID: 216007203}
+  - {fileID: 1799306326}
   m_Father: {fileID: 161453512}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &76745701
@@ -347,6 +348,11 @@ PrefabInstance:
         Assembly-CSharp]]'
       objectReference: {fileID: 0}
     - target: {fileID: 6156781042542566221, guid: 82702c3e3c5a09c488bff2646756d6ea, type: 3}
+      propertyPath: 'managedReferences[7476095730642846029]'
+      value: 'Unity.Behavior Unity.Behavior.BlackboardVariable`1[[BossPlayerRangeStayTimer,
+        Assembly-CSharp]]'
+      objectReference: {fileID: 0}
+    - target: {fileID: 6156781042542566221, guid: 82702c3e3c5a09c488bff2646756d6ea, type: 3}
       propertyPath: managedReferences[6739893442097447816].Name
       value: DistanceOrigin
       objectReference: {fileID: 0}
@@ -355,8 +361,12 @@ PrefabInstance:
       value: S1P1Boss Decision Parameter Asset
       objectReference: {fileID: 0}
     - target: {fileID: 6156781042542566221, guid: 82702c3e3c5a09c488bff2646756d6ea, type: 3}
+      propertyPath: managedReferences[7476095730642846029].Name
+      value: Boss Player Range Stay Timer
+      objectReference: {fileID: 0}
+    - target: {fileID: 6156781042542566221, guid: 82702c3e3c5a09c488bff2646756d6ea, type: 3}
       propertyPath: m_BlackboardVariableOverridesList.Array.size
-      value: 5
+      value: 6
       objectReference: {fileID: 0}
     - target: {fileID: 6156781042542566221, guid: 82702c3e3c5a09c488bff2646756d6ea, type: 3}
       propertyPath: managedReferences[6739893442097447816].m_Value
@@ -370,6 +380,10 @@ PrefabInstance:
       propertyPath: managedReferences[7476095671791518357].m_Value
       value: 
       objectReference: {fileID: 11400000, guid: 10a09ab8b8a792b47ae775c68a3fb2b4, type: 2}
+    - target: {fileID: 6156781042542566221, guid: 82702c3e3c5a09c488bff2646756d6ea, type: 3}
+      propertyPath: managedReferences[7476095730642846029].m_Value
+      value: 
+      objectReference: {fileID: 1799306327}
     - target: {fileID: 6156781042542566221, guid: 82702c3e3c5a09c488bff2646756d6ea, type: 3}
       propertyPath: 'm_BlackboardVariableOverridesList.Array.data[1]'
       value: 6739893442097447816
@@ -387,12 +401,24 @@ PrefabInstance:
       value: 7476095671791518357
       objectReference: {fileID: 0}
     - target: {fileID: 6156781042542566221, guid: 82702c3e3c5a09c488bff2646756d6ea, type: 3}
+      propertyPath: 'm_BlackboardVariableOverridesList.Array.data[5]'
+      value: 7476095730642846029
+      objectReference: {fileID: 0}
+    - target: {fileID: 6156781042542566221, guid: 82702c3e3c5a09c488bff2646756d6ea, type: 3}
       propertyPath: managedReferences[7476095671791518357].GUID.m_Value0
       value: 11761350464733539777
       objectReference: {fileID: 0}
     - target: {fileID: 6156781042542566221, guid: 82702c3e3c5a09c488bff2646756d6ea, type: 3}
       propertyPath: managedReferences[7476095671791518357].GUID.m_Value1
       value: 4153372195257998113
+      objectReference: {fileID: 0}
+    - target: {fileID: 6156781042542566221, guid: 82702c3e3c5a09c488bff2646756d6ea, type: 3}
+      propertyPath: managedReferences[7476095730642846029].GUID.m_Value0
+      value: 515939736178528533
+      objectReference: {fileID: 0}
+    - target: {fileID: 6156781042542566221, guid: 82702c3e3c5a09c488bff2646756d6ea, type: 3}
+      propertyPath: managedReferences[7476095730642846029].GUID.m_Value1
+      value: 7116709281685464267
       objectReference: {fileID: 0}
     - target: {fileID: 6410779098034264349, guid: 82702c3e3c5a09c488bff2646756d6ea, type: 3}
       propertyPath: m_hitboxGroups.Array.size
@@ -490,6 +516,10 @@ PrefabInstance:
       propertyPath: m_navMeshSurface
       value: 
       objectReference: {fileID: 1301987612}
+    - target: {fileID: 7409003094185733931, guid: 82702c3e3c5a09c488bff2646756d6ea, type: 3}
+      propertyPath: m_playerTransform
+      value: 
+      objectReference: {fileID: 326726324}
     - target: {fileID: 7549891240054735301, guid: 82702c3e3c5a09c488bff2646756d6ea, type: 3}
       propertyPath: m_AnchorMax.x
       value: 0
@@ -645,7 +675,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &216007203
 Transform:
   m_ObjectHideFlags: 0
@@ -658,7 +688,8 @@ Transform:
   m_LocalPosition: {x: -0, y: 5.05, z: 2.22}
   m_LocalScale: {x: 3.2197695, y: 7.247396, z: 7.247396}
   m_ConstrainProportionsScale: 1
-  m_Children: []
+  m_Children:
+  - {fileID: 983620967}
   m_Father: {fileID: 76745700}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!65 &216007204
@@ -716,7 +747,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 915a42b4f26aac448aaa138458350f9a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AttackHitbox
-  m_hitboxCollider: {fileID: 0}
+  m_hitboxCollider: {fileID: 216007204}
   m_targetLayerMask:
     serializedVersion: 2
     m_Bits: 256
@@ -982,6 +1013,96 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 6951992356297877455, guid: 82702c3e3c5a09c488bff2646756d6ea, type: 3}
   m_PrefabInstance: {fileID: 161453510}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &983620966
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 983620967}
+  - component: {fileID: 983620970}
+  - component: {fileID: 983620969}
+  m_Layer: 0
+  m_Name: Heat
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &983620967
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 983620966}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 3.6324, y: 1.2782, z: 2.5266}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 216007203}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!23 &983620969
+MeshRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 983620966}
+  m_Enabled: 1
+  m_CastShadows: 1
+  m_ReceiveShadows: 1
+  m_DynamicOccludee: 1
+  m_StaticShadowCaster: 0
+  m_MotionVectors: 1
+  m_LightProbeUsage: 1
+  m_ReflectionProbeUsage: 1
+  m_RayTracingMode: 2
+  m_RayTraceProcedural: 0
+  m_RayTracingAccelStructBuildFlagsOverride: 0
+  m_RayTracingAccelStructBuildFlags: 1
+  m_SmallMeshCulling: 1
+  m_ForceMeshLod: -1
+  m_MeshLodSelectionBias: 0
+  m_RenderingLayerMask: 1
+  m_RendererPriority: 0
+  m_Materials:
+  - {fileID: 2100000, guid: fbb7c7f17bf9195429d4f8249af9019a, type: 2}
+  m_StaticBatchInfo:
+    firstSubMesh: 0
+    subMeshCount: 0
+  m_StaticBatchRoot: {fileID: 0}
+  m_ProbeAnchor: {fileID: 0}
+  m_LightProbeVolumeOverride: {fileID: 0}
+  m_ScaleInLightmap: 1
+  m_ReceiveGI: 1
+  m_PreserveUVs: 0
+  m_IgnoreNormalsForChartDetection: 0
+  m_ImportantGI: 0
+  m_StitchLightmapSeams: 1
+  m_SelectedEditorRenderState: 3
+  m_MinimumChartSize: 4
+  m_AutoUVMaxDistance: 0.5
+  m_AutoUVMaxAngle: 89
+  m_LightmapParameters: {fileID: 0}
+  m_GlobalIlluminationMeshLod: 0
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 0
+  m_MaskInteraction: 0
+  m_AdditionalVertexStreams: {fileID: 0}
+--- !u!33 &983620970
+MeshFilter:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 983620966}
+  m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
 --- !u!1001 &1080929309
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1779,6 +1900,54 @@ MonoBehaviour:
   m_MinRegionArea: 2
   m_NavMeshData: {fileID: 23800000, guid: 47133f100c6b022479ddde0636f4c4ee, type: 2}
   m_BuildHeightMesh: 0
+--- !u!1 &1799306325
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1799306326}
+  - component: {fileID: 1799306327}
+  m_Layer: 0
+  m_Name: PlayerRangeStayTimer
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1799306326
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1799306325}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 76745700}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1799306327
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1799306325}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e29e1cf3938e30d42a0a5c33b5589096, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BossPlayerRangeStayTimer
+  m_references: {fileID: 1814326533}
+  m_decisionParameter: {fileID: 11400000, guid: 10a09ab8b8a792b47ae775c68a3fb2b4, type: 2}
+  m_timeCounter: 0
+  m_gizmoColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
 --- !u!1 &1814326526 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 7893520892823487738, guid: 82702c3e3c5a09c488bff2646756d6ea, type: 3}
@@ -1798,9 +1967,21 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::S1P1BossReferences
   m_leftLegTransform: {fileID: 1346670034}
   m_rightLegTransform: {fileID: 982179502}
-  m_playerTransform: {fileID: 326726324}
   m_bossNavMeshFootprint: {fileID: 1462967023}
   m_missileReferences: {fileID: 76745701}
+  m_decisionParameterAsset: {fileID: 11400000, guid: 10a09ab8b8a792b47ae775c68a3fb2b4, type: 2}
+  m_playerRangeStayTimer: {fileID: 1799306327}
+--- !u!114 &1814326533 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 7409003094185733931, guid: 82702c3e3c5a09c488bff2646756d6ea, type: 3}
+  m_PrefabInstance: {fileID: 161453510}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1814326526}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cd98ec454139116498117068330fff57, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BossPhaseReferences
 --- !u!1 &1841588946
 GameObject:
   m_ObjectHideFlags: 0
