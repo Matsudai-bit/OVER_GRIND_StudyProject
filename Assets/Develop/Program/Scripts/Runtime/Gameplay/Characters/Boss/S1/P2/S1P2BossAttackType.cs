@@ -6,5 +6,6 @@ using System;
 [Serializable]
 public enum S1P2BossAttackType
 {
-    CHARGING // 突進
+    CHARGING, // 突進
+    MISSILE,
 }

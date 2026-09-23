@@ -16,7 +16,7 @@ public sealed class S1P1BossReferences : BossPhaseParameterProvider
 
     // ミサイル攻撃で使用する参照
     [SerializeField, Header("ミサイルリファレンス")]
-    private S1P1BossMissileReferences m_missileReferences;
+    private S1BossMissileReferences m_missileReferences;
 
     // S1P1行動選択パラメータ
     [SerializeField, Header("行動選択パラメータ")]
@@ -45,7 +45,7 @@ public sealed class S1P1BossReferences : BossPhaseParameterProvider
     /// <summary>
     /// ミサイル攻撃で使用する参照を取得します。
     /// </summary>
-    public S1P1BossMissileReferences MissileReferences =>
+    public S1BossMissileReferences MissileReferences =>
         m_missileReferences;
 
     /// <summary>

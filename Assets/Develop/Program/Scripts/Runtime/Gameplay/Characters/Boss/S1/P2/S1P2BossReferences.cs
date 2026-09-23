@@ -12,6 +12,14 @@ public sealed class S1P2BossReferences :
     private S1BossChargeAttackParameterAsset
         m_chargeAttackParameterAsset;
 
+    [SerializeField, Header("状態のパラメータ")]
+    private S1P2BossStateParameterAsset m_stateParameterAsset;   
+    [SerializeField, Header("ミサイルリファレンス")]
+    private S1BossMissileReferences m_missileReferences;
+
+    public S1P2BossStateParameterAsset StateParameterAsset => m_stateParameterAsset;
+    public S1BossMissileReferences MissileReferences => m_missileReferences;
+
     /// <summary>
     /// フェーズで使用するパラメータを生成します。
     /// </summary>

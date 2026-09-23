@@ -2,14 +2,14 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// S1P1ボスのミサイル攻撃に必要な参照を管理します。
+/// S1ボスのミサイル攻撃に必要な参照を管理します。
 /// </summary>
 [DisallowMultipleComponent]
-public sealed class S1P1BossMissileReferences : MonoBehaviour
+public sealed class S1BossMissileReferences : MonoBehaviour
 {
     // 生成するミサイルPrefab
     [SerializeField, Header("ミサイル")]
-    private S1P1MissileController m_missilePrefab;
+    private S1MissileController m_missilePrefab;
 
     // ミサイルを生成する親
     [SerializeField]
@@ -22,7 +22,7 @@ public sealed class S1P1BossMissileReferences : MonoBehaviour
     /// <summary>
     /// ミサイルPrefabを取得します。
     /// </summary>
-    public S1P1MissileController MissilePrefab =>
+    public S1MissileController MissilePrefab =>
         m_missilePrefab;
 
     /// <summary>

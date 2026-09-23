@@ -7,7 +7,7 @@ using UnityEngine;
 [RequireComponent(typeof(MissileMotor))]
 [RequireComponent(typeof(MissileSteering))]
 [RequireComponent(typeof(MissileHoming))]
-public sealed class S1P1MissileController : MonoBehaviour
+public sealed class S1MissileController : MonoBehaviour
 {
     private enum MissileState
     {

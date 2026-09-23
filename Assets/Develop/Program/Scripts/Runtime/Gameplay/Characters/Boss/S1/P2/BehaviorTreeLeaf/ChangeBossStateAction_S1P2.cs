@@ -59,6 +59,10 @@ public partial class ChangeBossStateAction_S1P2 : Action
                 bossController.StateMachine.ChangeState<
                     S1P2BossChargingAttackState>();
                 break;
+            case S1BossStateID.P2_MISSILE:
+                bossController.StateMachine.ChangeState<
+                   S1P2BossMissileState>();
+                break;
 
             default:
                 LogFailure("未対応のState IDです。");

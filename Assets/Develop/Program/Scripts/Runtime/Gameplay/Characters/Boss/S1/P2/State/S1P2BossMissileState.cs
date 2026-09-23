@@ -4,17 +4,17 @@ using UnityEngine;
 /// <summary>
 /// ステージ1フェーズ1のミサイル攻撃を実行します。
 /// </summary>
-public sealed class S1P1BossMissileState :
+public sealed class S1P2BossMissileState :
     StateBase<BossController>
 {
-    // S1P1固有参照
-    private S1P1BossReferences m_references;
+    // S1P2固有参照
+    private S1P2BossReferences m_references;
 
     // ミサイル攻撃参照
     private S1BossMissileReferences m_missileReferences;
 
     // ミサイル状態のパラメータ
-    private S1P1BossMissileStateParameters m_parameters;
+    private S1P2BossMissileStateParameters m_parameters;
 
     // ミサイルの攻撃対象
     private Transform m_playerTransform;
@@ -27,6 +27,9 @@ public sealed class S1P1BossMissileState :
 
     // 停止状態への変更を要求したか
     private bool m_isIdleRequested;
+
+    // 一回目かどうか
+    private bool m_first;
 
     // ミサイルを発射可能か
     private bool m_canLaunch;
@@ -46,6 +49,7 @@ public sealed class S1P1BossMissileState :
         m_launchElapsedTime = 0.0f;
         m_isIdleRequested = false;
         m_canLaunch = false;
+        m_first = true;
 
         Owner.Motor?.StopHorizontalMovement();
 
@@ -108,7 +112,15 @@ public sealed class S1P1BossMissileState :
 
         if (HasFinishedLaunching())
         {
-            CompleteMissileAttack();
+            if (m_first)
+            {
+                m_nextLaunchSiteIndex = 0;
+                m_first = false;
+            }
+            else
+            {
+                CompleteMissileAttack();
+            }
         }
     }
 
@@ -149,24 +161,24 @@ public sealed class S1P1BossMissileState :
     /// </summary>
     private void StartCoolTimeIfSucceeded()
     {
-        if (Owner.GetStateExecutionStatus() !=
-            StateExecutionStatus.SUCCEEDED ||
-            m_references == null ||
-            m_references.DecisionParameterAsset == null)
-        {
-            return;
-        }
+        //if (Owner.GetStateExecutionStatus() !=
+        //    StateExecutionStatus.SUCCEEDED ||
+        //    m_references == null ||
+        //    m_references.DecisionParameterAsset == null)
+        //{
+        //    return;
+        //}
 
-        BossStateCoolTimeManager coolTimeManager =
-            Owner.GetComponent<BossStateCoolTimeManager>();
+        //BossStateCoolTimeManager coolTimeManager =
+        //    Owner.GetComponent<BossStateCoolTimeManager>();
 
-        if (coolTimeManager == null)
-        {
-            return;
-        }
+        //if (coolTimeManager == null)
+        //{
+        //    return;
+        //}
 
-        coolTimeManager.StartCoolTime<S1P1BossMissileState>(
-            m_references.DecisionParameterAsset.Missile.CoolTime);
+        //coolTimeManager.StartCoolTime<S1P2BossMissileState>(
+        //    m_references.DecisionParameterAsset.Missile.CoolTime);
     }
 
     /// <summary>
@@ -350,9 +362,9 @@ public sealed class S1P1BossMissileState :
     /// </returns>
     private bool ApplyAttackSetting()
     {
-        S1P1BossAttackSettings attackSettings =
+        S1P2BossAttackSettings attackSettings =
             Owner.GetComponentInChildren<
-                S1P1BossAttackSettings>(true);
+                S1P2BossAttackSettings>(true);
 
         if (attackSettings == null ||
             Owner.AnimationController == null)
@@ -361,7 +373,7 @@ public sealed class S1P1BossMissileState :
         }
 
         if (!attackSettings.TryGetAttackSetting(
-                S1P1BossAttackType.MISSILE,
+                S1P2BossAttackType.MISSILE,
                 out _,
                 out string animationTriggerName))
         {
