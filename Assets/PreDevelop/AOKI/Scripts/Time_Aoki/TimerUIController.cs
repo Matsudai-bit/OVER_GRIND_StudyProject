@@ -20,13 +20,13 @@ public class TimerUIController : MonoBehaviour
     {
         if (timerView == null) return;
 
-        // ★Controllerは「時間の計算」というロジックに集中する
+        // Controllerは「時間の計算」というロジックに集中する
         int minutes = Mathf.FloorToInt(time / 60f);
         int seconds = Mathf.FloorToInt(time % 60f);
         int milliseconds = Mathf.FloorToInt((time * 100f) % 100f);
         minutes = Mathf.Clamp(minutes, 0, 99);
 
-        // ★計算した結果をViewに渡すだけ
+        // 計算した結果をViewに渡すだけ
         timerView.SetTime(minutes, seconds, milliseconds);
     }
 }
