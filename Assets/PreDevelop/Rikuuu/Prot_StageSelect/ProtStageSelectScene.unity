@@ -672,8 +672,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::StageSelectManager
   HIT_RADIUS: 40
+  SNAP_RADIUS: 80
+  RELEASE_RADIUS: 90
+  SNAP_COMPLETE_THRESHOLD: 2
+  SNAP_SPEED: 10
   m_cursor: {fileID: 404243005}
-  m_stagePoint:
+  m_stagePoints:
   - rectTransform: {fileID: 1209287270}
     stageNumber: 1
     stageSectorNumber: {fileID: 21300000, guid: 51f384c16e222334e82378ee8e53044b, type: 3}
@@ -693,7 +697,7 @@ MonoBehaviour:
     stageSectorNumber: {fileID: 21300000, guid: 8341baa778ec6ac46bf3b2f40adfb2ae, type: 3}
     stageNameJa: "\u88FD\u9244\u6240"
     stageNameEng: STEELWORKS
-    bestTime: 180
+    bestTime: 0
     canPlay: 0
   m_sectorDefaultTexture: {fileID: 21300000, guid: 2015a2721f0151c4aaf2b4f90aa5cd30, type: 3}
   m_stageNumber: {fileID: 1805636521}
@@ -706,7 +710,8 @@ MonoBehaviour:
   m_onCursorImage: {fileID: 404243006}
   m_arrowLineImage: {fileID: 244527407}
   m_readyButton: {fileID: 16183939}
-  m_enterActionRef: {fileID: 0}
+  m_enterActionRef: {fileID: 392368643174621059, guid: 052faaac586de48259a63d0c4782560b, type: 3}
+  m_mapController: {fileID: 1985024543}
 --- !u!1 &404243004
 GameObject:
   m_ObjectHideFlags: 0

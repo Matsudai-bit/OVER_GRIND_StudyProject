@@ -1,77 +1,77 @@
-using TMPro;
+ï»¿using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 public class MapController : MonoBehaviour
 {
-    // ˆÚ“®‘¬“x
+    // ç§»å‹•é€Ÿåº¦
     [SerializeField]
     private float MOVE_SPEED = 300.0f;
 
-    // ”{—¦•Ï‰»‘¬“x
+    // å€ç‡å¤‰åŒ–é€Ÿåº¦
     [SerializeField]
     private float ZOOM_SPEED = 1.0f;
-    // Å¬k¬”{—¦
+    // æœ€å°ç¸®å°å€ç‡
     [SerializeField]
     private float MIN_ZOOM = 0.5f;
-    // Å‘åŠg‘å”{—¦
+    // æœ€å¤§æ‹¡å¤§å€ç‡
     [SerializeField]
     private float MAX_ZOOM = 3.0f;
 
-    // ƒ}ƒbƒvƒCƒ[ƒWƒRƒ“ƒ|[ƒlƒ“ƒg
+    // ãƒãƒƒãƒ—ã‚¤ãƒ¡ãƒ¼ã‚¸ã‚³ãƒ³ãƒãƒ¼ãƒãƒ³ãƒˆ
     [SerializeField] 
     private UnityEngine.UI.Image m_mapImage;
-    // ”{—¦‚ğ•\¦‚·‚éƒeƒLƒXƒgƒRƒ“ƒ|[ƒlƒ“ƒg
+    // å€ç‡ã‚’è¡¨ç¤ºã™ã‚‹ãƒ†ã‚­ã‚¹ãƒˆã‚³ãƒ³ãƒãƒ¼ãƒãƒ³ãƒˆ
     [SerializeField]
     private TextMeshProUGUI m_magnificationText;
 
-    // ˜g Width/HeightŒÅ’è
+    // æ  Width/Heightå›ºå®š
     [SerializeField]
     private RectTransform m_frameRect;
 
-    [Header("“ü—Í”»’èŠÖ˜A")]
-    // ˆÚ“®ƒL[‚ª‰Ÿ‚³‚ê‚é”»’è
+    [Header("å…¥åŠ›åˆ¤å®šé–¢é€£")]
+    // ç§»å‹•ã‚­ãƒ¼ãŒæŠ¼ã•ã‚Œã‚‹åˆ¤å®š
     [SerializeField]
     private InputActionReference m_navigateActionRef;
-    // ƒY[ƒ€ƒCƒ“ƒL[‚ª‰Ÿ‚³‚ê‚é”»’è
+    // ã‚ºãƒ¼ãƒ ã‚¤ãƒ³ã‚­ãƒ¼ãŒæŠ¼ã•ã‚Œã‚‹åˆ¤å®š
     [SerializeField]
     private InputActionReference m_zoomInRef;
-    // ƒY[ƒ€ƒAƒEƒgƒL[‚ª‰Ÿ‚³‚ê‚é”»’è
+    // ã‚ºãƒ¼ãƒ ã‚¢ã‚¦ãƒˆã‚­ãƒ¼ãŒæŠ¼ã•ã‚Œã‚‹åˆ¤å®š
     [SerializeField]
     private InputActionReference m_zoomOutRef;
 
-    // Œ»İ‚Ì”{—¦
+    // ç¾åœ¨ã®å€ç‡
     private float m_currentZoom = 1.0f;  
 
     private void OnEnable()
     {
-        // —LŒø‚É‚·‚é
+        // æœ‰åŠ¹ã«ã™ã‚‹
         m_navigateActionRef?.action.Enable();
     }
 
     private void OnDisable()
     {
-        // –³Œø‚É‚·‚é
+        // ç„¡åŠ¹ã«ã™ã‚‹
         m_navigateActionRef?.action.Disable();
     }
 
     void Update()
     {
-        // ˆÚ“®
+        // ç§»å‹•
         Vector2 move = m_navigateActionRef?.action.ReadValue<Vector2>() ?? Vector2.zero;
         if (move != Vector2.zero)
         {
             MoveMap(move);
         }
 
-        // Šg‘å‚·‚é
+        // æ‹¡å¤§ã™ã‚‹
         if (m_zoomInRef != null &&
            m_zoomInRef.action.IsPressed())
         {
             Zoom(ZOOM_SPEED);
         }
-        // k¬‚·‚é
+        // ç¸®å°ã™ã‚‹
         if (m_zoomOutRef != null &&
             m_zoomOutRef.action.IsPressed())
         {
@@ -79,9 +79,46 @@ public class MapController : MonoBehaviour
         }
     }
 
+    private void ClampMapPosition()
+    {
+        if (m_mapImage == null || m_frameRect == null)
+        {
+            return;
+        }
+
+        RectTransform imgRect = m_mapImage.rectTransform;
+        RectTransform parentRect = imgRect.parent as RectTransform;
+        if (parentRect == null)
+        {
+            return;
+        }
+
+        // æ ã®ä¸­å¿ƒã‚’ã€ç”»åƒã®è¦ªã®ãƒ­ãƒ¼ã‚«ãƒ«åº§æ¨™ã«å¤‰æ›ã™ã‚‹ï¼ˆAnchorã®ä½ç½®ã«ä¾å­˜ã—ãªã„åŸºæº–ç‚¹ï¼‰
+        Vector3 frameCenterWorld = m_frameRect.TransformPoint(m_frameRect.rect.center);
+        Vector2 frameCenter = parentRect.InverseTransformPoint(frameCenterWorld);
+
+        // ç¾åœ¨ã®ã‚ºãƒ¼ãƒ ã‚’åæ˜ ã—ãŸã€å®Ÿéš›ã«è¡¨ç¤ºã•ã‚Œã¦ã„ã‚‹ç”»åƒã‚µã‚¤ã‚º
+        Vector2 imageSize = imgRect.rect.size * (Vector2)imgRect.localScale;
+        Vector2 frameSize = m_frameRect.rect.size;
+
+        // å‹•ã‘ã‚‹æœ€å¤§è·é›¢ ï¼ ç”»åƒã®åŠåˆ†ã®ã‚µã‚¤ã‚º âˆ’ æ ã®åŠåˆ†ã®ã‚µã‚¤ã‚º
+        Vector2 maxOffset = new Vector2(
+            Mathf.Max(0f, (imageSize.x - frameSize.x) * 0.5f),
+            Mathf.Max(0f, (imageSize.y - frameSize.y) * 0.5f)
+        );
+
+        // æ ã®ä¸­å¿ƒã‹ã‚‰ã®ã‚ºãƒ¬é‡ã‚’æ¸¬ã£ã¦ã‚¯ãƒ©ãƒ³ãƒ—ã™ã‚‹
+        Vector2 offsetFromCenter = (Vector2)imgRect.localPosition - frameCenter;
+        offsetFromCenter.x = Mathf.Clamp(offsetFromCenter.x, -maxOffset.x, maxOffset.x);
+        offsetFromCenter.y = Mathf.Clamp(offsetFromCenter.y, -maxOffset.y, maxOffset.y);
+
+        Vector2 clampedPos = frameCenter + offsetFromCenter;
+        imgRect.localPosition = new Vector3(clampedPos.x, clampedPos.y, imgRect.localPosition.z);
+    }
+
     private void Zoom(float zoomSpeed)
     {
-        // •K—v‚ÈQÆ‚ª‚È‚¯‚ê‚Î‰½‚à‚µ‚È‚¢
+        // å¿…è¦ãªå‚ç…§ãŒãªã‘ã‚Œã°ä½•ã‚‚ã—ãªã„
         if (m_mapImage == null || m_frameRect == null)
         {
             return;
@@ -90,7 +127,7 @@ public class MapController : MonoBehaviour
         float oldZoom = m_currentZoom;
         m_currentZoom = Mathf.Clamp(m_currentZoom + zoomSpeed * Time.deltaTime, MIN_ZOOM, MAX_ZOOM);
 
-        // ãŒÀE‰ºŒÀ‚Å”{—¦‚ª•Ï‚í‚ç‚È‚©‚Á‚½ê‡‚Í‰½‚à‚µ‚È‚¢
+        // ä¸Šé™ãƒ»ä¸‹é™ã§å€ç‡ãŒå¤‰ã‚ã‚‰ãªã‹ã£ãŸå ´åˆã¯ä½•ã‚‚ã—ãªã„
         if (Mathf.Approximately(oldZoom, m_currentZoom))
         {
             return;
@@ -98,10 +135,13 @@ public class MapController : MonoBehaviour
 
         ApplyZoomAroundFrameCenter(m_currentZoom / oldZoom);
 
-        // ”{—¦‚ğ•\¦‚·‚é
+        // æ‹¡ç¸®å¾Œã€ç¯„å›²å¤–ã«å‡ºã¦ã„ã‚Œã°ã‚¯ãƒ©ãƒ³ãƒ—ã™ã‚‹
+        ClampMapPosition();
+
+        // å€ç‡ã‚’è¡¨ç¤ºã™ã‚‹
         if (m_magnificationText != null)
         {
-            m_magnificationText.text = "~" + m_currentZoom.ToString("F1");
+            m_magnificationText.text = "Ã—" + m_currentZoom.ToString("F1");
         }
     }
 
@@ -114,11 +154,11 @@ public class MapController : MonoBehaviour
             return;
         }
 
-        // ˜g‚Ì’†S‚ğA‰æ‘œ‚Ìe‚Ìƒ[ƒJƒ‹À•W‚É•ÏŠ·‚·‚é
+        // æ ã®ä¸­å¿ƒã‚’ã€ç”»åƒã®è¦ªã®ãƒ­ãƒ¼ã‚«ãƒ«åº§æ¨™ã«å¤‰æ›ã™ã‚‹
         Vector3 frameCenterWorld = m_frameRect.TransformPoint(m_frameRect.rect.center);
         Vector2 frameCenter = parentRect.InverseTransformPoint(frameCenterWorld);
 
-        // ˜g‚Ì’†S‚©‚çŒ©‚½‰æ‘œpivot‚ÌˆÊ’u‚ğA”{—¦‚Ì”ä—¦•ª‚¾‚¯Lk‚·‚é
+        // æ ã®ä¸­å¿ƒã‹ã‚‰è¦‹ãŸç”»åƒpivotã®ä½ç½®ã‚’ã€å€ç‡ã®æ¯”ç‡åˆ†ã ã‘ä¼¸ç¸®ã™ã‚‹
         Vector2 pivotPos = imgRect.localPosition;
         Vector2 newPos = frameCenter + (pivotPos - frameCenter) * ratio;
 
@@ -130,9 +170,26 @@ public class MapController : MonoBehaviour
     {
         RectTransform imgRect = m_mapImage.rectTransform;
 
-        // ˆÚ“®—ÊiTime.deltaTime ‚ğg‚Á‚ÄŠŠ‚ç‚©‚Éj
+        // ç§»å‹•é‡ï¼ˆTime.deltaTime ã‚’ä½¿ã£ã¦æ»‘ã‚‰ã‹ã«ï¼‰
         Vector2 delta = move * MOVE_SPEED * Time.deltaTime;
 
         imgRect.anchoredPosition -= delta;
+
+        // ç§»å‹•å¾Œã€ç¯„å›²å¤–ã«å‡ºã¦ã„ã‚Œã°ã‚¯ãƒ©ãƒ³ãƒ—ã™ã‚‹
+        ClampMapPosition();
+    }
+
+    public void PanMapBy(Vector2 delta)
+    {
+        // ãƒãƒƒãƒ—ã‚¤ãƒ¡ãƒ¼ã‚¸ãŒè¨­å®šã•ã‚Œã¦ã„ãªã‘ã‚Œã°ä½•ã‚‚ã—ãªã„
+        if (m_mapImage == null)
+        {
+            return;
+        }
+
+        m_mapImage.rectTransform.anchoredPosition += delta;
+
+        // å¸ç€ã«ã‚ˆã‚‹ç§»å‹•å¾Œã‚‚ã€ç¯„å›²å¤–ã«å‡ºã¦ã„ã‚Œã°ã‚¯ãƒ©ãƒ³ãƒ—ã™ã‚‹
+        ClampMapPosition();
     }
 }
