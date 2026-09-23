@@ -6,12 +6,7 @@ using UnityEngine.InputSystem;
 public class HPBarUIController : MonoBehaviour
 {
     [Header("Viewへの参照")]
-    [SerializeField] private NumberSpriteView numberView; // 追加
-
-    [Header("HP表示用Image (桁ごとのUI)")]
-    [SerializeField] private Image digit100Image;
-    [SerializeField] private Image digit10Image;
-    [SerializeField] private Image digit1Image;
+    [SerializeField] private HPDisplayView hpNumberView; 
 
     [Header("UI要素のアサイン")]
     [SerializeField] private Image greenGauge;
@@ -39,18 +34,12 @@ public class HPBarUIController : MonoBehaviour
         currentHP = Mathf.Max(0, currentHP - damage);
         float targetFillAmount = currentHP / maxHP;
 
-        if (greenGauge != null)
-        {
-            greenGauge.DOFillAmount(targetFillAmount, greenDuration)
-                .SetEase(Ease.OutQuad);
-        }
+        if (greenGauge != null) greenGauge.DOFillAmount(targetFillAmount, greenDuration).SetEase(Ease.OutQuad);
 
         if (redGauge != null)
         {
             if (redTween != null && redTween.IsActive()) redTween.Kill();
-            redTween = redGauge.DOFillAmount(targetFillAmount, redDuration)
-                .SetDelay(redDelay)
-                .SetEase(Ease.OutCubic);
+            redTween = redGauge.DOFillAmount(targetFillAmount, redDuration).SetDelay(redDelay).SetEase(Ease.OutCubic);
         }
 
         if (textTween != null && textTween.IsActive()) textTween.Kill();
@@ -58,8 +47,7 @@ public class HPBarUIController : MonoBehaviour
         {
             UpdateHPDisplay(value);
         })
-        .SetDelay(redDelay)
-        .SetEase(Ease.OutCubic);
+        .SetDelay(redDelay).SetEase(Ease.OutCubic);
     }
 
     public void UpdateUIImmediate()
@@ -72,14 +60,8 @@ public class HPBarUIController : MonoBehaviour
 
     private void UpdateHPDisplay(float hp)
     {
-        if (numberView == null) return; // Viewがない場合は処理しない
-
-        int hpInt = Mathf.RoundToInt(hp);
-
-        // 共通のViewを利用して各桁の画像を設定
-        numberView.SetDigit(digit100Image, (hpInt / 100) % 10);
-        numberView.SetDigit(digit10Image, (hpInt / 10) % 10);
-        numberView.SetDigit(digit1Image, hpInt % 10);
+      
+        if (hpNumberView != null) hpNumberView.SetValue(Mathf.RoundToInt(hp));
     }
 
     void Update()

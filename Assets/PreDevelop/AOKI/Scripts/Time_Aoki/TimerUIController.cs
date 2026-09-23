@@ -1,19 +1,9 @@
 using UnityEngine;
-using UnityEngine.UI;
 
 public class TimerUIController : MonoBehaviour
 {
     [Header("Viewへの参照")]
-    [SerializeField] private NumberSpriteView numberView; // 追加
-
-    [Header("タイマー表示用Image ")]
-    [SerializeField] private Image min10Image;
-    [SerializeField] private Image min1Image;
-    [SerializeField] private Image sec10Image;
-    [SerializeField] private Image sec1Image;
-    [SerializeField] private Image ms10Image;
-    [SerializeField] private Image ms1Image;
-
+    [SerializeField] private TimerDisplayView timerView; 
     private float currentTime = 0f;
     private bool isRunning = true;
 
@@ -28,20 +18,15 @@ public class TimerUIController : MonoBehaviour
 
     void UpdateTimerDisplay(float time)
     {
-        if (numberView == null) return; // Viewがない場合は処理しない
+        if (timerView == null) return;
 
+        // ★Controllerは「時間の計算」というロジックに集中する
         int minutes = Mathf.FloorToInt(time / 60f);
         int seconds = Mathf.FloorToInt(time % 60f);
         int milliseconds = Mathf.FloorToInt((time * 100f) % 100f);
-
         minutes = Mathf.Clamp(minutes, 0, 99);
 
-        // 共通のViewを利用して各桁の画像を設定
-        numberView.SetDigit(min10Image, (minutes / 10) % 10);
-        numberView.SetDigit(min1Image, minutes % 10);
-        numberView.SetDigit(sec10Image, (seconds / 10) % 10);
-        numberView.SetDigit(sec1Image, seconds % 10);
-        numberView.SetDigit(ms10Image, (milliseconds / 10) % 10);
-        numberView.SetDigit(ms1Image, milliseconds % 10);
+        // ★計算した結果をViewに渡すだけ
+        timerView.SetTime(minutes, seconds, milliseconds);
     }
 }
