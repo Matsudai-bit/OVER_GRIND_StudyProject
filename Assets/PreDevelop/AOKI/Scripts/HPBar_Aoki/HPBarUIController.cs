@@ -5,23 +5,18 @@ using UnityEngine.InputSystem;
 
 public class HPBarUIController : MonoBehaviour
 {
-    [Header("数字スプライト素材 (0～9の順番)")]
-    [SerializeField] private Sprite[] numberSprites = new Sprite[10];
-
-    [Header("HP表示用Image (桁ごとのUI)")]
-    [SerializeField] private Image digit100Image; // 百の位
-    [SerializeField] private Image digit10Image;  // 十の位
-    [SerializeField] private Image digit1Image;   // 一の位
+    [Header("Viewへの参照")]
+    [SerializeField] private HPDisplayView hpNumberView; 
 
     [Header("UI要素のアサイン")]
-    [SerializeField] private Image greenGauge;       // 緑ゲージ 
-    [SerializeField] private Image redGauge;         // 赤ゲージ 
+    [SerializeField] private Image greenGauge;
+    [SerializeField] private Image redGauge;
 
     [Header("アニメーション設定")]
-    [SerializeField] private float maxHP = 100f;        // 最大HP
-    [SerializeField] private float greenDuration = 0.2f; // 緑ゲージが減る速度
-    [SerializeField] private float redDelay = 0.4f;      // 赤ゲージが減り始めるまでの待ち時間
-    [SerializeField] private float redDuration = 0.6f;   // 赤ゲージが追従して減る速度
+    [SerializeField] private float maxHP = 100f;
+    [SerializeField] private float greenDuration = 0.2f;
+    [SerializeField] private float redDelay = 0.4f;
+    [SerializeField] private float redDuration = 0.6f;
 
     private float currentHP;
     private Tween redTween;
@@ -33,44 +28,28 @@ public class HPBarUIController : MonoBehaviour
         UpdateUIImmediate();
     }
 
-    /// <summary>
-    /// ダメージを与える処理
-    /// </summary>
     public void TakeDamage(float damage)
     {
         float previousHP = currentHP;
         currentHP = Mathf.Max(0, currentHP - damage);
         float targetFillAmount = currentHP / maxHP;
 
-        // 緑ゲージを素早く減らす
-        if (greenGauge != null)
-        {
-            greenGauge.DOFillAmount(targetFillAmount, greenDuration)
-                .SetEase(Ease.OutQuad);
-        }
+        if (greenGauge != null) greenGauge.DOFillAmount(targetFillAmount, greenDuration).SetEase(Ease.OutQuad);
 
-        // 赤ゲージを少し遅れてアニメーションさせて減らす
         if (redGauge != null)
         {
             if (redTween != null && redTween.IsActive()) redTween.Kill();
-            redTween = redGauge.DOFillAmount(targetFillAmount, redDuration)
-                .SetDelay(redDelay)
-                .SetEase(Ease.OutCubic);
+            redTween = redGauge.DOFillAmount(targetFillAmount, redDuration).SetDelay(redDelay).SetEase(Ease.OutCubic);
         }
 
-        // HP数字スプライトのカウントダウンアニメーション (赤ゲージの遅延・速度に同期)
         if (textTween != null && textTween.IsActive()) textTween.Kill();
         textTween = DOVirtual.Float(previousHP, currentHP, redDuration, value =>
         {
             UpdateHPDisplay(value);
         })
-        .SetDelay(redDelay)         // 赤ゲージと同じだけ待ってからカウントダウン開始
-        .SetEase(Ease.OutCubic);   // 赤ゲージと同じ減り方のカーブを適用
+        .SetDelay(redDelay).SetEase(Ease.OutCubic);
     }
 
-    /// <summary>
-    /// 初期状態に即時更新
-    /// </summary>
     public void UpdateUIImmediate()
     {
         float fillAmount = currentHP / maxHP;
@@ -79,24 +58,12 @@ public class HPBarUIController : MonoBehaviour
         UpdateHPDisplay(currentHP);
     }
 
-    /// <summary>
-    /// HPの数字スプライト更新処理 (3桁対応)
-    /// </summary>
     private void UpdateHPDisplay(float hp)
     {
-        if (numberSprites == null || numberSprites.Length < 10) return;
-
-        int hpInt = Mathf.RoundToInt(hp);
-        int digit100 = (hpInt / 100) % 10;
-        int digit10 = (hpInt / 10) % 10;
-        int digit1 = hpInt % 10;
-
-        if (digit100Image != null) digit100Image.sprite = numberSprites[digit100];
-        if (digit10Image != null) digit10Image.sprite = numberSprites[digit10];
-        if (digit1Image != null) digit1Image.sprite = numberSprites[digit1];
+      
+        if (hpNumberView != null) hpNumberView.SetValue(Mathf.RoundToInt(hp));
     }
 
-    // デバッグ用 (Spaceキーを押すと15ダメージ)
     void Update()
     {
         if (Keyboard.current != null && Keyboard.current.spaceKey.wasPressedThisFrame)
