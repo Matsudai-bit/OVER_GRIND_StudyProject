@@ -8,5 +8,7 @@ public enum S1P2BossAttackType
 {
     CHARGING, // 突進
     MISSILE,
-    HEAT_VENT
+    HEAT_VENT,
+       TAIL_SLAM
+        
 }
