@@ -2,7 +2,8 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using DG.Tweening;
 
-public class ResultUIController : MonoBehaviour
+// クラス名をファイル名(ResultSelectionInput)に合わせて修正しました
+public class ResultSelectionInput : MonoBehaviour
 {
     [Header("Next Stage ")]
     [SerializeField] private RectTransform nextStageVisual;
@@ -24,11 +25,44 @@ public class ResultUIController : MonoBehaviour
     [Tooltip("白枠が選択中に拡大し続ける割合")]
     [SerializeField] private float loopScaleAmount = 1.05f;
 
+    [Header("Input System 設定")]
+    [SerializeField] private InputAction upAction = new InputAction("Up", binding: "<Keyboard>/upArrow");
+    [SerializeField] private InputAction downAction = new InputAction("Down", binding: "<Keyboard>/downArrow");
+    [SerializeField] private InputAction submitAction = new InputAction("Submit", binding: "<Keyboard>/enter");
+
     private bool isNextStageSelected = true;
 
     // 元の座標とサイズを記憶する用
     private float nsOriginalPosX;
     private Vector3 ssOriginalScale;
+
+    private void Awake()
+    {
+        // スクリプト起動時に、WASDキーやゲームパッドの入力を自動で追加バインドします
+        upAction.AddBinding("<Keyboard>/w");
+        upAction.AddBinding("<Gamepad>/dpad/up");
+        upAction.AddBinding("<Gamepad>/leftStick/up");
+
+        downAction.AddBinding("<Keyboard>/s");
+        downAction.AddBinding("<Gamepad>/dpad/down");
+        downAction.AddBinding("<Gamepad>/leftStick/down");
+
+        submitAction.AddBinding("<Gamepad>/buttonSouth"); // 決定ボタン (XboxのA, PSの×など)
+    }
+
+    private void OnEnable()
+    {
+        upAction.Enable();
+        downAction.Enable();
+        submitAction.Enable();
+    }
+
+    private void OnDisable()
+    {
+        upAction.Disable();
+        downAction.Disable();
+        submitAction.Disable();
+    }
 
     void Start()
     {
@@ -42,27 +76,24 @@ public class ResultUIController : MonoBehaviour
 
     void Update()
     {
-        if (Keyboard.current == null) return;
-
-        // キーボード操作
-        if (Keyboard.current.downArrowKey.wasPressedThisFrame || Keyboard.current.sKey.wasPressedThisFrame)
+        // InputActionを使った入力判定
+        if (downAction.WasPressedThisFrame())
         {
             if (isNextStageSelected) SelectStageSelect();
         }
-        else if (Keyboard.current.upArrowKey.wasPressedThisFrame || Keyboard.current.wKey.wasPressedThisFrame)
+        else if (upAction.WasPressedThisFrame())
         {
             if (!isNextStageSelected) SelectNextStage();
         }
 
         // 決定キー
-        if (Keyboard.current.enterKey.wasPressedThisFrame)
+        if (submitAction.WasPressedThisFrame())
         {
             if (isNextStageSelected) Debug.Log("Next Stage 決定！");
             else Debug.Log("Stage Select 決定！");
         }
     }
 
-    // マウスホバーなどから呼ぶ用
     public void SelectNextStage()
     {
         if (isNextStageSelected) return;
@@ -77,23 +108,18 @@ public class ResultUIController : MonoBehaviour
         UpdateVisuals();
     }
 
-    /// <summary>
-    /// 消去処理を行わず、常時表示したまま状態を切り替える
-    /// </summary>
     private void UpdateVisuals(bool isInstant = false)
     {
         float t = isInstant ? 0f : duration;
 
-        
+
         // オレンジの奴
-        
         if (nextStageVisual != null)
         {
             nextStageVisual.DOKill();
 
             if (isNextStageSelected)
             {
-                // 選択時: 定位置へスライドして戻り、完了後にループ開始
                 nextStageVisual.DOAnchorPosX(nsOriginalPosX, t).SetEase(Ease.OutCubic)
                     .OnComplete(() =>
                     {
@@ -105,12 +131,10 @@ public class ResultUIController : MonoBehaviour
             }
             else
             {
-                // 非選択時: 消さずに非選択位置へ移動して維持
                 nextStageVisual.DOAnchorPosX(nsOriginalPosX + slideOffset, t).SetEase(Ease.OutCubic);
             }
         }
 
-        
         // 白の奴
         if (stageSelectVisual != null)
         {
@@ -118,7 +142,6 @@ public class ResultUIController : MonoBehaviour
 
             if (!isNextStageSelected)
             {
-                // 選択時: 元のサイズに拡大し、完了後にループ開始
                 stageSelectVisual.DOScale(ssOriginalScale, t).SetEase(Ease.OutBack)
                     .OnComplete(() =>
                     {
@@ -130,7 +153,6 @@ public class ResultUIController : MonoBehaviour
             }
             else
             {
-                // 非選択時: 消さずに非選択サイズへ変更して維持
                 stageSelectVisual.DOScale(ssOriginalScale * unselectedScale, t).SetEase(Ease.OutCubic);
             }
         }
