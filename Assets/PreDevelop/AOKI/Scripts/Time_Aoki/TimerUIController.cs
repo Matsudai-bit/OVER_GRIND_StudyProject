@@ -2,7 +2,7 @@ using UnityEngine;
 
 public class TimerUIController : MonoBehaviour
 {
-    [Header("View‚Ö‚ÌQÆ")]
+    [Header("View‚ÌQÆ")]
     [SerializeField] private TimerDisplayView timerView; 
     private float currentTime = 0f;
     private bool isRunning = true;
