@@ -1,202 +1,361 @@
 using System.Collections;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.Serialization;
+using UnityEngine.UI;
 
+/// <summary>
+/// ストーリー1ページ分のデータです。
+/// </summary>
 [System.Serializable]
 public struct StoryPage
 {
-    // ストーリーテクスチャ
-    public Sprite storyTexture;
+    /// <summary>
+    /// ストーリー画像。
+    /// </summary>
+    [FormerlySerializedAs("storyTexture")]
+    [SerializeField]
+    private Sprite m_storyTexture;
 
-    // ストーリーテキストテクスチャ
-    public Sprite storyText;
+    /// <summary>
+    /// ストーリーテキスト画像。
+    /// </summary>
+    [FormerlySerializedAs("storyText")]
+    [SerializeField]
+    private Sprite m_storyText;
+
+    /// <summary>
+    /// ストーリー画像を取得します。
+    /// </summary>
+    public Sprite StoryTexture => m_storyTexture;
+
+    /// <summary>
+    /// ストーリーテキスト画像を取得します。
+    /// </summary>
+    public Sprite StoryText => m_storyText;
 }
 
+/// <summary>
+/// ストーリー画面のページ送りとワイプ演出を管理します。
+/// </summary>
 public class StoryManager : MonoBehaviour
 {
-    [Header("定数")]
-    // 矢印が出現するまでの時間
+    // ---------- 定数 ----------
+
+    /// <summary>
+    /// 矢印が出現するまでの初期時間（秒）。
+    /// </summary>
+    private const float DEFAULT_ARROW_APPEAR_TIME = 5.0f;
+
+    /// <summary>
+    /// ワイプアウトアニメーションの初期ステート名。
+    /// </summary>
+    private const string DEFAULT_WIPE_OUT_STATE_NAME = "WipeOut";
+
+    /// <summary>
+    /// ワイプインアニメーションの初期ステート名。
+    /// </summary>
+    private const string DEFAULT_WIPE_IN_STATE_NAME = "WipeIn";
+
+    /// <summary>
+    /// ワイプアニメーションを再生する Animator のレイヤー番号。
+    /// </summary>
+    private const int WIPE_ANIMATOR_LAYER_INDEX = 0;
+
+    /// <summary>
+    /// アニメーション終了とみなす正規化時間。
+    /// </summary>
+    private const float ANIMATION_END_NORMALIZED_TIME = 1.0f;
+
+    // ---------- Inspector 設定値 ----------
+
+    [Header("矢印設定")]
+    /// <summary>
+    /// 矢印が出現するまでの時間（秒）。
+    /// </summary>
+    [FormerlySerializedAs("APPEARANCE_ARROW_TIME")]
     [SerializeField]
-    private float APPEARANCE_ARROW_TIME = 5.0f;
+    private float m_appearanceArrowTime = DEFAULT_ARROW_APPEAR_TIME;
 
     [Header("コンポーネント類")]
-    // イメージコンポーネント
+    /// <summary>
+    /// ストーリー画像を表示する Image。
+    /// </summary>
     [SerializeField]
-    private UnityEngine.UI.Image m_storyImage;
-    // テキストイメージコンポーネント
+    private Image m_storyImage;
+
+    /// <summary>
+    /// ストーリーテキストを表示する Image。
+    /// </summary>
     [SerializeField]
-    private UnityEngine.UI.Image m_storyText;
-    // 矢印イメージコンポーネント
+    private Image m_storyText;
+
+    /// <summary>
+    /// 矢印を表示する Image。
+    /// </summary>
     [SerializeField]
-    private UnityEngine.UI.Image m_arrowImage;
+    private Image m_arrowImage;
 
     [Header("ストーリーページ")]
-    // ストーリーページ
+    /// <summary>
+    /// ストーリーのページ一覧。
+    /// </summary>
     [SerializeField]
     private StoryPage[] m_storyPages;
 
     [Header("入力関連")]
-    // 決定キー
+    /// <summary>
+    /// 決定キーの入力アクション。
+    /// </summary>
     [SerializeField]
     private InputActionReference m_enterActionRef;
-    // スキップキー
+
+    /// <summary>
+    /// スキップキーの入力アクション（現在は未使用）。
+    /// </summary>
     [SerializeField]
     private InputActionReference m_skipActionRef;
 
     [Header("ワイプアニメーション")]
-    // アニメーション
-    [SerializeField] 
+    /// <summary>
+    /// ワイプ演出用の Animator。
+    /// </summary>
+    [SerializeField]
     private Animator m_wipeAnimator;
-    // 画面を暗くするアニメーション名
-    [SerializeField]
-    private string m_animationStateName = "WipeOut";
-    // 画面を明るくするアニメーション名
-    [SerializeField]
-    private string m_animationInStateName = "WipeIn";
 
-    // 現在表示しているページ
+    /// <summary>
+    /// 画面を暗くするアニメーションのステート名。
+    /// </summary>
+    [SerializeField]
+    private string m_animationOutStateName = DEFAULT_WIPE_OUT_STATE_NAME;
+
+    /// <summary>
+    /// 画面を明るくするアニメーションのステート名。
+    /// </summary>
+    [SerializeField]
+    private string m_animationInStateName = DEFAULT_WIPE_IN_STATE_NAME;
+
+    // ---------- 内部状態 ----------
+
+    /// <summary>
+    /// 現在表示しているページ番号。
+    /// </summary>
     private int m_currentPage = 0;
-    // ページが表示されてからの経過時間
+
+    /// <summary>
+    /// ページ表示後の経過時間（秒）。
+    /// </summary>
     private float m_elapsedTime = 0.0f;
-    // ワイプ演出中かどうか
+
+    /// <summary>
+    /// ワイプ演出中かどうか。
+    /// </summary>
     private bool m_isTransitioning = false;
 
+    /// <summary>
+    /// 必須設定を確認し、最初のページを表示します。
+    /// </summary>
     private void Awake()
     {
-        // ストーリーページが設定されていない場合
-        if(m_storyPages == null || m_storyPages.Length == 0)
+        // 必須設定が足りない場合
+        if (!ValidateSettings())
         {
-            // ログを出す
-            Debug.LogWarning("ストーリーページが設定されていません");
-            // この後の関数を実行しない
+            // 以降の処理を止める
             enabled = false;
             return;
         }
 
-        // コンポーネントのテクスチャを入れ替える
-        m_storyImage.sprite = m_storyPages[m_currentPage].storyTexture;
-        m_storyText.sprite = m_storyPages[m_currentPage].storyText;
+        // 最初のページを表示する
+        ApplyPage(m_currentPage);
 
-        // イメージコンポーネントのサイズ調整
-        m_storyImage.SetNativeSize();
-        m_storyText.SetNativeSize();
-
-        // 経過時間の初期化
-        m_elapsedTime = 0.0f;
+        // 矢印の待ち時間を初期化する
+        ResetArrowTimer();
     }
 
+    /// <summary>
+    /// 矢印の待ち時間の計測と決定キー入力を処理します。
+    /// </summary>
     private void Update()
     {
-        // ワイプ演出中の場合
+        // ワイプ演出中は何もしない
         if (m_isTransitioning)
         {
-            // なにもしない
             return;
         }
 
-        // 矢印が表示されていない場合
-        if (!m_arrowImage.enabled)
-        {
-            // 経過時間の加算
-            m_elapsedTime += Time.deltaTime;
-        }
+        // 経過時間を加算する
+        CountElapsedTime();
 
         // 決定キーが押された場合
-        if (m_enterActionRef != null && m_enterActionRef.action.WasPressedThisFrame())
+        if (IsEnterPressed())
         {
-            // コルーチン（時間差処理）を開始する
-            StartCoroutine(PageTransitionCoroutine());
+            // ページ切り替え演出を開始する
+            StartCoroutine(TransitPageCoroutine());
+            return;
+        }
+
+        // 矢印の表示状態を更新する
+        UpdateArrowVisibility();
+    }
+
+    /// <summary>
+    /// 必須の設定が揃っているか確認します。
+    /// </summary>
+    /// <returns>
+    /// true：設定が揃っています。
+    /// false：設定が不足しています。
+    /// </returns>
+    private bool ValidateSettings()
+    {
+        // ストーリーページが未設定の場合
+        if (m_storyPages == null || m_storyPages.Length == 0)
+        {
+            Debug.LogWarning("ストーリーページが設定されていません");
+            return false;
+        }
+
+        // 各コンポーネントが未設定の場合
+        if (m_storyImage == null || m_storyText == null ||
+            m_arrowImage == null || m_wipeAnimator == null)
+        {
+            Debug.LogWarning("必要なコンポーネントが設定されていません");
+            return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// 指定ページの画像とテキストを表示します。
+    /// </summary>
+    /// <param name="pageIndex">表示するページ番号。</param>
+    private void ApplyPage(int pageIndex)
+    {
+        // スプライトを入れ替える
+        m_storyImage.sprite = m_storyPages[pageIndex].StoryTexture;
+        m_storyText.sprite = m_storyPages[pageIndex].StoryText;
+
+        // イメージのサイズを画像に合わせる
+        m_storyImage.SetNativeSize();
+        m_storyText.SetNativeSize();
+    }
+
+    /// <summary>
+    /// 矢印の経過時間を 0 に戻し、矢印を非表示にします。
+    /// </summary>
+    private void ResetArrowTimer()
+    {
+        m_elapsedTime = 0.0f;
+        m_arrowImage.enabled = false;
+    }
+
+    /// <summary>
+    /// 矢印が非表示の間、経過時間を加算します。
+    /// </summary>
+    private void CountElapsedTime()
+    {
+        // 矢印が表示されていない場合のみ加算する
+        if (!m_arrowImage.enabled)
+        {
+            m_elapsedTime += Time.deltaTime;
         }
     }
 
-    private IEnumerator PageTransitionCoroutine()
+    /// <summary>
+    /// 経過時間に応じて矢印の表示・非表示を切り替えます。
+    /// </summary>
+    private void UpdateArrowVisibility()
     {
-        // 連打防止のためにフラグをONにする
+        // 表示すべき状態かどうか
+        bool shouldShow = m_elapsedTime >= m_appearanceArrowTime;
+
+        // 現在の状態と異なる場合のみ切り替える
+        if (m_arrowImage.enabled != shouldShow)
+        {
+            m_arrowImage.enabled = shouldShow;
+        }
+    }
+
+    /// <summary>
+    /// 決定キーが押されたかを判定します。
+    /// </summary>
+    /// <returns>
+    /// true：このフレームで押されました。
+    /// false：押されていません。
+    /// </returns>
+    private bool IsEnterPressed()
+    {
+        return m_enterActionRef != null && m_enterActionRef.action.WasPressedThisFrame();
+    }
+
+    /// <summary>
+    /// 現在のページが最後のページか判定します。
+    /// </summary>
+    /// <returns>
+    /// true：最後のページです。
+    /// false：次のページがあります。
+    /// </returns>
+    private bool IsLastPage()
+    {
+        return m_currentPage >= m_storyPages.Length - 1;
+    }
+
+    /// <summary>
+    /// ワイプ演出を挟んで次のページへ切り替えます。
+    /// </summary>
+    private IEnumerator TransitPageCoroutine()
+    {
+        // 連打防止のためにフラグを ON にする
         m_isTransitioning = true;
 
-        // 1. アニメーション（画面を黒くする）を再生
-        m_wipeAnimator.Play(m_animationStateName);
+        // ワイプアウト（画面を暗くする）を再生して待つ
+        yield return StartCoroutine(PlayWipeAnimationCoroutine(m_animationOutStateName));
 
-        // 2. アニメーションが開始して現在のステートに切り替わるまで1フレーム待つ
-        yield return null;
-
-        // 3. アニメーションが終了（真っ黒になる）するまで待機
-        AnimatorStateInfo stateInfo = m_wipeAnimator.GetCurrentAnimatorStateInfo(0);
-        while (stateInfo.normalizedTime < 1.0f)
+        // 最後のページだった場合
+        if (IsLastPage())
         {
-            stateInfo = m_wipeAnimator.GetCurrentAnimatorStateInfo(0);
-            yield return null;
-        }
-
-        // --- ここから画面が真っ黒な状態の処理 ---
-
-        // 最後のページだった場合は、次のシーンへ行くなどの処理を書く
-        if (m_currentPage >= m_storyPages.Length - 1)
-        {
-            // 例: タイトルやゲーム本編へ遷移させる場合（必要に応じてシーン名を変えてください）
-            // SceneManager.LoadScene("NextSceneName");
-
-            // 今回はとりあえず最初のページに戻るか、何もしないようにしておきます
+            // 何もせず演出を終了する
             Debug.Log("すべてのストーリーページが終了しました");
             m_isTransitioning = false;
             yield break;
         }
 
-        // 次のページへ進める
+        // 次のページへ進めて表示を更新する
         m_currentPage++;
+        ApplyPage(m_currentPage);
 
-        // コンポーネントのテクスチャを入れ替える
-        m_storyImage.sprite = m_storyPages[m_currentPage].storyTexture;
-        m_storyText.sprite = m_storyPages[m_currentPage].storyText;
+        // 矢印の待ち時間を初期化する
+        ResetArrowTimer();
 
-        // イメージコンポーネントのサイズ調整
-        m_storyImage.SetNativeSize();
-        m_storyText.SetNativeSize();
-
-        // 経過時間の初期化
-        m_elapsedTime = 0.0f;
-        m_arrowImage.enabled = false;
-
-        // --- ここから画面を戻す処理 ---
-
-        // 4. もし「画面を戻すアニメーション（WipeIn）」を作っている場合はここで再生
+        // ワイプイン（画面を明るくする）が設定されている場合
         if (!string.IsNullOrEmpty(m_animationInStateName))
         {
-            m_wipeAnimator.Play(m_animationInStateName);
-            yield return null;
-
-            // 元に戻るアニメーションが終わるまで待つ
-            stateInfo = m_wipeAnimator.GetCurrentAnimatorStateInfo(0);
-            while (stateInfo.normalizedTime < 1.0f)
-            {
-                stateInfo = m_wipeAnimator.GetCurrentAnimatorStateInfo(0);
-                yield return null;
-            }
+            // ワイプインを再生して待つ
+            yield return StartCoroutine(PlayWipeAnimationCoroutine(m_animationInStateName));
         }
 
-        // 演出終了、再度操作可能にする
+        // 演出終了
         m_isTransitioning = false;
     }
 
-    private void LateUpdate()
+    /// <summary>
+    /// ワイプアニメーションを再生し、終了まで待ちます。
+    /// </summary>
+    /// <param name="stateName">再生するステート名。</param>
+    private IEnumerator PlayWipeAnimationCoroutine(string stateName)
     {
-        // ワイプ演出中は矢印の計算を行わない
-        if (m_isTransitioning) 
-        {
-            return;
-        }
+        // アニメーションを再生する
+        m_wipeAnimator.Play(stateName);
 
-        // 経過時間に達している場合
-        if (m_elapsedTime >= APPEARANCE_ARROW_TIME && !m_arrowImage.enabled)
+        // ステートが切り替わるまで 1 フレーム待つ
+        yield return null;
+
+        // アニメーションが終了するまで待機する
+        AnimatorStateInfo stateInfo = m_wipeAnimator.GetCurrentAnimatorStateInfo(WIPE_ANIMATOR_LAYER_INDEX);
+        while (stateInfo.normalizedTime < ANIMATION_END_NORMALIZED_TIME)
         {
-            // 矢印を表示する
-            m_arrowImage.enabled = true;
-        }
-        // 経過時間に達していない場合
-        else if(m_elapsedTime < APPEARANCE_ARROW_TIME && m_arrowImage.enabled)
-        {
-            // 矢印を非表示にする
-            m_arrowImage.enabled = false;
+            stateInfo = m_wipeAnimator.GetCurrentAnimatorStateInfo(WIPE_ANIMATOR_LAYER_INDEX);
+            yield return null;
         }
     }
 }
