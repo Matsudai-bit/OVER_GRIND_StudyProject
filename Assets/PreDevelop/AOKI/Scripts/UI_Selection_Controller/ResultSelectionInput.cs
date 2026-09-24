@@ -9,7 +9,7 @@ public class ResultUIController : MonoBehaviour
     [Tooltip("非選択時にどれくらい横へずらしておくか")]
     [SerializeField] private float slideOffset = -50f;
 
-    [Header("Stage Select")]
+    [Header("Stage Select ")]
     [SerializeField] private RectTransform stageSelectVisual;
     [Tooltip("非選択時の縮小サイズ割合")]
     [SerializeField] private float unselectedScale = 0.8f;
@@ -17,24 +17,24 @@ public class ResultUIController : MonoBehaviour
     [Header("アニメーション設定")]
     [SerializeField] private float duration = 0.25f;
 
+    [Header("ループ設定")]
+    [SerializeField] private float loopDuration = 0.8f;
+    [Tooltip("オレンジが選択中に横にスライドし続ける幅")]
+    [SerializeField] private float loopSlideAmount = -10f;
+    [Tooltip("白枠が選択中に拡大し続ける割合")]
+    [SerializeField] private float loopScaleAmount = 1.05f;
+
     private bool isNextStageSelected = true;
 
     // 元の座標とサイズを記憶する用
     private float nsOriginalPosX;
     private Vector3 ssOriginalScale;
 
-    // フェード用のCanvasGroup
-    private CanvasGroup nsCG;
-    private CanvasGroup ssCG;
-
     void Start()
     {
         // 最初の位置・サイズを記憶
         if (nextStageVisual != null) nsOriginalPosX = nextStageVisual.anchoredPosition.x;
         if (stageSelectVisual != null) ssOriginalScale = stageSelectVisual.localScale;
-
-        nsCG = GetOrAddCanvasGroup(nextStageVisual?.gameObject);
-        ssCG = GetOrAddCanvasGroup(stageSelectVisual?.gameObject);
 
         // 起動時はアニメーションなしで即座に初期状態を反映
         UpdateVisuals(true);
@@ -78,60 +78,61 @@ public class ResultUIController : MonoBehaviour
     }
 
     /// <summary>
-    /// ご指示通りの「横スライド」と「拡大縮小」アニメーションを実行
+    /// 消去処理を行わず、常時表示したまま状態を切り替える
     /// </summary>
     private void UpdateVisuals(bool isInstant = false)
     {
         float t = isInstant ? 0f : duration;
 
+        
         // オレンジの奴
+        
         if (nextStageVisual != null)
         {
-            nextStageVisual.gameObject.SetActive(true);
             nextStageVisual.DOKill();
-            nsCG?.DOKill();
 
             if (isNextStageSelected)
             {
-                // 選択時: 横から元の位置へスライドしてくる
-                nextStageVisual.DOAnchorPosX(nsOriginalPosX, t).SetEase(Ease.OutCubic);
-                nsCG?.DOFade(1f, t);
+                // 選択時: 定位置へスライドして戻り、完了後にループ開始
+                nextStageVisual.DOAnchorPosX(nsOriginalPosX, t).SetEase(Ease.OutCubic)
+                    .OnComplete(() =>
+                    {
+                        if (isInstant) return;
+                        nextStageVisual.DOAnchorPosX(nsOriginalPosX + loopSlideAmount, loopDuration)
+                            .SetEase(Ease.InOutSine)
+                            .SetLoops(-1, LoopType.Yoyo);
+                    });
             }
             else
             {
-                // 非選択時: 横にスライドして消える
+                // 非選択時: 消さずに非選択位置へ移動して維持
                 nextStageVisual.DOAnchorPosX(nsOriginalPosX + slideOffset, t).SetEase(Ease.OutCubic);
-                nsCG?.DOFade(0f, t).OnComplete(() => { if (!isInstant) nextStageVisual.gameObject.SetActive(false); });
             }
         }
 
+        
         // 白の奴
         if (stageSelectVisual != null)
         {
-            stageSelectVisual.gameObject.SetActive(true);
             stageSelectVisual.DOKill();
-            ssCG?.DOKill();
 
             if (!isNextStageSelected)
             {
-                // 選択時: フワッと元のサイズに拡大
-                stageSelectVisual.DOScale(ssOriginalScale, t).SetEase(Ease.OutBack);
-                ssCG?.DOFade(1f, t);
+                // 選択時: 元のサイズに拡大し、完了後にループ開始
+                stageSelectVisual.DOScale(ssOriginalScale, t).SetEase(Ease.OutBack)
+                    .OnComplete(() =>
+                    {
+                        if (isInstant) return;
+                        stageSelectVisual.DOScale(ssOriginalScale * loopScaleAmount, loopDuration)
+                            .SetEase(Ease.InOutSine)
+                            .SetLoops(-1, LoopType.Yoyo);
+                    });
             }
             else
             {
-                // 非選択時: シュッと縮小して消える
+                // 非選択時: 消さずに非選択サイズへ変更して維持
                 stageSelectVisual.DOScale(ssOriginalScale * unselectedScale, t).SetEase(Ease.OutCubic);
-                ssCG?.DOFade(0f, t).OnComplete(() => { if (!isInstant) stageSelectVisual.gameObject.SetActive(false); });
             }
         }
-    }
-
-    private CanvasGroup GetOrAddCanvasGroup(GameObject obj)
-    {
-        if (obj == null) return null;
-        CanvasGroup cg = obj.GetComponent<CanvasGroup>();
-        if (cg == null) cg = obj.AddComponent<CanvasGroup>();
-        return cg;
     }
 }
