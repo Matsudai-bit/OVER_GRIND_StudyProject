@@ -32,7 +32,7 @@ public class ResultTimeView : MonoBehaviour
         int ms10 = (milliseconds / 10) % 10;
         int ms1 = milliseconds % 10;
 
-        // 3. スプライトの適用
+        // スプライトの適用
         SetDigitSprite(min10Image, min10);
         SetDigitSprite(min1Image, min1);
         SetDigitSprite(sec10Image, sec10);

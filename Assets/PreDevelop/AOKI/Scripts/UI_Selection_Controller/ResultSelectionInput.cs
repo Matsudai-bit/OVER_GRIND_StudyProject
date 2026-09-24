@@ -4,14 +4,14 @@ using DG.Tweening;
 
 public class ResultUIController : MonoBehaviour
 {
-    [Header("Next Stage (オレンジ - 横スライド)")]
+    [Header("Next Stage ")]
     [SerializeField] private RectTransform nextStageVisual;
-    [Tooltip("非選択時にどれくらい横へずらしておくか（例: -50 で左からスライド）")]
+    [Tooltip("非選択時にどれくらい横へずらしておくか")]
     [SerializeField] private float slideOffset = -50f;
 
-    [Header("Stage Select (白の枠 - 拡大縮小)")]
+    [Header("Stage Select")]
     [SerializeField] private RectTransform stageSelectVisual;
-    [Tooltip("非選択時の縮小サイズ割合（例: 0.8）")]
+    [Tooltip("非選択時の縮小サイズ割合")]
     [SerializeField] private float unselectedScale = 0.8f;
 
     [Header("アニメーション設定")]
@@ -23,7 +23,7 @@ public class ResultUIController : MonoBehaviour
     private float nsOriginalPosX;
     private Vector3 ssOriginalScale;
 
-    // フェード（透明度）用のCanvasGroup
+    // フェード用のCanvasGroup
     private CanvasGroup nsCG;
     private CanvasGroup ssCG;
 
@@ -84,9 +84,7 @@ public class ResultUIController : MonoBehaviour
     {
         float t = isInstant ? 0f : duration;
 
-        // ==========================================
-        // オレンジの奴（横スライド）
-        // ==========================================
+        // オレンジの奴
         if (nextStageVisual != null)
         {
             nextStageVisual.gameObject.SetActive(true);
@@ -107,9 +105,7 @@ public class ResultUIController : MonoBehaviour
             }
         }
 
-        // ==========================================
-        // 白の奴（拡大縮小）
-        // ==========================================
+        // 白の奴
         if (stageSelectVisual != null)
         {
             stageSelectVisual.gameObject.SetActive(true);
