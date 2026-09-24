@@ -810,6 +810,10 @@ PrefabInstance:
       propertyPath: m_stateParameterAsset
       value: 
       objectReference: {fileID: 11400000, guid: d3d5ef2b102608545994fd8910491899, type: 2}
+    - target: {fileID: 8431495690016108525, guid: 82702c3e3c5a09c488bff2646756d6ea, type: 3}
+      propertyPath: m_tailGroundCollisionSensor
+      value: 
+      objectReference: {fileID: 1646865674}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects:
@@ -834,6 +838,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 7884799166121265988, guid: 82702c3e3c5a09c488bff2646756d6ea, type: 3}
       insertIndex: -1
       addedObject: {fileID: 971017945}
+    - targetCorrespondingSourceObject: {fileID: 2159871022954225639, guid: 82702c3e3c5a09c488bff2646756d6ea, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1646865672}
     - targetCorrespondingSourceObject: {fileID: 2714766117026011743, guid: 82702c3e3c5a09c488bff2646756d6ea, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1633942295}
@@ -1513,8 +1520,8 @@ MonoBehaviour:
   - m_attackType: 2
     m_attackIdentifier: {fileID: 11400000, guid: 18eeeda1ecb524b468ff4405297f5362, type: 2}
     m_animationTriggerName: HeatVent
-  - m_attackType: 2
-    m_attackIdentifier: {fileID: 11400000, guid: 18eeeda1ecb524b468ff4405297f5362, type: 2}
+  - m_attackType: 3
+    m_attackIdentifier: {fileID: 11400000, guid: e078201e8d63c6c48b27642349d2c8f7, type: 2}
     m_animationTriggerName: TailSlam
 --- !u!1 &846255771
 GameObject:
@@ -3052,6 +3059,75 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1633942294}
   m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!1 &1646865671
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1646865672}
+  - component: {fileID: 1646865674}
+  - component: {fileID: 1646865673}
+  m_Layer: 7
+  m_Name: TailCollisionSensor
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1646865672
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1646865671}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 1.08, z: -0}
+  m_LocalScale: {x: 1.77, y: 1.77, z: 1.77}
+  m_ConstrainProportionsScale: 1
+  m_Children: []
+  m_Father: {fileID: 2135471732}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!135 &1646865673
+SphereCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1646865671}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Radius: 0.5
+  m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &1646865674
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1646865671}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dd73b71e6333c5b44a30158bbc38451c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CollisionSensor
+  m_targetLayerMask:
+    serializedVersion: 2
+    m_Bits: 8
 --- !u!1 &1681358616
 GameObject:
   m_ObjectHideFlags: 0
@@ -3767,6 +3843,11 @@ MonoBehaviour:
   m_forwardLength: 1
   m_forwardColor: {r: 0, g: 1, b: 1, a: 1}
   m_labelOffset: {x: 0, y: 0.2, z: 0}
+--- !u!4 &2135471732 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 2159871022954225639, guid: 82702c3e3c5a09c488bff2646756d6ea, type: 3}
+  m_PrefabInstance: {fileID: 161453510}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &2143013667
 GameObject:
   m_ObjectHideFlags: 0

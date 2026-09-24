@@ -6,5 +6,7 @@ public enum AttackEventType
     ANIMATION_START,
     HITBOX_ENABLE,
     HITBOX_DISABLE,
-    ANIMATION_END
+    ANIMATION_END,
+
+    IMPACT_START
 }
