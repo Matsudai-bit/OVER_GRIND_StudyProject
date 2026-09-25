@@ -36,7 +36,8 @@ public sealed class PlayerIdlingState
             return;
         }
 
-        if (Owner.Monitor.IsRailed)
+        if (Owner.GrindController.CanStartGrind(
+            Owner.Monitor.IsRailed ? Owner.Monitor.HitRailInfo : null))
         {
             Machine.ChangeState<PlayerGrindingState>();
             return;

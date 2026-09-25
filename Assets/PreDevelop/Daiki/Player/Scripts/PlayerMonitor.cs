@@ -22,6 +22,10 @@ public sealed class PlayerMonitor : MonoBehaviour
     [SerializeField]
     private LayerMask m_railLayerMask = ~0;
 
+    [SerializeField, Header("レール搭乗判定")]
+    [Tooltip("地上・空中の判定半径を設定するアセットです。未設定の場合は従来の接地半径を使います。")]
+    private PlayerRailDetectionParameterAsset m_railDetectionParameter;
+
     // プレイヤーの物理ボディ
     private Rigidbody m_playerRigidbody;
 
@@ -115,32 +119,50 @@ public sealed class PlayerMonitor : MonoBehaviour
             m_groundLayerMask,
             QueryTriggerInteraction.Ignore);
 
-        Collider[] hitColliders = Physics.OverlapSphere(
-                   checkPosition,
-                   m_groundCheckRadius,
-                   m_railLayerMask,
-                   QueryTriggerInteraction.Ignore
-               );
-
-        m_isRailed = hitColliders.Length > 0;
-
-        if (m_isRailed)
-        {
-
-            foreach (var collider in hitColliders)
-            {
-                if (collider.gameObject.TryGetComponent<SplineRailInfo>(out m_hitRailInfo))
-                {
-                    break;
-                }
-
-            }
-
-        }
+        RefreshRailDetection(checkPosition);
     }
 
     /// <summary>
-    /// 接地判定範囲をSceneビューに表示します。
+    /// 地上・空中に対応する搭乗判定半径を取得します。
+    /// </summary>
+    private float GetRailDetectionRadius(bool isGrounded)
+    {
+        return m_railDetectionParameter != null
+            ? m_railDetectionParameter.GetRadius(isGrounded)
+            : m_groundCheckRadius;
+    }
+
+    /// <summary>
+    /// 搭乗範囲にある有効なレールのうち、最も近いものを選択します。
+    /// </summary>
+    private void RefreshRailDetection(Vector3 checkPosition)
+    {
+        Collider[] hitColliders = Physics.OverlapSphere(
+            checkPosition, GetRailDetectionRadius(m_isGrounded),
+            m_railLayerMask, QueryTriggerInteraction.Ignore);
+
+        // 範囲を広げた際にも、レール以外の接触や前回の参照で搭乗しないよう毎回更新します。
+        m_hitRailInfo = null;
+        float nearestDistance = float.PositiveInfinity;
+        foreach (Collider hitCollider in hitColliders)
+        {
+            if (hitCollider.attachedRigidbody == m_playerRigidbody) continue;
+
+            SplineRailInfo rail = hitCollider.GetComponentInParent<SplineRailInfo>();
+            if (rail == null) continue;
+
+            float distance = (hitCollider.ClosestPoint(checkPosition) - checkPosition).sqrMagnitude;
+            if (distance >= nearestDistance) continue;
+
+            nearestDistance = distance;
+            m_hitRailInfo = rail;
+        }
+
+        m_isRailed = m_hitRailInfo != null;
+    }
+
+    /// <summary>
+    /// 接地判定と地上・空中のレール搭乗判定範囲をSceneビューに表示します。
     /// </summary>
     private void OnDrawGizmosSelected()
     {
@@ -148,6 +170,13 @@ public sealed class PlayerMonitor : MonoBehaviour
             ? m_groundCheckOrigin.position
             : transform.position;
 
+        Color previousColor = Gizmos.color;
+        Gizmos.color = Color.white;
         Gizmos.DrawWireSphere(checkPosition, m_groundCheckRadius);
+        Gizmos.color = Color.green;
+        Gizmos.DrawWireSphere(checkPosition, GetRailDetectionRadius(true));
+        Gizmos.color = Color.cyan;
+        Gizmos.DrawWireSphere(checkPosition, GetRailDetectionRadius(false));
+        Gizmos.color = previousColor;
     }
 }
