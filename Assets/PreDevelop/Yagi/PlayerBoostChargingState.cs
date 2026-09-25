@@ -50,6 +50,12 @@ public sealed class PlayerBoostChargingState
     // 現在使用している最大チャージ時間
     private float m_currentMaxChargeTime;
 
+    // カメラ遷移の開始・反転を検出するための左右入力（-1、0、1）
+    private int m_cameraSteeringSide;
+
+    // 目標角度への遷移に残された時間（秒）
+    private float m_cameraLookRemainingTime;
+
     /// <summary>
     /// 現在のチャージ割合を取得します。
     /// </summary>
@@ -70,6 +76,8 @@ public sealed class PlayerBoostChargingState
 
         m_chargeTime = 0.0f;
         m_speedLogElapsedTime = 0.0f;
+        m_cameraSteeringSide = 0;
+        m_cameraLookRemainingTime = 0.0f;
 
         PlayerMoveParameters normalParameters =
             Owner.MovementParameterAsset
@@ -291,17 +299,10 @@ public sealed class PlayerBoostChargingState
         }
 
         // --------------------------------------------------------
-        // カメラを、開始時の向きと実際の移動方向の中間へ追従
+        // カメラをチャージ中の入力側へ追従
         // --------------------------------------------------------
 
-        if (Owner.PlayerCamera != null)
-        {
-            Owner.PlayerCamera.UpdateDriftLookDirection(
-                m_currentFacingDirection,
-                m_parameterAsset.CameraDriftLookBlendRate,
-                m_parameterAsset.CameraDriftLookTurnSpeed,
-                Time.fixedDeltaTime);
-        }
+        UpdateChargeCamera(normalizedInput);
 
         // --------------------------------------------------------
         // ゲージ更新
@@ -332,6 +333,64 @@ public sealed class PlayerBoostChargingState
                 $"曲がりやすさ={currentDriftTurnSpeed:F1}deg/s",
                 Owner);
         }
+    }
+
+    /// <summary>
+    /// 移動中開始のチャージでは入力側へ指定角度だけカメラを向け、停止中開始では本体の向きへ追従します。
+    /// </summary>
+    /// <param name="input">正規化された移動入力。</param>
+    private void UpdateChargeCamera(Vector2 input)
+    {
+        if (Owner.PlayerCamera == null)
+        {
+            return;
+        }
+
+        Vector3 cameraLookDirection = m_currentFacingDirection;
+        float blendRate = m_parameterAsset.CameraDriftLookBlendRate;
+
+        if (!m_startedFromStationary)
+        {
+            cameraLookDirection = m_currentVelocityDirection;
+
+            int steeringSide = Mathf.Abs(input.x) > m_parameterAsset.SteeringDeadZone
+                ? (input.x > 0.0f ? 1 : -1)
+                : 0;
+
+            if (steeringSide != m_cameraSteeringSide)
+            {
+                m_cameraSteeringSide = steeringSide;
+                m_cameraLookRemainingTime = m_parameterAsset.MovingChargeCameraLookDuration;
+            }
+
+            if (steeringSide != 0)
+            {
+                cameraLookDirection =
+                    Quaternion.AngleAxis(
+                        steeringSide * m_parameterAsset.MovingChargeCameraLookAngle,
+                        Vector3.up) * m_currentVelocityDirection;
+
+                // 移動方向が変わってもタイマーは再開せず、指定時間で最新の目標角度へ到達する。
+                Owner.PlayerCamera.UpdateDriftLookDirectionOverTime(
+                    cameraLookDirection,
+                    m_cameraLookRemainingTime,
+                    Time.fixedDeltaTime);
+
+                m_cameraLookRemainingTime = Mathf.Max(
+                    0.0f, m_cameraLookRemainingTime - Time.fixedDeltaTime);
+                return;
+            }
+
+            // 開始時の角度とのブレンドで設定角度が小さくならないよう、目標方向へ完全に追従する。
+            // 入力を離した際も、既存のカメラ追従速度で移動方向へ滑らかに戻る。
+            blendRate = 1.0f;
+        }
+
+        Owner.PlayerCamera.UpdateDriftLookDirection(
+            cameraLookDirection,
+            blendRate,
+            m_parameterAsset.CameraDriftLookTurnSpeed,
+            Time.fixedDeltaTime);
     }
 
     /// <summary>

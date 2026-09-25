@@ -364,6 +364,38 @@ public class PlayerCamera : MonoBehaviour
     }
 
     /// <summary>
+    /// 残り時間に応じて水平角度を補間し、時間終了時には最新の目標方向へ合わせます。
+    /// </summary>
+    /// <param name="worldDirection">カメラが向くワールド方向。</param>
+    /// <param name="remainingTime">呼び出し側で減算する、到達までの残り時間（秒）。0以下で即座に向きます。</param>
+    /// <param name="deltaTime">今回の更新で進める時間（秒）。</param>
+    public void UpdateDriftLookDirectionOverTime(
+        Vector3 worldDirection,
+        float remainingTime,
+        float deltaTime)
+    {
+        if (!m_isDriftOverrideActive || m_orbitalFollow == null)
+        {
+            return;
+        }
+
+        worldDirection.y = 0.0f;
+        if (worldDirection.sqrMagnitude <= MIN_TARGET_DISTANCE)
+        {
+            return;
+        }
+
+        float targetAngle = Mathf.Atan2(worldDirection.x, worldDirection.z) * Mathf.Rad2Deg;
+        float progress = remainingTime > 0.0f
+            ? Mathf.Clamp01(Mathf.Max(deltaTime, 0.0f) / remainingTime)
+            : 1.0f;
+
+        // 毎回一定割合で近づけると到達しないため、残り時間に対する割合で補間する。
+        m_orbitalFollow.HorizontalAxis.Value = Mathf.LerpAngle(
+            m_orbitalFollow.HorizontalAxis.Value, targetAngle, progress);
+    }
+
+    /// <summary>
     /// カメラの水平角度を指定したワールド方向へ即座に向けます。
     /// </summary>
     public void SnapLookDirectionOnce(Vector3 worldDirection)

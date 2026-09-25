@@ -67,11 +67,21 @@ public sealed class PlayerBoostChargingParameterAsset : ScriptableObject
 
     [Header("カメラ設定")]
 
-    // チャージ中、カメラが目標角度へ追従する速度（度/秒）
+    [Tooltip("移動中開始のチャージ中、左右入力側へカメラを向ける角度（度）。移動方向を基準に、90で真横、0で正面。")]
+    [SerializeField, Range(0.0f, 180.0f)]
+    private float m_movingChargeCameraLookAngle = 90.0f;
+
+    [Tooltip("左右入力の開始・反転から、カメラが目標角度に到達するまでの時間（秒）。0で即座に向きます。")]
+    [SerializeField, Min(0.0f)]
+    private float m_movingChargeCameraLookDuration = 0.5f;
+
+    // 入力を離したときと、停止中開始のチャージで使用する追従速度（度/秒）
+    [Tooltip("入力を離したときの戻り速度と、停止中開始のチャージで使用する追従速度（度/秒）。")]
     [SerializeField, Min(0.0f)]
     private float m_cameraDriftLookTurnSpeed = 180.0f;
 
-    // チャージ中、カメラがプレイヤーの向きへどれだけ振れるか（0～1）
+    // 停止中開始のチャージで、カメラがプレイヤーの向きへどれだけ振れるか（0～1）
+    [Tooltip("停止中開始のチャージで使用する追従割合。移動中開始ではカメラ角度を優先します。")]
     [SerializeField, Range(0.0f, 1.0f)]
     private float m_cameraDriftLookBlendRate = 0.75f;
 
@@ -144,6 +154,18 @@ public sealed class PlayerBoostChargingParameterAsset : ScriptableObject
     /// </summary>
     public float MovingChargeSidewaysLookAngle =>
         m_movingChargeSidewaysLookAngle;
+
+    /// <summary>
+    /// 移動中開始のチャージで、入力側へカメラを向ける角度（度）を取得します。
+    /// </summary>
+    public float MovingChargeCameraLookAngle =>
+        m_movingChargeCameraLookAngle;
+
+    /// <summary>
+    /// 左右入力の開始・反転からカメラが目標角度へ到達するまでの時間（秒）を取得します。
+    /// </summary>
+    public float MovingChargeCameraLookDuration =>
+        m_movingChargeCameraLookDuration;
 
     /// <summary>
     /// カメラの追従速度（度/秒）を取得します。
