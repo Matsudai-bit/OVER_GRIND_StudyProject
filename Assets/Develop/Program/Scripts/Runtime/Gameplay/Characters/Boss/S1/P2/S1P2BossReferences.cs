@@ -16,12 +16,12 @@ public sealed class S1P2BossReferences :
     private S1P2BossStateParameterAsset m_stateParameterAsset;   
     [SerializeField, Header("ミサイルリファレンス")]
     private S1BossMissileReferences m_missileReferences;
-    [SerializeField, Header("尻尾のグラウンド判定センサー")]
-    private CollisionSensor m_tailGroundCollisionSensor;
+    [SerializeField, Header("足攻撃状態のリファレンス")]
+    private S1P2BossTailSlamReference m_tailSlamReference;
 
     public S1P2BossStateParameterAsset StateParameterAsset => m_stateParameterAsset;
     public S1BossMissileReferences MissileReferences => m_missileReferences;
-    public CollisionSensor TailGroundCollisionSensor => m_tailGroundCollisionSensor;
+    public S1P2BossTailSlamReference TailSlamReference => m_tailSlamReference;
 
     /// <summary>
     /// フェーズで使用するパラメータを生成します。

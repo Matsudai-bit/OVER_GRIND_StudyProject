@@ -131,7 +131,7 @@ public sealed class S1P2BossTailSlamState :
         }
 
         m_groundCollisionSensor =
-            m_references.TailGroundCollisionSensor;
+            m_references.TailSlamReference.TailGroundCollisionSensor;
 
         if (m_groundCollisionSensor == null)
         {
@@ -163,8 +163,7 @@ public sealed class S1P2BossTailSlamState :
             m_tailSlamAttackIdentifier);
 
         //// 衝撃波を開始する
-        //Owner.EnableAttackHitboxes(
-        //    m_impactAttackIdentifier);
+        Object.Instantiate(m_references.TailSlamReference.ImpactEffect, contactPosition, Owner.transform.rotation);
 
         Debug.Log(
             $"尻尾が地面に衝突しました。位置: {contactPosition}");

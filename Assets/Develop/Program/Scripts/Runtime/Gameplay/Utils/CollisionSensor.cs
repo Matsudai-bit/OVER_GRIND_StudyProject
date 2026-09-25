@@ -20,23 +20,16 @@ public sealed class CollisionSensor : MonoBehaviour
     /// Õ“Ë‚ğŒŸ’m‚µ‚Ü‚·B
     /// </summary>
     /// <param name="collision">Õ“Ëî•ñB</param>
-    private void OnCollisionEnter(Collision collision)
+    private void OnTriggerEnter(Collider other)
     {
-        if (!IsTargetLayer(collision.gameObject.layer))
+        var hitObject = other.gameObject;
+        var hitPosition = other.ClosestPointOnBounds(this.transform.position);
+        if (!IsTargetLayer(hitObject.layer))
         {
             return;
         }
 
-        if (collision.contactCount <= 0)
-        {
-            return;
-        }
-
-        ContactPoint contactPoint =
-            collision.GetContact(0);
-
-        CollisionDetected?.Invoke(
-            contactPoint.point);
+        CollisionDetected?.Invoke(hitPosition);
     }
 
     /// <summary>

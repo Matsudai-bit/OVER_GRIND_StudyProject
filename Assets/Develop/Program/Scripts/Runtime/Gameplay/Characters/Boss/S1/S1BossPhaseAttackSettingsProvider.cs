@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// ステージ1ボスのフェーズごとの攻撃ダメージ設定を保持します。
+/// ステージ1ボスのフェーズごとの攻撃設定を保持します。
 /// </summary>
 [DisallowMultipleComponent]
 public sealed class S1BossPhaseAttackSettingsProvider :
@@ -31,7 +31,7 @@ public sealed class S1BossPhaseAttackSettingsProvider :
     private AttackHitboxRegistry m_attackHitboxRegistry;
 
     /// <summary>
-    /// このフェーズの攻撃ダメージ設定を適用します。
+    /// このフェーズの攻撃設定を適用します。
     /// </summary>
     /// <returns>
     /// true：設定に成功しました。
@@ -71,21 +71,14 @@ public sealed class S1BossPhaseAttackSettingsProvider :
     }
 
     /// <summary>
-    /// このフェーズで使用していた攻撃ダメージ設定を解除します。
+    /// このフェーズで使用していた攻撃設定を解除します。
     /// </summary>
     public override void ClearDamageSettings()
     {
         ResolveReferences();
 
-        if (m_attackHitboxRegistry != null)
-        {
-            m_attackHitboxRegistry.ClearHitboxGroups();
-        }
-
-        if (m_attackDamageController != null)
-        {
-            m_attackDamageController.ClearDamageSettings();
-        }
+        m_attackHitboxRegistry?.ClearHitboxGroups();
+        m_attackDamageController?.ClearDamageSettings();
     }
 
     /// <summary>
@@ -99,15 +92,20 @@ public sealed class S1BossPhaseAttackSettingsProvider :
     private bool TryCreateRuntimeHitboxGroups(
         out List<AttackHitboxRuntimeGroup> runtimeGroups)
     {
-        runtimeGroups = new List<AttackHitboxRuntimeGroup>();
+        runtimeGroups =
+            new List<AttackHitboxRuntimeGroup>();
 
         if (!TryCreateHitboxMap(
-                out Dictionary<S1BossHitboxId, AttackHitbox> hitboxMap))
+                out Dictionary<
+                    S1BossHitboxId,
+                    IReadOnlyList<AttackHitbox>> hitboxMap))
         {
             return false;
         }
 
         bool isValid = true;
+
+        // 同じAttack IDの重複登録を防止
         HashSet<AttackIdentifier> registeredAttackIds = new();
 
         foreach (AttackHitboxGroup<S1BossHitboxId> hitboxGroup
@@ -137,14 +135,29 @@ public sealed class S1BossPhaseAttackSettingsProvider :
                     hitboxGroup.AttackIdentifier))
             {
                 Debug.LogError(
-                    $"{hitboxGroup.AttackIdentifier.name} が重複しています。",
+                    $"{hitboxGroup.AttackIdentifier.name} が" +
+                    "重複して登録されています。",
                     this);
 
                 isValid = false;
                 continue;
             }
 
-            List<AttackHitbox> attackHitboxes = new();
+            if (hitboxGroup.HitboxIds == null ||
+                hitboxGroup.HitboxIds.Count == 0)
+            {
+                Debug.LogError(
+                    $"{hitboxGroup.AttackIdentifier.name} に" +
+                    "使用するHitbox IDが設定されていません。",
+                    this);
+
+                isValid = false;
+                continue;
+            }
+
+            List<AttackHitbox> runtimeAttackHitboxes = new();
+
+            // 同一Attack内でのHitbox ID重複を防止
             HashSet<S1BossHitboxId> registeredHitboxIds = new();
 
             foreach (S1BossHitboxId hitboxId
@@ -164,7 +177,7 @@ public sealed class S1BossPhaseAttackSettingsProvider :
 
                 if (!hitboxMap.TryGetValue(
                         hitboxId,
-                        out AttackHitbox attackHitbox))
+                        out IReadOnlyList<AttackHitbox> mappedHitboxes))
                 {
                     Debug.LogError(
                         $"{hitboxGroup.AttackIdentifier.name} で使用する" +
@@ -175,14 +188,19 @@ public sealed class S1BossPhaseAttackSettingsProvider :
                     continue;
                 }
 
-                attackHitboxes.Add(
-                    attackHitbox);
+                // Hitbox IDに紐づいている全AttackHitboxを展開する
+                foreach (AttackHitbox attackHitbox
+                         in mappedHitboxes)
+                {
+                    runtimeAttackHitboxes.Add(
+                        attackHitbox);
+                }
             }
 
             runtimeGroups.Add(
                 new AttackHitboxRuntimeGroup(
                     hitboxGroup.AttackIdentifier,
-                    attackHitboxes));
+                    runtimeAttackHitboxes));
         }
 
         if (!isValid)
@@ -194,7 +212,7 @@ public sealed class S1BossPhaseAttackSettingsProvider :
     }
 
     /// <summary>
-    /// Hitbox IDからAttackHitboxを取得する検索テーブルを生成します。
+    /// Hitbox IDからAttackHitbox一覧を取得する検索テーブルを生成します。
     /// </summary>
     /// <param name="hitboxMap">生成した検索テーブル。</param>
     /// <returns>
@@ -202,12 +220,18 @@ public sealed class S1BossPhaseAttackSettingsProvider :
     /// false：設定に不備があります。
     /// </returns>
     private bool TryCreateHitboxMap(
-        out Dictionary<S1BossHitboxId, AttackHitbox> hitboxMap)
+        out Dictionary<
+            S1BossHitboxId,
+            IReadOnlyList<AttackHitbox>> hitboxMap)
     {
         hitboxMap =
-            new Dictionary<S1BossHitboxId, AttackHitbox>();
+            new Dictionary<
+                S1BossHitboxId,
+                IReadOnlyList<AttackHitbox>>();
 
         bool isValid = true;
+
+        // 同じAttackHitboxの重複登録を防止
         HashSet<AttackHitbox> registeredHitboxes = new();
 
         foreach (AttackHitboxBinding<S1BossHitboxId> binding
@@ -223,7 +247,24 @@ public sealed class S1BossPhaseAttackSettingsProvider :
                 continue;
             }
 
-            if (binding.AttackHitbox == null)
+            // 1つのHitbox IDにつきBindingは1つ
+            if (hitboxMap.ContainsKey(
+                    binding.HitboxId))
+            {
+                Debug.LogError(
+                    $"Hitbox ID {binding.HitboxId} が" +
+                    "重複して登録されています。",
+                    this);
+
+                isValid = false;
+                continue;
+            }
+
+            IReadOnlyList<AttackHitbox> attackHitboxes =
+                binding.AttackHitboxes;
+
+            if (attackHitboxes == null ||
+                attackHitboxes.Count == 0)
             {
                 Debug.LogError(
                     $"Hitbox ID {binding.HitboxId} に" +
@@ -234,27 +275,46 @@ public sealed class S1BossPhaseAttackSettingsProvider :
                 continue;
             }
 
-            if (!hitboxMap.TryAdd(
-                    binding.HitboxId,
-                    binding.AttackHitbox))
-            {
-                Debug.LogError(
-                    $"Hitbox ID {binding.HitboxId} が重複しています。",
-                    this);
+            bool isBindingValid = true;
 
-                isValid = false;
+            foreach (AttackHitbox attackHitbox
+                     in attackHitboxes)
+            {
+                if (attackHitbox == null)
+                {
+                    Debug.LogError(
+                        $"Hitbox ID {binding.HitboxId} に" +
+                        "未設定のAttackHitboxがあります。",
+                        this);
+
+                    isValid = false;
+                    isBindingValid = false;
+
+                    continue;
+                }
+
+                if (!registeredHitboxes.Add(
+                        attackHitbox))
+                {
+                    Debug.LogError(
+                        $"{attackHitbox.name} が" +
+                        "複数のHitbox IDまたは同一ID内に" +
+                        "重複して登録されています。",
+                        this);
+
+                    isValid = false;
+                    isBindingValid = false;
+                }
             }
 
-            if (!registeredHitboxes.Add(
-                    binding.AttackHitbox))
+            if (!isBindingValid)
             {
-                Debug.LogError(
-                    $"{binding.AttackHitbox.name} が複数のHitbox IDに" +
-                    "登録されています。",
-                    this);
-
-                isValid = false;
+                continue;
             }
+
+            hitboxMap.Add(
+                binding.HitboxId,
+                attackHitboxes);
         }
 
         if (!isValid)
@@ -317,13 +377,15 @@ public sealed class S1BossPhaseAttackSettingsProvider :
         if (m_parameterAsset == null)
         {
             Debug.LogError(
-                $"{nameof(S1BossAttackDamageParameterAsset)}が設定されていません。",
+                $"{nameof(S1BossAttackDamageParameterAsset)}が" +
+                "設定されていません。",
                 this);
 
             isValid = false;
         }
 
-        if (m_hitboxBindings == null)
+        if (m_hitboxBindings == null ||
+            m_hitboxBindings.Count == 0)
         {
             Debug.LogError(
                 "Hitbox対応が設定されていません。",
@@ -332,7 +394,8 @@ public sealed class S1BossPhaseAttackSettingsProvider :
             isValid = false;
         }
 
-        if (m_hitboxGroups == null)
+        if (m_hitboxGroups == null ||
+            m_hitboxGroups.Count == 0)
         {
             Debug.LogError(
                 "攻撃Hitbox設定がありません。",

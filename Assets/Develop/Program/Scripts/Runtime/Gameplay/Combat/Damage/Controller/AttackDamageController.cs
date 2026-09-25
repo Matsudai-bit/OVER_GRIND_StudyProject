@@ -14,8 +14,8 @@ public abstract class AttackDamageController<THitboxId> :
     // 現在フェーズで使用するダメージパラメータ
     private AttackDamageParameterAsset<THitboxId> m_parameterAsset;
 
-    // Hitbox IDからAttackHitboxを取得する検索テーブル
-    private readonly Dictionary<THitboxId, AttackHitbox>
+    // Hitbox IDからAttackHitbox一覧を取得する検索テーブル
+    private readonly Dictionary<THitboxId, IReadOnlyList<AttackHitbox>>
         m_hitboxMap = new();
 
     /// <summary>
@@ -56,7 +56,7 @@ public abstract class AttackDamageController<THitboxId> :
         {
             m_hitboxMap.Add(
                 binding.HitboxId,
-                binding.AttackHitbox);
+                binding.AttackHitboxes);
         }
 
         ResetHitboxDamages();
@@ -137,7 +137,7 @@ public abstract class AttackDamageController<THitboxId> :
 
             if (!m_hitboxMap.TryGetValue(
                     hitboxParameter.HitboxId,
-                    out AttackHitbox attackHitbox))
+                    out IReadOnlyList<AttackHitbox> attackHitboxes))
             {
                 Debug.LogWarning(
                     $"{attackIdentifier.name} のHitbox ID " +
@@ -149,7 +149,8 @@ public abstract class AttackDamageController<THitboxId> :
                 continue;
             }
 
-            attackHitbox.SetDamage(
+            SetDamageToHitboxes(
+                attackHitboxes,
                 hitboxParameter.Damage);
         }
 
@@ -157,19 +158,55 @@ public abstract class AttackDamageController<THitboxId> :
     }
 
     /// <summary>
-    /// 登録されている全Hitboxのダメージを初期値へ戻します。
+    /// 指定したHitbox一覧へダメージを設定します。
     /// </summary>
-    public void ResetHitboxDamages()
+    /// <param name="attackHitboxes">対象Hitbox一覧。</param>
+    /// <param name="damage">設定するダメージ。</param>
+    private static void SetDamageToHitboxes(
+        IReadOnlyList<AttackHitbox> attackHitboxes,
+        int damage)
     {
+        if (attackHitboxes == null)
+        {
+            return;
+        }
+
         foreach (AttackHitbox attackHitbox
-                 in m_hitboxMap.Values)
+                 in attackHitboxes)
         {
             if (attackHitbox == null)
             {
                 continue;
             }
 
-            attackHitbox.ResetDamage();
+            attackHitbox.SetDamage(
+                damage);
+        }
+    }
+
+    /// <summary>
+    /// 登録されている全Hitboxのダメージを初期値へ戻します。
+    /// </summary>
+    public void ResetHitboxDamages()
+    {
+        foreach (IReadOnlyList<AttackHitbox> attackHitboxes
+                 in m_hitboxMap.Values)
+        {
+            if (attackHitboxes == null)
+            {
+                continue;
+            }
+
+            foreach (AttackHitbox attackHitbox
+                     in attackHitboxes)
+            {
+                if (attackHitbox == null)
+                {
+                    continue;
+                }
+
+                attackHitbox.ResetDamage();
+            }
         }
     }
 
@@ -195,7 +232,10 @@ public abstract class AttackDamageController<THitboxId> :
 
         bool isValid = true;
 
+        // 同じHitbox IDのBinding重複を防止
         HashSet<THitboxId> registeredIds = new();
+
+        // 同じAttackHitboxの重複登録を防止
         HashSet<AttackHitbox> registeredHitboxes = new();
 
         foreach (AttackHitboxBinding<THitboxId> binding
@@ -211,7 +251,22 @@ public abstract class AttackDamageController<THitboxId> :
                 continue;
             }
 
-            if (binding.AttackHitbox == null)
+            if (!registeredIds.Add(
+                    binding.HitboxId))
+            {
+                Debug.LogError(
+                    $"Hitbox ID {binding.HitboxId} が" +
+                    "重複して登録されています。",
+                    this);
+
+                isValid = false;
+            }
+
+            IReadOnlyList<AttackHitbox> attackHitboxes =
+                binding.AttackHitboxes;
+
+            if (attackHitboxes == null ||
+                attackHitboxes.Count == 0)
             {
                 Debug.LogError(
                     $"Hitbox ID {binding.HitboxId} に" +
@@ -222,25 +277,30 @@ public abstract class AttackDamageController<THitboxId> :
                 continue;
             }
 
-            if (!registeredIds.Add(
-                    binding.HitboxId))
+            foreach (AttackHitbox attackHitbox
+                     in attackHitboxes)
             {
-                Debug.LogError(
-                    $"Hitbox ID {binding.HitboxId} が重複しています。",
-                    this);
+                if (attackHitbox == null)
+                {
+                    Debug.LogError(
+                        $"Hitbox ID {binding.HitboxId} に" +
+                        "未設定のAttackHitboxがあります。",
+                        this);
 
-                isValid = false;
-            }
+                    isValid = false;
+                    continue;
+                }
 
-            if (!registeredHitboxes.Add(
-                    binding.AttackHitbox))
-            {
-                Debug.LogError(
-                    $"{binding.AttackHitbox.name} が複数のHitbox IDに" +
-                    "登録されています。",
-                    this);
+                if (!registeredHitboxes.Add(
+                        attackHitbox))
+                {
+                    Debug.LogError(
+                        $"{attackHitbox.name} が" +
+                        "重複して登録されています。",
+                        this);
 
-                isValid = false;
+                    isValid = false;
+                }
             }
         }
 
