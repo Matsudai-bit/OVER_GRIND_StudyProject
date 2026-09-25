@@ -69,9 +69,15 @@ public sealed class PlayerIdlingState
             return;
         }
 
-        // 移動入力がなくても残っている
-        // Vブースト開始入力を消費する
-        Owner.InputReader.ConsumeVBoostStarted();
+        // Vブースト入力が開始されたら
+        // ブーストチャージ状態へ遷移する。
+        // 新規のブースト開始は接地中のみ許可する。
+        if (Owner.Monitor.IsGrounded &&
+            Owner.InputReader.ConsumeVBoostStarted())
+        {
+            Machine.ChangeState<PlayerBoostChargingState>();
+            return;
+        }
 
         // 通常移動パラメータで停止
         Owner.Motor.Decelerate(

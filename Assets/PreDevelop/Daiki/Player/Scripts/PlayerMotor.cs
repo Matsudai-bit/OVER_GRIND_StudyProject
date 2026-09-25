@@ -800,12 +800,13 @@ public sealed class PlayerMotor : MonoBehaviour
     /// 障害物への接触時に緩やかな減速を適用するかどうか。
     /// </param>
     public void MoveWithDriftAtFixedSpeed(
-        Vector3 velocityDirection,
-        float speed,
-        Vector3 facingDirection,
-        float facingRotationSpeed,
-        float deltaTime,
-        bool applyObstacleAvoidance = true)
+    Vector3 velocityDirection,
+    float speed,
+    Vector3 facingDirection,
+    float facingRotationSpeed,
+    float deltaTime,
+    bool applyObstacleAvoidance = true,
+    bool rotatePlayer = true)
     {
         if (!m_isInitialized)
         {
@@ -829,11 +830,13 @@ public sealed class PlayerMotor : MonoBehaviour
             deltaTime,
             applyObstacleAvoidance);
 
-        // キャラクターの向きは実際の進行方向とは独立して制御
-        RotateTowardsMoveDirection(
-            facingDirection,
-            facingRotationSpeed,
-            deltaTime);
+        if (rotatePlayer)
+        {
+            RotateTowardsMoveDirection(
+                facingDirection,
+                facingRotationSpeed,
+                deltaTime);
+        }
 
         m_currentMaxMoveSpeed =
             Mathf.Max(

@@ -6,8 +6,10 @@ using UnityEngine;
 /// プレイヤーのカメラ制御を行います。
 /// 通常時はCinemachineInputAxisControllerによる
 /// マウス・スティック操作を受け付けます。
-/// ロックオン中はCinemachineRotationComposerを使用して
-/// 指定されたターゲット方向へカメラを向けます。
+/// ロックオン中はCinemachineOrbitalFollowの軌道角度(HorizontalAxis)を
+/// 「Target→Playerの延長線上」と「Playerの移動方向」をブレンドした角度に配置することで
+/// Playerの斜め後ろにカメラを保ちつつ、CinemachineRotationComposerで
+/// 対象とプレイヤーを一直線上に収めます。
 /// </summary>
 public class PlayerCamera : MonoBehaviour
 {
@@ -23,6 +25,29 @@ public class PlayerCamera : MonoBehaviour
 
     [SerializeField]
     private CinemachineInputAxisController m_inputAxisController;
+
+    [Header("Lock-On Look At")]
+
+    [SerializeField, Min(0.1f)]
+    [Tooltip("ロックオン中の注視点(Player-Target中間点)とカメラの最低距離。" +
+             "これより近づくと注視点をカメラから離す方向へ補正し、" +
+             "急激な向きの変化や画面がPlayerで埋まる現象を防ぎます。")]
+    private float minLookAtDistanceFromCamera = 2.0f;
+
+    [Header("Lock-On Orbit")]
+
+    [SerializeField, Min(1.0f)]
+    [Tooltip("ロックオン中、カメラの軌道角度(位置)を目標角度へ追従させる速度[度/秒]。" +
+             "この値が遅いと、ロックオン開始直後や斜め移動時にカメラ位置の追従が" +
+             "間に合わずPlayer/Targetが画面外へ出る原因になります。")]
+    private float lockOnOrbitTurnSpeedDegreesPerSecond = 480.0f;
+
+    [SerializeField, Range(0.0f, 1.0f)]
+    [Tooltip("ロックオン中の軌道角度計算に、Playerの移動方向をどれだけ加味するか。" +
+             "0だとTarget方向のみで角度を決定するため、後退・斜め後退移動時に" +
+             "Playerの背面がカメラに向かず全身が見えづらくなります。" +
+             "値を上げるほどPlayerの移動方向側へカメラが回り込み、全身が収まりやすくなります。")]
+    private float lockOnMoveDirectionInfluence = 0.4f;
 
     private CinemachineOrbitalFollow m_orbitalFollow;
     private CinemachineRotationComposer m_rotationComposer;
@@ -105,6 +130,150 @@ public class PlayerCamera : MonoBehaviour
     }
 
     /// <summary>
+    /// 追従対象（プレイヤー）の現在位置を取得します。
+    /// </summary>
+    private Vector3 GetTrackingPosition()
+    {
+        if (m_cinemachineCamera != null && m_cinemachineCamera.Target.TrackingTarget != null)
+        {
+            return m_cinemachineCamera.Target.TrackingTarget.position;
+        }
+        return transform.position;
+    }
+
+    /// <summary>
+    /// PlayerとTargetの中間点を、カメラから一定距離以上離れるようクランプして算出します。
+    /// ロックオン中に注視点がカメラへ接近しすぎると、わずかな移動で向きが激変し、
+    /// 画面がPlayerで埋まる／視界外へ振り切れる原因になるため、ここで補正します。
+    /// </summary>
+    private Vector3 ComputeClampedTargetLookPosition(
+        Vector3 playerPos,
+        Vector3 targetPos)
+    {
+        Vector3 midPoint = Vector3.Lerp(playerPos, targetPos, 0.5f);
+
+        if (m_cinemachineCamera == null)
+        {
+            return midPoint;
+        }
+
+        Vector3 cameraPosition = m_cinemachineCamera.transform.position;
+        Vector3 offsetFromCamera = midPoint - cameraPosition;
+        float distanceFromCamera = offsetFromCamera.magnitude;
+
+        if (distanceFromCamera < minLookAtDistanceFromCamera)
+        {
+            Vector3 direction =
+                distanceFromCamera > MIN_TARGET_DISTANCE
+                    ? offsetFromCamera / distanceFromCamera
+                    : m_cinemachineCamera.transform.forward;
+
+            midPoint =
+                cameraPosition +
+                direction * minLookAtDistanceFromCamera;
+        }
+
+        return midPoint;
+    }
+
+    /// <summary>
+    /// ロックオン中のカメラ軌道角度の目標値を、
+    /// 「Target方向」と「Playerの移動方向」をブレンドして算出します。
+    /// Target方向のみを基準にすると、Playerが後退・斜め後退で移動した際に
+    /// カメラがPlayerの背面へ回り込めず、全身が見えづらくなるため、
+    /// 移動方向を一部加味してカメラが追随しやすいようにします。
+    /// </summary>
+    private float ComputeLockOnOrbitTargetAngle(
+        Vector3 dirToTarget,
+        Vector3 playerMoveDirection)
+    {
+        float targetDirAngle =
+            Mathf.Atan2(dirToTarget.x, dirToTarget.z) *
+            Mathf.Rad2Deg;
+
+        Vector3 flatMoveDirection = playerMoveDirection;
+        flatMoveDirection.y = 0.0f;
+
+        if (flatMoveDirection.sqrMagnitude <= MIN_TARGET_DISTANCE ||
+            lockOnMoveDirectionInfluence <= 0.0f)
+        {
+            return targetDirAngle;
+        }
+
+        float moveDirAngle =
+            Mathf.Atan2(flatMoveDirection.x, flatMoveDirection.z) *
+            Mathf.Rad2Deg;
+
+        return Mathf.LerpAngle(
+            targetDirAngle,
+            moveDirAngle,
+            lockOnMoveDirectionInfluence);
+    }
+
+    /// <summary>
+    /// カメラの軌道角度(HorizontalAxis)を、Target方向とPlayer移動方向を
+    /// ブレンドした角度へ即座にスナップさせます。ロックオン開始直後にカメラ位置が
+    /// 目標角度と大きくズレていると、追従が間に合わず画面外へ出てしまうため、
+    /// 開始時点で位置を合わせておく必要があります。
+    /// </summary>
+    private void SnapLockOnOrbitHeading(
+        Vector3 playerPos,
+        Vector3 targetPos,
+        Vector3 playerMoveDirection)
+    {
+        if (m_orbitalFollow == null)
+        {
+            return;
+        }
+
+        Vector3 dirToTarget = targetPos - playerPos;
+        dirToTarget.y = 0.0f;
+
+        if (dirToTarget.sqrMagnitude <= MIN_TARGET_DISTANCE)
+        {
+            return;
+        }
+
+        m_orbitalFollow.HorizontalAxis.Value =
+            ComputeLockOnOrbitTargetAngle(dirToTarget, playerMoveDirection);
+    }
+
+    /// <summary>
+    /// カメラの軌道角度(HorizontalAxis)を、Target方向とPlayer移動方向を
+    /// ブレンドした角度へ一定速度[度/秒]で追従させます。
+    /// 位置(Position)を担うOrbitalFollowを直接動かすことで、
+    /// 移動方向に応じてPlayerの斜め後ろにカメラを保ち続けます。
+    /// </summary>
+    private void UpdateLockOnOrbitHeading(
+        Vector3 playerPos,
+        Vector3 targetPos,
+        Vector3 playerMoveDirection,
+        float deltaTime)
+    {
+        if (m_orbitalFollow == null)
+        {
+            return;
+        }
+
+        Vector3 dirToTarget = targetPos - playerPos;
+        dirToTarget.y = 0.0f;
+
+        if (dirToTarget.sqrMagnitude <= MIN_TARGET_DISTANCE)
+        {
+            return;
+        }
+
+        float targetAngle =
+            ComputeLockOnOrbitTargetAngle(dirToTarget, playerMoveDirection);
+
+        m_orbitalFollow.HorizontalAxis.Value =
+            Mathf.MoveTowardsAngle(
+                m_orbitalFollow.HorizontalAxis.Value,
+                targetAngle,
+                lockOnOrbitTurnSpeedDegreesPerSecond * deltaTime);
+    }
+
+    /// <summary>
     /// 進行方向を向かせるオーバーライドを開始します。
     /// </summary>
     public void BeginDriftLookOverride()
@@ -140,10 +309,6 @@ public class PlayerCamera : MonoBehaviour
     /// <summary>
     /// 進行方向へカメラを向けます。
     /// </summary>
-    /// <param name="worldDirection">向かせたいワールド方向。</param>
-    /// <param name="blendRate">ブレンド割合。</param>
-    /// <param name="turnSpeedDegreesPerSecond">回転速度。</param>
-    /// <param name="deltaTime">経過時間。</param>
     public void UpdateDriftLookDirection(
         Vector3 worldDirection,
         float blendRate,
@@ -201,7 +366,6 @@ public class PlayerCamera : MonoBehaviour
     /// <summary>
     /// カメラの水平角度を指定したワールド方向へ即座に向けます。
     /// </summary>
-    /// <param name="worldDirection">向かせたいワールド方向。</param>
     public void SnapLookDirectionOnce(Vector3 worldDirection)
     {
         if (m_orbitalFollow == null)
@@ -230,14 +394,17 @@ public class PlayerCamera : MonoBehaviour
 
     /// <summary>
     /// 指定したターゲットへカメラをロックオンします。
-    /// プレイヤーを追従対象にしたまま、
-    /// Rotation Composerだけをターゲット方向へ向けます。
     /// </summary>
     /// <param name="target">ロックオン対象。</param>
-    /// <param name="duration">カメラ移動時間。</param>
+    /// <param name="duration">注視点が中間位置へ遷移するまでの時間。</param>
+    /// <param name="playerMoveDirection">
+    /// ロックオン開始時点のPlayer移動方向(ワールド空間)。
+    /// 未指定の場合はTarget方向のみでカメラ位置を決定します。
+    /// </param>
     public void BeginTargetLock(
         Transform target,
-        float duration)
+        float duration,
+        Vector3 playerMoveDirection = default)
     {
         if (target == null ||
             m_cinemachineCamera == null ||
@@ -249,9 +416,21 @@ public class PlayerCamera : MonoBehaviour
 
         m_targetLookTween?.Kill();
 
-        Vector3 startPosition =
-            m_targetLookTransform.position;
+        Vector3 playerPos = GetTrackingPosition();
 
+        // ★修正点: カメラの軌道位置を「Target方向 + 移動方向」の目標角度へ即座にスナップする
+        // これを行わないと、離れた敵をロックした瞬間に注視点だけが先に動き、
+        // カメラ位置の追従が間に合わず画面外に出てしまいます
+        SnapLockOnOrbitHeading(playerPos, target.position, playerMoveDirection);
+
+        Vector3 targetLookPos = ComputeClampedTargetLookPosition(playerPos, target.position);
+
+        // ★修正点: カメラが「現在向いている方向」の注視点を初期位置にして即座標を更新する
+        // これにより、一瞬古い位置や原点を向いてしまう違和感を防止します
+        float targetDistance = Vector3.Distance(playerPos, targetLookPos);
+        Vector3 startPosition = playerPos + m_cinemachineCamera.transform.forward * targetDistance;
+
+        m_targetLookTransform.position = startPosition;
         m_targetLookTransform.gameObject.SetActive(true);
 
         SetCameraLookTarget(m_targetLookTransform);
@@ -266,10 +445,13 @@ public class PlayerCamera : MonoBehaviour
                         return;
                     }
 
+                    Vector3 currentPlayerPos = GetTrackingPosition();
+                    Vector3 currentTargetLookPos = ComputeClampedTargetLookPosition(currentPlayerPos, target.position);
+
                     m_targetLookTransform.position =
                         Vector3.Lerp(
                             startPosition,
-                            target.position,
+                            currentTargetLookPos,
                             progress);
                 },
                 1.0f,
@@ -280,8 +462,15 @@ public class PlayerCamera : MonoBehaviour
     /// <summary>
     /// ロックオン中のカメラターゲットを更新します。
     /// </summary>
-    /// <param name="target">現在のターゲット。</param>
-    public void UpdateTargetLock(Transform target)
+    /// <param name="target">ロックオン対象。</param>
+    /// <param name="playerMoveDirection">
+    /// 現在のPlayer移動方向(ワールド空間、正規化不要)。
+    /// 後退・斜め後退移動時にPlayerの全身が画面内に収まるよう、
+    /// カメラ軌道角度の計算に反映されます。未指定の場合はTarget方向のみで決定します。
+    /// </param>
+    public void UpdateTargetLock(
+        Transform target,
+        Vector3 playerMoveDirection = default)
     {
         if (target == null ||
             m_targetLookTransform == null)
@@ -289,19 +478,23 @@ public class PlayerCamera : MonoBehaviour
             return;
         }
 
+        Vector3 playerPos = GetTrackingPosition();
+        Vector3 targetLookPos = ComputeClampedTargetLookPosition(playerPos, target.position);
+
         m_targetLookTransform.position =
             Vector3.Lerp(
                 m_targetLookTransform.position,
-                target.position,
+                targetLookPos,
                 Time.deltaTime * 12.0f);
+
+        // ★修正点: Target方向だけでなくPlayerの移動方向もブレンドしてカメラ軌道角度を追従させる
+        // これにより後退・斜め後退移動時にもカメラがPlayerの背後寄りへ回り込みやすくなります
+        UpdateLockOnOrbitHeading(playerPos, target.position, playerMoveDirection, Time.deltaTime);
     }
 
     /// <summary>
     /// ロックオンを解除します。
-    /// カメラを別方向へ移動させず、
-    /// 現在のカメラ状態から直接通常操作へ戻します。
     /// </summary>
-    /// <param name="duration">互換性のために保持している引数です。</param>
     public void EndTargetLock(float duration)
     {
         m_targetLookTween?.Kill();
@@ -310,10 +503,6 @@ public class PlayerCamera : MonoBehaviour
         ClearCameraLookTarget();
     }
 
-    /// <summary>
-    /// CinemachineCameraのLook Atターゲットを設定します。
-    /// </summary>
-    /// <param name="target">Look Atターゲット。</param>
     private void SetCameraLookTarget(Transform target)
     {
         CameraTarget cameraTarget =
@@ -331,9 +520,6 @@ public class PlayerCamera : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// CinemachineCameraのLook Atターゲットを解除します。
-    /// </summary>
     private void ClearCameraLookTarget()
     {
         CameraTarget cameraTarget =
@@ -352,15 +538,20 @@ public class PlayerCamera : MonoBehaviour
             m_inputAxisController.enabled = true;
         }
     }
+
     /// <summary>
     /// 指定したターゲットへの注視を開始します。
-    /// Xボタンを押している間はターゲットを注視し続けます。
     /// </summary>
-    /// <param name="target">注視するターゲット。</param>
-    /// <param name="duration">注視方向へ移動する時間。</param>
+    /// <param name="target">注視対象。</param>
+    /// <param name="duration">注視点が中間位置へ遷移するまでの時間。</param>
+    /// <param name="playerMoveDirection">
+    /// 注視開始時点のPlayer移動方向(ワールド空間)。
+    /// 未指定の場合はTarget方向のみでカメラ位置を決定します。
+    /// </param>
     public void BeginTargetFocus(
         Transform target,
-        float duration)
+        float duration,
+        Vector3 playerMoveDirection = default)
     {
         if (target == null ||
             m_cinemachineCamera == null ||
@@ -371,12 +562,21 @@ public class PlayerCamera : MonoBehaviour
 
         m_targetLookTween?.Kill();
 
+        Vector3 playerPos = GetTrackingPosition();
+
+        // ★修正点: BeginTargetLock同様、カメラ軌道位置を即座にスナップする
+        SnapLockOnOrbitHeading(playerPos, target.position, playerMoveDirection);
+
+        Vector3 targetLookPos = ComputeClampedTargetLookPosition(playerPos, target.position);
+
+        // ★修正点: BeginTargetLock同様、現在カメラの向きを初期座標としてセットする
+        float targetDistance = Vector3.Distance(playerPos, targetLookPos);
+        Vector3 startPosition = playerPos + m_cinemachineCamera.transform.forward * targetDistance;
+
+        m_targetLookTransform.position = startPosition;
         m_targetLookTransform.gameObject.SetActive(true);
 
         SetCameraLookTarget(m_targetLookTransform);
-
-        Vector3 startPosition =
-            m_targetLookTransform.position;
 
         m_targetLookTween =
             DOTween.To(
@@ -388,10 +588,13 @@ public class PlayerCamera : MonoBehaviour
                         return;
                     }
 
+                    Vector3 currentPlayerPos = GetTrackingPosition();
+                    Vector3 currentTargetLookPos = ComputeClampedTargetLookPosition(currentPlayerPos, target.position);
+
                     m_targetLookTransform.position =
                         Vector3.Lerp(
                             startPosition,
-                            target.position,
+                            currentTargetLookPos,
                             progress);
                 },
                 1.0f,
@@ -402,8 +605,14 @@ public class PlayerCamera : MonoBehaviour
     /// <summary>
     /// 注視中のターゲットを追従します。
     /// </summary>
-    /// <param name="target">現在のターゲット。</param>
-    public void UpdateTargetFocus(Transform target)
+    /// <param name="target">注視対象。</param>
+    /// <param name="playerMoveDirection">
+    /// 現在のPlayer移動方向(ワールド空間、正規化不要)。
+    /// UpdateTargetLock同様、カメラ軌道角度の計算に反映されます。
+    /// </param>
+    public void UpdateTargetFocus(
+        Transform target,
+        Vector3 playerMoveDirection = default)
     {
         if (target == null ||
             m_targetLookTransform == null ||
@@ -412,16 +621,21 @@ public class PlayerCamera : MonoBehaviour
             return;
         }
 
+        Vector3 playerPos = GetTrackingPosition();
+        Vector3 targetLookPos = ComputeClampedTargetLookPosition(playerPos, target.position);
+
         m_targetLookTransform.position =
             Vector3.Lerp(
                 m_targetLookTransform.position,
-                target.position,
+                targetLookPos,
                 Time.deltaTime * 15.0f);
+
+        // ★修正点: UpdateTargetLockと同様、移動方向を加味してカメラ軌道位置を追従させる
+        UpdateLockOnOrbitHeading(playerPos, target.position, playerMoveDirection, Time.deltaTime);
     }
 
     /// <summary>
-    /// ターゲットへの注視を終了し、
-    /// 通常のカメラ操作へ戻します。
+    /// ターゲットへの注視を終了します。
     /// </summary>
     public void EndTargetFocus()
     {
@@ -430,9 +644,7 @@ public class PlayerCamera : MonoBehaviour
 
         ClearCameraLookTarget();
     }
-    /// <summary>
-    /// オブジェクト破棄時にTweenを停止します。
-    /// </summary>
+
     private void OnDestroy()
     {
         m_targetLookTween?.Kill();

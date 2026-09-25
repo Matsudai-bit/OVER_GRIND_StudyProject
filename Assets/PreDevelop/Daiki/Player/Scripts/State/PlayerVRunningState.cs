@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 /// <summary>
@@ -184,10 +185,16 @@ public sealed class PlayerVRunningState
             return;
         }
 
+
         // ゲージが本体側の消費によって尽きていないか確認
         // （中断復帰直後や、消費が進んで0になった場合はここで検知する）
         if (Owner.SuspendedBoostGaugeRate <= 0.0f)
         {
+            // 現在のVブースト入力状態を消費して、
+            // WalkingStateへ遷移した直後に
+            // 同じ入力で再チャージされることを防ぐ。
+            Owner.InputReader.ConsumeVBoostInput();
+
             Debug.Log(
                 "[PlayerVRunningState] " +
                 "ゲージを消費しきったため通常歩行へ遷移します。",
@@ -197,15 +204,21 @@ public sealed class PlayerVRunningState
             return;
         }
 
+
         // 移動入力がなくなった場合は、打ち切らずに中断する。
         // 待機中に再び移動入力が入れば復帰できるようにする。
-        if (!Owner.InputReader.HasMoveInput)
+        // ただし、ブーストダッシュ中は入力を必要としないため、
+        // 通常移動フェーズでのみ中断判定を行う。
+        if (m_currentPhase == VBoostPhase.NORMAL_MOVE &&
+            !Owner.InputReader.HasMoveInput)
         {
             SuspendBoost();
 
             Machine.ChangeState<PlayerIdlingState>();
             return;
         }
+
+
 
         // ジャンプ入力を確認
         // 同様に打ち切らず中断し、着地後に復帰させる
@@ -263,11 +276,12 @@ public sealed class PlayerVRunningState
     }
 
 
-    /// <summary>
-    /// 現在のフェーズに応じた移動処理を行い、
-    /// ダッシュ時間経過時はフェーズを切り替えます。
-    /// </summary>
-    private void UpdatePhaseMovement()
+
+/// <summary>
+/// 現在のフェーズに応じた移動処理を行い、
+/// ダッシュ時間経過時はフェーズを切り替えます。
+/// </summary>
+private void UpdatePhaseMovement()
     {
         switch (m_currentPhase)
         {
@@ -280,12 +294,6 @@ public sealed class PlayerVRunningState
                 // スティック入力は使用しない。
                 // チャージ終了時に確定した方向へ固定する。
                 //
-                // 第3引数に回転速度を指定することで、
-                // Player自身はダッシュ方向へ徐々に向く。
-                //
-                // 移動方向と向きを分離しているため、
-                // 回転途中でもダッシュの移動方向は変化しない。
-                //
 
                 Owner.Motor.MoveAtFixedWorldDirection(
                     m_boostDashDirection,
@@ -297,14 +305,7 @@ public sealed class PlayerVRunningState
 
                 if (m_elapsedTime >= BOOST_DASH_DURATION)
                 {
-                    // ------------------------------------------------
-                    // ダッシュ終了時に正面を確実に進行方向へ合わせる
-                    // ------------------------------------------------
-                    //
-                    // 回転速度だけでは微妙な誤差が残る可能性があるため、
-                    // 通常移動へ移行する瞬間に正面を完全に合わせる。
-                    //
-
+                    // ダッシュ終了時に正面を進行方向へ合わせる
                     Vector3 finalForward =
                         m_boostDashDirection;
 
@@ -333,13 +334,36 @@ public sealed class PlayerVRunningState
             case VBoostPhase.NORMAL_MOVE:
 
                 // ------------------------------------------------
-                // 通常移動
+                // 新しいVブーストチャージ
                 // ------------------------------------------------
                 //
-                // ダッシュ終了後はスティック入力を再び使用する。
-                // Playerの正面もダッシュ進行方向に揃っているため、
-                // ここから通常通り操作できる。
+                // 現在のVブーストゲージが残っていても、
+                // 新しい長押しが成立した場合は
+                // 一度残りゲージを破棄してチャージを開始する。
                 //
+                // PlayerBoostChargingStateではチャージ時間を
+                // 0から計測するため、新しいチャージは0%から開始される。
+                //
+
+                if (Owner.Monitor.IsGrounded &&
+                    Owner.InputReader.ConsumeVBoostHoldStarted())
+                {
+                    Owner.SuspendedBoostGaugeRate = 0.0f;
+                    Owner.CarriedBoostGaugeRate = 0.0f;
+
+                    Debug.Log(
+                        "[PlayerVRunningState] " +
+                        "新しいVブーストチャージを開始します。" +
+                        "残りゲージを破棄して0%から再チャージします。",
+                        Owner);
+
+                    Machine.ChangeState<PlayerBoostChargingState>();
+                    return;
+                }
+
+                // ------------------------------------------------
+                // 通常移動
+                // ------------------------------------------------
 
                 Owner.Motor.Move(
                     Owner.InputReader.MoveInput,

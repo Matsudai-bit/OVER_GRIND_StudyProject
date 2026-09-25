@@ -74,6 +74,11 @@ public sealed class PlayerRootController : MonoBehaviour
     [SerializeField]
     private PlayerCamera m_playerCamera;
 
+    // 見た目のモデルオブジェクト（Playerの子オブジェクト）
+    // ブーストチャージ中の向き変更など、見た目だけの制御に使用する
+    [SerializeField]
+    private Transform m_modelTransform;
+
     // 初期化されているか
     private bool m_isInitialized;
 
@@ -109,18 +114,19 @@ public sealed class PlayerRootController : MonoBehaviour
             m_motor);
 
         m_stateMachineComponent.Initialize(
-            m_inputReader,
-            m_monitor,
-            m_motor,
-            m_animationPresenter,
-            m_attackController,
-            m_splineGrindController,
-            m_movementParameterAsset,
-            m_vBoostMovementParameterAsset,
-            m_boostChargingParameterAsset,
-            m_vGaugeUI,
-            m_vSpeedUI,
-            m_playerCamera);
+    m_inputReader,
+    m_monitor,
+    m_motor,
+    m_animationPresenter,
+    m_attackController,
+    m_splineGrindController,
+    m_movementParameterAsset,
+    m_vBoostMovementParameterAsset,
+    m_boostChargingParameterAsset,
+    m_vGaugeUI,
+    m_vSpeedUI,
+    m_playerCamera,
+    m_modelTransform);
 
         m_isInitialized =
             m_motor.IsInitialized &&
