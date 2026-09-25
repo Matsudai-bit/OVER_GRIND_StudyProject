@@ -58,16 +58,10 @@ public class StageSelectManager : MonoBehaviour
     [SerializeField]
     private RectTransform m_cursor;
 
-
     // ステージのある座標
     [Header("ステージの情報")]
     [SerializeField]
     private StageInfomation[] m_stagePoints;
-
-    [Header("デフォルト値")]
-    // セクター番号の通常時テクスチャ
-    [SerializeField]
-    private Sprite m_sectorDefaultTexture;
 
     // ステージ情報を表示するコンポーネント
     [Header("ステージ情報を表示するコンポーネント")]
@@ -77,18 +71,15 @@ public class StageSelectManager : MonoBehaviour
     // セクター番号
     [SerializeField]
     private UnityEngine.UI.Image m_sectorNumber;
-
     // ステージ名（日本語）
     [SerializeField]
     private TextMeshProUGUI m_stageNameJa;
     // ステージ名（英語）
     [SerializeField]
     private TextMeshProUGUI[] m_stageNameEng;
-
     // ベストタイム
     [SerializeField]
     private TextMeshProUGUI m_bestTime;
-
 
     // カーソルの衝突の有無で表示非表示を切り替えるオブジェクト
     [Header("ステージ情報を表示するコンポーネント")]
@@ -99,11 +90,26 @@ public class StageSelectManager : MonoBehaviour
     [SerializeField]
     private UnityEngine.UI.Image m_arrowLineImage;
 
+    [Header("デフォルト値関連")]
+    // セクター番号の通常時テクスチャ
+    [SerializeField]
+    private Sprite m_defaultSectorTexture;
+    // ステージ番号のデフォルト値
+    [SerializeField]
+    private string m_defaultStageNumber = "STAGE-";
+    // ステージ名（日本語）のデフォルト値
+    [SerializeField]
+    private string m_defaultStageNameJa = "--------";
+    // ステージ名（英語）のデフォルト値
+    [SerializeField]
+    private string m_defaultStageNameEn = "-------------";
+    // ベストタイムのデフォルト値
+    [SerializeField]
+    private string m_defaultBestTime = "-:-.-";
 
     [Header("READYボタン")]
     [SerializeField]
     private StageSelectButton m_readyButton;
-
 
     [Header("入力判定関連")]
     // 決定キーが押される判定
@@ -330,19 +336,19 @@ public class StageSelectManager : MonoBehaviour
     private void ResetConmornent()
     {
         // ステージ番号の初期化
-        m_stageNumber.text = "";
+        m_stageNumber.text = m_defaultStageNumber;
         // セクター番号の初期化
-        m_sectorNumber.sprite = m_sectorDefaultTexture;
+        m_sectorNumber.sprite = m_defaultSectorTexture;
 
         // ステージ名の初期化
-        m_stageNameJa.text = "";
+        m_stageNameJa.text = m_defaultStageNameJa;
         foreach (var stageName in m_stageNameEng)
         {
-            stageName.text = "";
+            stageName.text = m_defaultStageNameEn;
         }
 
         // ベストタイムの初期化
-        m_bestTime.text = "00:00.00";
+        m_bestTime.text = m_defaultBestTime;
 
         // イメージコンポーネントの非表示
         m_onCursorImage.enabled = false;
