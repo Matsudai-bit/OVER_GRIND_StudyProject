@@ -888,4 +888,28 @@ public sealed class PlayerMotor : MonoBehaviour
                 velocity.y,
                 nextHorizontalVelocity.z);
     }
+    /// <summary>攻撃中心から離れる水平速度と上向き速度を適用します。</summary>
+    public void ApplyKnockback(Vector3 attackCenter, float speed, float liftSpeed)
+    {
+        if (!m_isInitialized) return;
+
+        Vector3 direction = Vector3.ProjectOnPlane(m_playerRigidbody.position - attackCenter, Vector3.up);
+        if (direction.sqrMagnitude <= DIRECTION_SQR_THRESHOLD)
+        {
+            direction = Vector3.ProjectOnPlane(-transform.forward, Vector3.up);
+        }
+        if (direction.sqrMagnitude <= DIRECTION_SQR_THRESHOLD)
+        {
+            direction = Vector3.back;
+        }
+        m_playerRigidbody.linearVelocity = direction.normalized * Mathf.Max(0.0f, speed)
+            + Vector3.up * Mathf.Max(0.0f, liftSpeed);
+    }
+
+    /// <summary>吹き飛び速度を解除します。以降の落下には通常の重力を使用します。</summary>
+    public void StopKnockback()
+    {
+        if (!m_isInitialized) return;
+        m_playerRigidbody.linearVelocity = Vector3.zero;
+    }
 }
