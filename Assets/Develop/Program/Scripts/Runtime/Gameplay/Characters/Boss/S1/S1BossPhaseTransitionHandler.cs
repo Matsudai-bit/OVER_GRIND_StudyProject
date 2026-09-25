@@ -11,6 +11,10 @@ public sealed class S1BossPhaseTransitionHandler : MonoBehaviour
     [SerializeField, Header("ステージ1フェーズ移行")]
     private S1P1BossLegsController m_s1P1BossLegsController;
 
+    // フェーズ1から2へ移行するまでの時間
+    [SerializeField, Min(0.0f)]
+    private float m_s1P1TransitionDuration = 5.0f;
+
     // ボス制御
     private BossController m_bossController;
 
@@ -18,15 +22,12 @@ public sealed class S1BossPhaseTransitionHandler : MonoBehaviour
     private BossPhaseController m_phaseController;
 
     /// <summary>
-    /// 必要なコンポーネントを取得します。
+    /// 必要な参照を取得します。
     /// </summary>
     private void Awake()
     {
-        m_bossController =
-            GetComponent<BossController>();
-
-        m_phaseController =
-            GetComponent<BossPhaseController>();
+        m_bossController = GetComponent<BossController>();
+        m_phaseController = GetComponent<BossPhaseController>();
     }
 
     /// <summary>
@@ -57,8 +58,7 @@ public sealed class S1BossPhaseTransitionHandler : MonoBehaviour
     /// フェーズ終了要求に対応する遷移ステートを開始します。
     /// </summary>
     /// <param name="phaseID">終了したフェーズ。</param>
-    private void HandlePhaseCompletionRequested(
-        BossPhaseID phaseID)
+    private void HandlePhaseCompletionRequested(BossPhaseID phaseID)
     {
         if (m_bossController == null)
         {
@@ -91,13 +91,13 @@ public sealed class S1BossPhaseTransitionHandler : MonoBehaviour
             Debug.LogError(
                 $"{nameof(S1P1BossLegsController)}が設定されていません。",
                 this);
-
             return;
         }
 
         m_bossController.StateMachine
             .ChangeState<S1P1BossLegsCollapsingState>(
-                m_s1P1BossLegsController);
+                m_s1P1BossLegsController,
+                m_s1P1TransitionDuration);
     }
 
     /// <summary>
@@ -105,15 +105,27 @@ public sealed class S1BossPhaseTransitionHandler : MonoBehaviour
     /// </summary>
     private void StartS1P2Transition()
     {
-        m_phaseController?.AdvancePhase();
+        //if (m_s1P1BossLegsController == null)
+        //{
+        //    Debug.LogError(
+        //        $"{nameof(S1P1BossLegsController)}が設定されていません。",
+        //        this);
+        //    return;
+        //}
+
+        //m_bossController.StateMachine
+        //    .ChangeState<S1P1BossLegsCollapsingState>(
+        //        m_s1P1BossLegsController,
+        //        m_s1P1TransitionDuration);
+
+        m_phaseController.AdvancePhase();
     }
 
     /// <summary>
-    /// ステージ1フェーズ3の遷移を開始します。
+    /// ステージ1フェーズ2の遷移を開始します。
     /// </summary>
     private void StartS1P3Transition()
     {
-        SceneManager.LoadScene(
-            "TitleScene");
+        SceneManager.LoadScene("TitleScene");
     }
 }
