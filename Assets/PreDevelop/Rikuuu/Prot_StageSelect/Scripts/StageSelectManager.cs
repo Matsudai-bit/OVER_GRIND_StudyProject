@@ -108,6 +108,7 @@ public class StageSelectManager : MonoBehaviour
     private string m_defaultBestTime = "-:-.-";
 
     [Header("READYボタン")]
+    // 準備完了ボタン
     [SerializeField]
     private StageSelectButton m_readyButton;
 
@@ -116,8 +117,8 @@ public class StageSelectManager : MonoBehaviour
     [SerializeField]
     private InputActionReference m_enterActionRef;
 
-
-    [Header("マップ")]
+    [Header("マップコントローラー")]
+    // マップコントローラー
     [SerializeField]
     private MapController m_mapController;
 
@@ -132,6 +133,7 @@ public class StageSelectManager : MonoBehaviour
 
     private void Start()
     {
+        // コンポーネントの内容を初期化する
         ResetConmornent();
     }
 
@@ -148,14 +150,11 @@ public class StageSelectManager : MonoBehaviour
         {
             return;
         }
-
         m_hoveredIndex = hoveredIndex;
 
-        // 変化があったときのみ表示する
+        // カーソルが乗ったら
         if (IsHovering)
         {
-            Debug.Log("カーソルが乗った: " + m_stagePoints[m_hoveredIndex].rectTransform.name);
-
             // ステージ番号の表示
             m_stageNumber.text = "STAGE-" + m_stagePoints[m_hoveredIndex].stageNumber.ToString();
             // セクター番号の表示
@@ -187,10 +186,10 @@ public class StageSelectManager : MonoBehaviour
                 m_readyButton.OnCursor();
             }
         }
+        // カーソルが離れたら
         else
         {
-            Debug.Log("カーソルが離れた");
-
+            // コンポーネントの内容を初期化する
             ResetConmornent();
         }
 
@@ -235,7 +234,6 @@ public class StageSelectManager : MonoBehaviour
             }
 
             // ステージの座標をカーソルのローカル座標に変換して距離を測る
-            // （Canvasの拡大率やマップの拡大縮小の影響を受けない）
             Vector2 localPos = m_cursor.InverseTransformPoint(m_stagePoints[i].rectTransform.position);
             float distance = localPos.magnitude;
 
