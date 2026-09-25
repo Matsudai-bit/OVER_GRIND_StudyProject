@@ -133,6 +133,14 @@ public sealed class PlayerMonitor : MonoBehaviour
                 {
                     break;
                 }
+                else
+                {
+                    m_hitRailInfo = collider.gameObject.GetComponentInParent<SplineRailInfo>();
+                    if (!m_hitRailInfo)
+                        Debug.LogWarning("衝突したオブジェクトの階層からRailInfoが取得できないです");
+
+                }
+
 
             }
 
