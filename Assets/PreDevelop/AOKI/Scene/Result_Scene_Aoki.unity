@@ -743,12 +743,64 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ResultSelectionInput
   nextStageVisual: {fileID: 1227817775}
+  slideOffset: -50
   stageSelectVisual: {fileID: 188486866}
   unselectedScale: 1
-  selectedScale: 1.2
-  unselectedOffsetX: 0
-  switchDuration: 0.2
+  duration: 0.25
   loopDuration: 0.8
+  loopSlideAmount: -10
+  loopScaleAmount: 1.2
+  upAction:
+    m_Name: Up
+    m_Type: 0
+    m_ExpectedControlType: 
+    m_Id: 418f98f1-db9f-497f-9ddb-dcae75221a91
+    m_Processors: 
+    m_Interactions: 
+    m_SingletonActionBindings:
+    - m_Name: 
+      m_Id: 7341b8dc-cd85-4da3-8e05-1df050aaa521
+      m_Path: <Keyboard>/upArrow
+      m_Interactions: 
+      m_Processors: 
+      m_Groups: 
+      m_Action: Up
+      m_Flags: 0
+    m_Flags: 0
+  downAction:
+    m_Name: Down
+    m_Type: 0
+    m_ExpectedControlType: 
+    m_Id: 3e77a924-e71d-4ed6-b444-80c8ac4d3787
+    m_Processors: 
+    m_Interactions: 
+    m_SingletonActionBindings:
+    - m_Name: 
+      m_Id: d698a3b7-cde4-4292-9ed8-695f2052390a
+      m_Path: <Keyboard>/downArrow
+      m_Interactions: 
+      m_Processors: 
+      m_Groups: 
+      m_Action: Down
+      m_Flags: 0
+    m_Flags: 0
+  submitAction:
+    m_Name: Submit
+    m_Type: 0
+    m_ExpectedControlType: 
+    m_Id: dd134060-1618-4a82-8e30-bc8bde3439b3
+    m_Processors: 
+    m_Interactions: 
+    m_SingletonActionBindings:
+    - m_Name: 
+      m_Id: f5ead402-6634-4cce-b37b-4c2fb02764d9
+      m_Path: <Keyboard>/enter
+      m_Interactions: 
+      m_Processors: 
+      m_Groups: 
+      m_Action: Submit
+      m_Flags: 0
+    m_Flags: 0
 --- !u!4 &963085467
 Transform:
   m_ObjectHideFlags: 0
