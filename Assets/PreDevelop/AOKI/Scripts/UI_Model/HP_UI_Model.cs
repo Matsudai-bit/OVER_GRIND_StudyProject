@@ -4,21 +4,19 @@ using System;
 //変更UIモデル｛HP｝
 public class HP_UI_Model : MonoBehaviour
 {
+    public float MaxHp { get; private set; } = 100f;
+    public float CurrentHp { get; private set; }
 
-    public float MaxHP { get; private set; } = 100f; //最大値
-    public float CurrentHP { get; private set; }     //変更値
+    public event Action<float, float> OnHpChanged;
 
-
-    public event Action<float, float> OnHPChanged;//
-
-    void Start()
+    private void Start()
     {
-        CurrentHP = MaxHP;
+        CurrentHp = MaxHp;
     }
 
     public void TakeDamage(float damage)
     {
-        CurrentHP = Mathf.Max(0,  CurrentHP - damage);
-        OnHPChanged.Invoke(CurrentHP, MaxHP);
+        CurrentHp = Mathf.Max(0, CurrentHp - damage);
+        OnHpChanged?.Invoke(CurrentHp, MaxHp);
     }
 }
