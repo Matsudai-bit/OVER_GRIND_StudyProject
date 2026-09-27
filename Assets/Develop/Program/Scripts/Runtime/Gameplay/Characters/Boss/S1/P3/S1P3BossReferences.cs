@@ -14,12 +14,24 @@ public sealed class S1P3BossReferences : BossPhaseParameterProvider
 
     [SerializeField, Header("突進攻撃パラメータ")]
     S1P3BossChargeAttackParameterAsset m_chargeAttackParameterAsset;
+    // エネルギー砲状態
+    [SerializeField, Header("エネルギー砲")]
+    private S1P3EnergyCannonStateReferences m_energyCannonStateReferences;
+    [SerializeField, Header("状態のパラメータ")]
+    private S1P3BossStateParameterAsset m_stateParameterAsset;
 
+    public S1P3BossStateParameterAsset StateParameterAsset => m_stateParameterAsset;
     /// <summary>
     /// 突進目的地候補を取得します。
     /// </summary>
     public IReadOnlyList<Transform> ChargeDestinationPoints =>
         m_chargeDestinationPoints;
+
+    /// <summary>
+    /// エネルギー砲状態の参照を取得します。
+    /// </summary>
+    public S1P3EnergyCannonStateReferences EnergyCannonStateReferences =>
+            m_energyCannonStateReferences;
 
     public override BossPhaseParameters CreatePhaseParameters()
     {
