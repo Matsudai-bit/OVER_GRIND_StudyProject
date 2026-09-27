@@ -8,9 +8,11 @@ using UnityEngine;
 public sealed class S1P3BossStateParameterAssetEditor : Editor
 {
     private SerializedProperty m_energyCannonProperty;
+    private SerializedProperty m_dreadAttackProperty;
     private SerializedProperty m_chargeParameterAssetProperty;
 
     private bool m_showEnergyCannon = true;
+    private bool m_showDreadAttack = true;
     private bool m_showCharge = true;
     private bool m_showChargeDetails = true;
 
@@ -24,6 +26,9 @@ public sealed class S1P3BossStateParameterAssetEditor : Editor
     {
         m_energyCannonProperty =
             serializedObject.FindProperty("m_energyCannon");
+
+        m_dreadAttackProperty =
+            serializedObject.FindProperty("m_dreadAttack");
 
         m_chargeParameterAssetProperty =
             serializedObject.FindProperty("m_chargeParameterAsset");
@@ -45,6 +50,10 @@ public sealed class S1P3BossStateParameterAssetEditor : Editor
         serializedObject.Update();
 
         DrawEnergyCannonParameters();
+
+        EditorGUILayout.Space(8.0f);
+
+        DrawDreadAttackParameters();
 
         EditorGUILayout.Space(8.0f);
 
@@ -102,6 +111,141 @@ public sealed class S1P3BossStateParameterAssetEditor : Editor
             "m_trackingSpeed",
             "追従速度",
             "Player方向へエネルギー砲を左右に動かす速度です。");
+
+        EditorGUILayout.EndVertical();
+    }
+
+
+    /// <summary>
+    /// ドレッド攻撃状態のパラメータを描画します。
+    /// </summary>
+    private void DrawDreadAttackParameters()
+    {
+        m_showDreadAttack =
+            EditorGUILayout.Foldout(
+                m_showDreadAttack,
+                "ドレッド攻撃",
+                true);
+
+        if (!m_showDreadAttack)
+        {
+            return;
+        }
+
+        EditorGUILayout.BeginVertical(
+            EditorStyles.helpBox);
+
+        EditorGUILayout.LabelField(
+            "オイル飛行",
+            EditorStyles.boldLabel);
+
+        DrawRelativeProperty(
+            m_dreadAttackProperty,
+            "m_ascentDuration",
+            "上昇時間",
+            "オイルが上方向へ飛び出す時間です。");
+
+        DrawRelativeProperty(
+            m_dreadAttackProperty,
+            "m_horizontalMoveDuration",
+            "水平移動時間",
+            "着地点上空まで移動する時間です。");
+
+        DrawRelativeProperty(
+            m_dreadAttackProperty,
+            "m_fallDuration",
+            "落下時間",
+            "着地点上空から地面まで落下する時間です。");
+
+        DrawRelativeProperty(
+            m_dreadAttackProperty,
+            "m_flightHeight",
+            "飛翔高度",
+            "オイルが飛翔するときの高さです。");
+
+        EditorGUILayout.Space(4.0f);
+
+        EditorGUILayout.LabelField(
+            "着地点",
+            EditorStyles.boldLabel);
+
+        DrawRelativeProperty(
+            m_dreadAttackProperty,
+            "m_landingRadius",
+            "着地点ランダム半径",
+            "Playerを中心に着地点をランダム選択する半径です。");
+
+        DrawRelativeProperty(
+            m_dreadAttackProperty,
+            "m_groundRaycastStartHeight",
+            "地面探索Ray開始高さ",
+            "地面探索Rayの開始高さです。");
+
+        DrawRelativeProperty(
+            m_dreadAttackProperty,
+            "m_groundRaycastDistance",
+            "地面探索Ray距離",
+            "地面探索Rayの最大距離です。");
+
+        EditorGUILayout.Space(4.0f);
+
+        EditorGUILayout.LabelField(
+            "状態終了",
+            EditorStyles.boldLabel);
+
+        DrawRelativeProperty(
+            m_dreadAttackProperty,
+            "m_finishDelay",
+            "終了待機時間",
+            "全オイル着弾後から状態終了までの待機時間です。");
+
+        EditorGUILayout.Space(4.0f);
+
+        EditorGUILayout.LabelField(
+            "着弾予告",
+            EditorStyles.boldLabel);
+
+        DrawRelativeProperty(
+            m_dreadAttackProperty,
+            "m_targetDecalMinScale",
+            "最小サイズ",
+            "着弾予告Decalの開始サイズです。");
+
+        DrawRelativeProperty(
+            m_dreadAttackProperty,
+            "m_targetDecalMaxScale",
+            "最大サイズ",
+            "着弾予告Decalの最大サイズです。");
+
+        DrawRelativeProperty(
+            m_dreadAttackProperty,
+            "m_targetDecalMinAlpha",
+            "最小不透明度",
+            "着弾予告Decalの開始時の不透明度です。");
+
+        DrawRelativeProperty(
+            m_dreadAttackProperty,
+            "m_targetDecalMaxAlpha",
+            "最大不透明度",
+            "着弾予告Decalの最大不透明度です。");
+
+        DrawRelativeProperty(
+            m_dreadAttackProperty,
+            "m_decalGroundOffset",
+            "地面オフセット",
+            "Decalと地面の表示ずれを防ぐオフセットです。");
+
+        EditorGUILayout.Space(4.0f);
+
+        EditorGUILayout.LabelField(
+            "着弾痕",
+            EditorStyles.boldLabel);
+
+        DrawRelativeProperty(
+            m_dreadAttackProperty,
+            "m_oilDecalDuration",
+            "着弾痕表示時間",
+            "着弾後のオイルDecalを表示する時間です。");
 
         EditorGUILayout.EndVertical();
     }
@@ -232,6 +376,41 @@ public sealed class S1P3BossStateParameterAssetEditor : Editor
         {
             EditorGUILayout.HelpBox(
                 "エネルギー砲の追従速度は仕様資料に具体値がないため、実装時に調整値を設定してください。",
+                MessageType.Warning);
+        }
+
+
+        SerializedProperty minScaleProperty =
+            m_dreadAttackProperty?.FindPropertyRelative(
+                "m_targetDecalMinScale");
+
+        SerializedProperty maxScaleProperty =
+            m_dreadAttackProperty?.FindPropertyRelative(
+                "m_targetDecalMaxScale");
+
+        if (minScaleProperty != null &&
+            maxScaleProperty != null &&
+            minScaleProperty.floatValue > maxScaleProperty.floatValue)
+        {
+            EditorGUILayout.HelpBox(
+                "ドレッド攻撃の着弾予告最小サイズが最大サイズを上回っています。",
+                MessageType.Warning);
+        }
+
+        SerializedProperty minAlphaProperty =
+            m_dreadAttackProperty?.FindPropertyRelative(
+                "m_targetDecalMinAlpha");
+
+        SerializedProperty maxAlphaProperty =
+            m_dreadAttackProperty?.FindPropertyRelative(
+                "m_targetDecalMaxAlpha");
+
+        if (minAlphaProperty != null &&
+            maxAlphaProperty != null &&
+            minAlphaProperty.floatValue > maxAlphaProperty.floatValue)
+        {
+            EditorGUILayout.HelpBox(
+                "ドレッド攻撃の着弾予告最小不透明度が最大不透明度を上回っています。",
                 MessageType.Warning);
         }
 

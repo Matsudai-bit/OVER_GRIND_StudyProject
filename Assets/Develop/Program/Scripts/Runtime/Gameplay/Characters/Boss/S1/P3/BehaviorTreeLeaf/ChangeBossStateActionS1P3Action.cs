@@ -66,6 +66,11 @@ public partial class ChangeBossStateAction_S1P3 : Action
                 bossController.StateMachine.ChangeState<
                     S1P3BossEnergyCannonState>();
                 break;
+                      
+            case S1BossStateID.P3_DREAD_ATTACK:
+                bossController.StateMachine.ChangeState<
+                    S1P3BossDreadAttackState>();
+                break;
 
             default:
                 LogFailure("ñ¢ëŒâûÇÃState IDÇ≈Ç∑ÅB");

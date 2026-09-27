@@ -20,6 +20,16 @@ public sealed class S1P3BossReferences : BossPhaseParameterProvider
     [SerializeField, Header("状態のパラメータ")]
     private S1P3BossStateParameterAsset m_stateParameterAsset;
 
+    // フェーズ3で使用する攻撃設定Provider
+    [SerializeField, Header("共通参照")]
+    private S1BossPhaseAttackSettingsProvider
+        m_attackSettingsProvider;
+
+    // ドレット攻撃状態
+    [SerializeField, Header("ドレット攻撃")]
+    private DreadAttackStateReferences
+        m_dreadAttackStateReferences;
+
     public S1P3BossStateParameterAsset StateParameterAsset => m_stateParameterAsset;
     /// <summary>
     /// 突進目的地候補を取得します。
@@ -32,6 +42,18 @@ public sealed class S1P3BossReferences : BossPhaseParameterProvider
     /// </summary>
     public S1P3EnergyCannonStateReferences EnergyCannonStateReferences =>
             m_energyCannonStateReferences;
+
+    /// <summary>
+    /// 攻撃設定Providerを取得します。
+    /// </summary>
+    public S1BossPhaseAttackSettingsProvider AttackSettingsProvider =>
+        m_attackSettingsProvider;
+
+    /// <summary>
+    /// ドレット攻撃状態の参照を取得します。
+    /// </summary>
+    public DreadAttackStateReferences DreadAttackStateReferences =>
+        m_dreadAttackStateReferences;
 
     public override BossPhaseParameters CreatePhaseParameters()
     {

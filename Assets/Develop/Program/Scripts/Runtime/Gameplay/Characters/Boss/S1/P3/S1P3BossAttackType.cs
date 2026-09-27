@@ -7,5 +7,6 @@ using System;
 public enum S1P3BossAttackType
 {
     CHARGING, // 突進
-    ENERGY_CANNON
+    ENERGY_CANNON,
+    DREAD_ATTACK
 }

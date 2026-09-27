@@ -11,6 +11,9 @@ public sealed class S1P3BossStateParameterAsset : ScriptableObject
     [SerializeField, Header("エネルギー砲")]
     private S1P3BossEnergyCannonStateParameters m_energyCannon = new();
 
+    [SerializeField, Header("ドレッド攻撃")]
+    private S1P3BossDreadAttackStateParameters m_dreadAttack = new();
+
     [SerializeField, Header("突進")]
     private S1P3BossChargeAttackParameterAsset m_chargeParameterAsset;
 
@@ -21,10 +24,18 @@ public sealed class S1P3BossStateParameterAsset : ScriptableObject
         m_energyCannon;
 
     /// <summary>
+    /// ドレッド攻撃状態のパラメータを取得します。
+    /// </summary>
+    public S1P3BossDreadAttackStateParameters DreadAttack =>
+        m_dreadAttack;
+
+    /// <summary>
     /// 連続突進状態のパラメータアセットを取得します。
     /// </summary>
     public S1P3BossChargeAttackParameterAsset ChargeParameterAsset =>
         m_chargeParameterAsset;
+
+
 
     /// <summary>
     /// 必要な状態パラメータが設定されているか確認します。
@@ -36,6 +47,7 @@ public sealed class S1P3BossStateParameterAsset : ScriptableObject
     public bool HasRequiredParameters()
     {
         return m_energyCannon != null &&
+               m_dreadAttack != null &&
                m_chargeParameterAsset != null;
     }
 }
