@@ -1,17 +1,21 @@
 using UnityEngine;
+using UnityEngine.UI;
 using UnityEngine.InputSystem;
 using DG.Tweening;
 
-// クラス名をファイル名(ResultSelectionInput)に合わせて修正しました
 public class ResultSelectionInput : MonoBehaviour
 {
-    [Header("Next Stage ")]
+    [Header("Next Stage (画像切り替え & スライド移動)")]
     [SerializeField] private RectTransform nextStageVisual;
+    [SerializeField] private Image nextStageImage;
+    [SerializeField] private Sprite nextStageUnselectedSprite; 
+    [SerializeField] private Sprite nextStageSelectedSprite; 
     [Tooltip("非選択時にどれくらい横へずらしておくか")]
     [SerializeField] private float slideOffset = -50f;
 
-    [Header("Stage Select ")]
+    [Header("Stage Select (枠フェード & 拡縮アニメーション)")]
     [SerializeField] private RectTransform stageSelectVisual;
+    [SerializeField] private Image stageSelectFrameImage;    
     [Tooltip("非選択時の縮小サイズ割合")]
     [SerializeField] private float unselectedScale = 0.8f;
 
@@ -25,69 +29,36 @@ public class ResultSelectionInput : MonoBehaviour
     [Tooltip("白枠が選択中に拡大し続ける割合")]
     [SerializeField] private float loopScaleAmount = 1.05f;
 
-    [Header("Input System 設定")]
-    [SerializeField] private InputAction upAction = new InputAction("Up", binding: "<Keyboard>/upArrow");
-    [SerializeField] private InputAction downAction = new InputAction("Down", binding: "<Keyboard>/downArrow");
-    [SerializeField] private InputAction submitAction = new InputAction("Submit", binding: "<Keyboard>/enter");
-
     private bool isNextStageSelected = true;
 
-    // 元の座標とサイズを記憶する用
     private float nsOriginalPosX;
     private Vector3 ssOriginalScale;
 
-    private void Awake()
-    {
-        // スクリプト起動時に、WASDキーやゲームパッドの入力を自動で追加バインドします
-        upAction.AddBinding("<Keyboard>/w");
-        upAction.AddBinding("<Gamepad>/dpad/up");
-        upAction.AddBinding("<Gamepad>/leftStick/up");
-
-        downAction.AddBinding("<Keyboard>/s");
-        downAction.AddBinding("<Gamepad>/dpad/down");
-        downAction.AddBinding("<Gamepad>/leftStick/down");
-
-        submitAction.AddBinding("<Gamepad>/buttonSouth"); // 決定ボタン (XboxのA, PSの×など)
-    }
-
-    private void OnEnable()
-    {
-        upAction.Enable();
-        downAction.Enable();
-        submitAction.Enable();
-    }
-
-    private void OnDisable()
-    {
-        upAction.Disable();
-        downAction.Disable();
-        submitAction.Disable();
-    }
-
     void Start()
     {
-        // 最初の位置・サイズを記憶
         if (nextStageVisual != null) nsOriginalPosX = nextStageVisual.anchoredPosition.x;
         if (stageSelectVisual != null) ssOriginalScale = stageSelectVisual.localScale;
 
-        // 起動時はアニメーションなしで即座に初期状態を反映
         UpdateVisuals(true);
     }
 
-    void Update()
+    public void OnNavigate(InputValue value)
     {
-        // InputActionを使った入力判定
-        if (downAction.WasPressedThisFrame())
-        {
-            if (isNextStageSelected) SelectStageSelect();
-        }
-        else if (upAction.WasPressedThisFrame())
-        {
-            if (!isNextStageSelected) SelectNextStage();
-        }
+        Vector2 input = value.Get<Vector2>();
 
-        // 決定キー
-        if (submitAction.WasPressedThisFrame())
+        if (input.y > 0.5f && !isNextStageSelected)
+        {
+            SelectNextStage();
+        }
+        else if (input.y < -0.5f && isNextStageSelected)
+        {
+            SelectStageSelect();
+        }
+    }
+
+    public void OnSubmit(InputValue value)
+    {
+        if (value.isPressed)
         {
             if (isNextStageSelected) Debug.Log("Next Stage 決定！");
             else Debug.Log("Stage Select 決定！");
@@ -112,8 +83,12 @@ public class ResultSelectionInput : MonoBehaviour
     {
         float t = isInstant ? 0f : duration;
 
+        // Next Stage (選択中：2本線 / 非選択：1本線)
+        if (nextStageImage != null)
+        {
+            nextStageImage.sprite = isNextStageSelected ? nextStageSelectedSprite : nextStageUnselectedSprite;
+        }
 
-        // オレンジの奴
         if (nextStageVisual != null)
         {
             nextStageVisual.DOKill();
@@ -135,7 +110,13 @@ public class ResultSelectionInput : MonoBehaviour
             }
         }
 
-        // 白の奴
+        // Stage Select (選択中：枠表示 / 非選択：枠消去)
+        if (stageSelectFrameImage != null)
+        {
+            stageSelectFrameImage.DOKill();
+            stageSelectFrameImage.DOFade(isNextStageSelected ? 0f : 1f, t);
+        }
+
         if (stageSelectVisual != null)
         {
             stageSelectVisual.DOKill();
