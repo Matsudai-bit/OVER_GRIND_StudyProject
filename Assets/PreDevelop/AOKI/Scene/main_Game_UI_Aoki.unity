@@ -299,6 +299,50 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 75093914}
   m_CullTransparentMesh: 1
+--- !u!1 &170918271
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 170918272}
+  - component: {fileID: 170918273}
+  m_Layer: 0
+  m_Name: Velcle_UI_Model
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &170918272
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 170918271}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 747521808}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &170918273
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 170918271}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 98d0d4d8a09c8cd42b2224412c38f2fd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Veicle_UI_Model
 --- !u!1 &207381283
 GameObject:
   m_ObjectHideFlags: 0
@@ -1035,6 +1079,90 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 729749823}
   m_CullTransparentMesh: 1
+--- !u!1 &747521807
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 747521808}
+  m_Layer: 0
+  m_Name: UI_Main_Model
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &747521808
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 747521807}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 323, y: 181.62498, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 1900594795}
+  - {fileID: 2094099287}
+  - {fileID: 170918272}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &790647155
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 790647157}
+  - component: {fileID: 790647156}
+  m_Layer: 0
+  m_Name: UI_In_Game_Presenter
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &790647156
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 790647155}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e00ceba8aacd27d48a9e2925788558a6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::InGameUIPresenter
+  m_hpModel: {fileID: 1900594796}
+  m_timerModel: {fileID: 2094099288}
+  m_vehicleModel: {fileID: 170918273}
+  m_hpView: {fileID: 1611241331}
+  m_timerView: {fileID: 483553669}
+  m_vehicleView: {fileID: 1503262601}
+--- !u!4 &790647157
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 790647155}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 323, y: 181.62498, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &808994337
 GameObject:
   m_ObjectHideFlags: 0
@@ -1044,7 +1172,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 808994338}
-  - component: {fileID: 808994339}
   m_Layer: 5
   m_Name: Time
   m_TagString: Untagged
@@ -1078,19 +1205,6 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: -34}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &808994339
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 808994337}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6b873898a00ff6141bc8d3286af881fc, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::TimerController
-  timerView: {fileID: 483553669}
 --- !u!1 &847119470
 GameObject:
   m_ObjectHideFlags: 0
@@ -1100,7 +1214,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 847119471}
-  - component: {fileID: 847119472}
   m_Layer: 5
   m_Name: Speed_Gauge
   m_TagString: Untagged
@@ -1130,24 +1243,6 @@ RectTransform:
   m_AnchoredPosition: {x: -88.7, y: 55.5}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &847119472
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 847119470}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0756c7ba49c317d46abee590c382e27f, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::VGageController
-  speedView: {fileID: 1503262601}
-  gaugeFillImage: {fileID: 362283758}
-  maxSpeed: 40
-  speedAccelerate: 25
-  speedDecelerate: 15
-  chargeDuration: 1.5
 --- !u!1 &1029887285
 GameObject:
   m_ObjectHideFlags: 0
@@ -1519,7 +1614,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1261169067}
-  - component: {fileID: 1261169068}
   m_Layer: 5
   m_Name: VGauge
   m_TagString: Untagged
@@ -1549,24 +1643,6 @@ RectTransform:
   m_AnchoredPosition: {x: -70.7, y: 65.5}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &1261169068
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1261169066}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0756c7ba49c317d46abee590c382e27f, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::VGageController
-  speedView: {fileID: 0}
-  gaugeFillImage: {fileID: 1285433643}
-  maxSpeed: 40
-  speedAccelerate: 25
-  speedDecelerate: 15
-  chargeDuration: 1.5
 --- !u!1 &1285433641
 GameObject:
   m_ObjectHideFlags: 0
@@ -1944,6 +2020,7 @@ MonoBehaviour:
   digit10Image: {fileID: 1754483619}
   digit1Image: {fileID: 1497219622}
   digitDecimalImage: {fileID: 1029887287}
+  gaugeFillImage: {fileID: 362283758}
 --- !u!4 &1503262602
 Transform:
   m_ObjectHideFlags: 0
@@ -2002,6 +2079,11 @@ MonoBehaviour:
   digit100Image: {fileID: 1290625173}
   digit10Image: {fileID: 512848557}
   digit1Image: {fileID: 729749825}
+  greenGauge: {fileID: 2013201744}
+  redGauge: {fileID: 1348614105}
+  greenDuration: 0.2
+  redDelay: 0.4
+  redDuration: 0.6
 --- !u!4 &1611241332
 Transform:
   m_ObjectHideFlags: 0
@@ -2092,6 +2174,56 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1613211339}
   m_CullTransparentMesh: 1
+--- !u!1 &1733846851
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1733846853}
+  - component: {fileID: 1733846852}
+  m_Layer: 0
+  m_Name: Debug_UI_Contoller
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1733846852
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1733846851}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 59f445bb9b4ffe3469e6c54493af8e26, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UI_DebugController
+  hpModel: {fileID: 1900594796}
+  vehicleModel: {fileID: 170918273}
+  timerModel: {fileID: 2094099288}
+  speedAccelerate: 25
+  speedDecelerate: 15
+  chargeDuration: 1.5
+--- !u!4 &1733846853
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1733846851}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 323, y: 181.62498, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1749399404
 GameObject:
   m_ObjectHideFlags: 0
@@ -2294,6 +2426,50 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1754483617}
   m_CullTransparentMesh: 1
+--- !u!1 &1900594794
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1900594795}
+  - component: {fileID: 1900594796}
+  m_Layer: 0
+  m_Name: HP_UI_Model
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1900594795
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1900594794}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 747521808}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1900594796
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1900594794}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 782ed989ee3eeed47911bbaa47c887ca, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HP_UI_Model
 --- !u!1 &2012059201
 GameObject:
   m_ObjectHideFlags: 0
@@ -2303,7 +2479,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2012059202}
-  - component: {fileID: 2012059203}
   m_Layer: 5
   m_Name: HP_Bar
   m_TagString: Untagged
@@ -2337,25 +2512,6 @@ RectTransform:
   m_AnchoredPosition: {x: 149, y: -2}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0, y: 0}
---- !u!114 &2012059203
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2012059201}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: bdd997394c45de44dbdd990f889b1e15, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::HPBarController
-  hpNumberView: {fileID: 1611241331}
-  greenGauge: {fileID: 2013201744}
-  redGauge: {fileID: 1348614105}
-  maxHP: 100
-  greenDuration: 0.2
-  redDelay: 0.4
-  redDuration: 0.6
 --- !u!1 &2013201742
 GameObject:
   m_ObjectHideFlags: 0
@@ -2510,6 +2666,50 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &2094099286
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2094099287}
+  - component: {fileID: 2094099288}
+  m_Layer: 0
+  m_Name: Timer_UI_Model
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2094099287
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2094099286}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 747521808}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2094099288
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2094099286}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 953dd81bd68c1034cbfe04683d0560c6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Timer_UI_Model
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -2519,3 +2719,6 @@ SceneRoots:
   - {fileID: 2016884874}
   - {fileID: 28374689}
   - {fileID: 1443735428}
+  - {fileID: 790647157}
+  - {fileID: 747521808}
+  - {fileID: 1733846853}

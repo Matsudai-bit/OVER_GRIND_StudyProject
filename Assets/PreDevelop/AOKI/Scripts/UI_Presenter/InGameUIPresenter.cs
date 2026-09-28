@@ -44,7 +44,7 @@ public class InGameUIPresenter : MonoBehaviour
 
     private void HandleHpChanged(float currentHp, float maxHp)
     {
-        if (m_hpView != null) m_hpView.UpdateHpDisplay(currentHp, maxHp);
+        if (m_hpView != null) m_hpView.UpdateHPDisplay(currentHp, maxHp);
     }
 
     private void HandleTimeChanged(float time)
