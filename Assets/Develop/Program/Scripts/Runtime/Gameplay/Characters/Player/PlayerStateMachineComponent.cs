@@ -6,6 +6,13 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public sealed class PlayerStateMachineComponent : MonoBehaviour
 {
+    [SerializeField, Header("レールジャンプ")]
+    private PlayerRailJumpParameters m_railJumpParameters = new PlayerRailJumpParameters();
+
+    /// <summary>レールジャンプ専用の調整値を取得します。</summary>
+    public PlayerRailJumpParameters RailJumpParameters =>
+        m_railJumpParameters ?? (m_railJumpParameters = new PlayerRailJumpParameters());
+
     // ============================================================
     // 参照
     // ============================================================

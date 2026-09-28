@@ -41,6 +41,10 @@ public sealed class PlayerInputReader : MonoBehaviour
     // ジャンプ入力中か
     private bool m_hasJumpInput;
 
+    // 押下イベントを保持し、短い入力もグラインド側で一度だけ消費します。
+    private bool m_hasJumpPress;
+    private bool m_suppressJumpUntilRelease;
+
     // Vブースト入力が開始されたか
     private bool m_hasVBoostStarted;
 
@@ -84,7 +88,23 @@ public sealed class PlayerInputReader : MonoBehaviour
     /// <summary>
     /// ジャンプ入力中かどうかを取得します。
     /// </summary>
-    public bool HasJumpInput => m_hasJumpInput;
+    public bool HasJumpInput => m_hasJumpInput && !m_suppressJumpUntilRelease;
+
+    /// <summary>ジャンプの押下を一度だけ取得します。長押し状態は変更しません。</summary>
+    /// <returns>true：未消費の押下あり。false：押下なし。</returns>
+    public bool ConsumeJumpPress()
+    {
+        bool hasPress = m_hasJumpPress;
+        m_hasJumpPress = false;
+        return hasPress;
+    }
+
+    /// <summary>現在の長押しによる着地直後の再ジャンプを、ボタンを離すまで抑制します。</summary>
+    public void SuppressJumpUntilRelease()
+    {
+        m_suppressJumpUntilRelease = m_hasJumpInput;
+        m_hasJumpPress = false;
+    }
 
     /// <summary>
     /// 入力が有効かどうかを取得します。
@@ -428,6 +448,10 @@ public sealed class PlayerInputReader : MonoBehaviour
     private void HandleJumpPerformed(
         InputAction.CallbackContext context)
     {
+        if (!m_hasJumpInput)
+        {
+            m_hasJumpPress = true;
+        }
         m_hasJumpInput = true;
     }
 
@@ -439,6 +463,7 @@ public sealed class PlayerInputReader : MonoBehaviour
         InputAction.CallbackContext context)
     {
         m_hasJumpInput = false;
+        m_suppressJumpUntilRelease = false;
     }
 
     /// <summary>
@@ -491,6 +516,8 @@ private void HandleVBoostCanceled(
         m_hasAttackInput = false;
         m_isAttackHeld = false;
         m_hasJumpInput = false;
+        m_hasJumpPress = false;
+        m_suppressJumpUntilRelease = false;
         m_hasVBoostStarted = false;
         m_isVBoostHeld = false;
         m_hasVBoostHoldStarted = false;

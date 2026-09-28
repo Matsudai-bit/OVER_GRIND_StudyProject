@@ -52,6 +52,64 @@ public sealed class PlayerMotor : MonoBehaviour
     /// </summary>
     public bool IsInitialized => m_isInitialized;
 
+    /// <summary>描画補間の影響を受けない物理位置を取得します。</summary>
+    public Vector3 Position => m_isInitialized ? m_playerRigidbody.position : transform.position;
+
+    /// <summary>ワールド空間の初速を設定します。</summary>
+    /// <param name="velocity">水平・垂直成分を含む初速。</param>
+    public void SetWorldVelocity(Vector3 velocity)
+    {
+        if (!m_isInitialized) return;
+        m_playerRigidbody.linearVelocity = velocity;
+    }
+
+    /// <summary>障害物を確認し、レールジャンプの目標位置へ物理速度で移動します。</summary>
+    /// <param name="targetPosition">次の物理ステップで到達する位置。</param>
+    /// <param name="forward">進行方向。</param>
+    /// <param name="sourceRail">追従中のレール。移動経路の障害物から除外します。</param>
+    /// <param name="deltaTime">物理更新時間。</param>
+    /// <returns>true：障害物なし。false：障害物あり、または移動不可。</returns>
+    public bool TryMoveRailJump(Vector3 targetPosition, Vector3 forward,
+        SplineRailInfo sourceRail, float deltaTime)
+    {
+        if (!m_isInitialized || deltaTime <= 0.0f) return false;
+
+        Vector3 displacement = targetPosition - m_playerRigidbody.position;
+        float distance = displacement.magnitude;
+        float allowedDistance = distance;
+        bool isBlocked = false;
+        if (distance > OBSTACLE_CHECK_SPEED_THRESHOLD)
+        {
+            Physics.SyncTransforms();
+            RaycastHit[] hits = m_playerRigidbody.SweepTestAll(
+                displacement / distance, distance, QueryTriggerInteraction.Ignore);
+            foreach (RaycastHit hit in hits)
+            {
+                if (hit.collider.attachedRigidbody == m_playerRigidbody ||
+                    (sourceRail != null && hit.collider.GetComponentInParent<SplineRailInfo>() == sourceRail))
+                    continue;
+
+                allowedDistance = Mathf.Min(allowedDistance, Mathf.Max(0.0f, hit.distance - m_obstacleSkinWidth));
+                isBlocked = true;
+            }
+        }
+
+        if (isBlocked)
+        {
+            // 誘導を終了しても壁へ押し続けないように、今回進める速度だけを残します。
+            m_playerRigidbody.linearVelocity = displacement.normalized * (allowedDistance / deltaTime);
+            return false;
+        }
+
+        Vector3 velocity = displacement / deltaTime;
+        // 次の物理ステップの重力を補正し、計算済みの放物線へ正確に到達させます。
+        if (m_playerRigidbody.useGravity) velocity -= Physics.gravity * deltaTime;
+        m_playerRigidbody.linearVelocity = velocity;
+        if (forward.sqrMagnitude > DIRECTION_SQR_THRESHOLD)
+            m_playerRigidbody.MoveRotation(Quaternion.LookRotation(forward, Vector3.up));
+        return true;
+    }
+
     /// <summary>
     /// 現在の水平方向の移動方向を取得します。
     /// 速度がほぼ0の場合は、現在のプレイヤーの正面方向を返します。

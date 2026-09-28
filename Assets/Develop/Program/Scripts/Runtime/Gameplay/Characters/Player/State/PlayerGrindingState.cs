@@ -6,12 +6,26 @@ using UnityEngine;
 public sealed class PlayerGrindingState
     : StateBase<PlayerStateMachineComponent>
 {
+    private SplineRailInfo m_rail;
+
+    /// <summary>通常の接触検出からグラインドを開始します。</summary>
+    public PlayerGrindingState() { }
+
+    /// <summary>ジャンプから戻るレールを明示してグラインドを開始します。</summary>
+    /// <param name="rail">搭乗するレール。</param>
+    public PlayerGrindingState(SplineRailInfo rail)
+    {
+        m_rail = rail;
+    }
+
     /// <summary>
     /// 接触中のレールでグラインドを開始します。
     /// </summary>
     protected override void OnStartState()
     {
-        Owner.GrindController.StartGrind(Owner.Monitor.HitRailInfo);
+        if (m_rail == null) m_rail = Owner.Monitor.HitRailInfo;
+        Owner.InputReader.ConsumeJumpPress();
+        Owner.GrindController.StartGrind(m_rail);
     }
 
     /// <summary>
@@ -32,10 +46,12 @@ public sealed class PlayerGrindingState
             return;
         }
 
-        if (Owner.InputReader.HasJumpInput)
+        if (Owner.InputReader.ConsumeJumpPress())
         {
+            Vector2 moveInput = Owner.InputReader.MoveInput;
             Owner.GrindController.StopGrind();
-            Machine.ChangeState<PlayerJumpingState>();
+            Machine.ChangeState<PlayerRailJumpingState>(
+                m_rail, moveInput, Owner.Monitor.CurrentVelocity);
         }
     }
     /// <summary>
