@@ -9,39 +9,44 @@ public sealed class PlayerRailJumpPath
     private readonly SplineRailInfo m_rail;
     private readonly float m_speed;
     private float m_positionT;
-    private float m_heightOffset;
-    private int m_direction = 1;
+    private readonly float m_heightOffset;
+    private readonly int m_direction;
+
+    /// <summary>着地時に引き継ぐスプライン上の位置を取得します。</summary>
+    public float PositionT => m_positionT;
+
+    /// <summary>着地時に引き継ぐ進行方向を取得します。</summary>
+    public int Direction => m_direction;
+
+    /// <summary>着地時に引き継ぐ滑走速度を取得します。</summary>
+    public float Speed => m_speed;
 
     /// <summary>追従先と引き継ぐ滑走速度を保持します。</summary>
     /// <param name="rail">ジャンプ元のレール。</param>
     /// <param name="speed">レールに沿う移動速度。</param>
-    public PlayerRailJumpPath(SplineRailInfo rail, float speed)
+    /// <param name="positionT">直前の滑走位置。</param>
+    /// <param name="direction">順方向は1、逆方向は-1。</param>
+    /// <param name="heightOffset">レールからプレイヤー原点までの高さ。</param>
+    public PlayerRailJumpPath(SplineRailInfo rail, float speed, float positionT, int direction, float heightOffset)
     {
         m_rail = rail;
         m_speed = Mathf.Max(0.0f, speed);
+        m_positionT = Mathf.Clamp01(positionT);
+        m_direction = direction >= 0 ? 1 : -1;
+        m_heightOffset = heightOffset;
     }
 
-    /// <summary>現在位置から追従開始位置・高さ・進行方向を決定します。</summary>
-    /// <param name="position">プレイヤーの物理位置。</param>
-    /// <param name="forward">ジャンプ直前の進行方向。</param>
+    /// <summary>引き継いだレール上の位置から追従可能か確認します。</summary>
     /// <returns>true：追従可能。false：レールが無効。</returns>
-    public bool TryInitialize(Vector3 position, Vector3 forward)
+    public bool CanFollow()
     {
         if (!IsRailValid()) return false;
 
         using (var spline = new NativeSpline(m_rail.Container.Splines[0],
             m_rail.Container.transform.localToWorldMatrix))
         {
-            if (spline.GetLength() <= MIN_LENGTH) return false;
-            // 搭乗位置はレールの真上です。点からの最近傍では、坂で開始位置が前方へずれます。
-            SplineUtility.GetNearestPoint(spline, new Ray(position, Vector3.down), out _, out m_positionT);
-            float3 nearestPoint = spline.EvaluatePosition(m_positionT);
-            Vector3 tangent = spline.EvaluateTangent(m_positionT);
-            m_direction = Vector3.Dot(tangent, forward) >= 0.0f ? 1 : -1;
-            // 既存の搭乗高さを測定し、レール側の固定値には依存しません。
-            m_heightOffset = position.y - nearestPoint.y;
+            return spline.GetLength() > MIN_LENGTH;
         }
-        return true;
     }
 
     /// <summary>最新のレール形状から次の物理位置と接線方向を求めます。</summary>

@@ -42,6 +42,39 @@ public sealed class PlayerMotor : MonoBehaviour
     // 初期化済みかどうか
     private bool m_isInitialized;
 
+    // 誘導中だけ物理の押し戻し・重力から位置制御を分離し、離脱時に元の設定へ戻します。
+    private bool m_isRailMotionActive;
+    private bool m_previousIsKinematic;
+    private CollisionDetectionMode m_previousCollisionDetection;
+    private Vector3 m_railVelocity;
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+    private string m_lastRailJumpContact = "none";
+
+    /// <summary>発射直後の速度低下を調べるため、接触情報を初期化します。</summary>
+    public void ResetRailJumpContact() => m_lastRailJumpContact = "none";
+
+    /// <summary>ジャンプ診断用の物理設定と直近の接触相手を取得します。</summary>
+    public string RailJumpPhysicsDetails => m_playerRigidbody == null ? "Rigidbody missing" :
+        $"kinematic={m_playerRigidbody.isKinematic}, constraints={m_playerRigidbody.constraints}, contact={m_lastRailJumpContact}";
+
+    /// <summary>新しい接触の相手と法線を診断用に記録します。</summary>
+    private void OnCollisionEnter(Collision collision) => RecordRailJumpContact(collision);
+
+    /// <summary>継続中の接触の相手と法線を診断用に記録します。</summary>
+    private void OnCollisionStay(Collision collision) => RecordRailJumpContact(collision);
+
+    /// <summary>衝突が初速を打ち消した場合に確認できる情報を保持します。</summary>
+    private void RecordRailJumpContact(Collision collision)
+    {
+        m_lastRailJumpContact = $"{collision.collider.name}, normal=" +
+            (collision.contactCount > 0 ? collision.GetContact(0).normal.ToString("F3") : "none");
+    }
+#endif
+
+    /// <summary>レール誘導が設定した移動速度を取得します。</summary>
+    public Vector3 RailVelocity => m_railVelocity;
+
     /// <summary>
     /// 現在使用している最大移動速度を取得します。
     /// </summary>
@@ -63,22 +96,52 @@ public sealed class PlayerMotor : MonoBehaviour
         m_playerRigidbody.linearVelocity = velocity;
     }
 
-    /// <summary>障害物を確認し、レールジャンプの目標位置へ物理速度で移動します。</summary>
+    /// <summary>固定更新によるレール誘導を開始し、物理演算との位置の取り合いを防ぎます。</summary>
+    public void BeginRailMotion()
+    {
+        if (!m_isInitialized || m_isRailMotionActive) return;
+        m_previousIsKinematic = m_playerRigidbody.isKinematic;
+        m_previousCollisionDetection = m_playerRigidbody.collisionDetectionMode;
+        m_railVelocity = m_playerRigidbody.linearVelocity;
+        // ContinuousDynamicはキネマティックに対応しないため、一時的に切り替えます。
+        m_playerRigidbody.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
+        m_playerRigidbody.isKinematic = true;
+        m_isRailMotionActive = true;
+    }
+
+    /// <summary>誘導前の物理設定を復元し、離脱速度を適用します。</summary>
+    /// <param name="exitVelocity">離脱時の速度。</param>
+    public void EndRailMotion(Vector3 exitVelocity)
+    {
+        if (!m_isInitialized || !m_isRailMotionActive) return;
+        m_playerRigidbody.isKinematic = m_previousIsKinematic;
+        m_playerRigidbody.collisionDetectionMode = m_previousCollisionDetection;
+        m_isRailMotionActive = false;
+        if (!m_playerRigidbody.isKinematic) m_playerRigidbody.linearVelocity = exitVelocity;
+    }
+
+    /// <summary>無効化や破棄の際にも、一時的な物理設定を元に戻します。</summary>
+    private void OnDisable()
+    {
+        EndRailMotion(m_railVelocity);
+    }
+
+    /// <summary>滑走と無入力ジャンプを、障害物を確認しながら同じ物理更新で移動させます。</summary>
     /// <param name="targetPosition">次の物理ステップで到達する位置。</param>
     /// <param name="forward">進行方向。</param>
-    /// <param name="sourceRail">追従中のレール。移動経路の障害物から除外します。</param>
     /// <param name="deltaTime">物理更新時間。</param>
-    /// <returns>true：障害物なし。false：障害物あり、または移動不可。</returns>
-    public bool TryMoveRailJump(Vector3 targetPosition, Vector3 forward,
-        SplineRailInfo sourceRail, float deltaTime)
+    /// <param name="obstacle">経路上で最も近い障害物。</param>
+    /// <returns>true：移動可能。false：障害物あり、または誘導未開始。</returns>
+    public bool TryMoveAlongRail(Vector3 targetPosition, Vector3 forward,
+        float deltaTime, out RaycastHit obstacle)
     {
-        if (!m_isInitialized || deltaTime <= 0.0f) return false;
+        obstacle = default;
+        if (!m_isInitialized || !m_isRailMotionActive || deltaTime <= 0.0f) return false;
 
         Vector3 displacement = targetPosition - m_playerRigidbody.position;
         float distance = displacement.magnitude;
-        float allowedDistance = distance;
-        bool isBlocked = false;
-        if (distance > OBSTACLE_CHECK_SPEED_THRESHOLD)
+        float nearestDistance = float.PositiveInfinity;
+        if (distance > Mathf.Epsilon)
         {
             Physics.SyncTransforms();
             RaycastHit[] hits = m_playerRigidbody.SweepTestAll(
@@ -86,28 +149,40 @@ public sealed class PlayerMotor : MonoBehaviour
             foreach (RaycastHit hit in hits)
             {
                 if (hit.collider.attachedRigidbody == m_playerRigidbody ||
-                    (sourceRail != null && hit.collider.GetComponentInParent<SplineRailInfo>() == sourceRail))
-                    continue;
-
-                allowedDistance = Mathf.Min(allowedDistance, Mathf.Max(0.0f, hit.distance - m_obstacleSkinWidth));
-                isBlocked = true;
+                    IsRailCollider(hit.collider) || hit.distance >= nearestDistance) continue;
+                nearestDistance = hit.distance;
+                obstacle = hit;
             }
         }
 
-        if (isBlocked)
+        if (nearestDistance < float.PositiveInfinity)
         {
-            // 誘導を終了しても壁へ押し続けないように、今回進める速度だけを残します。
-            m_playerRigidbody.linearVelocity = displacement.normalized * (allowedDistance / deltaTime);
+            // 衝突時だけ安全な手前まで補正し、誘導解除後に壁へ押し込みません。
+            Vector3 movement = displacement.normalized * Mathf.Max(0.0f, nearestDistance - m_obstacleSkinWidth);
+            m_playerRigidbody.position += movement;
+            m_railVelocity = movement / deltaTime;
             return false;
         }
 
-        Vector3 velocity = displacement / deltaTime;
-        // 次の物理ステップの重力を補正し、計算済みの放物線へ正確に到達させます。
-        if (m_playerRigidbody.useGravity) velocity -= Physics.gravity * deltaTime;
-        m_playerRigidbody.linearVelocity = velocity;
+        m_railVelocity = displacement / deltaTime;
+        m_playerRigidbody.MovePosition(targetPosition);
         if (forward.sqrMagnitude > DIRECTION_SQR_THRESHOLD)
             m_playerRigidbody.MoveRotation(Quaternion.LookRotation(forward, Vector3.up));
         return true;
+    }
+
+    /// <summary>レールの接触を、誘導を中断する障害物から除外します。</summary>
+    /// <param name="collider">確認するコライダー。</param>
+    /// <returns>true：レール。false：レール以外。</returns>
+    private bool IsRailCollider(Collider collider)
+    {
+        int railLayer = LayerMask.NameToLayer("Rail");
+        for (Transform target = collider.transform; target != null; target = target.parent)
+        {
+            if (target.gameObject.layer == railLayer || target.CompareTag("Rail") ||
+                target.TryGetComponent<SplineRailInfo>(out _)) return true;
+        }
+        return false;
     }
 
     /// <summary>
