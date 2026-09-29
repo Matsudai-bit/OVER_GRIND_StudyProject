@@ -13,6 +13,17 @@ public sealed class PlayerRailJumpingState : StateBase<PlayerStateMachineCompone
     private bool m_isFollowingRail;
     private bool m_hasLeftSourceRail;
     private bool m_isTransitionPending;
+    private const float DASH_DISTANCE_EPSILON = 0.001f;
+    private const float DASH_BLOCKED_SPEED_RATIO = 0.5f;
+    private bool m_isDashing;
+    private bool m_hasSimulatedDash;
+    private Vector3 m_dashPreviousPosition;
+    private Vector3 m_dashHorizontalVelocity;
+    private Vector3 m_dashCommandedVelocity;
+    private float m_dashRemainingDistance;
+    private float m_dashEndSpeedRate;
+    private float m_dashTimeLimit;
+    private float m_dashElapsedTime;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
     private const float DIAGNOSTIC_DURATION = 0.2f;
     private const float DIAGNOSTIC_SPEED_RATIO = 0.5f;
@@ -49,9 +60,19 @@ public sealed class PlayerRailJumpingState : StateBase<PlayerStateMachineCompone
         if (m_moveInput.sqrMagnitude > parameters.DirectionDeadZone * parameters.DirectionDeadZone)
         {
             grind.BlockRailUntilSeparated(m_sourceRail);
+            Owner.Motor.BeginRailCollisionIgnore(m_sourceRail, parameters.RailCollisionIgnoreDuration);
             // 地上移動と同じカメラ基準で、発射時に方向を確定します。
             Vector3 direction = Owner.Motor.CalculateCameraRelativeDirection(m_moveInput);
             launchVelocity = parameters.CalculateLaunchVelocity(direction);
+            m_isDashing = true;
+            m_dashPreviousPosition = Owner.Motor.Position;
+            m_dashHorizontalVelocity = Vector3.ProjectOnPlane(launchVelocity, Vector3.up);
+            m_dashCommandedVelocity = m_dashHorizontalVelocity;
+            m_dashRemainingDistance = parameters.DashDistance;
+            m_dashEndSpeedRate = parameters.DashEndSpeedRate;
+            // 衝突などで距離を稼げない場合も、突進状態を残し続けません。
+            m_dashTimeLimit = parameters.DashDistance / Mathf.Max(DASH_DISTANCE_EPSILON,
+                m_dashHorizontalVelocity.magnitude) + Time.fixedDeltaTime * 2.0f;
         }
         else
         {
@@ -94,6 +115,8 @@ public sealed class PlayerRailJumpingState : StateBase<PlayerStateMachineCompone
             return;
         }
 
+        if (m_isDashing && UpdateDirectionalDash(deltaTime)) return;
+
         // 上昇中や離陸直後は、元のレールの検出範囲にいても搭乗しません。
         if (m_elapsedTime < m_landingDelay || Owner.Motor.VerticalVelocity > 0.0f) return;
 
@@ -113,14 +136,61 @@ public sealed class PlayerRailJumpingState : StateBase<PlayerStateMachineCompone
         }
     }
 
+    /// <summary>実際の水平移動距離で突進を制限し、終了後は減速して落下します。</summary>
+    /// <param name="deltaTime">物理更新の間隔。</param>
+    /// <returns>true：突進継続。false：距離到達または障害物などで終了。</returns>
+    private bool UpdateDirectionalDash(float deltaTime)
+    {
+        Vector3 position = Owner.Motor.Position;
+        Vector3 velocity = Owner.Monitor.CurrentVelocity;
+        if (m_hasSimulatedDash)
+        {
+            m_dashElapsedTime += deltaTime;
+            m_dashRemainingDistance -= Vector3.ProjectOnPlane(position - m_dashPreviousPosition, Vector3.up).magnitude;
+            if (m_dashRemainingDistance <= DASH_DISTANCE_EPSILON)
+            {
+                FinishDirectionalDash(velocity, true);
+                return false;
+            }
+            // 物理衝突で失われた速度を再設定せず、壁への押し込みを防ぎます。
+            float forwardSpeed = Vector3.Dot(velocity, m_dashHorizontalVelocity.normalized);
+            if (forwardSpeed < m_dashCommandedVelocity.magnitude * DASH_BLOCKED_SPEED_RATIO ||
+                m_dashElapsedTime >= m_dashTimeLimit ||
+                (m_elapsedTime >= m_landingDelay && Owner.Monitor.IsGrounded && velocity.y <= 0.0f))
+            {
+                FinishDirectionalDash(velocity, false);
+                return false;
+            }
+        }
+        m_hasSimulatedDash = true;
+        m_dashPreviousPosition = position;
+        // 最後の1ステップも残距離に合わせます。衝突後に加速し直すことはありません。
+        Vector3 horizontal = Vector3.ProjectOnPlane(velocity, Vector3.up);
+        m_dashCommandedVelocity = Vector3.ClampMagnitude(horizontal, m_dashRemainingDistance / deltaTime);
+        Owner.Motor.SetWorldVelocity(m_dashCommandedVelocity + Vector3.up * velocity.y);
+        return true;
+    }
+
+    /// <summary>距離到達時は設定割合まで減速し、上昇を終えて通常落下へ移行します。</summary>
+    /// <param name="velocity">現在の物理速度。</param>
+    /// <param name="completed">指定距離へ到達した場合はtrue。</param>
+    private void FinishDirectionalDash(Vector3 velocity, bool completed)
+    {
+        m_isDashing = false;
+        if (!completed) return; // 衝突時は物理演算の結果を維持します。
+        Owner.Motor.SetWorldVelocity(m_dashHorizontalVelocity * m_dashEndSpeedRate +
+            Vector3.up * Mathf.Min(0.0f, velocity.y));
+    }
+
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
     /// <summary>発射後の物理更新で初速が大きく失われた場合、一度だけ記録します。</summary>
     private void DiagnoseLaunchVelocity(float deltaTime)
     {
         // 開始と同じFixedUpdateでは、まだ物理シミュレーションされていません。
         if (!m_hasCheckedFirstStep) { m_hasCheckedFirstStep = true; return; }
-        if (!m_isDirectionalJump || m_hasReportedSpeedLoss || m_elapsedTime > DIAGNOSTIC_DURATION) return;
-        Vector3 expected = m_diagnosticLaunchVelocity + Physics.gravity * (m_elapsedTime - deltaTime);
+        if (!m_isDirectionalJump || !m_isDashing || m_hasReportedSpeedLoss || m_elapsedTime > DIAGNOSTIC_DURATION) return;
+        Vector3 expected = m_dashCommandedVelocity + Vector3.up *
+            (m_diagnosticLaunchVelocity.y + Physics.gravity.y * (m_elapsedTime - deltaTime));
         Vector3 actual = Owner.Monitor.CurrentVelocity;
         if (Vector3.Dot(actual, expected.normalized) >= expected.magnitude * DIAGNOSTIC_SPEED_RATIO) return;
         m_hasReportedSpeedLoss = true;
@@ -163,6 +233,7 @@ public sealed class PlayerRailJumpingState : StateBase<PlayerStateMachineCompone
     /// <summary>被弾による中断時も、ジャンプ演出と溜まった入力を終了します。</summary>
     protected override void OnExitState()
     {
+        Owner.Motor.RestoreRailCollisions();
         if (m_isFollowingRail) Owner.Motor.EndRailMotion(Owner.Motor.RailVelocity);
         Owner.AnimationPresenter.StopJumpAnimation();
         Owner.InputReader.ConsumeAttackInput();

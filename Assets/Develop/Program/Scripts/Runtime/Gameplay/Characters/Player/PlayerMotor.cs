@@ -47,6 +47,19 @@ public sealed class PlayerMotor : MonoBehaviour
     private bool m_previousIsKinematic;
     private CollisionDetectionMode m_previousCollisionDetection;
     private Vector3 m_railVelocity;
+    private readonly PlayerRailCollisionGuard m_railCollisionGuard = new PlayerRailCollisionGuard();
+
+    /// <summary>方向指定ジャンプの離陸元レールとの衝突を一時的に無視します。</summary>
+    public void BeginRailCollisionIgnore(SplineRailInfo rail, float minimumDuration)
+    {
+        if (m_isInitialized) m_railCollisionGuard.Begin(m_playerRigidbody, rail, minimumDuration);
+    }
+
+    /// <summary>ジャンプ中断時などにレールとの衝突を復元します。</summary>
+    public void RestoreRailCollisions() => m_railCollisionGuard.Restore();
+
+    /// <summary>物理更新ごとにレールから離れたことを確認します。</summary>
+    private void FixedUpdate() => m_railCollisionGuard.Update();
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
     private string m_lastRailJumpContact = "none";
@@ -123,6 +136,7 @@ public sealed class PlayerMotor : MonoBehaviour
     /// <summary>無効化や破棄の際にも、一時的な物理設定を元に戻します。</summary>
     private void OnDisable()
     {
+        RestoreRailCollisions();
         EndRailMotion(m_railVelocity);
     }
 
