@@ -414,4 +414,10 @@ public sealed class S1BossPhaseAttackSettingsProvider :
     {
         ResolveReferences();
     }
+
+    /// <summary>
+    /// 現在フェーズの攻撃ダメージパラメータを取得します。
+    /// </summary>
+    public S1BossAttackDamageParameterAsset ParameterAsset =>
+        m_parameterAsset;
 }
