@@ -12,7 +12,7 @@ public class EffectDatabaseUpdater
     [MenuItem("Tools/VFX/エフェクトを自動登録する (Enum連携)")]
     public static void UpdateDatabase()
     {
-        //  データベースファイルを読み込む（無ければ作る）
+        // 1. データベースファイルを読み込む（無ければ作る）
         EffectDatabase db = AssetDatabase.LoadAssetAtPath<EffectDatabase>(DATABASE_PATH);
         if (db == null)
         {
@@ -29,7 +29,7 @@ public class EffectDatabaseUpdater
         {
             string enumName = id.ToString();
 
-            // フォルダ指定を削除し、プロジェクト全体から検索するように変更
+            // 【修正】フォルダ指定を削除し、プロジェクト全体から検索するように変更
             string[] guids = AssetDatabase.FindAssets($"{enumName} t:GameObject");
 
             if (guids.Length > 0)
@@ -37,7 +37,7 @@ public class EffectDatabaseUpdater
                 string path = AssetDatabase.GUIDToAssetPath(guids[0]);
                 GameObject obj = AssetDatabase.LoadAssetAtPath<GameObject>(path);
 
-                EffectNode_Aoki node = obj.GetComponent<EffectNode_Aoki>();
+                EffectNode node = obj.GetComponent<EffectNode>();
                 if (node != null)
                 {
                     // プレハブ側に EffectID を自動セットして保存
@@ -52,7 +52,7 @@ public class EffectDatabaseUpdater
                 }
                 else
                 {
-                    Debug.LogWarning($"プレハブ '{enumName}' に EffectNode_Aoki がアタッチされていません。");
+                    Debug.LogWarning($"プレハブ '{enumName}' に EffectNode がアタッチされていません。");
                 }
             }
             else

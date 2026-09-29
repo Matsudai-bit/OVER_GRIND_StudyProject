@@ -327,8 +327,8 @@ public class EffectIDGeneratorWindow : EditorWindow
 
             // プレハブへのEffectNode付与・ID設定
             GameObject contents = PrefabUtility.LoadPrefabContents(entry.prefabPath);
-            EffectNode_Aoki node = contents.GetComponent<EffectNode_Aoki>();
-            if (node == null) node = contents.AddComponent<EffectNode_Aoki>();
+            EffectNode node = contents.GetComponent<EffectNode>();
+            if (node == null) node = contents.AddComponent<EffectNode>();
 
             EffectID targetID = (EffectID)Enum.Parse(typeof(EffectID), entry.idName);
             node.SetEffectID(targetID);
@@ -338,7 +338,7 @@ public class EffectIDGeneratorWindow : EditorWindow
 
             // データベースに書き込み
             GameObject updatedPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(entry.prefabPath);
-            EffectNode_Aoki finalNode = updatedPrefab.GetComponent<EffectNode_Aoki>();
+            EffectNode finalNode = updatedPrefab.GetComponent<EffectNode>();
 
             bool isUpdated = false;
             for (int i = 0; i < db.m_effectList.Count; i++)
@@ -395,8 +395,8 @@ public class EffectIDGeneratorWindow : EditorWindow
         string path = AssetDatabase.GetAssetPath(prefabObj);
 
         GameObject contents = PrefabUtility.LoadPrefabContents(path);
-        EffectNode_Aoki node = contents.GetComponent<EffectNode_Aoki>();
-        if (node == null) node = contents.AddComponent<EffectNode_Aoki>();
+        EffectNode node = contents.GetComponent<EffectNode>();
+        if (node == null) node = contents.AddComponent<EffectNode>();
 
         EffectID targetID = (EffectID)Enum.Parse(typeof(EffectID), idName);
         node.SetEffectID(targetID);
@@ -405,7 +405,7 @@ public class EffectIDGeneratorWindow : EditorWindow
         PrefabUtility.UnloadPrefabContents(contents);
 
         GameObject updatedPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
-        EffectNode_Aoki finalNode = updatedPrefab.GetComponent<EffectNode_Aoki>();
+        EffectNode finalNode = updatedPrefab.GetComponent<EffectNode>();
 
         EffectDatabase db = GetDatabaseStatic();
         if (db == null) return;
@@ -477,7 +477,7 @@ public class EffectIDGeneratorWindow : EditorWindow
         sb.AppendLine("}");
 
         string[] guids = AssetDatabase.FindAssets("EffectID t:MonoScript");
-        string path = guids.Length > 0 ? AssetDatabase.GUIDToAssetPath(guids[0]) : "Assets/PreDevelop/AOKI/Scripts/Effects_AokiScripts/EffectID.cs";
+        string path = guids.Length > 0 ? AssetDatabase.GUIDToAssetPath(guids[0]) : "Assets/PreDevelop/AOKI/Scripts/EffectsScripts/EffectID.cs";
         File.WriteAllText(path, sb.ToString(), Encoding.UTF8);
     }
 }

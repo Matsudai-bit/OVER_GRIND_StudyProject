@@ -22,10 +22,10 @@ public class VFXManager : MonoBehaviour
     private EffectDatabase m_database;
 
     // プール管理（非アクティブなオブジェクト）
-    private Dictionary<EffectID, Queue<EffectNode_Aoki>> m_poolDict = new Dictionary<EffectID, Queue<EffectNode_Aoki>>();
+    private Dictionary<EffectID, Queue<EffectNode>> m_poolDict = new Dictionary<EffectID, Queue<EffectNode>>();
 
     // 再生中エフェクトの追跡管理（アクティブなオブジェクト）
-    private Dictionary<EffectID, List<EffectNode_Aoki>> m_activeDict = new Dictionary<EffectID, List<EffectNode_Aoki>>();
+    private Dictionary<EffectID, List<EffectNode>> m_activeDict = new Dictionary<EffectID, List<EffectNode>>();
 
     private int m_handleCounter = 0;
 
@@ -47,7 +47,7 @@ public class VFXManager : MonoBehaviour
     /// <returns>個別に識別したい場合に使用するHandleID（不要なら無視してOK）</returns>
     public int Play(EffectID id, Vector3 position, Quaternion rotation = default, Transform parent = null)
     {
-        EffectNode_Aoki node = GetFromPool(id);
+        EffectNode node = GetFromPool(id);
         if (node == null) return -1;
 
         int handle = ++m_handleCounter;
@@ -59,7 +59,7 @@ public class VFXManager : MonoBehaviour
         // アクティブリストに登録
         if (!m_activeDict.ContainsKey(id))
         {
-            m_activeDict[id] = new List<EffectNode_Aoki>();
+            m_activeDict[id] = new List<EffectNode>();
         }
         m_activeDict[id].Add(node);
 
@@ -144,7 +144,7 @@ public class VFXManager : MonoBehaviour
     }
 
     // --- プール内部処理 ---
-    private EffectNode_Aoki GetFromPool(EffectID id)
+    private EffectNode GetFromPool(EffectID id)
     {
         if (m_database == null)
         {
@@ -154,7 +154,7 @@ public class VFXManager : MonoBehaviour
 
         if (!m_poolDict.TryGetValue(id, out var pool))
         {
-            pool = new Queue<EffectNode_Aoki>();
+            pool = new Queue<EffectNode>();
             m_poolDict[id] = pool;
         }
 
@@ -164,14 +164,14 @@ public class VFXManager : MonoBehaviour
         }
         else
         {
-            EffectNode_Aoki prefab = m_database.GetPrefab(id);
+            EffectNode prefab = m_database.GetPrefab(id);
             if (prefab == null) return null;
 
             return Instantiate(prefab, transform);
         }
     }
 
-    private void ReturnToPool(EffectID id, EffectNode_Aoki node)
+    private void ReturnToPool(EffectID id, EffectNode node)
     {
         node.gameObject.SetActive(false);
 
@@ -183,7 +183,7 @@ public class VFXManager : MonoBehaviour
 
         if (!m_poolDict.TryGetValue(id, out var pool))
         {
-            pool = new Queue<EffectNode_Aoki>();
+            pool = new Queue<EffectNode>();
             m_poolDict[id] = pool;
         }
         pool.Enqueue(node);

@@ -11,7 +11,7 @@ public sealed class S1P1BossMissileState :
     private S1P1BossReferences m_references;
 
     // ミサイル攻撃参照
-    private S1P1BossMissileReferences m_missileReferences;
+    private S1BossMissileReferences m_missileReferences;
 
     // ミサイル状態のパラメータ
     private S1P1BossMissileStateParameters m_parameters;
@@ -198,7 +198,7 @@ public sealed class S1P1BossMissileState :
                 continue;
             }
 
-            S1P1MissileController missile =
+            S1MissileController missile =
                 UnityEngine.Object.Instantiate(
                     m_missileReferences.MissilePrefab,
                     launchSite.position,
