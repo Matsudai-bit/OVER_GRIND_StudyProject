@@ -28,9 +28,21 @@ public class VGaugeUI : MonoBehaviour
     private int debugGaugeStep = 1;
 
     /// <summary>
-    /// 現在のゲージ値
+    /// チャージ量を保持するモデル。Startより前の呼び出しにも対応します。
     /// </summary>
-    private int currentGauge;
+    private readonly VGaugePlaceModel m_placeModel = new VGaugePlaceModel();
+
+    /// <summary>
+    /// 既存のInspector設定を反映したモデルを取得します。
+    /// </summary>
+    private VGaugePlaceModel PlaceModel
+    {
+        get
+        {
+            m_placeModel.SetMaxGauge(maxGauge);
+            return m_placeModel;
+        }
+    }
 
     [Header("Repeat")]
 
@@ -164,11 +176,8 @@ public class VGaugeUI : MonoBehaviour
     /// <param name="value">設定するゲージ値</param>
     public void SetGauge(int value)
     {
-        // ゲージが0～最大値の範囲を超えないよう制限する
-        currentGauge = Mathf.Clamp(
-            value,
-            0,
-            maxGauge);
+        // 値の保持と範囲制限をモデルへ委譲する
+        PlaceModel.SetGauge(value);
 
         // 表示を更新する
         UpdateGauge();
@@ -181,11 +190,8 @@ public class VGaugeUI : MonoBehaviour
     /// <param name="rate">0～1のゲージ割合。範囲外の値は自動的に丸められます。</param>
     public void SetGaugeRate(float rate)
     {
-        float clampedRate = Mathf.Clamp01(rate);
-
-        SetGauge(
-            Mathf.RoundToInt(
-                clampedRate * maxGauge));
+        PlaceModel.SetGaugeRate(rate);
+        UpdateGauge();
     }
 
     /// <summary>
@@ -201,7 +207,7 @@ public class VGaugeUI : MonoBehaviour
         }
 
         // 現在値へ増減量を加算する
-        SetGauge(currentGauge + amount);
+        SetGauge(GetGauge() + amount);
     }
 
     /// <summary>
@@ -231,7 +237,7 @@ public class VGaugeUI : MonoBehaviour
 
         // 現在のゲージ割合を画像へ反映する
         gaugeImage.fillAmount =
-            currentGauge / (float)maxGauge;
+            PlaceModel.GetGaugeRate();
     }
 
     /// <summary>
@@ -239,6 +245,6 @@ public class VGaugeUI : MonoBehaviour
     /// </summary>
     public int GetGauge()
     {
-        return currentGauge;
+        return PlaceModel.GetGauge();
     }
 }

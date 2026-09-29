@@ -18,9 +18,9 @@ public class VSpeedUI : MonoBehaviour
     private TMP_Text decimalText;
 
     /// <summary>
-    /// 現在表示している速度
+    /// 表示対象の速度を保持するモデル。
     /// </summary>
-    private float currentSpeed;
+    private readonly SpeedPlaceModel m_placeModel = new SpeedPlaceModel();
 
     /// <summary>
     /// 速度を設定します。
@@ -29,8 +29,8 @@ public class VSpeedUI : MonoBehaviour
     /// <param name="speed">表示する速度</param>
     public void SetSpeed(float speed)
     {
-        // 速度が0～99.9の範囲に収まるよう制限する
-        currentSpeed = Mathf.Clamp(speed, 0f, 99.9f);
+        // 値の保持と範囲制限をモデルへ委譲する
+        m_placeModel.SetSpeed(speed);
 
         // 表示内容を更新する
         UpdateSpeedText();
@@ -41,7 +41,7 @@ public class VSpeedUI : MonoBehaviour
     /// </summary>
     public float GetSpeed()
     {
-        return currentSpeed;
+        return m_placeModel.GetSpeed();
     }
 
     /// <summary>
@@ -49,6 +49,8 @@ public class VSpeedUI : MonoBehaviour
     /// </summary>
     private void UpdateSpeedText()
     {
+        float currentSpeed = m_placeModel.GetSpeed();
+
         // 整数部分を取得
         int integerPart = Mathf.FloorToInt(currentSpeed);
 
