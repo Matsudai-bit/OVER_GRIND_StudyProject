@@ -54,11 +54,11 @@ public partial class ChangeBossStateAction_S1P3 : Action
                 bossController.StateMachine.ChangeState<BossIdleState>(
                     IDLE_DURATION);
                 break;
-            case S1BossStateID.P2_ATTACK_CHARGING:
+            case S1BossStateID.P2_CHARGE:
                 bossController.StateMachine.ChangeState<
                     S1P3BossChargingAttackState>();
                 break;
-            case S1BossStateID.STUN:
+            case S1BossStateID.P2_STUN:
                 bossController.StateMachine.ChangeState<
                     S1P3BossStunnedState>();
                 break;
