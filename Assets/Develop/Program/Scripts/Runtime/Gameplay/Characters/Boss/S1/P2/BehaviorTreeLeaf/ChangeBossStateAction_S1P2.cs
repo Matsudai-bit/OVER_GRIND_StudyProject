@@ -55,9 +55,21 @@ public partial class ChangeBossStateAction_S1P2 : Action
                     IDLE_DURATION);
                 break;
 
-            case S1BossStateID.P2_ATTACK_CHARGING:
+            case S1BossStateID.P2_CHARGE:
                 bossController.StateMachine.ChangeState<
                     S1P2BossChargingAttackState>();
+                break;
+            case S1BossStateID.P2_MISSILE:
+                bossController.StateMachine.ChangeState<
+                   S1P2BossMissileState>();
+                break;
+            case S1BossStateID.P2_HEAT_EXHAUST:
+                bossController.StateMachine.ChangeState<
+                   S1P2BossHeatVentState>();
+                break;
+            case S1BossStateID.P2_TAIL_SLAM:
+                bossController.StateMachine.ChangeState<
+                   S1P2BossTailSlamState>();
                 break;
 
             default:

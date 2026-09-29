@@ -58,18 +58,20 @@ public partial class ChangeBossStateAction_S1P1 : Action
                 bossController.StateMachine.ChangeState<S1P1BossWalkState>();
                 break;
 
-            case S1BossStateID.P1_ATTACK_RIGHT:
-                return ChangeS1P1AttackState(
-                    bossController,
-                    S1P1BossAttackType.RIGHT_LEG);
+            case S1BossStateID.P1_STOMP:
+                bossController.StateMachine.ChangeState<S1P1BossStompState>();
+                break;
 
-            case S1BossStateID.P1_ATTACK_LEFT:
-                return ChangeS1P1AttackState(
-                    bossController,
-                    S1P1BossAttackType.LEFT_LEG);
+            case S1BossStateID.P1_MISSILE:
+                bossController.StateMachine.ChangeState<S1P1BossMissileState>();
+                break;
 
             case S1BossStateID.P1_TURN:
                 bossController.StateMachine.ChangeState<S1P1BossTurnState>();
+                break;
+
+            case S1BossStateID.P1_HEAT_EXHAUST:
+                bossController.StateMachine.ChangeState<S1P1BossHeatVentState>();
                 break;
 
             default:
@@ -113,9 +115,6 @@ public partial class ChangeBossStateAction_S1P1 : Action
             return Status.Failure;
         }
 
-        bossController.StateMachine.ChangeState<S1P1BossAttackState>(
-            animationTriggerName,
-            attackIdentifier);
 
         return Status.Success;
     }

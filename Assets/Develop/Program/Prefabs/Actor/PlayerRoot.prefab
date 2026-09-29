@@ -100,6 +100,8 @@ GameObject:
   - component: {fileID: 8572377566809189294}
   - component: {fileID: 2124101661379444245}
   - component: {fileID: 1405796748971180126}
+  - component: {fileID: 7405796748971180126}
+  - component: {fileID: 7405796748971180127}
   - component: {fileID: 2107488902007010570}
   m_Layer: 8
   m_Name: Player
@@ -149,7 +151,7 @@ Rigidbody:
   m_ImplicitTensor: 1
   m_UseGravity: 1
   m_IsKinematic: 0
-  m_Interpolate: 0
+  m_Interpolate: 1
   m_Constraints: 80
   m_CollisionDetection: 0
 --- !u!114 &5069751796256331156
@@ -355,6 +357,7 @@ MonoBehaviour:
   m_railLayerMask:
     serializedVersion: 2
     m_Bits: 512
+  m_railDetectionParameter: {fileID: 11400000, guid: 735c4218e37746e2a5b98d06f1e62ba9, type: 2}
 --- !u!114 &4683833250410149521
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -380,6 +383,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 57fd4ddafe7cfc7408b9dd19920404a8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerStateMachineComponent
+  m_railJumpParameterAsset: {fileID: 11400000, guid: 8595fb7b004046f999f45c29daab1952, type: 2}
+  m_knockbackSpeed: 12
+  m_knockbackLiftSpeed: 5
+  m_knockbackDuration: 0.8
+  m_hitRecoveryDuration: 0.2
+  m_hitEnvironmentLayerMask:
+    serializedVersion: 2
+    m_Bits: 73
 --- !u!114 &453875386572099116
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -394,6 +405,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerRootController
   m_movementParameterAsset: {fileID: 11400000, guid: ffef782441d77c84ab444d12ef66cf45, type: 2}
   m_vBoostMovementParameterAsset: {fileID: 11400000, guid: 8cab05a74b786e8408497af5277c643d, type: 2}
+  m_boostChargingParameterAsset: {fileID: 11400000, guid: 9d7f3e42838ee0c4ab216216db4d5332, type: 2}
   m_playerRigidbody: {fileID: 0}
   m_inputReader: {fileID: 0}
   m_monitor: {fileID: 0}
@@ -402,6 +414,7 @@ MonoBehaviour:
   m_stateMachineComponent: {fileID: 0}
   m_attackController: {fileID: 0}
   m_splineGrindController: {fileID: 0}
+  m_modelTransform: {fileID: 8987126671198791686}
 --- !u!114 &8122269946311702765
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -473,7 +486,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 588d23141549917469ee97909cad195c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Hurtbox
-  m_damageReceiverComponent: {fileID: 1405796748971180126}
+  m_damageReceiverComponent: {fileID: 7405796748971180126}
   m_damageMultiplier: 1
   m_canReceiveDamage: 1
 --- !u!1 &1015944288172727084
@@ -2343,3 +2356,32 @@ MonoBehaviour:
         DecelTime: 0
   PlayerIndex: -1
   AutoEnableInputs: 1
+--- !u!114 &7405796748971180126
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 415096441624393917}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cb9370fcbea932049abc9789f0cd1b0b, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerHealth
+  m_hurtbox: {fileID: 2107488902007010570}
+--- !u!114 &7405796748971180127
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 415096441624393917}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b4e306724d304bf994410f3ace0bfb9f, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerHitDebugInput
+  m_attackCenter: {fileID: 0}
+  m_localAttackCenterOffset: {x: 0, y: 0, z: 2}
+  m_applyDamage: 0
+  m_damage: 1
