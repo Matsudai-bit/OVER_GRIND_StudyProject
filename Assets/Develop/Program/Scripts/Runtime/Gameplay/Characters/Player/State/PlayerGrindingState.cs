@@ -1,55 +1,59 @@
 using UnityEngine;
 
-/// <summary>
-/// プレイヤーのグラインド状態と離脱先への遷移を管理します。
-/// </summary>
-public sealed class PlayerGrindingState
-    : StateBase<PlayerStateMachineComponent>
+/// <summary>グラインド移動と離脱先への遷移を物理更新に合わせて管理します。</summary>
+public sealed class PlayerGrindingState : StateBase<PlayerStateMachineComponent>
 {
-    /// <summary>
-    /// 接触中のレールでグラインドを開始します。
-    /// </summary>
+    private SplineRailInfo m_rail;
+    private readonly bool m_isResuming;
+    private readonly float m_positionT;
+    private readonly int m_direction;
+    private readonly float m_speed;
+    private bool m_hasStarted;
+
+    /// <summary>通常の接触検出からグラインドを開始します。</summary>
+    public PlayerGrindingState() { }
+
+    /// <summary>搭乗先のレールを保持します。</summary>
+    /// <param name="rail">搭乗するレール。</param>
+    public PlayerGrindingState(SplineRailInfo rail)
+    {
+        m_rail = rail;
+    }
+
+    /// <summary>無入力ジャンプの着地点・方向・速度を引き継ぎます。</summary>
+    public PlayerGrindingState(SplineRailInfo rail, float positionT, int direction, float speed)
+    {
+        m_rail = rail;
+        m_positionT = positionT;
+        m_direction = direction;
+        m_speed = speed;
+        m_isResuming = true;
+    }
+
+    /// <summary>搭乗先を確定し、実際の物理操作はFixedUpdateまで待ちます。</summary>
     protected override void OnStartState()
     {
-        Owner.GrindController.StartGrind(Owner.Monitor.HitRailInfo);
+        if (m_rail == null && !m_isResuming) m_rail = Owner.Monitor.HitRailInfo;
+        Owner.InputReader.ConsumeJumpPress();
     }
 
-    /// <summary>
-    /// 衝突による離脱、通常終了、ジャンプの遷移を処理します。
-    /// </summary>
-    protected override void OnUpdate(float deltaTime)
-    {
-        if (!Owner.GrindController.IsGrinding)
-        {
-            if (Owner.GrindController.IsCollisionExiting)
-            {
-                Machine.ChangeState<PlayerRailExitingState>();
-            }
-            else
-            {
-                Machine.ChangeState<PlayerIdlingState>();
-            }
-            return;
-        }
-
-        if (Owner.InputReader.HasJumpInput)
-        {
-            Owner.GrindController.StopGrind();
-            Machine.ChangeState<PlayerJumpingState>();
-        }
-    }
-    /// <summary>
-    /// 一定間隔の更新処理を行います。
-    /// </summary>
+    /// <summary>物理更新ごとに一度だけ滑走し、終了・衝突を判定します。</summary>
     protected override void OnFixedUpdate()
     {
-      
-    }
+        if (!m_hasStarted)
+        {
+            if (m_isResuming)
+                Owner.GrindController.StartGrindAt(m_rail, m_positionT, m_direction, m_speed);
+            else
+                Owner.GrindController.StartGrind(m_rail);
+            m_hasStarted = true;
+        }
 
-    /// <summary>
-    /// グラインド状態の終了処理を行います。
-    /// </summary>
-    protected override void OnExitState()
-    {
+        Owner.GrindController.UpdateGrind(Time.fixedDeltaTime);
+        if (Owner.GrindController.IsGrinding) return;
+        if (Owner.GrindController.IsCollisionExiting)
+            Owner.RequestRailStateChange<PlayerRailExitingState>();
+        else
+            Owner.RequestRailStateChange<PlayerIdlingState>();
     }
 }

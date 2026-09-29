@@ -6,6 +6,39 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public sealed class PlayerStateMachineComponent : MonoBehaviour
 {
+    [SerializeField, Header("レールジャンプ")]
+    private PlayerRailJumpParameterAsset m_railJumpParameterAsset;
+
+    // 既存のシーンで保存された設定を、アセット未設定時の互換値として保持します。
+    [SerializeField, HideInInspector]
+    private PlayerRailJumpParameters m_railJumpParameters = new PlayerRailJumpParameters();
+
+    private System.Action m_pendingRailStateChange;
+
+    /// <summary>レールジャンプ専用の調整値を取得します。</summary>
+    public PlayerRailJumpParameters RailJumpParameters =>
+        m_railJumpParameterAsset != null ? m_railJumpParameterAsset.Parameters :
+            m_railJumpParameters ?? (m_railJumpParameters = new PlayerRailJumpParameters());
+
+    /// <summary>レール関連の状態変更を、次の物理更新の先頭で実行します。</summary>
+    /// <typeparam name="TState">切り替え先の状態。</typeparam>
+    /// <param name="args">状態の生成に渡す引数。</param>
+    public void RequestRailStateChange<TState>(params object[] args)
+        where TState : StateBase<PlayerStateMachineComponent>
+    {
+        if (!m_isInitialized || m_pendingRailStateChange != null) return;
+        StateBase<PlayerStateMachineComponent> sourceState = m_stateMachine.GetNowState();
+        m_pendingRailStateChange = () =>
+        {
+            // 被弾などで状態が変わっていた場合、古いジャンプや着地の予約を破棄します。
+            if (m_stateMachine.GetNowState() != sourceState) return;
+            // 入力予約後の衝突で滑走が終わっていたら、追加のジャンプ初速を与えません。
+            if (typeof(TState) == typeof(PlayerRailJumpingState) && !m_splineGrindController.IsGrinding) return;
+            m_stateMachine.ChangeState<TState>(args);
+            m_stateMachine.Update(0.0f);
+        };
+    }
+
     // ============================================================
     // 参照
     // ============================================================
@@ -431,6 +464,18 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
 
         m_monitor.Refresh();
 
+        // 滑走を進める前に押下を消費し、この物理更新内で発射します。
+        // Updateでの予約待ち中に終端へ到達して入力が失われることを防ぎます。
+        if (m_pendingRailStateChange == null &&
+            m_stateMachine.IsCurrentState<PlayerGrindingState>() &&
+            m_splineGrindController.IsGrinding && m_inputReader.ConsumeJumpPress())
+        {
+            RequestRailStateChange<PlayerRailJumpingState>(m_inputReader.MoveInput);
+        }
+
+        System.Action railStateChange = m_pendingRailStateChange;
+        m_pendingRailStateChange = null;
+        railStateChange?.Invoke();
         m_stateMachine.FixedUpdate();
 
         // 現在のStateに関係なく、常に実速度をUIへ反映する
@@ -516,6 +561,7 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
     {
         m_stateMachine?.Dispose();
 
+        m_pendingRailStateChange = null;
         m_stateMachine = null;
         m_isInitialized = false;
     }
@@ -558,6 +604,7 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
     {
         if (!m_isInitialized || !isActiveAndEnabled || IsHitReacting) return false;
 
+        m_pendingRailStateChange = null;
         IsHitReacting = true;
         HasHitEnvironment = false;
         PlayerKnockbackProfile selectedProfile = profile != null ? profile : m_defaultKnockbackProfile;
