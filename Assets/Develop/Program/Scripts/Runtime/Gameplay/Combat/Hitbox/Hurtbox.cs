@@ -4,7 +4,7 @@ using UnityEngine;
 /// 被攻撃判定を管理します。
 /// </summary>
 [DisallowMultipleComponent]
-public sealed class Hurtbox : MonoBehaviour, IDamageable
+public sealed class Hurtbox : MonoBehaviour, IDirectionalDamageable
 {
     /// <summary>
     /// 実際にダメージを処理するコンポーネント。
@@ -54,34 +54,37 @@ public sealed class Hurtbox : MonoBehaviour, IDamageable
     /// <param name="damage">受けるダメージ量。</param>
     public void TakeDamage(int damage)
     {
-        if (!m_canReceiveDamage)
+        ApplyDamage(damage, null);
+    }
+
+    /// <summary>攻撃中心と倍率適用後のダメージを実際の被弾先へ転送します。</summary>
+    public bool TryTakeDamage(int damage, Vector3 attackCenter)
+    {
+        return ApplyDamage(damage, attackCenter);
+    }
+
+    /// <summary>受付状態と倍率を確認し、従来のダメージ受付にも対応します。</summary>
+    private bool ApplyDamage(int damage, Vector3? attackCenter)
+    {
+        if (!m_canReceiveDamage || damage <= 0 ||
+            (m_damageReceiver == null && !CacheDamageReceiver()))
         {
-            return;
+            return false;
         }
 
-        if (damage <= 0)
-        {
-            return;
-        }
-
-        // 参照が失われている場合は再取得します。
-        if (m_damageReceiver == null &&
-            !CacheDamageReceiver())
-        {
-            return;
-        }
-
-        // Hurtbox固有の倍率を適用します。
-        int adjustedDamage = Mathf.Max(
-            0,
-            Mathf.RoundToInt(damage * m_damageMultiplier));
-
+        int adjustedDamage = Mathf.Max(0, Mathf.RoundToInt(damage * m_damageMultiplier));
         if (adjustedDamage <= 0)
         {
-            return;
+            return false;
+        }
+
+        if (attackCenter.HasValue && m_damageReceiver is IDirectionalDamageable directionalReceiver)
+        {
+            return directionalReceiver.TryTakeDamage(adjustedDamage, attackCenter.Value);
         }
 
         m_damageReceiver.TakeDamage(adjustedDamage);
+        return true;
     }
 
     /// <summary>
