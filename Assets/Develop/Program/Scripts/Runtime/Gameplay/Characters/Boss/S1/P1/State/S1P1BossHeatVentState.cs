@@ -282,6 +282,5 @@ public sealed class S1P1BossHeatVentState :
 
         Owner.SetStateExecutionStatus(
             StateExecutionStatus.SUCCEEDED);
-        StartCoolTimeIfSucceeded();
     }
 }
