@@ -34,9 +34,9 @@ public class ResultSelectionInput : MonoBehaviour
     /// <summary>「Stage Select」選択時に表示する枠の Image コンポーネント。</summary>
     [SerializeField] private Image m_stageSelectFrameImage;
 
-    /// <summary>非選択時の縮小サイズの割合。</summary>
-    [Tooltip("非選択時の縮小サイズ割合")]
-    [SerializeField] private float m_unselectedScale = 0.8f;
+    /// <summary>非選択時の縮小サイズ割合 (X, Y)。</summary>
+    [Tooltip("非選択時の縮小サイズ割合 (X, Y)")]
+    [SerializeField] private Vector2 m_unselectedScale = new Vector2(0.8f, 0.8f);
 
     [Header("アニメーション設定")]
 
@@ -52,9 +52,9 @@ public class ResultSelectionInput : MonoBehaviour
     [Tooltip("オレンジが選択中に横にスライドし続ける幅")]
     [SerializeField] private float m_loopSlideAmount = -10f;
 
-    /// <summary>「Stage Select」選択中の拡大ループの割合。</summary>
-    [Tooltip("白枠が選択中に拡大し続ける割合")]
-    [SerializeField] private float m_loopScaleAmount = 1.05f;
+    /// <summary>「Stage Select」選択中に拡大し続ける割合 (X, Y)。</summary>
+    [Tooltip("白枠が選択中に拡大し続ける割合 (X, Y)")]
+    [SerializeField] private Vector2 m_loopScaleAmount = new Vector2(1.05f, 1.2f);
 
     /// <summary>現在「Next Stage」が選択されているかどうか。</summary>
     private bool m_isNextStageSelected = true;
@@ -185,14 +185,29 @@ public class ResultSelectionInput : MonoBehaviour
                     .OnComplete(() =>
                     {
                         if (isInstant) return;
-                        m_stageSelectVisual.DOScale(m_ssOriginalScale * m_loopScaleAmount, m_loopDuration)
+
+                        // X（横）と Y（高さ）を個別に計算したループ倍率を適用
+                        Vector3 loopTargetScale = new Vector3(
+                            m_ssOriginalScale.x * m_loopScaleAmount.x,
+                            m_ssOriginalScale.y * m_loopScaleAmount.y,
+                            m_ssOriginalScale.z
+                        );
+
+                        m_stageSelectVisual.DOScale(loopTargetScale, m_loopDuration)
                             .SetEase(Ease.InOutSine)
                             .SetLoops(-1, LoopType.Yoyo);
                     });
             }
             else
             {
-                m_stageSelectVisual.DOScale(m_ssOriginalScale * m_unselectedScale, t).SetEase(Ease.OutCubic);
+                // X（横）と Y（高さ）を個別に計算した非選択倍率を適用
+                Vector3 unselectedTargetScale = new Vector3(
+                    m_ssOriginalScale.x * m_unselectedScale.x,
+                    m_ssOriginalScale.y * m_unselectedScale.y,
+                    m_ssOriginalScale.z
+                );
+
+                m_stageSelectVisual.DOScale(unselectedTargetScale, t).SetEase(Ease.OutCubic);
             }
         }
     }
