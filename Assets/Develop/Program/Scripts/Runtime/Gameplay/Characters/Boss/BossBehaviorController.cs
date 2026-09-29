@@ -75,7 +75,7 @@ public sealed class BossBehaviorController : MonoBehaviour
             return;
         }
 
-        //m_currentBehaviorObject.SetActive(false);
+        m_currentBehaviorObject.SetActive(false);
         m_currentBehaviorObject = null;
     }
 }
