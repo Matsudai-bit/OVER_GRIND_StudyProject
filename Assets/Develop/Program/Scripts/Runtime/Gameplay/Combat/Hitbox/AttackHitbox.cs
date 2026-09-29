@@ -19,6 +19,34 @@ public sealed class AttackHitbox : MonoBehaviour
     [SerializeField, Header("攻撃判定")]
     private Collider m_hitboxCollider;
 
+    [SerializeField, Tooltip("攻撃部の中心。未設定の場合は攻撃Colliderの中心を使用します。")]
+    private Transform m_attackCenter;
+
+    /// <summary>攻撃部の中心位置をワールド座標で取得します。</summary>
+    public Vector3 AttackCenter => m_attackCenter != null
+        ? m_attackCenter.position
+        : m_hitboxCollider != null && m_hitboxCollider.enabled
+            ? m_hitboxCollider.bounds.center
+            : transform.position;
+
+    /// <summary>攻撃部の中心を外部から設定します。nullでCollider中心へ戻します。</summary>
+    public void SetAttackCenter(Transform attackCenter)
+    {
+        m_attackCenter = attackCenter;
+    }
+
+    /// <summary>攻撃中心を対応する受け手へ渡し、無敵中の命中通知を抑制します。</summary>
+    private bool TryApplyDamage(IDamageable damageReceiver)
+    {
+        if (damageReceiver is IDirectionalDamageable directionalReceiver)
+        {
+            return directionalReceiver.TryTakeDamage(m_currentDamage, AttackCenter);
+        }
+
+        damageReceiver.TakeDamage(m_currentDamage);
+        return true;
+    }
+
     // 攻撃対象のレイヤー
     [SerializeField]
     private LayerMask m_targetLayerMask;
@@ -219,7 +247,10 @@ public sealed class AttackHitbox : MonoBehaviour
                 continue;
             }
 
-            damageReceiver.TakeDamage(m_currentDamage);
+            if (!TryApplyDamage(damageReceiver))
+            {
+                continue;
+            }
             AttackHit?.Invoke(damageReceiver);
             hasHitAnyTarget = true;
         }
@@ -308,7 +339,7 @@ public sealed class AttackHitbox : MonoBehaviour
 
         // Colliderの親階層からダメージ受付コンポーネントを探します。
         IDamageable damageReceiver =
-            other.GetComponentInParent<IDamageable>();
+            (IDamageable)other.GetComponentInParent<Hurtbox>() ?? other.GetComponentInParent<IDamageable>();
 
         if (damageReceiver == null)
         {
@@ -338,8 +369,10 @@ public sealed class AttackHitbox : MonoBehaviour
             return;
         }
 
-        damageReceiver.TakeDamage(m_currentDamage);
-        AttackHit?.Invoke(damageReceiver);
+        if (TryApplyDamage(damageReceiver))
+        {
+            AttackHit?.Invoke(damageReceiver);
+        }
     }
 
     /// <summary>
@@ -354,7 +387,7 @@ public sealed class AttackHitbox : MonoBehaviour
         }
 
         IDamageable damageReceiver =
-            other.GetComponentInParent<IDamageable>();
+            (IDamageable)other.GetComponentInParent<Hurtbox>() ?? other.GetComponentInParent<IDamageable>();
 
         if (damageReceiver == null)
         {
