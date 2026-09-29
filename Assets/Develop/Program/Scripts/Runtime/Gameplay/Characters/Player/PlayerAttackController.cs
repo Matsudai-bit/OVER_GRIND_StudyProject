@@ -32,6 +32,11 @@ public class PlayerAttackController : MonoBehaviour
     [Min(0.1f)]
     private float m_baseHitsPerSecond = 40.0f;
 
+    // ダッシュ後に継続消費するチャージが残っている間のヒットレート
+    [SerializeField]
+    [Min(0.1f)]
+    private float m_chargedHitsPerSecond = 60.0f;
+
     // コンボ段階ごとに受信済みイベントを記録する
     private readonly Dictionary<int, HashSet<AttackAnimationEventType>> m_eventMap = new();
 
@@ -53,6 +58,18 @@ public class PlayerAttackController : MonoBehaviour
     /// </summary>
     public float BaseHitIntervalSeconds =>
         1.0f / Mathf.Max(m_baseHitsPerSecond, 0.0001f);
+
+    /// <summary>
+    /// ダッシュ後のチャージ残量に応じた基準ヒットレートを取得します。
+    /// </summary>
+    /// <param name="remainingCharge">継続消費されるチャージ残量。</param>
+    /// <returns>速度による減衰を適用する前の1秒あたりのヒット回数。</returns>
+    public float GetHitsPerSecond(float remainingCharge)
+    {
+        return Mathf.Max(
+            remainingCharge > 0.0f ? m_chargedHitsPerSecond : m_baseHitsPerSecond,
+            0.1f);
+    }
 
     private void OnEnable()
     {

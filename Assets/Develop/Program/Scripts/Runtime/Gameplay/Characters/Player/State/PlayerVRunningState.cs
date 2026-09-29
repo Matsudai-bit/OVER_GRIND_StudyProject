@@ -181,6 +181,8 @@ public sealed class PlayerVRunningState
         // 攻撃入力を確認
         if (Owner.InputReader.ConsumeAttackInput())
         {
+            // 攻撃中も残量を引き継ぎ、チャージの継続消費を維持する。
+            SuspendBoost();
             Machine.ChangeState<PlayerAttackingState>();
             return;
         }
@@ -249,7 +251,7 @@ public sealed class PlayerVRunningState
             return;
         }
 
-        // それ以外（ゲージを消費しきった、攻撃で打ち切られた等）の
+        // それ以外（ゲージを消費しきった等）の
         // 正真正銘の終了時は、表示・演出をリセットする
         if (Owner.VGaugeUI != null)
         {

@@ -192,7 +192,8 @@ public sealed class PlayerAttackingState
                 m_initialSlideSpeed);
 
         float currentHitsPerSecond =
-            Owner.AttackController.BaseHitsPerSecond *
+            Owner.AttackController.GetHitsPerSecond(
+                Owner.SuspendedBoostGaugeRate) *
             speedRate;
 
         float hitInterval =
