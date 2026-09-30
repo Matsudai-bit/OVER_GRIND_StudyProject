@@ -4,8 +4,9 @@ using UnityEngine;
 /// <summary>
 /// プレイヤーのブーストチャージ状態を管理します。
 ///
-/// チャージ中は現在の移動方向を維持しながら、
-/// 入力角度で直進減速と左右ドリフトを切り替えます。
+    /// チャージ中は現在の移動方向を維持しながら、
+    /// 入力角度で直進減速と左右ドリフトを切り替えます。
+    /// 固定した旋回方向への通常入力と、低倍率の逆入力を別に扱います。
 ///
 /// 移動中開始のチャージでは、実際のPlayer本体は回転させず、
 /// ModelTransformのみを移動方向に対して横向きにします。
@@ -418,9 +419,9 @@ public sealed class PlayerBoostChargingState
         return angle > 0.0f ? 1 : -1;
     }
 
-    /// <summary>最初の有効な左右入力を確定し、同じ方向の入力だけを返します。</summary>
+    /// <summary>最初の有効な左右入力を固定し、逆入力・無入力は低い倍率で同じ軌道を返します。</summary>
     /// <param name="input">スティック入力。</param>
-    /// <returns>確定方向と同じ入力は符号付き強度。未確定・反対方向は0。</returns>
+    /// <returns>旋回方向と倍率を反映した符号付き入力。</returns>
     private float GetLockedSteeringInput(Vector2 input)
     {
         int inputSide = ClassifyChargeInput(input);
@@ -431,12 +432,21 @@ public sealed class PlayerBoostChargingState
             m_currentDriftSteering = 0.0f;
         }
 
-        if (inputSide == 0 || inputSide != m_driftSide)
+        if (inputSide == m_driftSide)
         {
-            return 0.0f;
+            return m_driftSide * input.magnitude;
         }
 
-        return m_driftSide * input.magnitude;
+        // 逆入力とスティックを離した状態は、通常入力と同じ旋回計算を使い、
+        // 旋回方向だけ固定したまま入力の強さを下げます。
+        float steeringMagnitude = input.sqrMagnitude <=
+            m_parameterAsset.SteeringDeadZone * m_parameterAsset.SteeringDeadZone
+            ? 1.0f
+            : input.magnitude;
+
+        return m_driftSide *
+            steeringMagnitude *
+            m_parameterAsset.DriftCounterTurnRate;
     }
 
     /// <summary>入力と反対側へ膨らんだ後、入力側へ旋回する軌道を計算します。</summary>
@@ -448,17 +458,20 @@ public sealed class PlayerBoostChargingState
         if (Mathf.Approximately(steeringInput, 0.0f))
         {
             m_currentDriftSteering = 0.0f;
-            return;
+        }
+        else
+        {
+            m_currentDriftSteering = Mathf.MoveTowards(m_currentDriftSteering, steeringInput,
+                Time.fixedDeltaTime / m_parameterAsset.DriftSteeringResponseTime);
         }
 
-        m_currentDriftSteering = Mathf.MoveTowards(m_currentDriftSteering, steeringInput,
-            Time.fixedDeltaTime / m_parameterAsset.DriftSteeringResponseTime);
-
-        // 右入力なら初期の角速度は左向き。時間とともに右向きへ連続的に切り替えます。
+        // 通常入力・逆入力・スティックを離した状態で同じ軌道計算を使用します。
+        // 逆入力と無入力だけ、GetLockedSteeringInput側で旋回量を下げています。
         float progress = Mathf.Clamp01(m_driftElapsedTime / m_parameterAsset.DriftOutwardDuration);
         float turnRate = Mathf.Lerp(-m_parameterAsset.DriftOutwardTurnRate, 1.0f,
             Mathf.SmoothStep(0.0f, 1.0f, progress));
-        float turnAngle = m_currentDriftSteering * turnSpeedDegreesPerSecond * turnRate * Time.fixedDeltaTime;
+        float turnInput = m_currentDriftSteering;
+        float turnAngle = turnInput * turnSpeedDegreesPerSecond * turnRate * Time.fixedDeltaTime;
         m_currentVelocityDirection = (Quaternion.AngleAxis(turnAngle, Vector3.up)
             * m_currentVelocityDirection).normalized;
         m_driftElapsedTime += Time.fixedDeltaTime;

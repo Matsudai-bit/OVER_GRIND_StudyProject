@@ -76,7 +76,9 @@ public sealed class PlayerBoostChargingParameterAsset : ScriptableObject
     [SerializeField, HideInInspector]
     private float m_driftNeutralTurnRate = 0.55f;
 
-    [SerializeField, HideInInspector]
+    // 旋回方向と逆へ入力したときの旋回倍率
+    [Tooltip("最初に決めた旋回方向と逆へ入力したときの旋回倍率。小さいほど緩やかに大回りします。0で旋回しません。")]
+    [SerializeField, Range(0.0f, 1.0f)]
     private float m_driftCounterTurnRate = 0.15f;
 
     [Tooltip("旋回量が0から最大へ変化する時間（秒）。大きいほど穏やかに曲がります。")]
@@ -173,8 +175,8 @@ public sealed class PlayerBoostChargingParameterAsset : ScriptableObject
     /// <summary>無入力時の旋回割合を取得します。</summary>
     public float DriftNeutralTurnRate => Mathf.Clamp01(m_driftNeutralTurnRate);
 
-    /// <summary>逆入力時の旋回割合を、中立時以下に制限して取得します。</summary>
-    public float DriftCounterTurnRate => Mathf.Clamp(m_driftCounterTurnRate, 0.0f, DriftNeutralTurnRate);
+    /// <summary>旋回方向と逆へ入力したときの旋回倍率を取得します。</summary>
+    public float DriftCounterTurnRate => Mathf.Clamp01(m_driftCounterTurnRate);
 
     /// <summary>旋回入力の応答時間（秒）を取得します。</summary>
     public float DriftSteeringResponseTime => Mathf.Max(0.01f, m_driftSteeringResponseTime);

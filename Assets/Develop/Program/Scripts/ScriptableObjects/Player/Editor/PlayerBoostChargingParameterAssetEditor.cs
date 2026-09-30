@@ -4,7 +4,7 @@ using UnityEditor;
 using UnityEngine;
 
 /// <summary>
-/// ブーストチャージ用パラメータをInspectorに表示します。
+/// ブーストチャージ用パラメータを日本語で編集・確認するInspectorを表示します。
 /// </summary>
 [CustomEditor(typeof(PlayerBoostChargingParameterAsset))]
 public sealed class PlayerBoostChargingParameterAssetEditor : Editor
@@ -14,196 +14,78 @@ public sealed class PlayerBoostChargingParameterAssetEditor : Editor
     /// </summary>
     public override void OnInspectorGUI()
     {
-        // --------------------------------------------------------
-        // 通常のInspector
-        // --------------------------------------------------------
+        serializedObject.Update();
 
-        DrawDefaultInspector();
+        EditorGUILayout.LabelField("チャージ基本設定", EditorStyles.boldLabel);
+        DrawParameter("m_movingStartChargeTime", "移動中開始：最大チャージ時間", "移動中にチャージを開始した場合の最大時間（秒）。");
+        DrawParameter("m_stationaryStartChargeTime", "停止中開始：最大チャージ時間", "停止中にチャージを開始した場合の最大時間（秒）。");
+        DrawParameter("m_minBoostChargeRate", "ダッシュに必要な最低チャージ割合", "この割合以上でチャージを離すとブーストダッシュへ移行します。");
+        DrawParameter("m_chargeDeceleration", "チャージ中の減速度", "チャージ中に毎秒減少する速度（m/s²）。");
 
+        EditorGUILayout.Space();
+        EditorGUILayout.LabelField("入力判定", EditorStyles.boldLabel);
+        DrawParameter("m_forwardInputHalfAngle", "正面入力と判定する半角", "この角度以内の前方入力と、後方側の同じ角度範囲は直進扱いになります（度）。");
+        DrawParameter("m_steeringDeadZone", "スティックのデッドゾーン", "この値以下のスティック入力は無入力として扱います。");
 
-        // --------------------------------------------------------
-        // パラメータ取得
-        // --------------------------------------------------------
+        EditorGUILayout.Space();
+        EditorGUILayout.LabelField("ドリフト旋回", EditorStyles.boldLabel);
+        DrawParameter("m_driftOutwardDuration", "外側へ膨らむ時間", "通常入力時に、入力と逆側へ膨らむ時間（秒）。");
+        DrawParameter("m_driftOutwardTurnRate", "外側へ膨らむ旋回倍率", "通常入力開始時の逆向き旋回の強さ。大きいほど外側へ膨らみます。");
+        DrawParameter("m_driftTurnSpeedAtChargeStart", "チャージ開始時の旋回速度", "チャージ開始直後の最大旋回速度（度/秒）。");
+        DrawParameter("m_driftTurnSpeedAtFullCharge", "フルチャージ時の旋回速度", "フルチャージ時の最大旋回速度（度/秒）。");
+        DrawParameter("m_driftCounterTurnRate", "逆入力の旋回倍率", "最初に決めた旋回方向と逆へ入力したときの倍率。小さいほど緩やかに大回りします。0で旋回しません。");
+        DrawParameter("m_driftSteeringResponseTime", "旋回入力の反応時間", "旋回入力へ到達するまでの時間（秒）。大きいほど入力変化が穏やかになります。");
+        DrawParameter("m_facingRotationSpeed", "プレイヤーの向き変更速度", "プレイヤーの見た目が進行方向へ向く速度（度/秒）。");
+        DrawParameter("m_stationaryChargeRotationSpeed", "停止中チャージの回転速度", "停止中に左右入力したときの回転速度（度/秒）。");
+        DrawParameter("m_movingChargeSidewaysLookAngle", "移動中モデルの横滑り角度", "移動中チャージでモデルが進行方向に対して横を向く最大角度（度）。");
+
+        EditorGUILayout.Space();
+        EditorGUILayout.LabelField("カメラ", EditorStyles.boldLabel);
+        DrawParameter("m_movingChargeCameraLookAngle", "移動中カメラの先読み角度", "チャージ中にカメラがカーブ内側を先読みする角度（度）。");
+        DrawParameter("m_movingChargeCameraLookDuration", "移動中カメラの追従時間", "カメラが目標方向へ追従する時間（秒）。");
+        DrawParameter("m_cameraDriftLookTurnSpeed", "停止中・解除時のカメラ旋回速度", "停止中チャージとチャージ解除時にカメラが向きを変える速度（度/秒）。");
+        DrawParameter("m_cameraDriftLookBlendRate", "停止中カメラの追従割合", "停止中チャージでプレイヤーの向きをカメラへ反映する割合（0～1）。");
+
+        EditorGUILayout.Space();
+        EditorGUILayout.LabelField("その他", EditorStyles.boldLabel);
+        DrawParameter("m_noMoveInputGraceTime", "移動入力停止の猶予時間", "移動入力が一時的に途切れたとき、待機状態へ移るまでの猶予（秒）。");
+        DrawParameter("m_speedLogInterval", "速度ログの出力間隔", "チャージ中の速度ログを出力する間隔（秒）。");
+
+        serializedObject.ApplyModifiedProperties();
 
         PlayerBoostChargingParameterAsset parameterAsset =
             (PlayerBoostChargingParameterAsset)target;
 
-
-        // --------------------------------------------------------
-        // 計算値
-        // --------------------------------------------------------
-
-        float movingStartChargeTime =
-            parameterAsset.MovingStartChargeTime;
-
-        float stationaryStartChargeTime =
-            parameterAsset.StationaryStartChargeTime;
-
-        float minBoostChargeRate =
-            parameterAsset.MinBoostChargeRate;
-
-        // 移動中開始時の最低チャージ率到達時間
-        float movingMinimumChargeTime =
-            movingStartChargeTime *
-            minBoostChargeRate;
-
-        // 停止中開始時の最低チャージ率到達時間
-        float stationaryMinimumChargeTime =
-            stationaryStartChargeTime *
-            minBoostChargeRate;
-
-        float chargeDeceleration =
-            parameterAsset.ChargeDeceleration;
-
-
-        // --------------------------------------------------------
-        // プレビュー表示
-        // --------------------------------------------------------
-
         EditorGUILayout.Space();
-
-        EditorGUILayout.LabelField(
-            "計算値プレビュー",
-            EditorStyles.boldLabel);
-
-
+        EditorGUILayout.LabelField("計算値プレビュー", EditorStyles.boldLabel);
         using (new EditorGUI.DisabledScope(true))
         {
-            // ----------------------------------------------------
-            // チャージ
-            // ----------------------------------------------------
-
-            EditorGUILayout.LabelField(
-                "チャージ設定",
-                EditorStyles.boldLabel);
-
             EditorGUILayout.FloatField(
-                "移動中開始 最大チャージ時間",
-                movingStartChargeTime);
-
+                "移動中開始：最低チャージ時間（秒）",
+                parameterAsset.MovingStartChargeTime * parameterAsset.MinBoostChargeRate);
             EditorGUILayout.FloatField(
-                "移動中開始 最低チャージ時間",
-                movingMinimumChargeTime);
-
-            EditorGUILayout.FloatField(
-                "停止中開始 最大チャージ時間",
-                stationaryStartChargeTime);
-
-            EditorGUILayout.FloatField(
-                "停止中開始 最低チャージ時間",
-                stationaryMinimumChargeTime);
-
-            EditorGUILayout.FloatField(
-                "最低チャージ割合",
-                minBoostChargeRate);
-
-
-            EditorGUILayout.Space();
-
-
-            // ----------------------------------------------------
-            // 移動
-            // ----------------------------------------------------
-
-            EditorGUILayout.LabelField(
-                "移動設定",
-                EditorStyles.boldLabel);
-
-            EditorGUILayout.FloatField(
-                "チャージ中減速度 (m/s²)",
-                chargeDeceleration);
-
-            EditorGUILayout.FloatField("正面判定の半角 (度)", parameterAsset.ForwardInputHalfAngle);
-            EditorGUILayout.FloatField("外側への膨らみ遷移時間 (秒)", parameterAsset.DriftOutwardDuration);
-
-
-            EditorGUILayout.Space();
-
-
-            // ----------------------------------------------------
-            // ドリフト
-            // ----------------------------------------------------
-
-            EditorGUILayout.LabelField(
-                "ドリフト設定",
-                EditorStyles.boldLabel);
-
-            EditorGUILayout.FloatField(
-                "チャージ開始時の旋回速度",
-                parameterAsset.DriftTurnSpeedAtChargeStart);
-
-            EditorGUILayout.FloatField(
-                "フルチャージ時の旋回速度",
-                parameterAsset.DriftTurnSpeedAtFullCharge);
-
-            EditorGUILayout.FloatField(
-                "向き変更速度",
-                parameterAsset.FacingRotationSpeed);
-
-            EditorGUILayout.FloatField(
-                "ステアリングデッドゾーン",
-                parameterAsset.SteeringDeadZone);
-
-            EditorGUILayout.FloatField(
-                "停止中チャージ回転速度",
-                parameterAsset.StationaryChargeRotationSpeed);
-
-
-            EditorGUILayout.Space();
-
-
-            // ----------------------------------------------------
-            // カメラ
-            // ----------------------------------------------------
-
-            EditorGUILayout.LabelField(
-                "カメラ設定",
-                EditorStyles.boldLabel);
-
-            EditorGUILayout.FloatField(
-                "カメラ追従速度",
-                parameterAsset.CameraDriftLookTurnSpeed);
-
-            EditorGUILayout.FloatField(
-                "カメラブレンド率",
-                parameterAsset.CameraDriftLookBlendRate);
-
-
-            EditorGUILayout.Space();
-
-
-            // ----------------------------------------------------
-            // その他
-            // ----------------------------------------------------
-
-            EditorGUILayout.LabelField(
-                "その他",
-                EditorStyles.boldLabel);
-
-            EditorGUILayout.FloatField(
-                "入力停止猶予時間",
-                parameterAsset.NoMoveInputGraceTime);
-
-            EditorGUILayout.FloatField(
-                "速度ログ間隔",
-                parameterAsset.SpeedLogInterval);
+                "停止中開始：最低チャージ時間（秒）",
+                parameterAsset.StationaryStartChargeTime * parameterAsset.MinBoostChargeRate);
         }
 
-
-        // --------------------------------------------------------
-        // 補足
-        // --------------------------------------------------------
-
-        EditorGUILayout.Space();
-
         EditorGUILayout.HelpBox(
-            "移動中開始と停止中開始で最大チャージ時間を個別に設定できます。\n" +
-            "最低チャージ時間は、それぞれの最大チャージ時間 × 最低チャージ割合で計算されます。\n" +
-            "移動中の正面・ニュートラル・後方入力は、進行方向を保って徐々に減速します。\n" +
-            "移動中の左右入力は反対側へ膨らんでから入力側へ旋回し、徐々に減速します。\n" +
-            "停止中チャージでは左右入力によってプレイヤーを回転できます。\n" +
-            "停止中チャージの回転速度はチャージ率によって変化しません。",
+            "通常入力は一度決めた方向へドリフトします。逆入力は「逆入力の旋回倍率」で調整でき、" +
+            "値を小さくすると緩やかな大回りになります。",
             MessageType.Info);
+    }
+
+    /// <summary>指定したフィールドを日本語ラベルと説明付きで描画します。</summary>
+    private void DrawParameter(string propertyName, string label, string tooltip)
+    {
+        SerializedProperty property = serializedObject.FindProperty(propertyName);
+        if (property == null)
+        {
+            return;
+        }
+
+        EditorGUILayout.PropertyField(
+            property,
+            new GUIContent(label, tooltip));
     }
 }
 
