@@ -179,7 +179,7 @@ public sealed class PlayerVRunningState
     protected override void OnFixedUpdate()
     {
         // 攻撃入力を確認
-        if (Owner.InputReader.ConsumeAttackInput())
+        if (Owner.InputReader.ConsumeAttackInput() && Owner.Monitor.IsGrounded)
         {
             // 攻撃中も残量を引き継ぎ、チャージの継続消費を維持する。
             SuspendBoost();

@@ -26,7 +26,7 @@ public sealed class PlayerWalkingState
     protected override void OnFixedUpdate()
     {
         // UŒ‚“ü—Í‚ğŠm”F
-        if (Owner.InputReader.ConsumeAttackInput())
+        if (Owner.InputReader.ConsumeAttackInput() && Owner.Monitor.IsGrounded)
         {
             Machine.ChangeState<PlayerAttackingState>();
             return;

@@ -46,6 +46,16 @@ public sealed class PlayerMonitor : MonoBehaviour
     /// false：接地していません。
     /// </returns>
     public bool IsGrounded => m_isGrounded;
+    /// <summary>足元の下向き判定で床面を確認し、側面への接触を除外します。</summary>
+    /// <returns>true：足元に上向きの支持面あり。false：側面接触または空中。</returns>
+    public bool HasGroundSupport()
+    {
+        if (!m_isInitialized || !m_isGrounded) return false;
+        Vector3 origin = m_groundCheckOrigin != null ? m_groundCheckOrigin.position : transform.position;
+        return Physics.Raycast(origin, Vector3.down, out RaycastHit hit,
+            m_groundCheckRadius, m_groundLayerMask, QueryTriggerInteraction.Ignore) &&
+            hit.normal.y >= 0.5f;
+    }
     public bool IsRailed => m_isRailed;
 
     public SplineRailInfo HitRailInfo => m_hitRailInfo;
