@@ -9,6 +9,10 @@ public sealed class PlayerAttackingState : StateBase<PlayerStateMachineComponent
     /// <summary>接地を確認して地上攻撃を開始します。</summary>
     protected override void OnStartState()
     {
+        // 攻撃へ遷移した時点で、未消費のチャージ開始要求を破棄します。
+        // ダッシュ中の入力イベントが攻撃終了後に再利用されることを防ぎます。
+        Owner.InputReader.DiscardVBoostPendingInput();
+
         if (!Owner.Monitor.IsGrounded)
         {
             // 状態開始中は遷移を予約せず、次の更新で終了します。
@@ -61,6 +65,8 @@ public sealed class PlayerAttackingState : StateBase<PlayerStateMachineComponent
     {
         m_attack?.StopAttack();
         m_attack = null;
+        // 攻撃中に発生したチャージ入力は、攻撃終了後へ持ち越しません。
+        Owner.InputReader.DiscardVBoostPendingInput();
     }
 
     /// <summary>被弾などによる中断時も攻撃を終了します。</summary>

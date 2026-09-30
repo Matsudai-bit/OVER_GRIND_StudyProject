@@ -319,6 +319,15 @@ public sealed class PlayerMotor : MonoBehaviour
         }
 
         m_playerRigidbody = playerRigidbody;
+
+        // 向きは移動・レール処理で制御するため、衝突による物理回転を全軸で固定します。
+        // 位置の制約は維持し、シーン側の設定に依存せず回転を防ぎます。
+        if (!m_playerRigidbody.isKinematic)
+        {
+            m_playerRigidbody.angularVelocity = Vector3.zero;
+        }
+        m_playerRigidbody.constraints |= RigidbodyConstraints.FreezeRotation;
+
         m_isInitialized = true;
 
         if (m_playerRigidbody.isKinematic)

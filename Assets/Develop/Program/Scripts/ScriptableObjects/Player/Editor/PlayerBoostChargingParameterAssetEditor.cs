@@ -52,8 +52,8 @@ public sealed class PlayerBoostChargingParameterAssetEditor : Editor
             stationaryStartChargeTime *
             minBoostChargeRate;
 
-        float chargeMoveSpeedRate =
-            parameterAsset.ChargeMoveSpeedRate;
+        float chargeDeceleration =
+            parameterAsset.ChargeDeceleration;
 
 
         // --------------------------------------------------------
@@ -110,8 +110,11 @@ public sealed class PlayerBoostChargingParameterAssetEditor : Editor
                 EditorStyles.boldLabel);
 
             EditorGUILayout.FloatField(
-                "チャージ中速度倍率",
-                chargeMoveSpeedRate);
+                "チャージ中減速度 (m/s²)",
+                chargeDeceleration);
+
+            EditorGUILayout.FloatField("正面判定の半角 (度)", parameterAsset.ForwardInputHalfAngle);
+            EditorGUILayout.FloatField("外側への膨らみ遷移時間 (秒)", parameterAsset.DriftOutwardDuration);
 
 
             EditorGUILayout.Space();
@@ -196,6 +199,8 @@ public sealed class PlayerBoostChargingParameterAssetEditor : Editor
         EditorGUILayout.HelpBox(
             "移動中開始と停止中開始で最大チャージ時間を個別に設定できます。\n" +
             "最低チャージ時間は、それぞれの最大チャージ時間 × 最低チャージ割合で計算されます。\n" +
+            "移動中の正面・ニュートラル・後方入力は、進行方向を保って徐々に減速します。\n" +
+            "移動中の左右入力は反対側へ膨らんでから入力側へ旋回し、徐々に減速します。\n" +
             "停止中チャージでは左右入力によってプレイヤーを回転できます。\n" +
             "停止中チャージの回転速度はチャージ率によって変化しません。",
             MessageType.Info);
