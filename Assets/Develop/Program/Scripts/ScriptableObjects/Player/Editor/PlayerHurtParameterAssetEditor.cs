@@ -80,6 +80,7 @@ public sealed class PlayerHurtParameterAssetEditor : Editor
     public override void OnInspectorGUI()
     {
         serializedObject.Update();
+
         DrawDescription();
 
         EditorGUILayout.Space(SECTION_SPACE);
@@ -144,14 +145,14 @@ public sealed class PlayerHurtParameterAssetEditor : Editor
             m_knockbackRateProperty,
             new GUIContent(
                 "ノックバック倍率",
-                "全攻撃共通のノックバック倍率です。" +
+                "全攻撃共通のノックバック倍率です。\n" +
                 "攻撃固有の倍率と乗算します。"));
 
         EditorGUILayout.PropertyField(
             m_defaultKnockbackProfileProperty,
             new GUIContent(
                 "攻撃別設定が渡されなかった場合の設定",
-                "攻撃別設定が渡されなかった場合の設定です。" +
+                "攻撃別設定が渡されなかった場合の設定です。\n" +
                 "未設定なら従来の速度・時間を使用します。"));
 
         EditorGUILayout.PropertyField(
