@@ -13,8 +13,10 @@ public sealed class PlayerHitDebugInput : MonoBehaviour
     [SerializeField, Tooltip("OFFならHPを減らさず、繰り返し被弾動作を確認できます。")]
     private bool m_applyDamage;
     [SerializeField, Min(1)] private int m_damage = 1;
-    [SerializeField, Tooltip("再現する攻撃の設定。未設定時はプレイヤーの標準設定を使用します。")]
+    [SerializeField, Tooltip("攻撃別設定をまとめたプロファイル。未設定時はプレイヤーの標準プロファイルを使用します。")]
     private PlayerKnockbackProfile m_knockbackProfile;
+    [SerializeField, Tooltip("仮に受けたことにする攻撃アセット。未設定・未登録時はプロファイルの標準設定を使用します。")]
+    private AttackIdentifier m_attackIdentifier;
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
     private PlayerHealth m_health;
@@ -82,17 +84,18 @@ public sealed class PlayerHitDebugInput : MonoBehaviour
         bool accepted;
         if (m_applyDamage)
         {
-            accepted = m_health != null && m_health.TryTakeDamage(Mathf.Max(1, m_damage), attackCenter, m_knockbackProfile);
+            accepted = m_health != null && m_health.TryTakeDamage(Mathf.Max(1, m_damage), attackCenter, m_knockbackProfile, m_attackIdentifier);
         }
         else
         {
             // 動作だけの確認は通常入力の有効状態やHPに依存させません。
-            accepted = m_stateMachine.TryStartHitReaction(attackCenter, m_knockbackProfile);
+            accepted = m_stateMachine.TryStartHitReaction(attackCenter, m_knockbackProfile, m_attackIdentifier);
         }
 
         if (accepted)
         {
-            Debug.Log($"[PlayerHitDebugInput] 被弾を再現しました。Key={m_hitKey}, Damage={m_applyDamage}", this);
+            string attackName = m_attackIdentifier != null ? m_attackIdentifier.name : "未指定";
+            Debug.Log($"[PlayerHitDebugInput] 被弾を再現しました。Attack={attackName}, Key={m_hitKey}, Damage={m_applyDamage}", this);
         }
         else
         {

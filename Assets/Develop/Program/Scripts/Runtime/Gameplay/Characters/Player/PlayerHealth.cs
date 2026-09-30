@@ -82,7 +82,7 @@ public sealed class PlayerHealth : MonoBehaviour, IDirectionalDamageable
     }
 
     /// <summary>攻撃別のノックバック設定を指定して、通常の無敵・HP判定を通して被弾します。</summary>
-    public bool TryTakeDamage(int damage, Vector3 attackCenter, PlayerKnockbackProfile profile)
+    public bool TryTakeDamage(int damage, Vector3 attackCenter, PlayerKnockbackProfile profile, AttackIdentifier attackIdentifier = null)
     {
         if (damage <= 0 || m_health == null || !m_health.IsInitialized || m_health.IsDead ||
             (m_hurtbox != null && !m_hurtbox.CanReceiveDamage) ||
@@ -94,7 +94,7 @@ public sealed class PlayerHealth : MonoBehaviour, IDirectionalDamageable
         // HP変更イベントから別の攻撃が発生しても、先に無敵化して多重被弾を防ぎます。
         if (m_stateMachine != null)
         {
-            m_stateMachine.TryStartHitReaction(attackCenter, profile);
+            m_stateMachine.TryStartHitReaction(attackCenter, profile, attackIdentifier);
         }
         m_health.TakeDamage(damage);
         return true;
