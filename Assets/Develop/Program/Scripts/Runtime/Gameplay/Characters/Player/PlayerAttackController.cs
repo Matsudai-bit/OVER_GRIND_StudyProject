@@ -6,6 +6,53 @@ using UnityEngine;
 /// </summary>
 public class PlayerAttackController : MonoBehaviour
 {
+    [SerializeField, Header("空中攻撃の吸着"), Min(0.0f)]
+    private float m_airAttachHoldDuration = 0.15f;
+    [SerializeField, Min(0.01f)]
+    private float m_airAttachFallAcceleration = 0.75f;
+    [SerializeField, Min(0.0f)]
+    private float m_airAttachContactGrace = 0.2f;
+    [SerializeField, Min(0.01f)]
+    private float m_airAttachMaxDistance = 1.0f;
+
+    /// <summary>初回命中後、その場に留まる時間を取得します。</summary>
+    public float AirAttachHoldDuration => Mathf.Max(0.0f, m_airAttachHoldDuration);
+    /// <summary>吸着後の下滑りの加速度を取得します。</summary>
+    public float AirAttachFallAcceleration => Mathf.Max(0.01f, m_airAttachFallAcceleration);
+    /// <summary>一時的な接触切れを許容する時間を取得します。</summary>
+    public float AirAttachContactGrace => Mathf.Max(0.0f, m_airAttachContactGrace);
+    /// <summary>吸着追従を許容する最大距離を取得します。</summary>
+    public float AirAttachMaxDistance => Mathf.Max(0.01f, m_airAttachMaxDistance);
+
+    /// <summary>連続攻撃で実際に命中した対象を通知します。</summary>
+    public event System.Action<IDamageable> ContinuousAttackHit;
+
+    /// <summary>既存ヒットボックスの命中通知を空中攻撃へ中継します。</summary>
+    /// <param name="target">命中した対象。</param>
+    private void HandleContinuousAttackHit(IDamageable target)
+    {
+        ContinuousAttackHit?.Invoke(target);
+    }
+
+    [SerializeField, Header("空中攻撃の落下"), Min(0.1f)]
+    [Tooltip("空中攻撃中の最大落下速度（m/s）。小さいほど攻撃を当てる時間に余裕ができます。")]
+    private float m_airAttackFallSpeed = 2.0f;
+
+    /// <summary>空中攻撃中の通常の最大落下速度を取得します。</summary>
+    public float AirAttackFallSpeed => Mathf.Max(0.1f, m_airAttackFallSpeed);
+
+    [SerializeField, Header("空中攻撃の命中時滞空"), Min(0.0f)]
+    private float m_airHitStopDuration = 0.08f;
+
+    [SerializeField, Min(0.0f)]
+    private float m_airHitFallSpeed = 0.5f;
+
+    /// <summary>命中後に落下を緩める時間を取得します。</summary>
+    public float AirHitStopDuration => Mathf.Max(0.0f, m_airHitStopDuration);
+
+    /// <summary>命中後の滞空中に許容する落下速度を取得します。</summary>
+    public float AirHitFallSpeed => Mathf.Max(0.0f, m_airHitFallSpeed);
+
     /// <summary>
     /// 攻撃アニメーションから通知されるイベント種別です。
     /// </summary>
@@ -94,6 +141,8 @@ public class PlayerAttackController : MonoBehaviour
                 continue;
             }
 
+            attackHitbox.AttackHit -= HandleContinuousAttackHit;
+            attackHitbox.AttackHit += HandleContinuousAttackHit;
             attackHitbox.EnableContinuousHitbox();
         }
     }
@@ -211,6 +260,7 @@ public class PlayerAttackController : MonoBehaviour
                 continue;
             }
 
+            attackHitbox.AttackHit -= HandleContinuousAttackHit;
             attackHitbox.DisableHitbox();
         }
     }
