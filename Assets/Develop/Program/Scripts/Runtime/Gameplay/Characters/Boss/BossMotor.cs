@@ -97,10 +97,20 @@ public sealed class BossMotor : MonoBehaviour
                 Mathf.Max(0.0f, acceleration) *
                 deltaTime);
 
+        Debug.Log(
+      $"Before: {currentHorizontalVelocity.magnitude:F3}, " +
+      $"New: {newHorizontalVelocity.magnitude:F3}, " +
+      $"Target: {targetSpeed:F3}, " +
+      $"Acceleration: {acceleration:F3}");
+
         m_rigidbody.linearVelocity = new Vector3(
             newHorizontalVelocity.x,
             m_rigidbody.linearVelocity.y,
             newHorizontalVelocity.z);
+
+        Debug.Log(
+        $"After Rigidbody: " +
+        $"{new Vector2(m_rigidbody.linearVelocity.x, m_rigidbody.linearVelocity.z).magnitude:F3}");
     }
 
     /// <summary>
@@ -176,6 +186,27 @@ public sealed class BossMotor : MonoBehaviour
         }
 
         m_rigidbody.MovePosition(targetPosition);
+    }
+
+    /// <summary>
+    /// 現在の水平移動速度を取得します。
+    /// </summary>
+    public float HorizontalSpeed
+    {
+        get
+        {
+            if (m_rigidbody == null)
+            {
+                return 0.0f;
+            }
+
+            Vector3 velocity =
+                m_rigidbody.linearVelocity;
+
+            return new Vector2(
+                velocity.x,
+                velocity.z).magnitude;
+        }
     }
 
 }

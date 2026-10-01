@@ -18,10 +18,28 @@ public sealed class S1P2BossReferences :
     private S1BossMissileReferences m_missileReferences;
     [SerializeField, Header("足攻撃状態のリファレンス")]
     private S1P2BossTailSlamReference m_tailSlamReference;
+    [SerializeField, Header("移動")]
+    private S1P2MoveStateReferences
+    m_moveStateReferences;
+
+    [SerializeField, Header("ミサイル実行制御")]
+    private S1P2BossMissileExecutor m_missileExecutor;
+
+    /// <summary>
+    /// ミサイル実行制御を取得します。
+    /// </summary>
+    public S1P2BossMissileExecutor MissileExecutor =>
+        m_missileExecutor;
 
     public S1P2BossStateParameterAsset StateParameterAsset => m_stateParameterAsset;
     public S1BossMissileReferences MissileReferences => m_missileReferences;
     public S1P2BossTailSlamReference TailSlamReference => m_tailSlamReference;
+
+    /// <summary>
+    /// 移動状態の参照を取得します。
+    /// </summary>
+    public S1P2MoveStateReferences MoveStateReferences =>
+        m_moveStateReferences;
 
     /// <summary>
     /// フェーズで使用するパラメータを生成します。
