@@ -153,7 +153,24 @@ public sealed class S1P2BossMissileState :
     /// </summary>
     private void StartCoolTimeIfSucceeded()
     {
-        // 必要になった段階で実装
+        if (Owner.GetStateExecutionStatus() !=
+            StateExecutionStatus.SUCCEEDED ||
+            m_references == null ||
+            m_references.DecisionParameterAsset == null)
+        {
+            return;
+        }
+
+        BossStateCoolTimeManager coolTimeManager =
+            Owner.GetComponent<BossStateCoolTimeManager>();
+
+        if (coolTimeManager == null)
+        {
+            return;
+        }
+
+        coolTimeManager.StartCoolTime<S1P2BossMissileState>(
+            m_references.DecisionParameterAsset.Missile.CoolTime);
     }
 
     /// <summary>
