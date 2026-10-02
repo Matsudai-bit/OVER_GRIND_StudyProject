@@ -119,6 +119,8 @@ public sealed class S1P3BossEnergyCannonState :
     /// </summary>
     protected override void OnExitState()
     {
+        StartCoolTimeIfSucceeded();
+
         if (m_attackIdentifier != null)
         {
             Owner.AttackHitboxRegistry?.DisableHitboxes(
@@ -239,7 +241,7 @@ public sealed class S1P3BossEnergyCannonState :
     {
         //Transform cannonPivot =
         //    m_stateReferences.CannonPivot;
- 
+
         //Transform playerTransform =
         //    m_commonReferences.PlayerTransform;
 
@@ -348,7 +350,7 @@ public sealed class S1P3BossEnergyCannonState :
                 "見つかりません。");
 
             return false;
-        }       
+        }
         if (!Owner.PhaseController
                 .TryGetCurrentPhaseComponent(
                     out m_commonReferences))
@@ -402,6 +404,34 @@ public sealed class S1P3BossEnergyCannonState :
         }
 
         return true;
+    }
+
+    /// <summary>
+    /// 正常終了した行動のクールタイムを開始します。
+    /// </summary>
+    private void StartCoolTimeIfSucceeded()
+    {
+        if (Owner == null ||
+            Owner.GetStateExecutionStatus() !=
+            StateExecutionStatus.SUCCEEDED ||
+            m_references == null ||
+            m_references.DecisionParameterAsset == null)
+        {
+            return;
+        }
+
+        BossStateCoolTimeManager coolTimeManager =
+            Owner.GetComponent<BossStateCoolTimeManager>();
+
+        if (coolTimeManager == null)
+        {
+            return;
+        }
+
+        coolTimeManager.StartCoolTime<S1P3BossEnergyCannonState>(
+            m_references.DecisionParameterAsset
+                .EnergyCannon
+                .CoolTime);
     }
 
     /// <summary>
