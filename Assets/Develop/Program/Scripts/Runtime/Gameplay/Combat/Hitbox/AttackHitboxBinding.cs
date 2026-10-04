@@ -1,12 +1,13 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Hitbox IDとAttackHitboxの対応を保持します。
+/// Hitbox IDと複数のAttackHitboxの対応を保持します。
 /// </summary>
 /// <typeparam name="THitboxId">Hitboxを識別する列挙型。</typeparam>
 [Serializable]
-public class AttackHitboxBinding<THitboxId>
+public sealed class AttackHitboxBinding<THitboxId>
     where THitboxId : struct, Enum
 {
     // Hitboxを識別するID
@@ -15,7 +16,7 @@ public class AttackHitboxBinding<THitboxId>
 
     // IDに対応するAttackHitbox
     [SerializeField]
-    private AttackHitbox m_attackHitbox;
+    private List<AttackHitbox> m_attackHitboxes = new();
 
     /// <summary>
     /// Hitbox IDを取得します。
@@ -23,7 +24,8 @@ public class AttackHitboxBinding<THitboxId>
     public THitboxId HitboxId => m_hitboxId;
 
     /// <summary>
-    /// AttackHitboxを取得します。
+    /// IDに対応するAttackHitbox一覧を取得します。
     /// </summary>
-    public AttackHitbox AttackHitbox => m_attackHitbox;
+    public IReadOnlyList<AttackHitbox> AttackHitboxes =>
+        m_attackHitboxes;
 }

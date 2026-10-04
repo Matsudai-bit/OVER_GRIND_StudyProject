@@ -23,7 +23,7 @@ public sealed class BossNavigation : MonoBehaviour
     [SerializeField, Min(MIN_SAMPLE_DISTANCE)]
     private float m_sampleDistance = 2.0f;
 
-    public void SetNavMeshSurface(NavMeshSurface navMesh)
+    private void SetNavMeshSurface(NavMeshSurface navMesh)
     {
         m_navMeshSurface = navMesh;
     }
@@ -41,13 +41,6 @@ public sealed class BossNavigation : MonoBehaviour
         if (m_navigationOrigin == null)
         {
             m_navigationOrigin = transform;
-        }
-
-        if (m_navMeshSurface == null)
-        {
-            Debug.LogError(
-                $"{nameof(NavMeshSurface)}が設定されていません。",
-                this);
         }
     }
 
@@ -211,5 +204,204 @@ public sealed class BossNavigation : MonoBehaviour
             movableDistance - Mathf.Max(0.0f, stopMargin),
             0.0f,
             maxDistance);
+    }
+
+    public void ReplaceSurface(NavMeshSurface navMeshSurface)
+    {
+        if (navMeshSurface)
+        {
+            if (m_navMeshSurface)
+                m_navMeshSurface.gameObject.SetActive(false);
+            SetNavMeshSurface(navMeshSurface);
+
+            m_navMeshSurface.gameObject.SetActive(true);
+        }
+    }
+
+    // FootprintがNavMesh内にあるとみなす許容距離
+    private const float FOOTPRINT_NAVMESH_TOLERANCE = 0.1f;
+    // NavMesh内側方向を探索する最大距離
+    [SerializeField, Min(MIN_SAMPLE_DISTANCE)]
+    private float m_insideDirectionSampleDistance = 10.0f;
+
+    /// <summary>
+    /// FootprintがNavMeshからはみ出している場合の内側方向を取得します。
+    /// </summary>
+    /// <param name="footprint">確認するボスのNavMesh占有範囲。</param>
+    /// <param name="insideDirection">NavMesh内側を向く方向。</param>
+    /// <returns>
+    /// true：内側方向を取得できました。
+    /// false：FootprintがNavMesh内、または方向を取得できませんでした。
+    /// </returns>
+    public bool TryGetNavMeshInsideDirection(
+        BossNavMeshFootprint footprint,
+        out Vector3 insideDirection)
+    {
+        insideDirection = Vector3.zero;
+
+        if (footprint == null)
+        {
+            return false;
+        }
+
+        Vector3[] corners = footprint.GetWorldCorners();
+
+        if (corners == null ||
+            corners.Length == 0)
+        {
+            return false;
+        }
+
+        NavMeshQueryFilter queryFilter =
+            CreateQueryFilter();
+
+        Vector3 correctionDirection = Vector3.zero;
+        int outsideCornerCount = 0;
+
+        foreach (Vector3 corner in corners)
+        {
+            // 内側方向を求めるため、通常より広い範囲から
+            // 最寄りのNavMesh位置を取得する
+            if (!NavMesh.SamplePosition(
+                    corner,
+                    out NavMeshHit hit,
+                    m_insideDirectionSampleDistance,
+                    queryFilter))
+            {
+                continue;
+            }
+
+            Vector3 difference =
+                hit.position - corner;
+
+            difference.y = 0.0f;
+
+            // NavMesh上にある点は方向計算に使用しない
+            if (difference.sqrMagnitude <=
+                FOOTPRINT_NAVMESH_TOLERANCE *
+                FOOTPRINT_NAVMESH_TOLERANCE)
+            {
+                continue;
+            }
+
+            correctionDirection += difference;
+            outsideCornerCount++;
+        }
+
+        if (outsideCornerCount == 0)
+        {
+            return false;
+        }
+
+        if (correctionDirection.sqrMagnitude <= Mathf.Epsilon)
+        {
+            return false;
+        }
+
+        insideDirection =
+            correctionDirection.normalized;
+
+        return true;
+    }
+
+    /// <summary>
+    /// 現在のFootprintがNavMesh内に収まっているか確認します。
+    /// </summary>
+    /// <param name="footprint">確認する占有範囲。</param>
+    /// <returns>
+    /// true：Footprint全体がNavMesh内です。
+    /// false：NavMesh外へ出ています。
+    /// </returns>
+    public bool IsFootprintInsideNavMesh(
+        BossNavMeshFootprint footprint)
+    {
+        if (footprint == null)
+        {
+            return false;
+        }
+
+        return AreFootprintCornersInsideNavMesh(
+            footprint.GetWorldCorners());
+    }
+
+    /// <summary>
+    /// 指定PoseでFootprintがNavMesh内に収まるか確認します。
+    /// </summary>
+    /// <param name="footprint">確認する占有範囲。</param>
+    /// <param name="poseOrigin">移動基準Transform。</param>
+    /// <param name="position">予測位置。</param>
+    /// <param name="rotation">予測回転。</param>
+    /// <returns>
+    /// true：Footprint全体がNavMesh内です。
+    /// false：NavMesh外へ出ています。
+    /// </returns>
+    public bool IsFootprintInsideNavMesh(
+        BossNavMeshFootprint footprint,
+        Transform poseOrigin,
+        Vector3 position,
+        Quaternion rotation)
+    {
+        if (footprint == null ||
+            poseOrigin == null)
+        {
+            return false;
+        }
+
+        return AreFootprintCornersInsideNavMesh(
+            footprint.GetWorldCorners(
+                poseOrigin,
+                position,
+                rotation));
+    }
+
+    /// <summary>
+    /// Footprintの各頂点がNavMesh内にあるか確認します。
+    /// </summary>
+    /// <param name="corners">確認する頂点。</param>
+    /// <returns>
+    /// true：全頂点がNavMesh内です。
+    /// false：NavMesh外の頂点があります。
+    /// </returns>
+    private bool AreFootprintCornersInsideNavMesh(
+        Vector3[] corners)
+    {
+        if (m_navMeshSurface == null ||
+            corners == null ||
+            corners.Length == 0)
+        {
+            return false;
+        }
+
+        NavMeshQueryFilter queryFilter =
+            CreateQueryFilter();
+
+        foreach (Vector3 corner
+                 in corners)
+        {
+            if (!NavMesh.SamplePosition(
+                    corner,
+                    out NavMeshHit hit,
+                    m_sampleDistance,
+                    queryFilter))
+            {
+                return false;
+            }
+
+            Vector3 difference =
+                hit.position -
+                corner;
+
+            difference.y =
+                0.0f;
+
+            if (difference.sqrMagnitude >
+                FOOTPRINT_NAVMESH_TOLERANCE *
+                FOOTPRINT_NAVMESH_TOLERANCE)
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

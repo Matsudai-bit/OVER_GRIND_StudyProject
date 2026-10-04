@@ -501,7 +501,7 @@ public sealed class BossPhaseController : MonoBehaviour
 
         if (phaseReferences.NavMeshSurface != null)
         {
-            m_navigation.SetNavMeshSurface(
+            m_navigation.ReplaceSurface(
                 phaseReferences.NavMeshSurface);
         }
 
