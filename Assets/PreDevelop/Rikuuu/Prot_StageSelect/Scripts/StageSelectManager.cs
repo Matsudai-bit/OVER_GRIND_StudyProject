@@ -124,85 +124,158 @@ public class StageSelectManager : MonoBehaviour
     // 吸着が完了し、既に中心へ到達済みかどうか
     private bool m_isSnapCompleted = false;
 
+
     private void Start()
     {
         ResetConmornent();
     }
 
+    // 1分あたりの秒数
+    private const int SECONDS_PER_MINUTE = 60;
+
     private void LateUpdate()
     {
-        // 判定の前にカーソルを吸着させる
+        // カーソルの吸着処理
         UpdateCursorSnap();
 
-        // マップの移動・拡大縮小（Update）の後で判定する
+        // カーソルが乗っているステージを更新
+        UpdateHoveredStage();
+
+        // READYボタンの入力を更新
+        UpdateReadyButtonInput();
+    }
+
+    /// <summary>
+    /// カーソルが乗っているステージを更新します。
+    /// </summary>
+    private void UpdateHoveredStage()
+    {
+        // 現在カーソルが乗っているステージを取得
         int hoveredIndex = FindHoveredIndex();
 
-        // 変化がなければ何もしない
+        // 選択中のステージに変化がない場合
         if (hoveredIndex == m_hoveredIndex)
         {
             return;
         }
 
+        // 選択中のステージを更新
         m_hoveredIndex = hoveredIndex;
 
-        // 変化があったときのみ表示する
-        if (IsHovering)
-        {
-            Debug.Log("カーソルが乗った: " + m_stagePoints[m_hoveredIndex].rectTransform.name);
-
-            // ステージ番号の表示
-            m_stageNumber.text = "STAGE-" + m_stagePoints[m_hoveredIndex].stageNumber.ToString();
-            // セクター番号の表示
-            m_sectorNumber.sprite = m_stagePoints[m_hoveredIndex].stageSectorNumber;
-
-            // ステージ名の表示
-            m_stageNameJa.text = m_stagePoints[m_hoveredIndex].stageNameJa;
-            foreach (var stageName in m_stageNameEng)
-            {
-                stageName.text = m_stagePoints[m_hoveredIndex].stageNameEng;
-            }
-
-            // ベストタイムの表示
-            int bestTime = m_stagePoints[m_hoveredIndex].bestTime;
-            int minutes = bestTime / 60;
-            float seconds = bestTime - (minutes * 60);
-
-            string timeText = minutes.ToString("00") + ":" + seconds.ToString("00.00");
-            m_bestTime.text = timeText;
-
-            // イメージコンポーネントの表示
-            m_onCursorImage.enabled = true;
-            m_arrowLineImage.enabled = true;
-
-            // プレイできる場合
-            if (m_stagePoints[m_hoveredIndex].canPlay) 
-            {
-                // ボタンにカーソルが合っている状態にする
-                m_readyButton.OnCursor();
-            }
-        }
-        else
+        // ステージにカーソルが乗っていない場合
+        if (!IsHovering)
         {
             Debug.Log("カーソルが離れた");
 
             ResetConmornent();
+            return;
         }
 
-        // カーソルが合わさっていたら
-        if(m_readyButton.m_isOnCursor)
+        StageInfomation stageInfo = m_stagePoints[m_hoveredIndex];
+
+        Debug.Log(
+            $"カーソルが乗った: {stageInfo.rectTransform.name}"
+        );
+
+        // 選択中のステージ情報をUIへ反映
+        UpdateStageInformation(stageInfo);
+    }
+
+    /// <summary>
+    /// ステージ情報をUIへ反映します。
+    /// </summary>
+    /// <param name="stageInfo">表示するステージ情報。</param>
+    private void UpdateStageInformation(StageInfomation stageInfo)
+    {
+        // ステージ番号を更新
+        m_stageNumber.text = $"STAGE-{stageInfo.stageNumber}";
+
+        // セクター番号を更新
+        m_sectorNumber.sprite = stageInfo.stageSectorNumber;
+
+        // ステージ名を更新
+        m_stageNameJa.text = stageInfo.stageNameJa;
+
+        foreach (TextMeshProUGUI stageName in m_stageNameEng)
         {
-            // 決定キーが押されたら
-            if (m_enterActionRef != null && m_enterActionRef.action.WasPressedThisFrame())
-            {
-                // キーが押されたときの処理を実行する
-                m_readyButton.OnClick();
-            }
-            // 決定ボタンが離されたら
-            if (m_enterActionRef != null && m_enterActionRef.action.WasReleasedThisFrame())
-            {
-                // キーが離されたときの処理を実行する
-                m_readyButton.OnClickExit();
-            }
+            stageName.text = stageInfo.stageNameEng;
+        }
+
+        // ベストタイムを更新
+        UpdateBestTime(stageInfo.bestTime);
+
+        // ステージ情報UIを表示
+        m_onCursorImage.enabled = true;
+        m_arrowLineImage.enabled = true;
+
+        // プレイ可能状態に応じてREADYボタンを更新
+        UpdateReadyButtonState(stageInfo.canPlay);
+    }
+
+    /// <summary>
+    /// ベストタイム表示を更新します。
+    /// </summary>
+    /// <param name="bestTime">ベストタイムの秒数。</param>
+    private void UpdateBestTime(int bestTime)
+    {
+        int minutes = bestTime / SECONDS_PER_MINUTE;
+        int seconds = bestTime % SECONDS_PER_MINUTE;
+
+        m_bestTime.text = $"{minutes:00}:{seconds:00}.00";
+    }
+
+    /// <summary>
+    /// ステージのプレイ可能状態に応じてREADYボタンを更新します。
+    /// </summary>
+    /// <param name="canPlay">ステージがプレイ可能かどうか。</param>
+    private void UpdateReadyButtonState(bool canPlay)
+    {
+        if (m_readyButton == null)
+        {
+            return;
+        }
+
+        // プレイ可能な場合
+        if (canPlay)
+        {
+            m_readyButton.OnCursor();
+            return;
+        }
+
+        // プレイできない場合
+        m_readyButton.OnCursorExit();
+    }
+
+    /// <summary>
+    /// READYボタンの入力を更新します。
+    /// </summary>
+    private void UpdateReadyButtonInput()
+    {
+        if (m_readyButton == null || m_enterActionRef == null)
+        {
+            return;
+        }
+
+        // READYボタンが選択されていない場合
+        if (!m_readyButton.IsOnCursor)
+        {
+            return;
+        }
+
+        // 決定ボタンが押された場合
+        if (m_enterActionRef.action.WasPressedThisFrame())
+        {
+            Debug.Log("READY Press");
+
+            m_readyButton.OnClick();
+        }
+
+        // 決定ボタンが離された場合
+        if (m_enterActionRef.action.WasReleasedThisFrame())
+        {
+            Debug.Log("READY Release");
+
+            m_readyButton.OnClickExit();
         }
     }
 
