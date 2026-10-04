@@ -79,6 +79,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerCamera
   sensitivity: 1
+  m_cinemachineCamera: {fileID: 1812006397312950562}
+  m_inputAxisController: {fileID: 1163282603766494091}
 --- !u!1 &415096441624393917
 GameObject:
   m_ObjectHideFlags: 0
@@ -152,7 +154,7 @@ Rigidbody:
   m_UseGravity: 1
   m_IsKinematic: 0
   m_Interpolate: 1
-  m_Constraints: 80
+  m_Constraints: 112
   m_CollisionDetection: 0
 --- !u!114 &5069751796256331156
 MonoBehaviour:
@@ -336,7 +338,9 @@ MonoBehaviour:
   m_moveActionReference: {fileID: -1680190386980627800, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_attackActionReference: {fileID: 1120369429361536294, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_jumpActionReference: {fileID: -2099379676528639254, guid: 052faaac586de48259a63d0c4782560b, type: 3}
-  m_vBoostActionReference: {fileID: 7727032971491509709, guid: 052faaac586de48259a63d0c4782560b, type: 3}
+  m_vBoostActionReference: {fileID: 0}
+  m_inputActionsAsset: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
+  m_vBoostActionName: Player/Charge
 --- !u!114 &5667916083665077385
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -414,6 +418,7 @@ MonoBehaviour:
   m_stateMachineComponent: {fileID: 0}
   m_attackController: {fileID: 0}
   m_splineGrindController: {fileID: 0}
+  m_playerCamera: {fileID: 7282053601130355310}
   m_modelTransform: {fileID: 8987126671198791686}
 --- !u!114 &8122269946311702765
 MonoBehaviour:

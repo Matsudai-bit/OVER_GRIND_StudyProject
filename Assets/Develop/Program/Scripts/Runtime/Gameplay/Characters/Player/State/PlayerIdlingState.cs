@@ -23,7 +23,7 @@ public sealed class PlayerIdlingState
     /// </summary>
     protected override void OnFixedUpdate()
     {
-        if (Owner.InputReader.ConsumeAttackInput())
+        if (Owner.InputReader.ConsumeAttackInput() && Owner.Monitor.IsGrounded)
         {
             Machine.ChangeState<PlayerAttackingState>();
             return;

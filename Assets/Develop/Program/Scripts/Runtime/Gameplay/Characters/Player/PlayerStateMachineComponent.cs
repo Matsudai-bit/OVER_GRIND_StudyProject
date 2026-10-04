@@ -600,7 +600,7 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
     }
 
     /// <summary>攻撃別設定を使って被弾を開始します。未指定時は標準設定を使用します。</summary>
-    public bool TryStartHitReaction(Vector3 attackCenter, PlayerKnockbackProfile profile)
+    public bool TryStartHitReaction(Vector3 attackCenter, PlayerKnockbackProfile profile, AttackIdentifier attackIdentifier = null)
     {
         if (!m_isInitialized || !isActiveAndEnabled || IsHitReacting) return false;
 
@@ -615,11 +615,13 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
         float recoveryDuration = HitRecoveryDuration;
         if (selectedProfile != null)
         {
-            rate *= selectedProfile.KnockbackRate;
-            horizontalSpeed = selectedProfile.HorizontalSpeed;
-            liftSpeed = selectedProfile.LiftSpeed;
-            duration = selectedProfile.Duration;
-            recoveryDuration = selectedProfile.RecoveryDuration;
+            // 攻撃IDが未設定・未登録なら、既存アセットの標準設定を使用します。
+            bool hasAttackSettings = selectedProfile.TryGetSettings(attackIdentifier, out PlayerAttackKnockbackSettings settings);
+            rate *= hasAttackSettings ? settings.KnockbackRate : selectedProfile.KnockbackRate;
+            horizontalSpeed = hasAttackSettings ? settings.HorizontalSpeed : selectedProfile.HorizontalSpeed;
+            liftSpeed = hasAttackSettings ? settings.LiftSpeed : selectedProfile.LiftSpeed;
+            duration = hasAttackSettings ? settings.Duration : selectedProfile.Duration;
+            recoveryDuration = hasAttackSettings ? settings.RecoveryDuration : selectedProfile.RecoveryDuration;
         }
 
         // 被弾開始時に値を確定し、共有アセットの変更で飛行途中の設定が変わることを防ぎます。

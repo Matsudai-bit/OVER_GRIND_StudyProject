@@ -26,9 +26,37 @@ public sealed class PlayerBoostChargingParameterAsset : ScriptableObject
     [SerializeField, Range(0.0f, 1.0f)]
     private float m_minBoostChargeRate = 0.10f;
 
-    // チャージ中の移動速度倍率
-    [SerializeField, Min(0.0f)]
+    // 旧アセット互換用。現在の移動では使用しません。
+    [SerializeField, HideInInspector]
     private float m_chargeMoveSpeedRate = 0.75f;
+
+    [Tooltip("チャージ中に毎秒減らす速度（m/s²）。開始時の実速度から減速します。")]
+    [SerializeField, Min(0.0f)]
+    private float m_chargeDeceleration = 4.0f;
+
+    [Tooltip("正面入力の判定半角（度）。30なら正面から左右30度以内。そのほかの左右領域でドリフトします。正面・後方の同じ半角では旋回せず徐々に減速します。")]
+    [SerializeField, Range(1.0f, 89.0f)]
+    private float m_forwardInputHalfAngle = 30.0f;
+
+    [Tooltip("反対側への膨らみから入力側の旋回へ切り替わる時間（秒）。")]
+    [SerializeField, Min(0.01f)]
+    private float m_driftOutwardDuration = 0.8f;
+
+    [Tooltip("膨らみ始めの逆向き旋回速度。通常旋回速度に対する倍率。")]
+    [SerializeField, Min(0.0f)]
+    private float m_driftOutwardTurnRate = 1.0f;
+
+    /// <summary>チャージ中の減速度を取得します。</summary>
+    public float ChargeDeceleration => Mathf.Max(0.0f, m_chargeDeceleration);
+
+    /// <summary>正面・後方入力の判定半角を取得します。</summary>
+    public float ForwardInputHalfAngle => Mathf.Clamp(m_forwardInputHalfAngle, 1.0f, 89.0f);
+
+    /// <summary>外側へ膨らむ旋回の遷移時間を取得します。</summary>
+    public float DriftOutwardDuration => Mathf.Max(0.01f, m_driftOutwardDuration);
+
+    /// <summary>外側へ膨らむ旋回速度の倍率を取得します。</summary>
+    public float DriftOutwardTurnRate => Mathf.Max(0.0f, m_driftOutwardTurnRate);
 
     [Header("ドリフト設定（移動方向の曲がりやすさ）")]
 
@@ -36,7 +64,7 @@ public sealed class PlayerBoostChargingParameterAsset : ScriptableObject
     // 値が小さいほど曲がりにくい
     [Tooltip("チャージ開始直後の曲がりやすさ（度/秒）。小さいほど曲がりにくい。")]
     [SerializeField, Min(0.0f)]
-    private float m_driftTurnSpeedAtChargeStart = 15.0f;
+    private float m_driftTurnSpeedAtChargeStart = 45.0f;
 
     // チャージ完了時点の、移動方向を変更できる速度（度/秒）
     // チャージが進むほどこの値へ近づき、曲がりやすくなる
@@ -44,9 +72,22 @@ public sealed class PlayerBoostChargingParameterAsset : ScriptableObject
     [SerializeField, Min(0.0f)]
     private float m_driftTurnSpeedAtFullCharge = 60.0f;
 
+    // 旧ドリフト設定の保存用。現在は入力角度で直進減速へ切り替えます。
+    [SerializeField, HideInInspector]
+    private float m_driftNeutralTurnRate = 0.55f;
+
+    // 旋回方向と逆へ入力したときの旋回倍率
+    [Tooltip("最初に決めた旋回方向と逆へ入力したときの旋回倍率。小さいほど緩やかに大回りします。0で旋回しません。")]
+    [SerializeField, Range(0.0f, 1.0f)]
+    private float m_driftCounterTurnRate = 0.15f;
+
+    [Tooltip("旋回量が0から最大へ変化する時間（秒）。大きいほど穏やかに曲がります。")]
+    [SerializeField, Min(0.01f)]
+    private float m_driftSteeringResponseTime = 0.3f;
+
     // プレイヤーの見た目の向きを変更する速度（度/秒）
     [SerializeField, Min(0.0f)]
-    private float m_facingRotationSpeed = 50.0f;
+    private float m_facingRotationSpeed = 120.0f;
 
     // スティック入力のデッドゾーン
     [SerializeField, Range(0.0f, 1.0f)]
@@ -60,18 +101,18 @@ public sealed class PlayerBoostChargingParameterAsset : ScriptableObject
 
     // 移動中開始のチャージ中、モデルが移動方向に対して
     // どれだけ真横を向くかの角度（度）
-    // 旋回入力がある側へこの角度分だけモデルを向ける
-    [Tooltip("移動中開始のチャージ中、旋回入力側へモデルを向ける角度（度）。90で真横。")]
+    // 最大旋回時の角度。旋回量に応じて滑らかに変化する
+    [Tooltip("最大旋回時のモデルの横滑り角度（度）。通常は20～40程度。")]
     [SerializeField, Range(0.0f, 180.0f)]
-    private float m_movingChargeSidewaysLookAngle = 90.0f;
+    private float m_movingChargeSidewaysLookAngle = 30.0f;
 
     [Header("カメラ設定")]
 
-    [Tooltip("移動中開始のチャージ中、左右入力側へカメラを向ける角度（度）。移動方向を基準に、90で真横、0で正面。")]
+    [Tooltip("最大旋回時にカメラがカーブの内側を先読みする角度（度）。0で進行方向へ追従。")]
     [SerializeField, Range(0.0f, 180.0f)]
-    private float m_movingChargeCameraLookAngle = 90.0f;
+    private float m_movingChargeCameraLookAngle = 10.0f;
 
-    [Tooltip("左右入力の開始・反転から、カメラが目標角度に到達するまでの時間（秒）。0で即座に向きます。")]
+    [Tooltip("進行方向へカメラが近づく追従時間（秒）。0で即座に向きます。")]
     [SerializeField, Min(0.0f)]
     private float m_movingChargeCameraLookDuration = 0.5f;
 
@@ -131,6 +172,15 @@ public sealed class PlayerBoostChargingParameterAsset : ScriptableObject
     public float DriftTurnSpeedAtFullCharge =>
         m_driftTurnSpeedAtFullCharge;
 
+    /// <summary>無入力時の旋回割合を取得します。</summary>
+    public float DriftNeutralTurnRate => Mathf.Clamp01(m_driftNeutralTurnRate);
+
+    /// <summary>旋回方向と逆へ入力したときの旋回倍率を取得します。</summary>
+    public float DriftCounterTurnRate => Mathf.Clamp01(m_driftCounterTurnRate);
+
+    /// <summary>旋回入力の応答時間（秒）を取得します。</summary>
+    public float DriftSteeringResponseTime => Mathf.Max(0.01f, m_driftSteeringResponseTime);
+
     /// <summary>
     /// プレイヤーの見た目の向きを変更する速度（度/秒）を取得します。
     /// </summary>
@@ -162,7 +212,7 @@ public sealed class PlayerBoostChargingParameterAsset : ScriptableObject
         m_movingChargeCameraLookAngle;
 
     /// <summary>
-    /// 左右入力の開始・反転からカメラが目標角度へ到達するまでの時間（秒）を取得します。
+    /// カメラが目標方向へ近づく追従時間（秒）を取得します。
     /// </summary>
     public float MovingChargeCameraLookDuration =>
         m_movingChargeCameraLookDuration;
