@@ -109,6 +109,42 @@ public sealed class PlayerMotor : MonoBehaviour
         m_playerRigidbody.linearVelocity = velocity;
     }
 
+    /// <summary>速度を変更せず、指定した水平進行方向へ体の向きを即座に合わせます。</summary>
+    /// <param name="worldDirection">ワールド空間の進行方向。垂直成分は使用しません。</param>
+    public void AlignFacingToDirection(Vector3 worldDirection)
+    {
+        if (!m_isInitialized) return;
+        worldDirection.y = 0.0f;
+        if (worldDirection.sqrMagnitude <= DIRECTION_SQR_THRESHOLD) return;
+
+        // 同じ物理更新内で攻撃へ移る場合も、新しい向きから移動を開始します。
+        m_playerRigidbody.rotation = Quaternion.LookRotation(worldDirection.normalized, Vector3.up);
+    }
+
+    /// <summary>水平速度と上昇を維持し、空中攻撃中の落下速度を制限します。</summary>
+    /// <param name="maxFallSpeed">許容する下向きの速度。</param>
+    public void LimitAttackFallSpeed(float maxFallSpeed)
+    {
+        if (!m_isInitialized || m_playerRigidbody.isKinematic) return;
+        Vector3 velocity = m_playerRigidbody.linearVelocity;
+        float gravityStep = m_playerRigidbody.useGravity ? Physics.gravity.y * Time.fixedDeltaTime : 0.0f;
+        // この後の物理計算で加わる重力も含めて制限します。
+        velocity.y = Mathf.Max(velocity.y, -Mathf.Max(0.0f, maxFallSpeed) - gravityStep);
+        m_playerRigidbody.linearVelocity = velocity;
+    }
+
+    /// <summary>物理衝突を維持しながら、空中攻撃の接触位置へ追従します。</summary>
+    /// <param name="position">対象の移動と下降量を反映した目標位置。</param>
+    /// <param name="deltaTime">物理更新の間隔。</param>
+    public void MoveToAirAttackContact(Vector3 position, float deltaTime)
+    {
+        if (!m_isInitialized || m_playerRigidbody.isKinematic || deltaTime <= 0.0f) return;
+        Vector3 velocity = (position - m_playerRigidbody.position) / deltaTime;
+        // 停止・緩やかな下降を重力に上書きされないよう、次の物理更新分を補償します。
+        if (m_playerRigidbody.useGravity) velocity -= Physics.gravity * deltaTime;
+        m_playerRigidbody.linearVelocity = velocity;
+    }
+
     /// <summary>固定更新によるレール誘導を開始し、物理演算との位置の取り合いを防ぎます。</summary>
     public void BeginRailMotion()
     {
@@ -283,6 +319,15 @@ public sealed class PlayerMotor : MonoBehaviour
         }
 
         m_playerRigidbody = playerRigidbody;
+
+        // 向きは移動・レール処理で制御するため、衝突による物理回転を全軸で固定します。
+        // 位置の制約は維持し、シーン側の設定に依存せず回転を防ぎます。
+        if (!m_playerRigidbody.isKinematic)
+        {
+            m_playerRigidbody.angularVelocity = Vector3.zero;
+        }
+        m_playerRigidbody.constraints |= RigidbodyConstraints.FreezeRotation;
+
         m_isInitialized = true;
 
         if (m_playerRigidbody.isKinematic)

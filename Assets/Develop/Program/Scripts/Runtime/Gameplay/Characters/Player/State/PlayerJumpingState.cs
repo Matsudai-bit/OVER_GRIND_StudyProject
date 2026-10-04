@@ -28,6 +28,8 @@ public sealed class PlayerJumpingState
     /// </summary>
     protected override void OnFixedUpdate()
     {
+        // 通常ジャンプ中の攻撃入力を着地後へ持ち越しません。
+        Owner.InputReader.ConsumeAttackInput();
         Debug.Log(
             $"[Jump] y-vel={Owner.Motor.VerticalVelocity:F3}, " +
             $"y-pos={Owner.transform.position.y:F3}, " +

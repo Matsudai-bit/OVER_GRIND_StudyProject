@@ -1,230 +1,77 @@
 using UnityEngine;
 
-/// <summary>
-/// ƒvƒŒƒCƒ„[‚Ì’nãUŒ‚ó‘Ô‚ğŠÇ—‚µ‚Ü‚·B
-/// UŒ‚ƒ{ƒ^ƒ“‚ğ‰Ÿ‚µ‚Ä‚¢‚éŠÔAŠJn“_‚Ì‘Ì‚ÌŒü‚«‚ğˆÛ‚µ‚½‚Ü‚Ü
-/// ˆÚ“®‚µ‚È‚ª‚çUŒ‚‚ğ‘±‚¯Aˆê’èüŠú‚Å‘½’iƒqƒbƒg”»’è‚ğs‚¢‚Ü‚·B
-/// ˆÚ“®‘¬“x‚ÍUŒ‚Œp‘±ŠÔ‚Æ‚µ‚ÄÁ”ï‚³‚ê‚Ü‚·B
-/// </summary>
-public sealed class PlayerAttackingState
-    : StateBase<PlayerStateMachineComponent>
+/// <summary>æ¥åœ°ä¸­ã®é€£ç¶šæ”»æ’ƒã¨é€šå¸¸ç§»å‹•ãƒ»ã‚¸ãƒ£ãƒ³ãƒ—ã¸ã®é·ç§»ã‚’ç®¡ç†ã—ã¾ã™ã€‚</summary>
+public sealed class PlayerAttackingState : StateBase<PlayerStateMachineComponent>
 {
-    // UŒ‚’†‚ÍŠJn‚Ì•ûŒü‚ÖŒÅ’è‚·‚é‚½‚ß‰ñ“]‚³‚¹‚È‚¢
-    private const float ATTACK_ROTATION_SPEED = 0.0f;
+    private PlayerContinuousAttack m_attack;
+    private bool m_isTransitionPending;
 
-    // UŒ‚’†‚É1•b‚ ‚½‚èÁ”ï‚·‚é‘¬“x
-    private const float SPEED_DECAY_PER_SECOND = 8.0f;
-
-    // ‚±‚ê–¢–‚É‚È‚Á‚½‚ç‘¬“x‚ğg‚¢Ø‚Á‚½‚Æ‚İ‚È‚·
-    private const float SPEED_EPSILON = 0.01f;
-
-    // UŒ‚ŠJn‚Ì‘¬“x
-    private float m_initialSlideSpeed;
-
-    // UŒ‚’†‚Ìc‚è‘¬“x
-    private float m_currentSlideSpeed;
-
-    // Ÿ‚Ìƒqƒbƒg”»’è‚Ü‚Å‚ÌŒo‰ßŠÔ
-    private float m_hitTimer;
-
-    // UŒ‚ŠJn‚ÉŒÅ’è‚·‚éˆÚ“®•ûŒü
-    private Vector3 m_slideDirection;
-
-    /// <summary>
-    /// UŒ‚ó‘Ô‚ğŠJn‚µ‚Ü‚·B
-    /// </summary>
+    /// <summary>æ¥åœ°ã‚’ç¢ºèªã—ã¦åœ°ä¸Šæ”»æ’ƒã‚’é–‹å§‹ã—ã¾ã™ã€‚</summary>
     protected override void OnStartState()
     {
-        m_currentSlideSpeed =
-            Owner.Motor.HorizontalSpeed;
+        // æ”»æ’ƒã¸é·ç§»ã—ãŸæ™‚ç‚¹ã§ã€æœªæ¶ˆè²»ã®ãƒãƒ£ãƒ¼ã‚¸é–‹å§‹è¦æ±‚ã‚’ç ´æ£„ã—ã¾ã™ã€‚
+        // ãƒ€ãƒƒã‚·ãƒ¥ä¸­ã®å…¥åŠ›ã‚¤ãƒ™ãƒ³ãƒˆãŒæ”»æ’ƒçµ‚äº†å¾Œã«å†åˆ©ç”¨ã•ã‚Œã‚‹ã“ã¨ã‚’é˜²ãã¾ã™ã€‚
+        Owner.InputReader.DiscardVBoostPendingInput();
 
-        m_initialSlideSpeed =
-            Mathf.Max(
-                m_currentSlideSpeed,
-                SPEED_EPSILON);
-
-        m_slideDirection =
-            Owner.Motor.FacingDirection;
-
-        m_hitTimer = 0.0f;
-
-        Owner.AttackController
-            .EnableContinuousAttackHitboxes();
-
-        Owner.AnimationPresenter
-            .PlayAttackAnimation();
-
-        Owner.SetSpeedDisplayOverride(
-            m_currentSlideSpeed);
+        if (!Owner.Monitor.IsGrounded)
+        {
+            // çŠ¶æ…‹é–‹å§‹ä¸­ã¯é·ç§»ã‚’äºˆç´„ã›ãšã€æ¬¡ã®æ›´æ–°ã§çµ‚äº†ã—ã¾ã™ã€‚
+            return;
+        }
+        m_attack = new PlayerContinuousAttack(Owner, false);
+        m_attack.StartAttack();
     }
 
-    /// <summary>
-    /// UŒ‚ó‘Ô‚ğXV‚µ‚Ü‚·B
-    /// </summary>
-    /// <param name="deltaTime">Œo‰ßŠÔB</param>
+    /// <summary>å…¥åŠ›è§£é™¤æ™‚ã«æ”»æ’ƒã‚’çµ‚äº†ã—ã¾ã™ã€‚</summary>
+    /// <param name="deltaTime">æç”»æ›´æ–°ã®é–“éš”ã€‚</param>
     protected override void OnUpdate(float deltaTime)
     {
-        // UŒ‚ƒ{ƒ^ƒ“‚ğ—£‚µ‚½‚ç’ÊíˆÚ“®‚Ö–ß‚é
-        if (!Owner.InputReader.IsAttackHeld)
-        {
-            Machine.ChangeState<PlayerIdlingState>();
-        }
+        if (!m_isTransitionPending && (m_attack == null || !Owner.InputReader.IsAttackHeld)) FinishAttack();
     }
 
-    /// <summary>
-    /// UŒ‚ó‘Ô‚Ì•¨—XV‚ğs‚¢‚Ü‚·B
-    /// </summary>
+    /// <summary>æ¥åœ°ä¸­ã®ã¿æ”»æ’ƒã‚’ç¶šã‘ã€ã‚¸ãƒ£ãƒ³ãƒ—æ™‚ã¯æ”»æ’ƒåˆ¤å®šã‚’å³åº§ã«çµ‚äº†ã—ã¾ã™ã€‚</summary>
     protected override void OnFixedUpdate()
     {
-        float fixedDeltaTime =
-            Time.fixedDeltaTime;
-
-        if (!Owner.InputReader.IsAttackHeld)
+        if (m_isTransitionPending) return;
+        Owner.InputReader.ConsumeAttackInput();
+        if (m_attack == null || !Owner.Monitor.IsGrounded)
         {
+            FinishAttack();
             return;
         }
-
-        // UŒ‚Œp‘±—p‚Ì‘¬“x‚ğÁ”ï‚·‚éB
-        // ÀÛ‚ÌˆÚ“®‘¬“x‚ğ’x‚­‚µ‚Ä‚àA‚±‚Ì’l©‘Ì‚Í•ÏX‚µ‚È‚¢B
-        m_currentSlideSpeed -=
-            SPEED_DECAY_PER_SECOND *
-            fixedDeltaTime;
-
-        if (m_currentSlideSpeed <= SPEED_EPSILON)
+        if (!m_attack.UpdateAttack(Time.fixedDeltaTime))
         {
-            Machine.ChangeState<PlayerIdlingState>();
+            FinishAttack();
             return;
         }
-
-        UpdateMovement(fixedDeltaTime);
-
-        // UI‚É‚ÍUŒ‚Œp‘±—p‚Ìc‚è‘¬“x‚ğ•\¦‚·‚é
-        Owner.SetSpeedDisplayOverride(
-            m_currentSlideSpeed);
-
-        // ‘¬“x‚É‰‚¶‚ÄƒqƒbƒgŠÔŠu‚ğ•Ï‰»‚³‚¹‚é
-        UpdateHitCycle(fixedDeltaTime);
-
-        // ƒqƒbƒgƒ{ƒbƒNƒX‚ª‘ÎÛ‚ÖH‚¢‚ñ‚Å‚¢‚éê‡‚ÍˆÊ’u‚ğ•â³‚·‚é
-        if (Owner.AttackController.TryGetMaxPenetration(
-                out Vector3 penetrationDirection,
-                out float penetrationDistance))
+        if (Owner.InputReader.HasJumpInput)
         {
-            Owner.Motor.ResolvePenetration(
-                penetrationDirection,
-                penetrationDistance);
-        }
-
-        // UŒ‚’†‚Å‚àƒWƒƒƒ“ƒv“ü—Í‚ğó‚¯•t‚¯‚é
-        if (Owner.Monitor.IsGrounded &&
-            Owner.InputReader.HasJumpInput)
-        {
+            m_isTransitionPending = true;
+            StopAttack();
             Machine.ChangeState<PlayerJumpingState>();
         }
     }
 
-    /// <summary>
-    /// UŒ‚’†‚ÌˆÚ“®‚ğXV‚µ‚Ü‚·B
-    /// </summary>
-    /// <param name="fixedDeltaTime">•¨—XVŠÔB</param>
-    private void UpdateMovement(float fixedDeltaTime)
+    /// <summary>æ”»æ’ƒã‚’çµ‚äº†ã—ã€é€šå¸¸ç§»å‹•ã¸æˆ»ã—ã¾ã™ã€‚</summary>
+    private void FinishAttack()
     {
-        // ˆÚ“®“ü—Í‚ª‚È‚¢ê‡‚ÍA’Êí‚ÌŒ¸‘¬ˆ—‚ğ
-        // UŒ‚—p‚Ì”{—¦‚ÅŠÉ‚â‚©‚É‚µ‚Äg—p‚·‚éB
-        if (!Owner.InputReader.HasMoveInput)
-        {
-            PlayerMoveParameters normalParameters =
-                Owner.MovementParameterAsset
-                    .CreateMoveParameters();
-
-            float attackDecelerationMultiplier =
-                Mathf.Max(
-                    Owner.MovementParameterAsset
-                        .AttackDecelerationMultiplier,
-                    1.0f);
-
-            PlayerMoveParameters attackParameters =
-                new PlayerMoveParameters(
-                    normalParameters.MaxMoveSpeed,
-                    normalParameters.TimeToMaxSpeed,
-                    normalParameters.TimeToStop *
-                        attackDecelerationMultiplier,
-                    normalParameters.RotationSpeed);
-
-            Owner.Motor.Decelerate(
-                attackParameters,
-                fixedDeltaTime);
-
-            return;
-        }
-
-        // ƒqƒbƒg’†‚¾‚¯ÀÛ‚ÌˆÚ“®‘¬“x‚ğ’x‚­‚·‚éB
-        // m_currentSlideSpeed©‘Ì‚Í•ÏX‚µ‚È‚¢B
-        float movementSpeed =
-            m_currentSlideSpeed;
-
-        if (Owner.AttackController.IsHittingAnyTarget())
-        {
-            movementSpeed *=
-                Owner.MovementParameterAsset
-                    .AttackHitMovementSpeedMultiplier;
-        }
-
-        Owner.Motor.MoveAtFixedWorldDirection(
-            m_slideDirection,
-            movementSpeed,
-            ATTACK_ROTATION_SPEED,
-            fixedDeltaTime,
-            applyObstacleAvoidance: false);
+        m_isTransitionPending = true;
+        StopAttack();
+        Machine.ChangeState<PlayerIdlingState>();
     }
 
-    /// <summary>
-    /// UŒ‚‘¬“x‚É‰‚¶‚½‘½’iƒqƒbƒg”»’è‚ğÀs‚µ‚Ü‚·B
-    /// UŒ‚ŠJn‚ğŠî€‚Æ‚µ‚ÄA‘¬“x‚ª’á‰º‚·‚é‚Ù‚Ç
-    /// 1•b‚ ‚½‚è‚Ìƒqƒbƒg‰ñ”‚àŒ¸­‚µ‚Ü‚·B
-    /// </summary>
-    /// <param name="fixedDeltaTime">•¨—XVŠÔB</param>
-    private void UpdateHitCycle(float fixedDeltaTime)
+    /// <summary>é·ç§»å¾…ã¡ã®ç‰©ç†æ›´æ–°ã§ã‚‚æ”»æ’ƒåˆ¤å®šãŒæ®‹ã‚‰ãªã„ã‚ˆã†ã«ã—ã¾ã™ã€‚</summary>
+    private void StopAttack()
     {
-        float speedRate =
-            Mathf.Clamp01(
-                m_currentSlideSpeed /
-                m_initialSlideSpeed);
-
-        float currentHitsPerSecond =
-            Owner.AttackController.BaseHitsPerSecond *
-            speedRate;
-
-        float hitInterval =
-            1.0f /
-            Mathf.Max(
-                currentHitsPerSecond,
-                0.0001f);
-
-        m_hitTimer += fixedDeltaTime;
-
-        while (m_hitTimer >= hitInterval)
-        {
-            m_hitTimer -= hitInterval;
-
-            // ‹óU‚è‚µ‚Ä‚àUŒ‚ó‘Ô‚ÍI—¹‚µ‚È‚¢B
-            // ‰Ÿ‚µ‚Ä‚¢‚éŠÔ‚ÍŒp‘±‚µ‚Ä”»’è‚·‚éB
-            Owner.AttackController
-                .ApplyContinuousHitTick();
-        }
+        m_attack?.StopAttack();
+        m_attack = null;
+        // æ”»æ’ƒä¸­ã«ç™ºç”Ÿã—ãŸãƒãƒ£ãƒ¼ã‚¸å…¥åŠ›ã¯ã€æ”»æ’ƒçµ‚äº†å¾Œã¸æŒã¡è¶Šã—ã¾ã›ã‚“ã€‚
+        Owner.InputReader.DiscardVBoostPendingInput();
     }
 
-    /// <summary>
-    /// UŒ‚ó‘Ô‚ğI—¹‚µ‚Ü‚·B
-    /// </summary>
+    /// <summary>è¢«å¼¾ãªã©ã«ã‚ˆã‚‹ä¸­æ–­æ™‚ã‚‚æ”»æ’ƒã‚’çµ‚äº†ã—ã¾ã™ã€‚</summary>
     protected override void OnExitState()
     {
-        Owner.AnimationPresenter
-            .StopAttackAnimation();
-
-        Owner.AttackController
-            .DisableAttackHitboxes();
-
-        Owner.ClearSpeedDisplayOverride();
+        StopAttack();
     }
 }
