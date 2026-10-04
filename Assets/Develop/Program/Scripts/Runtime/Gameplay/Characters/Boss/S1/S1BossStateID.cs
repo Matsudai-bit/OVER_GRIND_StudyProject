@@ -25,7 +25,7 @@ public enum S1BossStateID
     P2_HEAT_EXHAUST,        // 排熱攻撃
     P2_MISSILE,             // ミサイル攻撃
     P2_NAPE_JET,            // うなじ噴射
-    P2_STUN,                // ダウン状態
+    P2_MOVE_MISSILE,                // ダウン状態
 
 
     // Phase 3
