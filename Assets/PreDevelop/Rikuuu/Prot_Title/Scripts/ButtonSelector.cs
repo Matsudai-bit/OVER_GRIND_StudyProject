@@ -121,7 +121,7 @@ public class ButtonSelector : MonoBehaviour
         }
 
         // カーソルがロックされていない場合
-        if(!m_isLockCursor)
+        //if(!m_isLockCursor)
         {
             // カーソルの座標更新
             if (m_cursor != null)
