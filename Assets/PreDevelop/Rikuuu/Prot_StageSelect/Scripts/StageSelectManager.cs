@@ -128,6 +128,7 @@ public class StageSelectManager : MonoBehaviour
     private void Start()
     {
         ResetConmornent();
+        m_enterActionRef.action.Enable();
     }
 
     // 1•ª‚ ‚½‚è‚Ì•b”
