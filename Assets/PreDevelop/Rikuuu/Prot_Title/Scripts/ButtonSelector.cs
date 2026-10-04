@@ -92,7 +92,7 @@ public class ButtonSelector : MonoBehaviour
         Vector2 nav = m_navigateActionRef.action.ReadValue<Vector2>();
 
         // 上下キーどちらかが押されていたら || カーソルが固定されていなかったら
-        if (wasPressedUpOrDown() && !m_isLockCursor)
+        if (wasPressedUpOrDown() /*&& !m_isLockCursor*/)
         {
             // カーソルを離れるときの関数を実行する
             m_buttons[m_selectButtonNumber].OnCursorExit();
