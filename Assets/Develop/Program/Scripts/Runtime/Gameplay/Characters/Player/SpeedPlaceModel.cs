@@ -3,7 +3,7 @@ using UnityEngine;
 /// <summary>
 /// 速度UIで扱う速度を保持します。
 /// </summary>
-public class SpeedPlaceModel
+public class SpeedPlaceModel :MonoBehaviour
 {
     private const float MAX_SPEED = 99.9f;
 
