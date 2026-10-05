@@ -3,7 +3,7 @@ using UnityEngine;
 /// <summary>
 /// Vゲージのチャージ量と上限を保持します。
 /// </summary>
-public class VGaugePlaceModel
+public class VGaugePlaceModel :MonoBehaviour
 {
     private int m_currentGauge;
     private int m_maxGauge = 100;
