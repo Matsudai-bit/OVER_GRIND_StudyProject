@@ -97,20 +97,12 @@ public sealed class BossMotor : MonoBehaviour
                 Mathf.Max(0.0f, acceleration) *
                 deltaTime);
 
-        Debug.Log(
-      $"Before: {currentHorizontalVelocity.magnitude:F3}, " +
-      $"New: {newHorizontalVelocity.magnitude:F3}, " +
-      $"Target: {targetSpeed:F3}, " +
-      $"Acceleration: {acceleration:F3}");
-
         m_rigidbody.linearVelocity = new Vector3(
             newHorizontalVelocity.x,
             m_rigidbody.linearVelocity.y,
             newHorizontalVelocity.z);
 
-        Debug.Log(
-        $"After Rigidbody: " +
-        $"{new Vector2(m_rigidbody.linearVelocity.x, m_rigidbody.linearVelocity.z).magnitude:F3}");
+        
     }
 
     /// <summary>
