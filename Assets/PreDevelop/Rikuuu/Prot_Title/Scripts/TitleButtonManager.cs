@@ -4,20 +4,31 @@ using DG.Tweening;
 
 public class TitleButtonManager : MonoBehaviour
 {
-    Vector3 pos = Vector3.zero;
+    // ボタンセレクター
+    [SerializeField]
+    ButtonSelector m_buttonSelector;
+    // カーソルの座標
+    Vector3 m_cursorPosition = Vector3.zero;
+
+    private void Start()
+    {
+        // ボタンセレクターのロックを解除する
+        m_buttonSelector.UnLockCursor();
+    }
+
     public void MoveCursor(
         UnityEngine.UI.Image cursor,
         Vector3 targetPosition)
     {
-        if (pos == targetPosition)
+        if (m_cursorPosition == targetPosition)
         {
             cursor.DOFade(endValue: 1.0f, duration: 0.2f);
         }
-        else if (pos != targetPosition)
+        else if (m_cursorPosition != targetPosition)
         {
             cursor.DOFade(endValue: 0.0f, duration: 0.01f);
 
-            pos = targetPosition;
+            m_cursorPosition = targetPosition;
         }
 
         cursor.transform.DOMove(targetPosition, 0.2f);
