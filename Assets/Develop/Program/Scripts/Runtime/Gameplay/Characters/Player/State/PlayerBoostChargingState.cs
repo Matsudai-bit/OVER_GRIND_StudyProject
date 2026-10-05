@@ -58,6 +58,7 @@ public sealed class PlayerBoostChargingState
     private float m_currentDriftSteering;
     private float m_modelSlipAngle;
     private float m_driftElapsedTime;
+    private bool m_isDashRequested;
 
     /// <summary>
     /// 現在のチャージ割合を取得します。
@@ -83,6 +84,7 @@ public sealed class PlayerBoostChargingState
         m_currentDriftSteering = 0.0f;
         m_modelSlipAngle = 0.0f;
         m_driftElapsedTime = 0.0f;
+        m_isDashRequested = false;
 
 
 
@@ -167,6 +169,8 @@ public sealed class PlayerBoostChargingState
     /// </summary>
     protected override void OnFixedUpdate()
     {
+        // Updateで遷移するまで、解除時に確定した向きとダッシュ方向を保持します。
+        if (m_isDashRequested) return;
         if (Owner.InputReader.ConsumeAttackInput() && Owner.Monitor.IsGrounded)
         {
             Machine.ChangeState<PlayerAttackingState>();
@@ -257,7 +261,7 @@ public sealed class PlayerBoostChargingState
             UpdateFacingDirection();
 
             // モデルだけを移動方向に対して横向きにする
-            UpdateModelSidewaysFacing();
+            UpdateModelSidewaysFacing(normalizedInput);
         }
         else
         {
@@ -507,9 +511,13 @@ public sealed class PlayerBoostChargingState
     }
 
     /// <summary>旋回の強さに応じた横滑り角度へ、モデルを滑らかに傾けます。</summary>
-    private void UpdateModelSidewaysFacing()
+    private void UpdateModelSidewaysFacing(Vector2 input)
     {
-        float targetAngle = m_currentDriftSteering * m_parameterAsset.MovingChargeSidewaysLookAngle;
+        // 旋回の弱さと体の横向き角度を分離し、逆入力・無入力でも姿勢を残します。
+        float lookRate = ClassifyChargeInput(input) == m_driftSide
+            ? input.magnitude
+            : m_parameterAsset.CounterSteeringLookRate;
+        float targetAngle = m_driftSide * lookRate * m_parameterAsset.MovingChargeSidewaysLookAngle;
         m_modelSlipAngle = Mathf.MoveTowards(m_modelSlipAngle, targetAngle,
             m_parameterAsset.FacingRotationSpeed * Time.fixedDeltaTime);
         m_currentModelFacingDirection = Quaternion.AngleAxis(m_modelSlipAngle, Vector3.up)
@@ -550,7 +558,8 @@ public sealed class PlayerBoostChargingState
 
         // 見た目の横滑り角度を移動へ持ち越さず、終了時の進行方向へ本体を合わせます。
         if (!m_startedFromStationary)
-            Owner.Motor.AlignFacingToDirection(m_currentVelocityDirection);
+            Owner.Motor.AlignFacingToDirection(m_isDashRequested
+                ? Owner.BoostDashDirection : m_currentVelocityDirection);
 
         // モデルオブジェクトの回転をPrefabで設定された元の姿勢へ戻す
         if (Owner.ModelTransform != null)
@@ -574,10 +583,9 @@ public sealed class PlayerBoostChargingState
         if (ChargeRate >=
             m_parameterAsset.MinBoostChargeRate)
         {
-            // 見た目の横滑り角度を除き、実際の進行方向を
-            // そのままダッシュ方向へ引き継ぐ。
+            // 解除直前に表示されている体の正面をダッシュ方向として確定します。
             Vector3 dashDirection =
-                m_currentVelocityDirection;
+                Owner.ModelTransform != null ? Owner.ModelTransform.forward : m_currentModelFacingDirection;
 
             dashDirection.y = 0.0f;
 
@@ -589,6 +597,7 @@ public sealed class PlayerBoostChargingState
 
             Owner.BoostDashDirection =
                 dashDirection;
+            m_isDashRequested = true;
 
             Debug.Log(
                 $"[PlayerBoostChargingState] " +

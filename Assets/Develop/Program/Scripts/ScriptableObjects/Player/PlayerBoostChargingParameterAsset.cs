@@ -106,6 +106,13 @@ public sealed class PlayerBoostChargingParameterAsset : ScriptableObject
     [SerializeField, Range(0.0f, 180.0f)]
     private float m_movingChargeSidewaysLookAngle = 30.0f;
 
+    [SerializeField, Range(0.0f, 1.0f)]
+    [Tooltip("逆入力・無入力時に残す横滑り角度の割合。0で進行方向、1で通常入力と同じ角度。")]
+    private float m_counterSteeringLookRate = 0.65f;
+
+    /// <summary>逆入力・無入力時に残す横滑り角度の割合を取得します。</summary>
+    public float CounterSteeringLookRate => Mathf.Clamp01(m_counterSteeringLookRate);
+
     [Header("カメラ設定")]
 
     [Tooltip("最大旋回時にカメラがカーブの内側を先読みする角度（度）。0で進行方向へ追従。")]
