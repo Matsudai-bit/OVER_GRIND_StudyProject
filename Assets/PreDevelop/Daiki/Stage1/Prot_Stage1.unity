@@ -1972,6 +1972,14 @@ PrefabInstance:
     m_TransformParent: {fileID: 2044511298}
     m_Modifications:
     - target: {fileID: 453875386572099116, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
+      propertyPath: m_vGaugePlaceModel
+      value:
+      objectReference: {fileID: 1934485544}
+    - target: {fileID: 453875386572099116, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
+      propertyPath: m_speedPlaceModel
+      value:
+      objectReference: {fileID: 1934485543}
+    - target: {fileID: 453875386572099116, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
       propertyPath: m_vGaugeUI
       value: 
       objectReference: {fileID: 227766890}
@@ -5050,6 +5058,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c87b306fe50d91344b0f289f3695bbc8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SpeedPlaceModel
+  m_currentSpeed: 0
 --- !u!114 &1934485544
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5062,6 +5071,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b492a0f048041e34e81c0f279439922e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::VGaugePlaceModel
+  m_maxGauge: 100
+  m_currentGauge: 0
 --- !u!1 &1966830633 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: -384057949720922092, guid: 1df82618771219548a4a035cd72d7bb2, type: 3}

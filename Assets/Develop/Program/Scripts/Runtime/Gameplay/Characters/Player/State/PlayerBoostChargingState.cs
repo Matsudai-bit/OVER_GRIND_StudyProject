@@ -150,9 +150,10 @@ public sealed class PlayerBoostChargingState
             $"チャージ速度={m_chargeSpeed:F2}",
             Owner);
 
+        Owner.VGaugePlaceModel.SetGaugeRate(0.0f);
+
         if (Owner.VGaugeUI != null)
         {
-            Owner.VGaugeUI.SetGaugeRate(0.0f);
             Owner.VGaugeUI.SetCharging(true);
         }
 
@@ -185,9 +186,10 @@ public sealed class PlayerBoostChargingState
             Owner.SuspendedBoostGaugeRate = 0.0f;
 
             // UIのチャージゲージも0にする
+            Owner.VGaugePlaceModel.SetGaugeRate(0.0f);
+
             if (Owner.VGaugeUI != null)
             {
-                Owner.VGaugeUI.SetGaugeRate(0.0f);
                 Owner.VGaugeUI.SetCharging(false);
             }
 
@@ -302,10 +304,7 @@ public sealed class PlayerBoostChargingState
         // ゲージ更新
         // --------------------------------------------------------
 
-        if (Owner.VGaugeUI != null)
-        {
-            Owner.VGaugeUI.SetGaugeRate(ChargeRate);
-        }
+        Owner.VGaugePlaceModel.SetGaugeRate(ChargeRate);
 
         // --------------------------------------------------------
         // デバッグログ
@@ -617,9 +616,10 @@ public sealed class PlayerBoostChargingState
             $"チャージ率{ChargeRate:P1} → 通常歩行へ遷移",
             Owner);
 
+        Owner.VGaugePlaceModel.SetGaugeRate(0.0f);
+
         if (Owner.VGaugeUI != null)
         {
-            Owner.VGaugeUI.SetGaugeRate(0.0f);
             Owner.VGaugeUI.SetCharging(false);
         }
 
