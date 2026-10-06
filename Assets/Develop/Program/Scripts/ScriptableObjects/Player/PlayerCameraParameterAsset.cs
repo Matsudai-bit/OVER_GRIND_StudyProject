@@ -5,6 +5,19 @@ using UnityEngine;
     menuName = "Game/Parameters/Player/Camera Parameter")]
 public class PlayerCameraParameterAsset : ScriptableObject
 {
+    [SerializeField, Range(0.1f, 5.0f)]
+    [Tooltip("X軸カメラ感度。")]
+    private float m_cameraSensitivityX = 1.0f;
+
+    [SerializeField, Range(0.1f, 5.0f)]
+    [Tooltip("Y軸カメラ感度。")]
+    private float m_cameraSensitivityY = 1.0f;
+
+    [SerializeField]
+    [Tooltip("Y軸カメラの操作を反転させるかどうか。")]
+    private bool m_isCameraReverseY = false;
+
+
     [SerializeField, Range(0.0f, 1.0f)]
     [Tooltip("チャージ中に進行方向へ向く割合。0でチャージ開始時の向き、1で進行方向を向きます。")]
     private float m_chargeCameraDirectionInfluence = 1.0f;
@@ -20,6 +33,9 @@ public class PlayerCameraParameterAsset : ScriptableObject
     public PlayerCameraParameter CreateCameraParameter()
     {
         return new PlayerCameraParameter(
+            m_cameraSensitivityX,
+            m_cameraSensitivityY,
+            m_isCameraReverseY,
             m_chargeCameraDirectionInfluence,
             m_chargeCameraVerticalAngle,
             m_chargeCameraVerticalTurnSpeed

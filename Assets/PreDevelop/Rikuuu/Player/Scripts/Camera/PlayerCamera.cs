@@ -6,6 +6,11 @@ public class PlayerCamera : MonoBehaviour
 {
     private const float MIN_TARGET_DISTANCE = 0.0001f;
 
+
+    // Y軸の入力変換比をX軸に揃えるための補正倍率
+    private const float AXIS_Y_GAIN_SCALE = 0.25f;
+
+
     [SerializeField] private CinemachineCamera m_cinemachineCamera;
     [SerializeField] private CinemachineInputAxisController m_inputAxisController;
 
@@ -60,9 +65,12 @@ public class PlayerCamera : MonoBehaviour
         m_parameter = m_parameterAsset.CreateCameraParameter();
 
         // パラメータの設定を行う
+        ApplyCameraParameter();
+        
         m_chargeCameraDirectionInfluence = m_parameter.m_chargeCameraDirectionInfluence;
         m_chargeCameraVerticalAngle = m_parameter.m_chargeCameraVerticalAngle;
         m_chargeCameraVerticalTurnSpeed = m_parameter.m_chargeCameraVerticalTurnSpeed;
+
 
 
 
@@ -309,4 +317,35 @@ public class PlayerCamera : MonoBehaviour
 
     /// <summary>無効化時にロックオンを解除します。</summary>
     private void OnDisable() => EndTargetFocus();
+
+
+
+    /// <summary>
+    /// カメラのパラメータを適用させる。
+    /// </summary>
+    public void ApplyCameraParameter()
+    {
+        if(m_inputAxisController == null)
+        {
+            Debug.LogAssertion("PlayerCameraのCinemachineInputAxisController参照が未設定です。");
+            return;
+        }
+
+        foreach(var controller in m_inputAxisController.Controllers)
+        {
+            // X軸カメラ感度の設定
+            if(controller.Name == "Look Orbit X")
+            {
+                controller.Input.Gain = m_parameter.m_cameraSensitivityX;
+            }
+            // Y軸カメラ感度の設定
+            if(controller.Name == "Look Orbit Y")
+            {
+                // カメラ反転にチェックがついているかを調べる
+                float sign = m_parameter.m_isCameraReverseY ? -1.0f : 1.0f;
+
+                controller.Input.Gain *= sign * m_parameter.m_cameraSensitivityY * AXIS_Y_GAIN_SCALE;
+            }
+        }
+    }
 }
