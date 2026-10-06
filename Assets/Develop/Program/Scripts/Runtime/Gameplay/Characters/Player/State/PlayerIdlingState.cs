@@ -29,7 +29,7 @@ public sealed class PlayerIdlingState
             return;
         }
 
-        if (Owner.Monitor.IsGrounded &&
+        if (Owner.Monitor.CanStartJump &&
             Owner.InputReader.HasJumpInput)
         {
             Machine.ChangeState<PlayerJumpingState>();

@@ -223,7 +223,7 @@ public sealed class PlayerVRunningState
 
         // ジャンプ入力を確認
         // 同様に打ち切らず中断し、着地後に復帰させる
-        if (Owner.Monitor.IsGrounded &&
+        if (Owner.Monitor.CanStartJump &&
             Owner.InputReader.HasJumpInput)
         {
             SuspendBoost();
