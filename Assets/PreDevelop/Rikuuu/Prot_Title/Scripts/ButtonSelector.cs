@@ -26,7 +26,7 @@ public class ButtonSelector : MonoBehaviour
     private bool m_keepSelectionWhenLocked = false;
 
     // カーソルがロックされているかどうか
-    private bool m_isLockCursor = true;
+    private bool m_isLockCursor = false;
     // カーソルの固定・解除の予約
     private bool m_cursorLockRequested;
     private bool m_cursorUnlockRequested;
@@ -44,7 +44,11 @@ public class ButtonSelector : MonoBehaviour
 
     private void OnEnable()
     {
-        if(m_navigateActionRef == null)
+        m_cursorLockRequested = false;
+        m_cursorUnlockRequested = false;
+        m_previousNav = Vector2.zero;
+
+        if (m_navigateActionRef == null)
         {
             Debug.LogWarning($"{gameObject.name}: {m_navigateActionRef} が設定されていません。Inspectorで割り当ててください。", this);
             return;
@@ -103,7 +107,7 @@ public class ButtonSelector : MonoBehaviour
             {
                 // カーソルを一つ上に移動させる
                 m_selectButtonNumber--;
-                //Debug.Log("MoveUP");
+                Debug.Log("MoveUP");
             }
             // 下キーが押されたら
             if (nav.y < -NAVIGATE_THRESHOLD && 
@@ -111,7 +115,7 @@ public class ButtonSelector : MonoBehaviour
             {
                 // カーソルを一つ下に移動させる
                 m_selectButtonNumber++;
-                //Debug.Log("MoveDOWN");
+                Debug.Log("MoveDOWN");
             }
 
             // 範囲内に収める
@@ -119,9 +123,13 @@ public class ButtonSelector : MonoBehaviour
             // カーソルが乗ったときの処理を呼ぶ
             m_buttons[m_selectButtonNumber].OnCursor();
         }
+        else if(wasPressedUpOrDown() && !m_isLockCursor)
+        {
+            Debug.Log("Lock");
+        }
 
         // カーソルがロックされていない場合
-        if(!m_isLockCursor)
+        if (!m_isLockCursor)
         {
             // カーソルの座標更新
             if (m_cursor != null)

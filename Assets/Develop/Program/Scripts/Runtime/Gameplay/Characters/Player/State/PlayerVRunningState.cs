@@ -163,11 +163,10 @@ public sealed class PlayerVRunningState
 
         Owner.AnimationPresenter.PlayWalkAnimation();
 
+        Owner.VGaugePlaceModel.SetGaugeRate(Owner.SuspendedBoostGaugeRate);
+
         if (Owner.VGaugeUI != null)
         {
-            Owner.VGaugeUI.SetGaugeRate(
-                Owner.SuspendedBoostGaugeRate);
-
             Owner.VGaugeUI.SetCharging(true);
         }
     }
@@ -253,9 +252,10 @@ public sealed class PlayerVRunningState
 
         // それ以外（ゲージを消費しきった等）の
         // 正真正銘の終了時は、表示・演出をリセットする
+        Owner.VGaugePlaceModel.SetGaugeRate(0.0f);
+
         if (Owner.VGaugeUI != null)
         {
-            Owner.VGaugeUI.SetGaugeRate(0.0f);
             Owner.VGaugeUI.SetCharging(false);
         }
     }
