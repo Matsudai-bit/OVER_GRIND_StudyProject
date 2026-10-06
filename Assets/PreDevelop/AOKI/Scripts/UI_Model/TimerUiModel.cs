@@ -21,4 +21,13 @@ public class TimerUiModel : MonoBehaviour
         CurrentTime += deltaTime;
         OnTimeChanged?.Invoke(CurrentTime);
     }
+
+    /// <summary>
+    /// 経過時間の更新
+    /// </summary>
+    private void Update()
+    {
+        // 毎フレーム時間を進める
+        AddTime(Time.deltaTime);
+    }
 }

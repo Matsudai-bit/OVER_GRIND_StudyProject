@@ -525,7 +525,7 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
 
         if (m_vSpeedUI != null)
         {
-            m_vSpeedUI.SetSpeed(m_speedPlaceModel.GetSpeed());
+            m_vSpeedUI.SetSpeed(m_speedPlaceModel.Speed);
         }
     }
 

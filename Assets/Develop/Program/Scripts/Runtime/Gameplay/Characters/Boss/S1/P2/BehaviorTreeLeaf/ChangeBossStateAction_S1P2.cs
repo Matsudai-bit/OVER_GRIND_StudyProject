@@ -71,6 +71,14 @@ public partial class ChangeBossStateAction_S1P2 : Action
                 bossController.StateMachine.ChangeState<
                    S1P2BossTailSlamState>();
                 break;
+            case S1BossStateID.P2_MOVE:
+                bossController.StateMachine.ChangeState<
+                   S1P2BossMoveState>();
+                break;
+            case S1BossStateID.P2_MOVE_MISSILE:
+                bossController.StateMachine.ChangeState<
+                   S1P2BossMoveMissileState>();
+                break;
 
             default:
                 LogFailure("未対応のState IDです。");

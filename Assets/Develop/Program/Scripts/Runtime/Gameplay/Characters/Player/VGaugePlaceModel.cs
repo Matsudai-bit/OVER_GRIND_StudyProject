@@ -1,4 +1,5 @@
 using UnityEngine;
+using System;
 
 /// <summary>
 /// Vゲージの現在値、ブーストへの引き継ぎ量と消費中の残量を保持します。
@@ -13,6 +14,8 @@ public class VGaugePlaceModel : MonoBehaviour
     [SerializeField, Min(0)]
     private int m_currentGauge;
 
+    public event Action<float> OnGaugeRateChanged;
+
     // 引き継ぎ量・残量は丸めず保持し、従来のブースト持続時間を維持します。
     private float m_carriedBoostGaugeRate;
     private float m_suspendedBoostGaugeRate;
@@ -22,7 +25,16 @@ public class VGaugePlaceModel : MonoBehaviour
     public int Gauge
     {
         get => m_currentGauge;
-        set => m_currentGauge = Mathf.Clamp(value, 0, MaxGauge);
+        set
+        {
+            int clampedValue = Mathf.Clamp(value, 0, MaxGauge);
+            // 値が実際に変化した時のみ通知を飛ばす
+            if (m_currentGauge != clampedValue)
+            {
+                m_currentGauge = clampedValue;
+                OnGaugeRateChanged?.Invoke(GaugeRate);
+            }
+        }
     }
 
     /// <summary>ゲージの最大値を取得・設定します。</summary>
