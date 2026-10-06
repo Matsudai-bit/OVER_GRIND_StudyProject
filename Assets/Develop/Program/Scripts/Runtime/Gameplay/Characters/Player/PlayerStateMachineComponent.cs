@@ -593,6 +593,17 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
 
     /// <summary>被弾中の無敵状態を取得します。</summary>
     public bool IsHitReacting { get; private set; }
+
+    /// <summary>
+    /// 被弾State中か、被弾Stateへの遷移直後かを取得します。
+    /// </summary>
+    /// <remarks>
+    /// 無敵判定は経過時間ではなく、PlayerHitStateの有効期間に連動します。
+    /// </remarks>
+    public bool IsInvincible =>
+        IsHitReacting ||
+        (m_stateMachine != null &&
+         m_stateMachine.IsCurrentState<PlayerHitState>());
     /// <summary>被弾中に地形へ衝突したかを取得します。</summary>
     public bool HasHitEnvironment { get; private set; }
     /// <summary>吹き飛びの水平速度を取得します。</summary>
