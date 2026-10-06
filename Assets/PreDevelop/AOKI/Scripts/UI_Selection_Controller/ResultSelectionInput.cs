@@ -35,8 +35,9 @@ public class ResultSelectionInput : MonoBehaviour
     [SerializeField] private Image m_stageSelectFrameImage;
 
     /// <summary>非選択時の縮小サイズ割合 (X, Y)。</summary>
-    [Tooltip("非選択時の縮小サイズ割合 (X, Y)")]
-    [SerializeField] private Vector2 m_unselectedScale = new Vector2(0.8f, 0.8f);
+    /// <summary>非選択時に外側へ消えていく際の拡大サイズ割合 (X, Y)。</summary>
+    [Tooltip("非選択時に外側へ消えていく際の拡大サイズ割合 (X, Y)")]
+    [SerializeField] private Vector2 m_fadeOutScale = new Vector2(1.2f, 1.2f); 
 
     [Header("アニメーション設定")]
 
@@ -201,13 +202,13 @@ public class ResultSelectionInput : MonoBehaviour
             else
             {
                 // X（横）と Y（高さ）を個別に計算した非選択倍率を適用
-                Vector3 unselectedTargetScale = new Vector3(
-                    m_ssOriginalScale.x * m_unselectedScale.x,
-                    m_ssOriginalScale.y * m_unselectedScale.y,
-                    m_ssOriginalScale.z
-                );
+                Vector3 fadeOutTargetScale = new Vector3(
+                                    m_ssOriginalScale.x * m_fadeOutScale.x,
+                                    m_ssOriginalScale.y * m_fadeOutScale.y,
+                                    m_ssOriginalScale.z
+                                );
 
-                m_stageSelectVisual.DOScale(unselectedTargetScale, t).SetEase(Ease.OutCubic);
+                m_stageSelectVisual.DOScale(fadeOutTargetScale, t).SetEase(Ease.OutCubic);
             }
         }
     }
