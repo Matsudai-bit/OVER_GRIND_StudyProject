@@ -13,6 +13,13 @@ public class StageSelectButton : MonoBehaviour
     [SerializeField]
     private UnityEngine.UI.Image m_image;
 
+    private SelectButton selectButton;
+
+    /// <summary>
+    /// カーソルが乗っているかどうかを取得します。
+    /// </summary>
+    public bool IsOnCursor => m_isOnCursor;
+
     // カーソルが合わさっているかどうか
     public bool m_isOnCursor = false;
 
@@ -22,6 +29,8 @@ public class StageSelectButton : MonoBehaviour
         m_image.sprite = m_defaultTexture;
         // サイズを調整する
         m_image.SetNativeSize();
+
+        selectButton = GetComponent<SelectButton>();
     }
 
     // 押されたときの処理 ---------------------------------------
@@ -44,11 +53,11 @@ public class StageSelectButton : MonoBehaviour
 
     public void OnClick()
     {
-
+        selectButton?.OnClick();
     }
 
     public void OnClickExit()
     {
-
+        selectButton?.OnClickExit();
     }
 }
