@@ -58,6 +58,7 @@ public sealed class PlayerBoostChargingState
     private float m_currentDriftSteering;
     private float m_modelSlipAngle;
     private float m_driftElapsedTime;
+    private bool m_isDashRequested;
 
     /// <summary>
     /// 現在のチャージ割合を取得します。
@@ -83,6 +84,7 @@ public sealed class PlayerBoostChargingState
         m_currentDriftSteering = 0.0f;
         m_modelSlipAngle = 0.0f;
         m_driftElapsedTime = 0.0f;
+        m_isDashRequested = false;
 
 
 
@@ -148,9 +150,10 @@ public sealed class PlayerBoostChargingState
             $"チャージ速度={m_chargeSpeed:F2}",
             Owner);
 
+        Owner.VGaugePlaceModel.SetGaugeRate(0.0f);
+
         if (Owner.VGaugeUI != null)
         {
-            Owner.VGaugeUI.SetGaugeRate(0.0f);
             Owner.VGaugeUI.SetCharging(true);
         }
 
@@ -167,6 +170,8 @@ public sealed class PlayerBoostChargingState
     /// </summary>
     protected override void OnFixedUpdate()
     {
+        // Updateで遷移するまで、解除時に確定した向きとダッシュ方向を保持します。
+        if (m_isDashRequested) return;
         if (Owner.InputReader.ConsumeAttackInput() && Owner.Monitor.IsGrounded)
         {
             Machine.ChangeState<PlayerAttackingState>();
@@ -181,9 +186,10 @@ public sealed class PlayerBoostChargingState
             Owner.SuspendedBoostGaugeRate = 0.0f;
 
             // UIのチャージゲージも0にする
+            Owner.VGaugePlaceModel.SetGaugeRate(0.0f);
+
             if (Owner.VGaugeUI != null)
             {
-                Owner.VGaugeUI.SetGaugeRate(0.0f);
                 Owner.VGaugeUI.SetCharging(false);
             }
 
@@ -257,7 +263,7 @@ public sealed class PlayerBoostChargingState
             UpdateFacingDirection();
 
             // モデルだけを移動方向に対して横向きにする
-            UpdateModelSidewaysFacing();
+            UpdateModelSidewaysFacing(normalizedInput);
         }
         else
         {
@@ -278,8 +284,11 @@ public sealed class PlayerBoostChargingState
         // 停止中開始の場合は移動しない
         if (!m_startedFromStationary)
         {
+            Vector3 movementDirection =
+                GetChargeMovementDirection(normalizedInput);
+
             Owner.Motor.MoveWithDriftAtFixedSpeed(
-                m_currentVelocityDirection,
+                movementDirection,
                 m_chargeSpeed,
                 m_currentFacingDirection,
                 m_parameterAsset.FacingRotationSpeed,
@@ -298,10 +307,7 @@ public sealed class PlayerBoostChargingState
         // ゲージ更新
         // --------------------------------------------------------
 
-        if (Owner.VGaugeUI != null)
-        {
-            Owner.VGaugeUI.SetGaugeRate(ChargeRate);
-        }
+        Owner.VGaugePlaceModel.SetGaugeRate(ChargeRate);
 
         // --------------------------------------------------------
         // デバッグログ
@@ -419,7 +425,7 @@ public sealed class PlayerBoostChargingState
         return angle > 0.0f ? 1 : -1;
     }
 
-    /// <summary>最初の有効な左右入力を固定し、逆入力・無入力は低い倍率で同じ軌道を返します。</summary>
+    /// <summary>最初の有効な左右入力を固定し、入力状態ごとの旋回量を返します。</summary>
     /// <param name="input">スティック入力。</param>
     /// <returns>旋回方向と倍率を反映した符号付き入力。</returns>
     private float GetLockedSteeringInput(Vector2 input)
@@ -434,19 +440,22 @@ public sealed class PlayerBoostChargingState
 
         if (inputSide == m_driftSide)
         {
-            return m_driftSide * input.magnitude;
+            return m_driftSide *
+                input.magnitude *
+                m_parameterAsset.DriftForwardTurnRate;
         }
 
-        // 逆入力とスティックを離した状態は、通常入力と同じ旋回計算を使い、
-        // 旋回方向だけ固定したまま入力の強さを下げます。
-        float steeringMagnitude = input.sqrMagnitude <=
-            m_parameterAsset.SteeringDeadZone * m_parameterAsset.SteeringDeadZone
-            ? 1.0f
-            : input.magnitude;
+        if (inputSide == -m_driftSide)
+        {
+            // 逆入力でも確定済みの旋回方向は維持し、旋回量だけを弱めます。
+            return m_driftSide *
+                input.magnitude *
+                m_parameterAsset.DriftCounterTurnRate;
+        }
 
+        // 無入力では、従来の逆入力・無入力共通だった内向きの緩い旋回を維持します。
         return m_driftSide *
-            steeringMagnitude *
-            m_parameterAsset.DriftCounterTurnRate;
+            m_parameterAsset.DriftNeutralTurnRate;
     }
 
     /// <summary>入力と反対側へ膨らんだ後、入力側へ旋回する軌道を計算します。</summary>
@@ -465,16 +474,47 @@ public sealed class PlayerBoostChargingState
                 Time.fixedDeltaTime / m_parameterAsset.DriftSteeringResponseTime);
         }
 
-        // 通常入力・逆入力・スティックを離した状態で同じ軌道計算を使用します。
-        // 逆入力と無入力だけ、GetLockedSteeringInput側で旋回量を下げています。
-        float progress = Mathf.Clamp01(m_driftElapsedTime / m_parameterAsset.DriftOutwardDuration);
-        float turnRate = Mathf.Lerp(-m_parameterAsset.DriftOutwardTurnRate, 1.0f,
+        // すべての入力状態で同じ軌道計算を使用し、旋回方向は固定します。
+        // 入力状態による違いはGetLockedSteeringInputで決めた倍率だけです。
+        float progress = Mathf.Clamp01(
+            m_driftElapsedTime / m_parameterAsset.DriftOutwardDuration);
+        float turnRate = Mathf.Lerp(
+            -m_parameterAsset.DriftOutwardTurnRate,
+            1.0f,
             Mathf.SmoothStep(0.0f, 1.0f, progress));
+
         float turnInput = m_currentDriftSteering;
         float turnAngle = turnInput * turnSpeedDegreesPerSecond * turnRate * Time.fixedDeltaTime;
         m_currentVelocityDirection = (Quaternion.AngleAxis(turnAngle, Vector3.up)
             * m_currentVelocityDirection).normalized;
         m_driftElapsedTime += Time.fixedDeltaTime;
+    }
+
+    /// <summary>
+    /// 入力状態に応じたチャージ中の実移動方向を取得します。
+    /// 逆入力中は旋回方向を変えず、移動方向だけを旋回外側へ傾けます。
+    /// </summary>
+    /// <param name="input">正規化された移動入力。</param>
+    /// <returns>チャージ中の実移動に使用する正規化済み方向。</returns>
+    private Vector3 GetChargeMovementDirection(Vector2 input)
+    {
+        int inputSide = ClassifyChargeInput(input);
+        bool isCounterSteering =
+            m_driftSide != 0 &&
+            inputSide == -m_driftSide;
+
+        if (!isCounterSteering)
+        {
+            return m_currentVelocityDirection;
+        }
+
+        // 右旋回中は左、左旋回中は右へ傾け、常にカーブ外側へ大きく移動させます。
+        float outwardAngle =
+            -m_driftSide *
+            m_parameterAsset.CounterInputMovementAngle;
+
+        return (Quaternion.AngleAxis(outwardAngle, Vector3.up) *
+            m_currentVelocityDirection).normalized;
     }
 
     /// <summary>
@@ -507,9 +547,13 @@ public sealed class PlayerBoostChargingState
     }
 
     /// <summary>旋回の強さに応じた横滑り角度へ、モデルを滑らかに傾けます。</summary>
-    private void UpdateModelSidewaysFacing()
+    private void UpdateModelSidewaysFacing(Vector2 input)
     {
-        float targetAngle = m_currentDriftSteering * m_parameterAsset.MovingChargeSidewaysLookAngle;
+        // 旋回の弱さと体の横向き角度を分離し、逆入力・無入力でも姿勢を残します。
+        float lookRate = ClassifyChargeInput(input) == m_driftSide
+            ? input.magnitude
+            : m_parameterAsset.CounterSteeringLookRate;
+        float targetAngle = m_driftSide * lookRate * m_parameterAsset.MovingChargeSidewaysLookAngle;
         m_modelSlipAngle = Mathf.MoveTowards(m_modelSlipAngle, targetAngle,
             m_parameterAsset.FacingRotationSpeed * Time.fixedDeltaTime);
         m_currentModelFacingDirection = Quaternion.AngleAxis(m_modelSlipAngle, Vector3.up)
@@ -550,7 +594,8 @@ public sealed class PlayerBoostChargingState
 
         // 見た目の横滑り角度を移動へ持ち越さず、終了時の進行方向へ本体を合わせます。
         if (!m_startedFromStationary)
-            Owner.Motor.AlignFacingToDirection(m_currentVelocityDirection);
+            Owner.Motor.AlignFacingToDirection(m_isDashRequested
+                ? Owner.BoostDashDirection : m_currentVelocityDirection);
 
         // モデルオブジェクトの回転をPrefabで設定された元の姿勢へ戻す
         if (Owner.ModelTransform != null)
@@ -574,10 +619,9 @@ public sealed class PlayerBoostChargingState
         if (ChargeRate >=
             m_parameterAsset.MinBoostChargeRate)
         {
-            // 見た目の横滑り角度を除き、実際の進行方向を
-            // そのままダッシュ方向へ引き継ぐ。
+            // 解除直前に表示されている体の正面をダッシュ方向として確定します。
             Vector3 dashDirection =
-                m_currentVelocityDirection;
+                Owner.ModelTransform != null ? Owner.ModelTransform.forward : m_currentModelFacingDirection;
 
             dashDirection.y = 0.0f;
 
@@ -589,6 +633,7 @@ public sealed class PlayerBoostChargingState
 
             Owner.BoostDashDirection =
                 dashDirection;
+            m_isDashRequested = true;
 
             Debug.Log(
                 $"[PlayerBoostChargingState] " +
@@ -608,9 +653,10 @@ public sealed class PlayerBoostChargingState
             $"チャージ率{ChargeRate:P1} → 通常歩行へ遷移",
             Owner);
 
+        Owner.VGaugePlaceModel.SetGaugeRate(0.0f);
+
         if (Owner.VGaugeUI != null)
         {
-            Owner.VGaugeUI.SetGaugeRate(0.0f);
             Owner.VGaugeUI.SetCharging(false);
         }
 

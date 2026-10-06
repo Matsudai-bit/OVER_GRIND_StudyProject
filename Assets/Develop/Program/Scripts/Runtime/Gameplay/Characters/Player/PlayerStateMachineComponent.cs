@@ -67,6 +67,16 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
     // 速度表示機能
     private VSpeedUI m_vSpeedUI;
 
+    // ParameterModel上の共有データ。UIがなくても更新します。
+    private VGaugePlaceModel m_vGaugePlaceModel;
+    private SpeedPlaceModel m_speedPlaceModel;
+
+    /// <summary>Vゲージの値を管理するモデルを取得します。</summary>
+    public VGaugePlaceModel VGaugePlaceModel => m_vGaugePlaceModel;
+
+    /// <summary>毎フレーム更新する速度モデルを取得します。</summary>
+    public SpeedPlaceModel SpeedPlaceModel => m_speedPlaceModel;
+
     // プレイヤーカメラ機能
     private PlayerCamera m_playerCamera;
 
@@ -191,7 +201,7 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
     // （nullの場合は通常通りMotor.HorizontalSpeedを表示する）
     // 例：攻撃中に物理速度が実際の状況と異なる場合でも、
     // 　　攻撃継続リソースとしての速度を見た目上は減衰表示させたい場合に使用
-    private float? m_speedDisplayOverride;
+    // 表示上書きの値はSpeedPlaceModelで保持します。
 
     /// <summary>
     /// 速度UIへ表示する値を上書き設定します。
@@ -201,7 +211,7 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
     /// <param name="displaySpeed">表示する速度値。</param>
     public void SetSpeedDisplayOverride(float displaySpeed)
     {
-        m_speedDisplayOverride = Mathf.Max(0.0f, displaySpeed);
+        m_speedPlaceModel.SetSpeedDisplayOverride(displaySpeed);
     }
 
     /// <summary>
@@ -210,7 +220,7 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
     /// </summary>
     public void ClearSpeedDisplayOverride()
     {
-        m_speedDisplayOverride = null;
+        m_speedPlaceModel.ClearSpeedDisplayOverride();
     }
 
 
@@ -219,12 +229,11 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
     // ============================================================
 
     // チャージ解除時点でのゲージ量（0～1）
-    private float m_carriedBoostGaugeRate;
-
+    /// <summary>チャージ終了時の割合をモデル経由で取得・設定します。</summary>
     public float CarriedBoostGaugeRate
     {
-        get => m_carriedBoostGaugeRate;
-        set => m_carriedBoostGaugeRate = Mathf.Clamp01(value);
+        get => m_vGaugePlaceModel.CarriedBoostGaugeRate;
+        set => m_vGaugePlaceModel.CarriedBoostGaugeRate = value;
     }
 
     // ------------------------------------------------------------
@@ -263,12 +272,11 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
     // Vブースト中断時点／進行中の残りゲージ量（0～1）
     // PlayerVRunningStateが開始・参照・更新し、
     // 中断中（Idling/Jumping中）もこの本体側で消費し続けます
-    private float m_suspendedBoostGaugeRate;
-
+    /// <summary>中断中も維持するブースト残量をモデル経由で取得・設定します。</summary>
     public float SuspendedBoostGaugeRate
     {
-        get => m_suspendedBoostGaugeRate;
-        set => m_suspendedBoostGaugeRate = Mathf.Clamp01(value);
+        get => m_vGaugePlaceModel.SuspendedBoostGaugeRate;
+        set => m_vGaugePlaceModel.SuspendedBoostGaugeRate = value;
     }
 
     // Vブーストが中断中か
@@ -283,7 +291,7 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
 
     // ゲージを1秒あたりどれだけ消費するか
     // （VRunningState開始時に設定される）
-    private float m_boostGaugeDepletionRatePerSecond;
+    // 消費レートと残量の計算はVGaugePlaceModelが管理します。
 
     /// <summary>
     /// ゲージの1秒あたりの消費レートを設定します。
@@ -291,8 +299,7 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
     /// </summary>
     public void SetBoostGaugeDepletionRate(float ratePerSecond)
     {
-        m_boostGaugeDepletionRatePerSecond =
-            Mathf.Max(ratePerSecond, 0.0f);
+        m_vGaugePlaceModel.SetBoostGaugeDepletionRate(ratePerSecond);
     }
 
 
@@ -318,7 +325,9 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
         VGaugeUI vGaugeUI,
         VSpeedUI vSpeedUI,
         PlayerCamera playerCamera,
-        Transform modelTransform)
+        Transform modelTransform,
+        VGaugePlaceModel vGaugePlaceModel,
+        SpeedPlaceModel speedPlaceModel)
     {
         if (inputReader == null ||
             monitor == null ||
@@ -328,7 +337,9 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
             splineGrindController == null ||
             movementParameterAsset == null ||
             vBoostMovementParameterAsset == null ||
-            boostChargingParameterAsset == null)
+            boostChargingParameterAsset == null ||
+            vGaugePlaceModel == null ||
+            speedPlaceModel == null)
         {
             Debug.LogError(
                 $"[{nameof(PlayerStateMachineComponent)}] " +
@@ -404,6 +415,11 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
         m_vSpeedUI = vSpeedUI;
         m_playerCamera = playerCamera;
         m_modelTransform = modelTransform;
+        m_vGaugePlaceModel = vGaugePlaceModel;
+        m_speedPlaceModel = speedPlaceModel;
+        m_vGaugePlaceModel.ResetGauge();
+        m_speedPlaceModel.ResetSpeed();
+        RefreshParameterDisplays();
 
         m_stateMachine =
             new StateMachine<PlayerStateMachineComponent>(
@@ -478,36 +494,44 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
         railStateChange?.Invoke();
         m_stateMachine.FixedUpdate();
 
-        // 現在のStateに関係なく、常に実速度をUIへ反映する
-        UpdateSpeedDisplay();
-
         // Vブースト中（中断中を含む）は、
         // 現在のStateに関係なく常にゲージを消費する
         UpdateSuspendableBoostGauge();
     }
 
     /// <summary>
-    /// 現在の水平速度をVSpeedUIへ反映します。
-    /// 速度表示オーバーライドが設定されている場合は、
-    /// 実際の物理速度の代わりにその値を表示します。
+    /// 物理更新とState更新の後に、毎フレーム速度をモデルへ保存して表示します。
     /// </summary>
-    private void UpdateSpeedDisplay()
+    private void LateUpdate()
     {
-        if (m_vSpeedUI == null)
+        if (!m_isInitialized)
         {
             return;
         }
 
-        float displaySpeed =
-            m_speedDisplayOverride ??
-            m_motor.HorizontalSpeed;
+        m_speedPlaceModel.UpdateSpeed(m_motor.HorizontalSpeed);
+        RefreshParameterDisplays();
+    }
 
-        m_vSpeedUI.SetSpeed(displaySpeed);
+    /// <summary>
+    /// モデルの値をUIへ渡します。将来の表示接続の変更箇所をここへまとめています。
+    /// </summary>
+    private void RefreshParameterDisplays()
+    {
+        if (m_vGaugeUI != null)
+        {
+            m_vGaugeUI.SetGaugeRate(m_vGaugePlaceModel.GetGaugeRate());
+        }
+
+        if (m_vSpeedUI != null)
+        {
+            m_vSpeedUI.SetSpeed(m_speedPlaceModel.Speed);
+        }
     }
 
     /// <summary>
     /// Vブースト中（VRunningState中・中断中の両方）の
-    /// ゲージ消費とUI反映を、Stateに関係なく行います。
+    /// モデルのゲージ消費をStateに関係なく行います。表示はLateUpdateで反映します。
     /// </summary>
     private void UpdateSuspendableBoostGauge()
     {
@@ -520,24 +544,11 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
             return;
         }
 
-        m_suspendedBoostGaugeRate -=
-            m_boostGaugeDepletionRatePerSecond *
-            Time.fixedDeltaTime;
-
-        if (m_suspendedBoostGaugeRate < 0.0f)
-        {
-            m_suspendedBoostGaugeRate = 0.0f;
-        }
-
-        if (m_vGaugeUI != null)
-        {
-            m_vGaugeUI.SetGaugeRate(
-                m_suspendedBoostGaugeRate);
-        }
+        m_vGaugePlaceModel.ConsumeBoostGauge(Time.fixedDeltaTime);
 
         // 中断中にゲージを使い切った場合も、
         // 復帰しようがないため中断状態を解除しておく
-        if (m_suspendedBoostGaugeRate <= 0.0f &&
+        if (SuspendedBoostGaugeRate <= 0.0f &&
             m_isBoostSuspended)
         {
             m_isBoostSuspended = false;
