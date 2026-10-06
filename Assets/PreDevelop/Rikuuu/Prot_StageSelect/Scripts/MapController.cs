@@ -3,6 +3,11 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
+/// <summary>
+/// マップの移動・拡大縮小を管理する
+/// カーソルは画像内を自由に移動し、フレームはカーソルに追従する
+/// 画像が端に到達した場合は、それ以上フレームを追従させない
+/// </summary>
 public class MapController : MonoBehaviour
 {
     // 移動速度
@@ -20,8 +25,8 @@ public class MapController : MonoBehaviour
     private float MAX_ZOOM = 3.0f;
 
     // マップイメージコンポーネント
-    [SerializeField] 
-    private UnityEngine.UI.Image m_mapImage;
+    [SerializeField]
+    private Image m_mapImage;
     // 倍率を表示するテキストコンポーネント
     [SerializeField]
     private TextMeshProUGUI m_magnificationText;
@@ -29,6 +34,11 @@ public class MapController : MonoBehaviour
     // 枠 Width/Height固定
     [SerializeField]
     private RectTransform m_frameRect;
+
+    // マップ中央に配置されたカーソル座標
+    [Header("カーソル")]
+    [SerializeField]
+    private RectTransform m_cursorRect;
 
     [Header("入力判定関連")]
     // 移動キーが押される判定
@@ -42,7 +52,14 @@ public class MapController : MonoBehaviour
     private InputActionReference m_zoomOutRef;
 
     // 現在の倍率
-    private float m_currentZoom = 1.0f;  
+    private float m_currentZoom = 1.0f;
+    // 画像の初期Scale（Inspectorで設定された値）
+    private Vector3 m_baseScale = Vector3.one;
+
+    // カーソルの基準位置（地図座標が(0,0)のときの表示位置）
+    private Vector2 m_cursorHomePosition;
+    // カーソルの地図上の座標（画像の中心からのオフセット、画像の等倍(Scale=1)でのローカル座標）
+    private Vector2 m_cursorMapPosition = Vector2.zero;
 
     private void OnEnable()
     {
@@ -56,13 +73,31 @@ public class MapController : MonoBehaviour
         m_navigateActionRef?.action.Disable();
     }
 
-    void Update()
+    private void Start()
     {
-        // 移動
+        // 画像の初期Scaleを記録する
+        if (m_mapImage != null)
+        {
+            m_baseScale = m_mapImage.rectTransform.localScale;
+        }
+
+        // カーソルの基準位置を記録する
+        if (m_cursorRect != null)
+        {
+            m_cursorHomePosition = m_cursorRect.anchoredPosition;
+        }
+
+        // 初期状態の表示を反映する
+        ApplyCursorAndImagePosition();
+    }
+
+    private void Update()
+    {
+        // カーソルを移動し、画像を追従させる
         Vector2 move = m_navigateActionRef?.action.ReadValue<Vector2>() ?? Vector2.zero;
         if (move != Vector2.zero)
         {
-            MoveMap(move);
+            MoveCursorOnMap(move);
         }
 
         // 拡大する
@@ -79,117 +114,146 @@ public class MapController : MonoBehaviour
         }
     }
 
-    private void ClampMapPosition()
-    {
-        if (m_mapImage == null || m_frameRect == null)
-        {
-            return;
-        }
-
-        RectTransform imgRect = m_mapImage.rectTransform;
-        RectTransform parentRect = imgRect.parent as RectTransform;
-        if (parentRect == null)
-        {
-            return;
-        }
-
-        // 枠の中心を、画像の親のローカル座標に変換する（Anchorの位置に依存しない基準点）
-        Vector3 frameCenterWorld = m_frameRect.TransformPoint(m_frameRect.rect.center);
-        Vector2 frameCenter = parentRect.InverseTransformPoint(frameCenterWorld);
-
-        // 現在のズームを反映した、実際に表示されている画像サイズ
-        Vector2 imageSize = imgRect.rect.size * (Vector2)imgRect.localScale;
-        Vector2 frameSize = m_frameRect.rect.size;
-
-        // 動ける最大距離 ＝ 画像の半分のサイズ − 枠の半分のサイズ
-        Vector2 maxOffset = new Vector2(
-            Mathf.Max(0f, (imageSize.x - frameSize.x) * 0.5f),
-            Mathf.Max(0f, (imageSize.y - frameSize.y) * 0.5f)
-        );
-
-        // 枠の中心からのズレ量を測ってクランプする
-        Vector2 offsetFromCenter = (Vector2)imgRect.localPosition - frameCenter;
-        offsetFromCenter.x = Mathf.Clamp(offsetFromCenter.x, -maxOffset.x, maxOffset.x);
-        offsetFromCenter.y = Mathf.Clamp(offsetFromCenter.y, -maxOffset.y, maxOffset.y);
-
-        Vector2 clampedPos = frameCenter + offsetFromCenter;
-        imgRect.localPosition = new Vector3(clampedPos.x, clampedPos.y, imgRect.localPosition.z);
-    }
-
+    /// <summary>
+    /// マップを拡大縮小する（枠の中心を基準にする）
+    /// </summary>
+    /// <param name="zoomSpeed">倍率の変化速度（縮小は負の値）</param>
     private void Zoom(float zoomSpeed)
     {
-        // 必要な参照がなければ何もしない
-        if (m_mapImage == null || m_frameRect == null)
-        {
-            return;
-        }
-
-        float oldZoom = m_currentZoom;
         m_currentZoom = Mathf.Clamp(m_currentZoom + zoomSpeed * Time.deltaTime, MIN_ZOOM, MAX_ZOOM);
 
-        // 上限・下限で倍率が変わらなかった場合は何もしない
-        if (Mathf.Approximately(oldZoom, m_currentZoom))
-        {
-            return;
-        }
-
-        ApplyZoomAroundFrameCenter(m_currentZoom / oldZoom);
-
-        // 拡縮後、範囲外に出ていればクランプする
-        ClampMapPosition();
+        // 初期Scaleを基準に拡大縮小する
+        m_mapImage.rectTransform.localScale = m_baseScale * m_currentZoom;
 
         // 倍率を表示する
-        if (m_magnificationText != null)
-        {
-            m_magnificationText.text = "×" + m_currentZoom.ToString("F1");
-        }
+        m_magnificationText.text = "×" + m_currentZoom.ToString("F1");
+
+        // カーソルの地図上座標を基準に、画像とカーソルの表示位置を再計算する
+        // （effectiveScaleが変わるため、自動的にカーソルの位置を中心とした拡大縮小になる）
+        ApplyCursorAndImagePosition();
     }
 
-    private void ApplyZoomAroundFrameCenter(float ratio)
+    /// <summary>
+    /// 入力分だけカーソルの地図上の座標を動かし、表示を更新する
+    /// </summary>
+    private void MoveCursorOnMap(Vector2 move)
     {
-        RectTransform imgRect = m_mapImage.rectTransform;
-        RectTransform parentRect = imgRect.parent as RectTransform;
-        if (parentRect == null)
-        {
-            return;
-        }
-
-        // 枠の中心を、画像の親のローカル座標に変換する
-        Vector3 frameCenterWorld = m_frameRect.TransformPoint(m_frameRect.rect.center);
-        Vector2 frameCenter = parentRect.InverseTransformPoint(frameCenterWorld);
-
-        // 枠の中心から見た画像pivotの位置を、倍率の比率分だけ伸縮する
-        Vector2 pivotPos = imgRect.localPosition;
-        Vector2 newPos = frameCenter + (pivotPos - frameCenter) * ratio;
-
-        imgRect.localPosition = new Vector3(newPos.x, newPos.y, imgRect.localPosition.z);
-        imgRect.localScale = new Vector3(m_currentZoom, m_currentZoom, 1f);
-    }
-
-    private void MoveMap(Vector2 move)
-    {
-        RectTransform imgRect = m_mapImage.rectTransform;
-
-        // 移動量（Time.deltaTime を使って滑らかに）
-        Vector2 delta = move * MOVE_SPEED * Time.deltaTime;
-
-        imgRect.anchoredPosition -= delta;
-
-        // 移動後、範囲外に出ていればクランプする
-        ClampMapPosition();
-    }
-
-    public void PanMapBy(Vector2 delta)
-    {
-        // マップイメージが設定されていなければ何もしない
         if (m_mapImage == null)
         {
             return;
         }
 
-        m_mapImage.rectTransform.anchoredPosition += delta;
+        // 入力量を、画像の等倍(Scale=1)でのローカル座標に変換する
+        Vector2 delta = move * MOVE_SPEED * Time.deltaTime;
+        Vector2 effectiveScale = GetEffectiveScale();
+        m_cursorMapPosition += new Vector2(delta.x / effectiveScale.x, delta.y / effectiveScale.y);
 
-        // 吸着による移動後も、範囲外に出ていればクランプする
-        ClampMapPosition();
+        // 画像の範囲内にカーソル位置を収める
+        m_cursorMapPosition = ClampCursorMapPosition(m_cursorMapPosition);
+
+        ApplyCursorAndImagePosition();
+    }
+
+    /// <summary>
+    /// カーソルの地図上の座標を、画像の範囲内に収める
+    /// </summary>
+    private Vector2 ClampCursorMapPosition(Vector2 mapPosition)
+    {
+        if (m_mapImage == null)
+        {
+            return mapPosition;
+        }
+
+        // 画像の等倍(Scale=1)でのサイズの半分が、カーソルの動ける範囲
+        Vector2 halfImageSize = m_mapImage.rectTransform.rect.size * 0.5f;
+
+        float clampedX = Mathf.Clamp(mapPosition.x, -halfImageSize.x, halfImageSize.x);
+        float clampedY = Mathf.Clamp(mapPosition.y, -halfImageSize.y, halfImageSize.y);
+
+        return new Vector2(clampedX, clampedY);
+    }
+
+    /// <summary>
+    /// カーソルの地図上の座標から、画像位置とカーソルの表示位置を計算して反映する
+    /// 画像は、カーソルが枠の中心に来るように追従する
+    /// 画像が端に到達した場合は追従できないため、その分カーソルが中心からずれて表示される
+    /// </summary>
+    private void ApplyCursorAndImagePosition()
+    {
+        if (m_mapImage == null || m_frameRect == null || m_cursorRect == null)
+        {
+            return;
+        }
+
+        Vector2 effectiveScale = GetEffectiveScale();
+
+        // カーソルを枠の中心に表示するために必要な画像位置
+        Vector2 desiredImagePos = -Vector2.Scale(m_cursorMapPosition, effectiveScale);
+
+        // 画像がフレームをはみ出せる範囲でクランプする（端に到達したらそれ以上動かさない）
+        RectTransform imgRect = m_mapImage.rectTransform;
+        imgRect.anchoredPosition = ClampToImageBounds(desiredImagePos);
+
+        // 画像が追従しきれなかった分だけ、カーソルが枠の中心からずれる
+        m_cursorRect.anchoredPosition =
+            m_cursorHomePosition + Vector2.Scale(m_cursorMapPosition, effectiveScale) + imgRect.anchoredPosition;
+    }
+
+    /// <summary>
+    /// 画像の位置を、枠がフチからはみ出ない範囲に収める
+    /// </summary>
+    private Vector2 ClampToImageBounds(Vector2 position)
+    {
+        if (m_mapImage == null || m_frameRect == null)
+        {
+            return position;
+        }
+
+        RectTransform imgRect = m_mapImage.rectTransform;
+
+        // 画像の4隅のワールド座標から、実際の見た目のサイズを求める
+        Vector3[] corners = new Vector3[4];
+        imgRect.GetWorldCorners(corners);
+
+        Vector2 bottomLeft = m_frameRect.InverseTransformPoint(corners[0]);
+        Vector2 topRight = m_frameRect.InverseTransformPoint(corners[2]);
+        Vector2 imageSize = topRight - bottomLeft;
+
+        Vector2 frameSize = m_frameRect.rect.size;
+
+        // 画像がフレームよりはみ出せる範囲の半分（はみ出し量の上限）
+        Vector2 maxOffset = Vector2.Max((imageSize - frameSize) * 0.5f, Vector2.zero);
+
+        float clampedX = Mathf.Clamp(position.x, -maxOffset.x, maxOffset.x);
+        float clampedY = Mathf.Clamp(position.y, -maxOffset.y, maxOffset.y);
+
+        return new Vector2(clampedX, clampedY);
+    }
+
+    /// <summary>
+    /// 現在の実際のScale（初期Scale × 拡大縮小倍率）を返す
+    /// </summary>
+    private Vector2 GetEffectiveScale()
+    {
+        return (Vector2)m_baseScale * m_currentZoom;
+    }
+
+    /// <summary>
+    /// 外部（吸着処理など）からカーソルを直接移動させる
+    /// 移動後は、画像の範囲内に収める
+    /// </summary>
+    /// <param name="delta">移動量（フレーム座標系）</param>
+    public void PanMapBy(Vector2 delta)
+    {
+        if (m_mapImage == null)
+        {
+            return;
+        }
+
+        Vector2 effectiveScale = GetEffectiveScale();
+        m_cursorMapPosition -= new Vector2(delta.x / effectiveScale.x, delta.y / effectiveScale.y);
+        m_cursorMapPosition = ClampCursorMapPosition(m_cursorMapPosition);
+
+        ApplyCursorAndImagePosition();
     }
 }
