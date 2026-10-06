@@ -1,56 +1,114 @@
 using UnityEngine;
 
 /// <summary>
-/// Vゲージのチャージ量と上限を保持します。
+/// Vゲージの現在値、ブーストへの引き継ぎ量と消費中の残量を保持します。
+/// UIやStateを参照せず、更新タイミングは呼び出し元が決定します。
 /// </summary>
-public class VGaugePlaceModel
+[DisallowMultipleComponent]
+public class VGaugePlaceModel : MonoBehaviour
 {
-    private int m_currentGauge;
+    [SerializeField, Min(1)]
     private int m_maxGauge = 100;
 
-    /// <summary>
-    /// ゲージの最大値を設定し、現在値を範囲内に収めます。
-    /// </summary>
+    [SerializeField, Min(0)]
+    private int m_currentGauge;
+
+    // 引き継ぎ量・残量は丸めず保持し、従来のブースト持続時間を維持します。
+    private float m_carriedBoostGaugeRate;
+    private float m_suspendedBoostGaugeRate;
+    private float m_boostGaugeDepletionRatePerSecond;
+
+    /// <summary>現在のチャージ量を取得・設定します。</summary>
+    public int Gauge
+    {
+        get => m_currentGauge;
+        set => m_currentGauge = Mathf.Clamp(value, 0, MaxGauge);
+    }
+
+    /// <summary>ゲージの最大値を取得・設定します。</summary>
+    public int MaxGauge
+    {
+        get => Mathf.Max(1, m_maxGauge);
+        set
+        {
+            m_maxGauge = Mathf.Max(1, value);
+            Gauge = m_currentGauge;
+        }
+    }
+
+    /// <summary>現在のチャージ割合を取得・設定します。表示用の整数単位に丸めます。</summary>
+    public float GaugeRate
+    {
+        get => Gauge / (float)MaxGauge;
+        set => Gauge = Mathf.RoundToInt(Mathf.Clamp01(value) * MaxGauge);
+    }
+
+    /// <summary>チャージ終了時にブーストへ渡す割合を取得・設定します。</summary>
+    public float CarriedBoostGaugeRate
+    {
+        get => m_carriedBoostGaugeRate;
+        set => m_carriedBoostGaugeRate = Mathf.Clamp01(value);
+    }
+
+    /// <summary>ブースト中・中断中の残量を取得・設定します。</summary>
+    public float SuspendedBoostGaugeRate
+    {
+        get => m_suspendedBoostGaugeRate;
+        set => m_suspendedBoostGaugeRate = Mathf.Clamp01(value);
+    }
+
+    /// <summary>ゲージの最大値を設定します。</summary>
     /// <param name="maxGauge">最大値。1未満は1として扱います。</param>
-    public void SetMaxGauge(int maxGauge)
-    {
-        m_maxGauge = Mathf.Max(1, maxGauge);
-        SetGauge(m_currentGauge);
-    }
+    public void SetMaxGauge(int maxGauge) => MaxGauge = maxGauge;
 
-    /// <summary>
-    /// 現在のチャージ量を取得します。
-    /// </summary>
+    /// <summary>現在のチャージ量を取得します。</summary>
     /// <returns>0から最大値までのチャージ量。</returns>
-    public int GetGauge()
-    {
-        return m_currentGauge;
-    }
+    public int GetGauge() => Gauge;
 
-    /// <summary>
-    /// チャージ量を0から最大値の範囲で設定します。
-    /// </summary>
+    /// <summary>現在のチャージ量を設定します。</summary>
     /// <param name="value">設定するチャージ量。</param>
-    public void SetGauge(int value)
-    {
-        m_currentGauge = Mathf.Clamp(value, 0, m_maxGauge);
-    }
+    public void SetGauge(int value) => Gauge = value;
 
-    /// <summary>
-    /// チャージ量を割合で設定します。
-    /// </summary>
+    /// <summary>現在のチャージ割合を設定します。</summary>
     /// <param name="rate">0から1までの割合。範囲外は制限します。</param>
-    public void SetGaugeRate(float rate)
+    public void SetGaugeRate(float rate) => GaugeRate = rate;
+
+    /// <summary>現在のチャージ割合を取得します。</summary>
+    /// <returns>0から1までのチャージ割合。</returns>
+    public float GetGaugeRate() => GaugeRate;
+
+    /// <summary>チャージ量を増減します。</summary>
+    /// <param name="amount">増減量。</param>
+    public void AddGauge(int amount) => Gauge += amount;
+
+    /// <summary>ブースト中に1秒当たり消費する割合を設定します。</summary>
+    /// <param name="ratePerSecond">1秒当たりの消費割合。</param>
+    public void SetBoostGaugeDepletionRate(float ratePerSecond)
     {
-        SetGauge(Mathf.RoundToInt(Mathf.Clamp01(rate) * m_maxGauge));
+        m_boostGaugeDepletionRatePerSecond = Mathf.Max(0.0f, ratePerSecond);
     }
 
-    /// <summary>
-    /// 現在のチャージ量を割合で取得します。
-    /// </summary>
-    /// <returns>0から1までのチャージ割合。</returns>
-    public float GetGaugeRate()
+    /// <summary>ブースト残量を消費し、現在のゲージ値へ反映します。</summary>
+    /// <param name="deltaTime">消費を進める秒数。</param>
+    public void ConsumeBoostGauge(float deltaTime)
     {
-        return m_currentGauge / (float)m_maxGauge;
+        SuspendedBoostGaugeRate -=
+            m_boostGaugeDepletionRatePerSecond * Mathf.Max(0.0f, deltaTime);
+        GaugeRate = SuspendedBoostGaugeRate;
+    }
+
+    /// <summary>ゲージの実行時データを初期化します。最大値の設定は維持します。</summary>
+    public void ResetGauge()
+    {
+        Gauge = 0;
+        CarriedBoostGaugeRate = 0.0f;
+        SuspendedBoostGaugeRate = 0.0f;
+        m_boostGaugeDepletionRatePerSecond = 0.0f;
+    }
+
+    /// <summary>Inspectorから入力された値を有効範囲へ制限します。</summary>
+    private void OnValidate()
+    {
+        MaxGauge = m_maxGauge;
     }
 }

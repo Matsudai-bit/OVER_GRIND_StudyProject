@@ -1,250 +1,36 @@
 using UnityEngine;
-using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 /// <summary>
-/// Vゲージの表示を管理します。
+/// 渡されたVゲージ割合とチャージ演出を表示します。ゲージ値は保持しません。
 /// </summary>
 public class VGaugeUI : MonoBehaviour
 {
-    [Header("Gauge")]
-
-    // Vゲージ画像
-    [SerializeField]
+    [SerializeField, Header("Gauge")]
     private Image gaugeImage;
 
-    // ゲージの最大値
-    [SerializeField]
-    private int maxGauge = 100;
-
-    [Header("Debug")]
-
-    // デバッグ入力を有効にするか
-    [SerializeField]
-    private bool useDebugInput = true;
-
-    // デバッグ時に増減するゲージ量
-    [SerializeField]
-    private int debugGaugeStep = 1;
-
-    /// <summary>
-    /// チャージ量を保持するモデル。Startより前の呼び出しにも対応します。
-    /// </summary>
-    private readonly VGaugePlaceModel m_placeModel = new VGaugePlaceModel();
-
-    /// <summary>
-    /// 既存のInspector設定を反映したモデルを取得します。
-    /// </summary>
-    private VGaugePlaceModel PlaceModel
-    {
-        get
-        {
-            m_placeModel.SetMaxGauge(maxGauge);
-            return m_placeModel;
-        }
-    }
-
-    [Header("Repeat")]
-
-    // 長押し開始までの時間
-    [SerializeField]
-    private float firstRepeatTime = 0.3f;
-
-    // 長押し中の入力間隔
-    [SerializeField]
-    private float repeatInterval = 0.05f;
-
-    [Header("Blade")]
-
-    // Vゲージ周辺の刃
-    // プロトタイプ用に回転速度を連動させる
-    [SerializeField]
+    [SerializeField, Header("Blade")]
     private VBladeRotator bladeRotator;
 
     /// <summary>
-    /// 長押し判定用タイマー
+    /// モデルから取得したゲージ割合を表示します。モデルの値は変更しません。
     /// </summary>
-    private float repeatTimer;
-
-    /// <summary>
-    /// 長押し中か
-    /// </summary>
-    private bool isRepeating;
-
-    /// <summary>
-    /// 初期設定
-    /// </summary>
-    private void Start()
-    {
-        // ゲージを0で初期化する
-        SetGauge(0);
-    }
-
-    /// <summary>
-    /// 毎フレーム更新
-    /// </summary>
-    private void Update()
-    {
-        // デバッグ入力を使用しない場合は終了
-        if (!useDebugInput)
-            return;
-
-        DebugInput();
-    }
-
-    /// <summary>
-    /// デバッグ用入力
-    /// </summary>
-    private void DebugInput()
-    {
-        //// コントローラー未接続なら終了
-        //if (Gamepad.current == null)
-        //    return;
-
-        //// 十字キーまたは左スティック上入力
-        //bool increase =
-        //    Gamepad.current.dpad.up.isPressed ||
-        //    Gamepad.current.leftStick.up.isPressed;
-
-        //// 十字キーまたは左スティック下入力
-        //bool decrease =
-        //    Gamepad.current.dpad.down.isPressed ||
-        //    Gamepad.current.leftStick.down.isPressed;
-
-        //if (increase)
-        //{
-        //    // ゲージを増加させる
-        //    RepeatInput(debugGaugeStep);
-        //}
-        //else if (decrease)
-        //{
-        //    // ゲージを減少させる
-        //    RepeatInput(-debugGaugeStep);
-        //}
-        //else
-        //{
-        //    // 入力が無くなったら長押し状態を解除する
-        //    repeatTimer = 0f;
-        //    isRepeating = false;
-
-        //    // 刃を通常回転へ戻す
-        //    if (bladeRotator != null)
-        //    {
-        //        bladeRotator.SetGaugeUsing(false);
-        //    }
-        //}
-    }
-
-    /// <summary>
-    /// 長押し入力を処理します。
-    /// </summary>
-    /// <param name="amount">増減量</param>
-    private void RepeatInput(int amount)
-    {
-        // ゲージ減少中のみ刃を高速回転させる
-        if (bladeRotator != null)
-        {
-            bladeRotator.SetGaugeUsing(amount < 0);
-        }
-
-        // 最初の入力は即時反映する
-        if (!isRepeating)
-        {
-            AddGauge(amount);
-
-            isRepeating = true;
-            repeatTimer = firstRepeatTime;
-
-            return;
-        }
-
-        // 長押しタイマーを更新する
-        repeatTimer -= Time.deltaTime;
-
-        // 一定時間ごとに入力を繰り返す
-        if (repeatTimer <= 0f)
-        {
-            AddGauge(amount);
-
-            repeatTimer = repeatInterval;
-        }
-    }
-
-    /// <summary>
-    /// ゲージ値を設定します。
-    /// </summary>
-    /// <param name="value">設定するゲージ値</param>
-    public void SetGauge(int value)
-    {
-        // 値の保持と範囲制限をモデルへ委譲する
-        PlaceModel.SetGauge(value);
-
-        // 表示を更新する
-        UpdateGauge();
-    }
-
-    /// <summary>
-    /// ゲージ値を0～1の割合で設定します。
-    /// ブーストチャージなど、外部の進捗率と連動させる用途に使用します。
-    /// </summary>
-    /// <param name="rate">0～1のゲージ割合。範囲外の値は自動的に丸められます。</param>
+    /// <param name="rate">0から1までのゲージ割合。</param>
     public void SetGaugeRate(float rate)
     {
-        PlaceModel.SetGaugeRate(rate);
-        UpdateGauge();
-    }
-
-    /// <summary>
-    /// ゲージ値を増減します。
-    /// </summary>
-    /// <param name="amount">増減量</param>
-    public void AddGauge(int amount)
-    {
-        // ゲージ減少中のみ刃を高速回転させる
-        if (bladeRotator != null)
+        if (gaugeImage != null)
         {
-            bladeRotator.SetGaugeUsing(amount < 0);
+            gaugeImage.fillAmount = Mathf.Clamp01(rate);
         }
-
-        // 現在値へ増減量を加算する
-        SetGauge(GetGauge() + amount);
     }
 
-    /// <summary>
-    /// チャージ中かどうかを刃の演出へ反映します。
-    /// ブーストチャージ開始・終了時に呼び出してください。
-    /// </summary>
-    /// <param name="isCharging">
-    /// true：チャージ中の演出（高速回転）を行う。
-    /// false：通常の演出へ戻す。
-    /// </param>
+    /// <summary>チャージ状態を刃の演出へ反映します。</summary>
+    /// <param name="isCharging">true：高速回転、false：通常回転。</param>
     public void SetCharging(bool isCharging)
     {
         if (bladeRotator != null)
         {
             bladeRotator.SetGaugeUsing(isCharging);
         }
-    }
-
-    /// <summary>
-    /// ゲージ表示を更新します。
-    /// </summary>
-    private void UpdateGauge()
-    {
-        // ゲージ画像が設定されていない場合は終了
-        if (gaugeImage == null)
-            return;
-
-        // 現在のゲージ割合を画像へ反映する
-        gaugeImage.fillAmount =
-            PlaceModel.GetGaugeRate();
-    }
-
-    /// <summary>
-    /// 現在のゲージ値を取得します。
-    /// </summary>
-    public int GetGauge()
-    {
-        return PlaceModel.GetGauge();
     }
 }

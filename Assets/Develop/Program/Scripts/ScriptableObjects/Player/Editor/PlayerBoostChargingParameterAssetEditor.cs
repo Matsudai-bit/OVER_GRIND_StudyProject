@@ -41,6 +41,7 @@ public sealed class PlayerBoostChargingParameterAssetEditor : Editor
 
         EditorGUILayout.Space();
         EditorGUILayout.LabelField("カメラ", EditorStyles.boldLabel);
+        DrawParameter("m_counterSteeringLookRate", "逆入力・無入力時の体の角度割合", "0で進行方向、1で通常入力と同じ横向き角度。旋回倍率とは独立して調整します。");
         DrawParameter("m_movingChargeCameraLookAngle", "移動中カメラの先読み角度", "チャージ中にカメラがカーブ内側を先読みする角度（度）。");
         DrawParameter("m_movingChargeCameraLookDuration", "移動中カメラの追従時間", "カメラが目標方向へ追従する時間（秒）。");
         DrawParameter("m_cameraDriftLookTurnSpeed", "停止中・解除時のカメラ旋回速度", "停止中チャージとチャージ解除時にカメラが向きを変える速度（度/秒）。");
