@@ -36,6 +36,7 @@ public sealed class PlayerBoostChargingParameterAssetEditor : Editor
         DrawParameter("m_driftForwardTurnRate", "進行方向入力の旋回倍率", "最初に決めた進行方向へ入力したときの倍率。1で基準の旋回速度です。");
         DrawParameter("m_driftNeutralTurnRate", "無入力の旋回倍率", "無入力時に維持する内向き旋回の倍率。0で旋回しません。");
         DrawParameter("m_driftCounterTurnRate", "逆入力の旋回倍率", "逆入力でも旋回方向は維持されます。値を小さくするほど緩やかに曲がります。0で旋回しません。");
+        DrawParameter("m_counterInputMovementAngle", "逆入力の外側移動角度", "逆入力中に移動方向を旋回外側へ傾ける角度。右旋回なら左側、左旋回なら右側へ移動します。");
         DrawParameter("m_driftSteeringResponseTime", "旋回入力の反応時間", "旋回入力へ到達するまでの時間（秒）。大きいほど入力変化が穏やかになります。");
         DrawParameter("m_facingRotationSpeed", "プレイヤーの向き変更速度", "プレイヤーの見た目が進行方向へ向く速度（度/秒）。");
         DrawParameter("m_stationaryChargeRotationSpeed", "停止中チャージの回転速度", "停止中に左右入力したときの回転速度（度/秒）。");
@@ -73,7 +74,7 @@ public sealed class PlayerBoostChargingParameterAssetEditor : Editor
 
         EditorGUILayout.HelpBox(
             "進行方向入力・無入力・逆入力は、それぞれ個別の旋回倍率で調整できます。" +
-            "逆入力でも最初に決めた旋回方向を維持し、設定した低い倍率で緩やかに曲がります。",
+            "逆入力でも最初に決めた旋回方向を維持し、実際の移動方向だけを設定角度だけ外側へ傾けます。",
             MessageType.Info);
     }
 

@@ -284,8 +284,11 @@ public sealed class PlayerBoostChargingState
         // 停止中開始の場合は移動しない
         if (!m_startedFromStationary)
         {
+            Vector3 movementDirection =
+                GetChargeMovementDirection(normalizedInput);
+
             Owner.Motor.MoveWithDriftAtFixedSpeed(
-                m_currentVelocityDirection,
+                movementDirection,
                 m_chargeSpeed,
                 m_currentFacingDirection,
                 m_parameterAsset.FacingRotationSpeed,
@@ -485,6 +488,33 @@ public sealed class PlayerBoostChargingState
         m_currentVelocityDirection = (Quaternion.AngleAxis(turnAngle, Vector3.up)
             * m_currentVelocityDirection).normalized;
         m_driftElapsedTime += Time.fixedDeltaTime;
+    }
+
+    /// <summary>
+    /// 入力状態に応じたチャージ中の実移動方向を取得します。
+    /// 逆入力中は旋回方向を変えず、移動方向だけを旋回外側へ傾けます。
+    /// </summary>
+    /// <param name="input">正規化された移動入力。</param>
+    /// <returns>チャージ中の実移動に使用する正規化済み方向。</returns>
+    private Vector3 GetChargeMovementDirection(Vector2 input)
+    {
+        int inputSide = ClassifyChargeInput(input);
+        bool isCounterSteering =
+            m_driftSide != 0 &&
+            inputSide == -m_driftSide;
+
+        if (!isCounterSteering)
+        {
+            return m_currentVelocityDirection;
+        }
+
+        // 右旋回中は左、左旋回中は右へ傾け、常にカーブ外側へ大きく移動させます。
+        float outwardAngle =
+            -m_driftSide *
+            m_parameterAsset.CounterInputMovementAngle;
+
+        return (Quaternion.AngleAxis(outwardAngle, Vector3.up) *
+            m_currentVelocityDirection).normalized;
     }
 
     /// <summary>
