@@ -314,7 +314,8 @@ public class StageSelectManager : MonoBehaviour
             }
             else
             {
-                Vector2 offset = m_cursor.InverseTransformPoint(m_stagePoints[m_snappedIndex].stagePoint.rectTransform.position);
+                Vector2 offset = (Vector2)m_cursor.InverseTransformPoint(m_stagePoints[m_snappedIndex].stagePoint.rectTransform.position)
+                        + m_mapController.CursorTilt;
                 float distance = offset.magnitude;
 
                 // ‰ğœ‹——£‚ğ’´‚¦‚Ä—£‚ê‚½‚ç‹z’…‚ğ‰ğœ‚µAV‹K’Tõ‚Öi‚Ş
@@ -358,7 +359,8 @@ public class StageSelectManager : MonoBehaviour
                 continue;
             }
 
-            Vector2 offset = m_cursor.InverseTransformPoint(m_stagePoints[i].stagePoint.rectTransform.position);
+            Vector2 offset = (Vector2)m_cursor.InverseTransformPoint(m_stagePoints[i].stagePoint.rectTransform.position)
+                 + m_mapController.CursorTilt;
             float distance = offset.magnitude;
 
             if (distance <= nearestDistance)

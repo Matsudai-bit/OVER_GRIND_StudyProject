@@ -24,6 +24,14 @@ public class MapController : MonoBehaviour
     [SerializeField]
     private float MAX_ZOOM = 3.0f;
 
+    [Header("カーソルの傾き挙動")]
+    // スティックを倒したときにカーソルが寄る最大距離
+    [SerializeField]
+    private float CURSOR_TILT_DISTANCE = 20.0f;
+    // 傾きオフセットが目標へ追従する速さ(大きいほど素早い)
+    [SerializeField]
+    private float CURSOR_TILT_SPEED = 12.0f;
+
     // マップイメージコンポーネント
     [SerializeField]
     private Image m_mapImage;
@@ -61,6 +69,11 @@ public class MapController : MonoBehaviour
     // カーソルの地図上の座標（画像の中心からのオフセット、画像の等倍(Scale=1)でのローカル座標）
     private Vector2 m_cursorMapPosition = Vector2.zero;
 
+    // スティック入力によるカーソルの見た目上のずれ
+    private Vector2 m_cursorTiltOffset = Vector2.zero;
+    // 外部(吸着処理)から参照するための公開プロパティ
+    public Vector2 CursorTilt => m_cursorTiltOffset;
+
     private void OnEnable()
     {
         // 有効にする
@@ -93,25 +106,55 @@ public class MapController : MonoBehaviour
 
     private void Update()
     {
-        // カーソルを移動し、画像を追従させる
         Vector2 move = m_navigateActionRef?.action.ReadValue<Vector2>() ?? Vector2.zero;
+
+        // 傾きオフセットを更新する
+        bool tiltChanged = UpdateCursorTilt(move);
+
         if (move != Vector2.zero)
         {
+            // 内部で ApplyCursorAndImagePosition() が呼ばれる
             MoveCursorOnMap(move);
         }
+        else if (tiltChanged)
+        {
+            // 移動はないが、傾きが戻っている最中は表示を更新する
+            ApplyCursorAndImagePosition();
+        }
 
-        // 拡大する
-        if (m_zoomInRef != null &&
-           m_zoomInRef.action.IsPressed())
+        // (ズーム処理は今まで通り)
+        if (m_zoomInRef != null && m_zoomInRef.action.IsPressed())
         {
             Zoom(ZOOM_SPEED);
         }
-        // 縮小する
-        if (m_zoomOutRef != null &&
-            m_zoomOutRef.action.IsPressed())
+        if (m_zoomOutRef != null && m_zoomOutRef.action.IsPressed())
         {
             Zoom(-ZOOM_SPEED);
         }
+    }
+
+    /// <summary>
+    /// スティックの倒した方向へカーソルを少し寄せ、離すと中央へ戻す
+    /// </summary>
+    /// <returns>オフセットが変化したかどうか</returns>
+    private bool UpdateCursorTilt(Vector2 move)
+    {
+        // 斜め入力でも最大距離を超えないようにする
+        Vector2 target = Vector2.ClampMagnitude(move, 1.0f) * CURSOR_TILT_DISTANCE;
+
+        // フレームレートに依存しない補間
+        float t = 1.0f - Mathf.Exp(-CURSOR_TILT_SPEED * Time.deltaTime);
+        Vector2 next = Vector2.Lerp(m_cursorTiltOffset, target, t);
+
+        // 十分小さくなったら完全に0へ戻す(無駄な更新を止める)
+        if (target == Vector2.zero && next.sqrMagnitude < 0.01f)
+        {
+            next = Vector2.zero;
+        }
+
+        bool changed = next != m_cursorTiltOffset;
+        m_cursorTiltOffset = next;
+        return changed;
     }
 
     /// <summary>
@@ -196,7 +239,10 @@ public class MapController : MonoBehaviour
 
         // 画像が追従しきれなかった分だけ、カーソルが枠の中心からずれる
         m_cursorRect.anchoredPosition =
-            m_cursorHomePosition + Vector2.Scale(m_cursorMapPosition, effectiveScale) + imgRect.anchoredPosition;
+            m_cursorHomePosition + 
+            Vector2.Scale(m_cursorMapPosition, effectiveScale) + 
+            imgRect.anchoredPosition + 
+            m_cursorTiltOffset;
     }
 
     /// <summary>
