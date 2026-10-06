@@ -72,14 +72,17 @@ public sealed class PlayerBoostChargingParameterAsset : ScriptableObject
     [SerializeField, Min(0.0f)]
     private float m_driftTurnSpeedAtFullCharge = 60.0f;
 
-    // 旧ドリフト設定の保存用。現在は入力角度で直進減速へ切り替えます。
-    [SerializeField, HideInInspector]
-    private float m_driftNeutralTurnRate = 0.55f;
+    [Tooltip("最初に決めた進行方向へ入力したときの旋回倍率。1で基準の旋回速度になります。")]
+    [SerializeField, Range(0.0f, 2.0f)]
+    private float m_driftForwardTurnRate = 1.0f;
 
-    // 旋回方向と逆へ入力したときの旋回倍率
-    [Tooltip("最初に決めた旋回方向と逆へ入力したときの旋回倍率。小さいほど緩やかに大回りします。0で旋回しません。")]
+    [Tooltip("移動入力がないときに維持する旋回倍率。0で旋回しません。")]
     [SerializeField, Range(0.0f, 1.0f)]
-    private float m_driftCounterTurnRate = 0.15f;
+    private float m_driftNeutralTurnRate = 0.15f;
+
+    [Tooltip("最初に決めた進行方向と逆へ入力したときの旋回倍率。旋回方向は変えず、値を小さくするほど緩やかに曲がります。")]
+    [SerializeField, Range(0.0f, 2.0f)]
+    private float m_driftCounterTurnRate = 0.10f;
 
     [Tooltip("旋回量が0から最大へ変化する時間（秒）。大きいほど穏やかに曲がります。")]
     [SerializeField, Min(0.01f)]
@@ -179,11 +182,14 @@ public sealed class PlayerBoostChargingParameterAsset : ScriptableObject
     public float DriftTurnSpeedAtFullCharge =>
         m_driftTurnSpeedAtFullCharge;
 
+    /// <summary>進行方向入力時の旋回割合を取得します。</summary>
+    public float DriftForwardTurnRate => Mathf.Clamp(m_driftForwardTurnRate, 0.0f, 2.0f);
+
     /// <summary>無入力時の旋回割合を取得します。</summary>
     public float DriftNeutralTurnRate => Mathf.Clamp01(m_driftNeutralTurnRate);
 
-    /// <summary>旋回方向と逆へ入力したときの旋回倍率を取得します。</summary>
-    public float DriftCounterTurnRate => Mathf.Clamp01(m_driftCounterTurnRate);
+    /// <summary>進行方向と逆へ入力したときの旋回倍率を取得します。</summary>
+    public float DriftCounterTurnRate => Mathf.Clamp(m_driftCounterTurnRate, 0.0f, 2.0f);
 
     /// <summary>旋回入力の応答時間（秒）を取得します。</summary>
     public float DriftSteeringResponseTime => Mathf.Max(0.01f, m_driftSteeringResponseTime);
