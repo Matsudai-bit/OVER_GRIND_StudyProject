@@ -9,19 +9,33 @@ public class PlayerCamera : MonoBehaviour
     [SerializeField] private CinemachineCamera m_cinemachineCamera;
     [SerializeField] private CinemachineInputAxisController m_inputAxisController;
 
+
+
+    [Header("Parameter")]
+
+    [SerializeField]
+    [Tooltip("カメラ挙動のパラメータを設定したアセット。")]
+    private PlayerCameraParameterAsset m_parameterAsset;
+
+    // アセットから生成した、カメラ制御用のパラメータ
+    private PlayerCameraParameter m_parameter;
+
+
     [Header("Charge Camera")]
 
-    [SerializeField, Range(0.0f, 1.0f)]
-    [Tooltip("チャージ中に進行方向へ向く割合。0でチャージ開始時の向き、1で進行方向を向きます。")]
-    private float m_chargeCameraDirectionInfluence = 1.0f;
+    //[SerializeField, Range(0.0f, 1.0f)]
+    //[Tooltip("チャージ中に進行方向へ向く割合。0でチャージ開始時の向き、1で進行方向を向きます。")]
+    private float m_chargeCameraDirectionInfluence;
 
-    [SerializeField, Range(-10.0f, 45.0f)]
-    [Tooltip("チャージ中に維持するカメラの上下角度。Playerを少し上から見る角度です。")]
-    private float m_chargeCameraVerticalAngle = 8.0f;
+    //[SerializeField, Range(-10.0f, 45.0f)]
+    //[Tooltip("チャージ中に維持するカメラの上下角度。Playerを少し上から見る角度です。")]
+    private float m_chargeCameraVerticalAngle;
 
-    [SerializeField, Min(0.0f)]
-    [Tooltip("チャージ中にカメラの高さを目的角度へ戻す速度[度/秒]。")]
-    private float m_chargeCameraVerticalTurnSpeed = 120.0f;
+    //[SerializeField, Min(0.0f)]
+    //[Tooltip("チャージ中にカメラの高さを目的角度へ戻す速度[度/秒]。")]
+    private float m_chargeCameraVerticalTurnSpeed;
+
+
 
     private CinemachineOrbitalFollow m_orbitalFollow;
     private PlayerLockOnCamera m_lockOnCamera;
@@ -35,6 +49,23 @@ public class PlayerCamera : MonoBehaviour
     /// <summary>既存カメラと専用ロックオン制御を接続します。</summary>
     private void Awake()
     {
+
+
+        // パラメータの生成を行う
+        if(m_parameterAsset == null)
+        {
+            Debug.LogError("PlayerCameraのPlayerCameraParameterAsset参照が未設定です。", this);
+            return;
+        }
+        m_parameter = m_parameterAsset.CreateCameraParameter();
+
+        // パラメータの設定を行う
+        m_chargeCameraDirectionInfluence = m_parameter.m_chargeCameraDirectionInfluence;
+        m_chargeCameraVerticalAngle = m_parameter.m_chargeCameraVerticalAngle;
+        m_chargeCameraVerticalTurnSpeed = m_parameter.m_chargeCameraVerticalTurnSpeed;
+
+
+
         if (m_cinemachineCamera == null)
         {
             Debug.LogError("PlayerCameraのCinemachineCamera参照が未設定です。", this);
