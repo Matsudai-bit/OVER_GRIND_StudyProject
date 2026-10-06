@@ -68,8 +68,8 @@ public class UserSupportManager : MonoBehaviour
     private void OnDisable()
     {
         // 無効にする
-        m_changePageLeftActionRef?.action.Disable();
-        m_changePageRightActionRef?.action.Disable();
+        //m_changePageLeftActionRef?.action.Disable();
+        //m_changePageRightActionRef?.action.Disable();
     }
 
     private void Start()
@@ -109,45 +109,45 @@ public class UserSupportManager : MonoBehaviour
     // マニュアルページへの切り替え
     void ChangeToManualPage()
     {
-        // 選択しているコンテナを左にする
-        m_containerController.ChangeToLeft();
+        // アイテムの表示切替
+        foreach (var item in m_optionItems)
+        {
+            item.SetActive(false);
+        }
+        foreach (var item in m_manualItems)
+        {
+            item.SetActive(true);
+        }
 
         // マニュアルテクスチャを表示する
         m_manualButton.OnCursor();
         // オプションテクスチャを薄くする
         m_optionButton.OnCursorExit();
 
-        // アイテムの表示切替
-        foreach (var item in m_manualItems)
-        {
-            item.SetActive(true);
-        }
-        foreach (var item in m_optionItems)
-        {
-            item.SetActive(false);
-        }
+        // 選択しているコンテナを左にする
+        m_containerController.ChangeToLeft();
     }
 
     // オプションページへの切り替え
     void ChangeToOptionPage()
     {
-        // 選択しているコンテナを左にする
-        m_containerController.ChangeToLeft();
+        // アイテムの表示切替
+        foreach (var item in m_manualItems)
+        {
+            item.SetActive(false);
+        }
+        foreach (var item in m_optionItems)
+        {
+            item.SetActive(true);
+        }
 
         // オプションテクスチャを表示する
         m_optionButton.OnCursor();
         // マニュアルテクスチャを薄くする
         m_manualButton.OnCursorExit();
 
-        // アイテムの表示切替
-        foreach (var item in m_manualItems)
-        {
-            item.SetActive(false);
-        }
-        foreach (var item in m_optionItems)
-        {
-            item.SetActive(true);
-        }
+        // 選択しているコンテナを左にする
+        m_containerController.ChangeToLeft();
     }
 
     // ------------------------------------------------------
