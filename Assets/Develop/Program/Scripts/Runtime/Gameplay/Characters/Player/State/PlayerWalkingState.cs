@@ -53,6 +53,9 @@ public sealed class PlayerWalkingState
         // Vブーストの長押し成立を確認。
         // ただし新規のブースト開始は接地中のみ許可する
         if (Owner.Monitor.IsGrounded &&
+            Owner.InputReader.HasVBoostHoldStarted &&
+            Owner.BoostChargingParameterAsset.CanStartMovingCharge(
+                Owner.InputReader.MoveInput) &&
             Owner.InputReader.ConsumeVBoostHoldStarted())
         {
             Machine.ChangeState<PlayerBoostChargingState>();

@@ -24,7 +24,7 @@ public sealed class PlayerBoostChargingParameterAssetEditor : Editor
 
         EditorGUILayout.Space();
         EditorGUILayout.LabelField("入力判定", EditorStyles.boldLabel);
-        DrawParameter("m_forwardInputHalfAngle", "正面入力と判定する半角", "この角度以内の前方入力と、後方側の同じ角度範囲は直進扱いになります（度）。");
+        DrawParameter("m_freeSteeringAngle", "方向固定前の自由旋回角度", "移動中チャージ開始時の進行方向から左右へこの角度以内なら自由に切り返せます。現在の進行方向が超えると、その側へ旋回方向を固定します（度）。");
         DrawParameter("m_steeringDeadZone", "スティックのデッドゾーン", "この値以下のスティック入力は無入力として扱います。");
 
         EditorGUILayout.Space();
@@ -73,6 +73,7 @@ public sealed class PlayerBoostChargingParameterAssetEditor : Editor
         }
 
         EditorGUILayout.HelpBox(
+            "移動中は、スティックを正面から「方向固定前の自由旋回角度」以上左右へ入れた状態でのみチャージを開始できます。" +
             "進行方向入力・無入力・逆入力は、それぞれ個別の旋回倍率で調整できます。" +
             "逆入力でも最初に決めた旋回方向を維持し、実際の移動方向だけを設定角度だけ外側へ傾けます。",
             MessageType.Info);

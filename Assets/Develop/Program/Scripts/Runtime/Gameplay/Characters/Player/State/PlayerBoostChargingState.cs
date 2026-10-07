@@ -33,6 +33,9 @@ public sealed class PlayerBoostChargingState
     // 現在のチャージ中の移動方向
     private Vector3 m_currentVelocityDirection;
 
+    // 移動中チャージ開始時の進行方向。自由旋回範囲の基準として使用します。
+    private Vector3 m_chargeStartDirection;
+
     // 現在のプレイヤーの向き
     // 実際のPlayer本体は回転させず、移動方向・カメラ等の基準として使用します。
     private Vector3 m_currentFacingDirection;
@@ -122,6 +125,9 @@ public sealed class PlayerBoostChargingState
         }
 
         m_currentVelocityDirection.Normalize();
+
+        m_chargeStartDirection =
+            m_currentVelocityDirection;
 
         // --------------------------------------------------------
         // プレイヤーの向きを初期化
@@ -417,29 +423,36 @@ public sealed class PlayerBoostChargingState
         ApplyModelFacing();
     }
 
-    /// <summary>スティックの正面からの角度で左右を判定します。</summary>
+    /// <summary>現在のスティック横入力の左右を判定します。</summary>
     /// <param name="input">スティック入力。</param>
     /// <returns>左は-1、右は1、正面・後方・ニュートラルは0。</returns>
     private int ClassifyChargeInput(Vector2 input)
     {
-        float deadZone = m_parameterAsset.SteeringDeadZone;
-        if (input.sqrMagnitude <= deadZone * deadZone) return 0;
-        float angle = Mathf.Atan2(input.x, input.y) * Mathf.Rad2Deg;
-        float absoluteAngle = Mathf.Abs(angle);
-        if (absoluteAngle <= m_parameterAsset.ForwardInputHalfAngle ||
-            absoluteAngle >= 180.0f - m_parameterAsset.ForwardInputHalfAngle) return 0;
-        return angle > 0.0f ? 1 : -1;
+        if (Mathf.Abs(input.x) <= m_parameterAsset.SteeringDeadZone) return 0;
+        return input.x > 0.0f ? 1 : -1;
     }
 
-    /// <summary>最初の有効な左右入力を固定し、入力状態ごとの旋回量を返します。</summary>
+    /// <summary>自由旋回中は左右入力を直接返し、角度超過後は最初の有効な方向へ固定します。</summary>
     /// <param name="input">スティック入力。</param>
     /// <returns>旋回方向と倍率を反映した符号付き入力。</returns>
     private float GetLockedSteeringInput(Vector2 input)
     {
         int inputSide = ClassifyChargeInput(input);
-        if (m_driftSide == 0 && inputSide != 0)
+        if (m_driftSide == 0)
         {
-            m_driftSide = inputSide;
+            float currentAngleFromStart =
+                Vector3.SignedAngle(
+                    m_chargeStartDirection,
+                    m_currentVelocityDirection,
+                    Vector3.up);
+
+            if (Mathf.Abs(currentAngleFromStart) <
+                m_parameterAsset.FreeSteeringAngle)
+            {
+                return GetFreeSteeringInput(input);
+            }
+
+            m_driftSide = currentAngleFromStart > 0.0f ? 1 : -1;
             m_driftElapsedTime = 0.0f;
             m_currentDriftSteering = 0.0f;
         }
@@ -464,6 +477,20 @@ public sealed class PlayerBoostChargingState
             m_parameterAsset.DriftNeutralTurnRate;
     }
 
+    /// <summary>方向固定前の範囲内で、スティックの横方向傾斜に応じた自由旋回入力を取得します。</summary>
+    /// <param name="input">スティック入力。</param>
+    /// <returns>左は負、右は正となる自由旋回入力。</returns>
+    private float GetFreeSteeringInput(Vector2 input)
+    {
+        float deadZone = m_parameterAsset.SteeringDeadZone;
+        if (input.sqrMagnitude <= deadZone * deadZone)
+        {
+            return 0.0f;
+        }
+
+        return input.x * m_parameterAsset.DriftForwardTurnRate;
+    }
+
     /// <summary>入力と反対側へ膨らんだ後、入力側へ旋回する軌道を計算します。</summary>
     /// <param name="input">スティック入力。</param>
     /// <param name="turnSpeedDegreesPerSecond">最大旋回速度（度/秒）。</param>
@@ -480,20 +507,23 @@ public sealed class PlayerBoostChargingState
                 Time.fixedDeltaTime / m_parameterAsset.DriftSteeringResponseTime);
         }
 
-        // すべての入力状態で同じ軌道計算を使用し、旋回方向は固定します。
-        // 入力状態による違いはGetLockedSteeringInputで決めた倍率だけです。
-        float progress = Mathf.Clamp01(
-            m_driftElapsedTime / m_parameterAsset.DriftOutwardDuration);
-        float turnRate = Mathf.Lerp(
-            -m_parameterAsset.DriftOutwardTurnRate,
-            1.0f,
-            Mathf.SmoothStep(0.0f, 1.0f, progress));
+        // 自由旋回中は入力方向へ直接曲がり、方向固定後のみ従来の膨らむ軌道を使用します。
+        float turnRate = 1.0f;
+        if (m_driftSide != 0)
+        {
+            float progress = Mathf.Clamp01(
+                m_driftElapsedTime / m_parameterAsset.DriftOutwardDuration);
+            turnRate = Mathf.Lerp(
+                -m_parameterAsset.DriftOutwardTurnRate,
+                1.0f,
+                Mathf.SmoothStep(0.0f, 1.0f, progress));
+            m_driftElapsedTime += Time.fixedDeltaTime;
+        }
 
         float turnInput = m_currentDriftSteering;
         float turnAngle = turnInput * turnSpeedDegreesPerSecond * turnRate * Time.fixedDeltaTime;
         m_currentVelocityDirection = (Quaternion.AngleAxis(turnAngle, Vector3.up)
             * m_currentVelocityDirection).normalized;
-        m_driftElapsedTime += Time.fixedDeltaTime;
     }
 
     /// <summary>
@@ -555,6 +585,18 @@ public sealed class PlayerBoostChargingState
     /// <summary>旋回の強さに応じた横滑り角度へ、モデルを滑らかに傾けます。</summary>
     private void UpdateModelSidewaysFacing(Vector2 input)
     {
+        if (m_driftSide == 0)
+        {
+            float freeTargetAngle =
+                m_currentDriftSteering *
+                m_parameterAsset.MovingChargeSidewaysLookAngle;
+            m_modelSlipAngle = Mathf.MoveTowards(m_modelSlipAngle, freeTargetAngle,
+                m_parameterAsset.FacingRotationSpeed * Time.fixedDeltaTime);
+            m_currentModelFacingDirection = Quaternion.AngleAxis(m_modelSlipAngle, Vector3.up)
+                * m_currentVelocityDirection;
+            return;
+        }
+
         // 旋回の弱さと体の横向き角度を分離し、逆入力・無入力でも姿勢を残します。
         float lookRate = ClassifyChargeInput(input) == m_driftSide
             ? input.magnitude

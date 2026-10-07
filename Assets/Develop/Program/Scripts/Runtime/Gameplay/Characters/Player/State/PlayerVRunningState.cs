@@ -348,6 +348,9 @@ private void UpdatePhaseMovement()
                 //
 
                 if (Owner.Monitor.IsGrounded &&
+                    Owner.InputReader.HasVBoostHoldStarted &&
+                    Owner.BoostChargingParameterAsset.CanStartMovingCharge(
+                        Owner.InputReader.MoveInput) &&
                     Owner.InputReader.ConsumeVBoostHoldStarted())
                 {
                     Owner.SuspendedBoostGaugeRate = 0.0f;

@@ -205,6 +205,10 @@ public sealed class PlayerInputReader : MonoBehaviour
     public bool IsVBoostHeldInput =>
         m_isVBoostHeld;
 
+    /// <summary>Vブーストの長押しが成立し、まだチャージ開始に使用されていないか取得します。</summary>
+    public bool HasVBoostHoldStarted =>
+        m_hasVBoostHoldStarted;
+
     /// <summary>
     /// Vブースト入力が離されたか取得します。
     /// 取得すると離した入力を消費します。

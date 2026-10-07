@@ -34,9 +34,12 @@ public sealed class PlayerBoostChargingParameterAsset : ScriptableObject
     [SerializeField, Min(0.0f)]
     private float m_chargeDeceleration = 4.0f;
 
-    [Tooltip("正面入力の判定半角（度）。30なら正面から左右30度以内。そのほかの左右領域でドリフトします。正面・後方の同じ半角では旋回せず徐々に減速します。")]
+    [Tooltip("移動中チャージ開始時の進行方向を基準に、方向を固定せず左右へ自由旋回できる角度（度）。現在の進行方向がこの角度を超えると旋回方向を固定します。")]
     [SerializeField, Range(1.0f, 89.0f)]
-    private float m_forwardInputHalfAngle = 30.0f;
+    [FormerlySerializedAs("m_forwardInputHalfAngle")]
+    [FormerlySerializedAs("m_freeSteeringHalfAngle")]
+    [FormerlySerializedAs("m_freeSteeringTiltAngle")]
+    private float m_freeSteeringAngle = 15.0f;
 
     [Tooltip("反対側への膨らみから入力側の旋回へ切り替わる時間（秒）。")]
     [SerializeField, Min(0.01f)]
@@ -49,8 +52,25 @@ public sealed class PlayerBoostChargingParameterAsset : ScriptableObject
     /// <summary>チャージ中の減速度を取得します。</summary>
     public float ChargeDeceleration => Mathf.Max(0.0f, m_chargeDeceleration);
 
-    /// <summary>正面・後方入力の判定半角を取得します。</summary>
-    public float ForwardInputHalfAngle => Mathf.Clamp(m_forwardInputHalfAngle, 1.0f, 89.0f);
+    /// <summary>チャージ開始時の進行方向を基準に自由旋回できる角度を取得します。</summary>
+    public float FreeSteeringAngle => Mathf.Clamp(m_freeSteeringAngle, 1.0f, 89.0f);
+
+    /// <summary>移動中にチャージを開始できるスティック入力か判定します。</summary>
+    /// <param name="input">現在のスティック入力。</param>
+    /// <returns>true：左右へ必要角度以上入力している。false：正面入力または入力不足。</returns>
+    public bool CanStartMovingCharge(Vector2 input)
+    {
+        if (input.sqrMagnitude <= SteeringDeadZone * SteeringDeadZone ||
+            Mathf.Abs(input.x) <= SteeringDeadZone)
+        {
+            return false;
+        }
+
+        float inputAngle = Mathf.Abs(
+            Mathf.Atan2(input.x, input.y) * Mathf.Rad2Deg);
+
+        return inputAngle >= FreeSteeringAngle;
+    }
 
     /// <summary>外側へ膨らむ旋回の遷移時間を取得します。</summary>
     public float DriftOutwardDuration => Mathf.Max(0.01f, m_driftOutwardDuration);
