@@ -336,7 +336,7 @@ public class PlayerCamera : MonoBehaviour
             // X軸カメラ感度の設定
             if(controller.Name == "Look Orbit X")
             {
-                controller.Input.Gain = m_parameter.m_cameraSensitivityX;
+                controller.Input.Gain = m_parameter.m_cameraSensitivityX * 100.0f;
             }
             // Y軸カメラ感度の設定
             if(controller.Name == "Look Orbit Y")
@@ -344,7 +344,7 @@ public class PlayerCamera : MonoBehaviour
                 // カメラ反転にチェックがついているかを調べる
                 float sign = m_parameter.m_isCameraReverseY ? -1.0f : 1.0f;
 
-                controller.Input.Gain *= sign * m_parameter.m_cameraSensitivityY * AXIS_Y_GAIN_SCALE;
+                controller.Input.Gain *= sign * m_parameter.m_cameraSensitivityY * 100.0f * AXIS_Y_GAIN_SCALE;
             }
         }
     }
