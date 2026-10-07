@@ -178,7 +178,7 @@ public sealed class PlayerBoostChargingState
             return;
         }
 
-        if (Owner.Monitor.IsGrounded &&
+        if (Owner.Monitor.CanStartJump &&
             Owner.InputReader.HasJumpInput)
         {
             // チャージを中断するため、保持しているゲージを破棄する
@@ -372,7 +372,13 @@ public sealed class PlayerBoostChargingState
     private void UpdateStationaryChargeRotation(
         Vector2 input)
     {
-        float steeringInput = GetLockedSteeringInput(input);
+        // 停止中はドリフト用の旋回方向固定を使わず、左右入力をそのまま反映する。
+        // これにより、チャージ中でも任意のタイミングで左右へ切り返せる。
+        float steeringInput =
+            Mathf.Abs(input.x) > m_parameterAsset.SteeringDeadZone
+                ? input.x
+                : 0.0f;
+
         if (Mathf.Approximately(steeringInput, 0.0f))
         {
             return;

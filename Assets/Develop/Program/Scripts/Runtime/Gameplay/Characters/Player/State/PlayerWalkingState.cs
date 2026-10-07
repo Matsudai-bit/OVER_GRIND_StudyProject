@@ -43,7 +43,7 @@ public sealed class PlayerWalkingState
         }
 
         // ジャンプ入力を確認
-        if (Owner.Monitor.IsGrounded &&
+        if (Owner.Monitor.CanStartJump &&
             Owner.InputReader.HasJumpInput)
         {
             Machine.ChangeState<PlayerJumpingState>();
