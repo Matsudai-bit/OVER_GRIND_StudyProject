@@ -109,7 +109,7 @@ public sealed class GameplaySequenceController : MonoBehaviour
             return false;
         }
 
-        if (!TryEnterRequiredMode(sequence))
+        if (m_gameplayModeController.IsActive &&  !TryEnterRequiredMode(sequence))
         {
             return false;
         }
