@@ -73,7 +73,7 @@ public sealed class PlayerBoostChargingParameterAssetEditor : Editor
         }
 
         EditorGUILayout.HelpBox(
-            "移動中は、スティックを正面から「方向固定前の自由旋回角度」以上左右へ入れた状態でのみチャージを開始できます。" +
+            "移動中は、チャージボタン押下時から実際の移動方向が「方向固定前の自由旋回角度」以上変化した場合のみチャージを開始できます。" +
             "進行方向入力・無入力・逆入力は、それぞれ個別の旋回倍率で調整できます。" +
             "逆入力でも最初に決めた旋回方向を維持し、実際の移動方向だけを設定角度だけ外側へ傾けます。",
             MessageType.Info);

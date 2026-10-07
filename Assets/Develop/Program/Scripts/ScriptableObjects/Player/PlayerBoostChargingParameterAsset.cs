@@ -55,21 +55,27 @@ public sealed class PlayerBoostChargingParameterAsset : ScriptableObject
     /// <summary>チャージ開始時の進行方向を基準に自由旋回できる角度を取得します。</summary>
     public float FreeSteeringAngle => Mathf.Clamp(m_freeSteeringAngle, 1.0f, 89.0f);
 
-    /// <summary>移動中にチャージを開始できるスティック入力か判定します。</summary>
-    /// <param name="input">現在のスティック入力。</param>
-    /// <returns>true：左右へ必要角度以上入力している。false：正面入力または入力不足。</returns>
-    public bool CanStartMovingCharge(Vector2 input)
+    /// <summary>チャージボタン押下時から実移動方向が自由旋回角度を超えたか判定します。</summary>
+    /// <param name="startDirection">チャージボタン押下時の移動方向。</param>
+    /// <param name="currentDirection">現在の移動方向。</param>
+    /// <returns>true：実移動方向が自由旋回角度以上変化した。false：角度内または方向が不正。</returns>
+    public bool HasExceededFreeSteeringAngle(
+        Vector3 startDirection,
+        Vector3 currentDirection)
     {
-        if (input.sqrMagnitude <= SteeringDeadZone * SteeringDeadZone ||
-            Mathf.Abs(input.x) <= SteeringDeadZone)
+        startDirection.y = 0.0f;
+        currentDirection.y = 0.0f;
+
+        if (startDirection.sqrMagnitude <= 0.0001f ||
+            currentDirection.sqrMagnitude <= 0.0001f)
         {
             return false;
         }
 
-        float inputAngle = Mathf.Abs(
-            Mathf.Atan2(input.x, input.y) * Mathf.Rad2Deg);
-
-        return inputAngle >= FreeSteeringAngle;
+        float movementAngle = Vector3.Angle(
+            startDirection,
+            currentDirection);
+        return movementAngle >= FreeSteeringAngle;
     }
 
     /// <summary>外側へ膨らむ旋回の遷移時間を取得します。</summary>
