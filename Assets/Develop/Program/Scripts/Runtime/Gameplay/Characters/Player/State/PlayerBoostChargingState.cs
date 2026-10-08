@@ -5,7 +5,7 @@ using UnityEngine;
 /// プレイヤーのブーストチャージ状態を管理します。
 ///
     /// チャージ中は現在の移動方向を維持しながら、
-    /// 入力角度で直進減速と左右ドリフトを切り替えます。
+    /// 入力角度で固定速度の直進と左右ドリフトを切り替えます。
     /// 固定した旋回方向への通常入力と、低倍率の逆入力を別に扱います。
 ///
 /// 移動中開始のチャージでは、実際のPlayer本体は回転させず、
@@ -15,9 +15,6 @@ using UnityEngine;
 public sealed class PlayerBoostChargingState
     : StateBase<PlayerStateMachineComponent>
 {
-    // 停止状態と判定する速度のしきい値
-    private const float STATIONARY_SPEED_THRESHOLD = 0.01f;
-
     // 使用するパラメータアセット
     private PlayerBoostChargingParameterAsset m_parameterAsset;
 
@@ -27,7 +24,7 @@ public sealed class PlayerBoostChargingState
     // 速度ログの経過時間
     private float m_speedLogElapsedTime;
 
-    // 開始時の実速度から徐々に減少するチャージ中の速度
+    // チャージ開始時の実速度へ設定倍率を掛けた固定速度
     private float m_chargeSpeed;
 
     // 現在のチャージ中の移動方向
@@ -81,7 +78,15 @@ public sealed class PlayerBoostChargingState
         m_parameterAsset =
             Owner.BoostChargingParameterAsset;
 
-        m_chargeTime = 0.0f;
+        float inheritedChargeRate =
+            Mathf.Clamp01(
+                Owner.SuspendedBoostGaugeRate);
+
+        // 中断扱いの残量から再チャージする場合は、
+        // チャージ中にバックグラウンド消費されないよう解除します。
+        Owner.IsBoostSuspended = false;
+        Owner.CarriedBoostGaugeRate =
+            inheritedChargeRate;
         m_speedLogElapsedTime = 0.0f;
         m_driftSide = 0;
         m_currentDriftSteering = 0.0f;
@@ -96,8 +101,7 @@ public sealed class PlayerBoostChargingState
 
         // チャージ開始時に停止していたか判定
         m_startedFromStationary =
-            currentSpeedAtChargeStart <=
-            STATIONARY_SPEED_THRESHOLD;
+            Owner.Motor.IsHorizontallyStopped;
 
         // 開始状態に応じてチャージ時間を選択
         m_currentMaxChargeTime =
@@ -105,7 +109,13 @@ public sealed class PlayerBoostChargingState
                 ? m_parameterAsset.StationaryStartChargeTime
                 : m_parameterAsset.MovingStartChargeTime;
 
-        m_chargeSpeed = currentSpeedAtChargeStart;
+        m_chargeTime =
+            m_currentMaxChargeTime *
+            inheritedChargeRate;
+
+        m_chargeSpeed =
+            currentSpeedAtChargeStart *
+            m_parameterAsset.ChargeMoveSpeedRate;
 
         // --------------------------------------------------------
         // チャージ開始時の移動方向を取得
@@ -152,11 +162,12 @@ public sealed class PlayerBoostChargingState
             $"[PlayerBoostChargingState] チャージ開始 " +
             $"開始時実速度={currentSpeedAtChargeStart:F2} " +
             $"停止開始={m_startedFromStationary} " +
+            $"引き継ぎ率={inheritedChargeRate:P1} " +
             $"最大チャージ時間={m_currentMaxChargeTime:F2}秒 " +
             $"チャージ速度={m_chargeSpeed:F2}",
             Owner);
 
-        Owner.VGaugePlaceModel.SetGaugeRate(0.0f);
+        Owner.VGaugePlaceModel.SetGaugeRate(ChargeRate);
 
         if (Owner.VGaugeUI != null)
         {
@@ -281,12 +292,7 @@ public sealed class PlayerBoostChargingState
         // チャージ中の移動
         // --------------------------------------------------------
 
-        // 実速度には接触摩擦や物理の押し戻しも含まれるため、減速計算へ毎回取り込みません。
-        // 開始時の速度から設定した減速度だけで目標速度を減らし、障害物はMotor側で制限します。
-        m_chargeSpeed = Mathf.MoveTowards(m_chargeSpeed,
-            0.0f, m_parameterAsset.ChargeDeceleration * Time.fixedDeltaTime);
-
-        // 正面・ニュートラルでも速度を保持し、上記の減速だけを適用します。
+        // チャージ開始時に確定した速度を、チャージ終了まで固定して使用します。
         // 停止中開始の場合は移動しない
         if (!m_startedFromStationary)
         {
@@ -331,8 +337,8 @@ public sealed class PlayerBoostChargingState
                 $"[PlayerBoostChargingState] " +
                 $"チャージ={ChargeRate:P1} " +
                 $"実速度={Owner.Motor.HorizontalSpeed:F2} " +
-                $"減速後速度={m_chargeSpeed:F2} " +
-                $"減速度={m_parameterAsset.ChargeDeceleration:F3} " +
+                $"固定速度={m_chargeSpeed:F2} " +
+                $"開始時速度倍率={m_parameterAsset.ChargeMoveSpeedRate:F2} " +
                 $"設定={m_parameterAsset.name} " +
                 $"曲がりやすさ={currentDriftTurnSpeed:F1}deg/s",
                 Owner);
@@ -381,9 +387,7 @@ public sealed class PlayerBoostChargingState
         // 停止中はドリフト用の旋回方向固定を使わず、左右入力をそのまま反映する。
         // これにより、チャージ中でも任意のタイミングで左右へ切り返せる。
         float steeringInput =
-            Mathf.Abs(input.x) > m_parameterAsset.SteeringDeadZone
-                ? input.x
-                : 0.0f;
+            m_parameterAsset.GetSmoothedSteeringInput(input);
 
         if (Mathf.Approximately(steeringInput, 0.0f))
         {
@@ -428,8 +432,15 @@ public sealed class PlayerBoostChargingState
     /// <returns>左は-1、右は1、正面・後方・ニュートラルは0。</returns>
     private int ClassifyChargeInput(Vector2 input)
     {
-        if (Mathf.Abs(input.x) <= m_parameterAsset.SteeringDeadZone) return 0;
-        return input.x > 0.0f ? 1 : -1;
+        float steeringInput =
+            m_parameterAsset.GetSmoothedSteeringInput(input);
+
+        if (Mathf.Approximately(steeringInput, 0.0f))
+        {
+            return 0;
+        }
+
+        return steeringInput > 0.0f ? 1 : -1;
     }
 
     /// <summary>自由旋回中は左右入力を直接返し、角度超過後は最初の有効な方向へ固定します。</summary>
@@ -482,13 +493,9 @@ public sealed class PlayerBoostChargingState
     /// <returns>左は負、右は正となる自由旋回入力。</returns>
     private float GetFreeSteeringInput(Vector2 input)
     {
-        float deadZone = m_parameterAsset.SteeringDeadZone;
-        if (input.sqrMagnitude <= deadZone * deadZone)
-        {
-            return 0.0f;
-        }
-
-        return input.x * m_parameterAsset.DriftForwardTurnRate;
+        return
+            m_parameterAsset.GetSmoothedSteeringInput(input) *
+            m_parameterAsset.DriftForwardTurnRate;
     }
 
     /// <summary>入力と反対側へ膨らんだ後、入力側へ旋回する軌道を計算します。</summary>

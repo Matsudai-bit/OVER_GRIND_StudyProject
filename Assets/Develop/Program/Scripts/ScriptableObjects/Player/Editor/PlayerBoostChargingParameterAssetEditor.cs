@@ -20,12 +20,13 @@ public sealed class PlayerBoostChargingParameterAssetEditor : Editor
         DrawParameter("m_movingStartChargeTime", "移動中開始：最大チャージ時間", "移動中にチャージを開始した場合の最大時間（秒）。");
         DrawParameter("m_stationaryStartChargeTime", "停止中開始：最大チャージ時間", "停止中にチャージを開始した場合の最大時間（秒）。");
         DrawParameter("m_minBoostChargeRate", "ダッシュに必要な最低チャージ割合", "この割合以上でチャージを離すとブーストダッシュへ移行します。");
-        DrawParameter("m_chargeDeceleration", "チャージ中の減速度", "チャージ中に毎秒減少する速度（m/s²）。");
+        DrawParameter("m_chargeMoveSpeedRate", "チャージ中の開始時速度倍率", "チャージ開始時の実速度に掛ける倍率。チャージ終了までこの速度を維持します。");
 
         EditorGUILayout.Space();
         EditorGUILayout.LabelField("入力判定", EditorStyles.boldLabel);
         DrawParameter("m_freeSteeringAngle", "方向固定前の自由旋回角度", "移動中チャージ開始時の進行方向から左右へこの角度以内なら自由に切り返せます。現在の進行方向が超えると、その側へ旋回方向を固定します（度）。");
         DrawParameter("m_steeringDeadZone", "スティックのデッドゾーン", "この値以下のスティック入力は無入力として扱います。");
+        DrawParameter("m_forwardStickGraceAngle", "正面入力の角度猶予", "スティック前方を直進として扱う左右の角度（度）。境界を越えた旋回入力は滑らかに強くなります。");
 
         EditorGUILayout.Space();
         EditorGUILayout.LabelField("ドリフト旋回", EditorStyles.boldLabel);

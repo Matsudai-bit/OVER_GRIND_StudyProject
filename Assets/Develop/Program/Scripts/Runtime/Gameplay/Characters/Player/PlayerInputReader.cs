@@ -55,6 +55,9 @@ public sealed class PlayerInputReader : MonoBehaviour
     // Vブースト入力が開始されたか
     private bool m_hasVBoostStarted;
 
+    // Vブーストを押すたびに更新する識別番号
+    private int m_vBoostPressId;
+
     // Vブースト入力中か
     private bool m_isVBoostHeld;
 
@@ -123,6 +126,18 @@ public sealed class PlayerInputReader : MonoBehaviour
     /// </summary>
     public bool IsVBoostHeld =>
         m_isVBoostHeld;
+
+    /// <summary>
+    /// 未消費のVブースト開始入力があるか取得します。
+    /// </summary>
+    public bool HasVBoostStarted =>
+        m_hasVBoostStarted;
+
+    /// <summary>
+    /// 現在のVブースト押下を識別する番号を取得します。
+    /// </summary>
+    public int VBoostPressId =>
+        m_vBoostPressId;
 
     /// <summary>
     /// 攻撃入力を取得して消費します。
@@ -507,6 +522,10 @@ public sealed class PlayerInputReader : MonoBehaviour
 
         // 今回のVブースト開始を記録
         m_hasVBoostStarted = true;
+        unchecked
+        {
+            m_vBoostPressId++;
+        }
 
         // 現在Vブースト入力が押されている
         m_isVBoostHeld = true;

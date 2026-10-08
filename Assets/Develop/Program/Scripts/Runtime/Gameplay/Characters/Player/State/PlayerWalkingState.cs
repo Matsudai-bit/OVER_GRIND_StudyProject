@@ -61,6 +61,8 @@ public sealed class PlayerWalkingState
         if (Owner.Monitor.IsGrounded &&
             m_isWaitingForMovingCharge &&
             Owner.InputReader.HasVBoostHoldStarted &&
+            Owner.BoostChargingParameterAsset.HasLateralChargeInput(
+                Owner.InputReader.MoveInput) &&
             Owner.BoostChargingParameterAsset.HasExceededFreeSteeringAngle(
                 m_movingChargeStartDirection,
                 Owner.Motor.HorizontalDirection) &&
