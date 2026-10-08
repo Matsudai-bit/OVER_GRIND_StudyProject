@@ -23,7 +23,7 @@ public class ButtonSelector : MonoBehaviour
         if (m_cursor != null)
         {
             // カーソルの座標初期化
-            m_cursor.transform.position = m_buttons[m_selectButtonNumber].transform.position;
+            //m_cursor.transform.position = m_buttons[m_selectButtonNumber].transform.position;
         }
 
         // 選択している状態にする
