@@ -26,17 +26,16 @@ public sealed class PlayerBoostChargingParameterAsset : ScriptableObject
     [SerializeField, Range(0.0f, 1.0f)]
     private float m_minBoostChargeRate = 0.10f;
 
-    // 旧アセット互換用。現在の移動では使用しません。
-    [SerializeField, HideInInspector]
+    [Tooltip("移動中チャージで維持する速度倍率。チャージ開始時の実速度にこの値を掛けた速度で固定します。")]
+    [SerializeField, Min(0.0f)]
     private float m_chargeMoveSpeedRate = 0.75f;
 
-    [Tooltip("チャージ中に毎秒減らす速度（m/s²）。開始時の実速度から減速します。")]
-    [SerializeField, Min(0.0f)]
-    private float m_chargeDeceleration = 4.0f;
-
-    [Tooltip("正面入力の判定半角（度）。30なら正面から左右30度以内。そのほかの左右領域でドリフトします。正面・後方の同じ半角では旋回せず徐々に減速します。")]
+    [Tooltip("移動中チャージ開始時の進行方向を基準に、方向を固定せず左右へ自由旋回できる角度（度）。現在の進行方向がこの角度を超えると旋回方向を固定します。")]
     [SerializeField, Range(1.0f, 89.0f)]
-    private float m_forwardInputHalfAngle = 30.0f;
+    [FormerlySerializedAs("m_forwardInputHalfAngle")]
+    [FormerlySerializedAs("m_freeSteeringHalfAngle")]
+    [FormerlySerializedAs("m_freeSteeringTiltAngle")]
+    private float m_freeSteeringAngle = 15.0f;
 
     [Tooltip("反対側への膨らみから入力側の旋回へ切り替わる時間（秒）。")]
     [SerializeField, Min(0.01f)]
@@ -46,11 +45,31 @@ public sealed class PlayerBoostChargingParameterAsset : ScriptableObject
     [SerializeField, Min(0.0f)]
     private float m_driftOutwardTurnRate = 1.0f;
 
-    /// <summary>チャージ中の減速度を取得します。</summary>
-    public float ChargeDeceleration => Mathf.Max(0.0f, m_chargeDeceleration);
+    /// <summary>チャージ開始時の進行方向を基準に自由旋回できる角度を取得します。</summary>
+    public float FreeSteeringAngle => Mathf.Clamp(m_freeSteeringAngle, 1.0f, 89.0f);
 
-    /// <summary>正面・後方入力の判定半角を取得します。</summary>
-    public float ForwardInputHalfAngle => Mathf.Clamp(m_forwardInputHalfAngle, 1.0f, 89.0f);
+    /// <summary>チャージボタン押下時から実移動方向が自由旋回角度を超えたか判定します。</summary>
+    /// <param name="startDirection">チャージボタン押下時の移動方向。</param>
+    /// <param name="currentDirection">現在の移動方向。</param>
+    /// <returns>true：実移動方向が自由旋回角度以上変化した。false：角度内または方向が不正。</returns>
+    public bool HasExceededFreeSteeringAngle(
+        Vector3 startDirection,
+        Vector3 currentDirection)
+    {
+        startDirection.y = 0.0f;
+        currentDirection.y = 0.0f;
+
+        if (startDirection.sqrMagnitude <= 0.0001f ||
+            currentDirection.sqrMagnitude <= 0.0001f)
+        {
+            return false;
+        }
+
+        float movementAngle = Vector3.Angle(
+            startDirection,
+            currentDirection);
+        return movementAngle >= FreeSteeringAngle;
+    }
 
     /// <summary>外側へ膨らむ旋回の遷移時間を取得します。</summary>
     public float DriftOutwardDuration => Mathf.Max(0.01f, m_driftOutwardDuration);
@@ -99,6 +118,10 @@ public sealed class PlayerBoostChargingParameterAsset : ScriptableObject
     // スティック入力のデッドゾーン
     [SerializeField, Range(0.0f, 1.0f)]
     private float m_steeringDeadZone = 0.1f;
+
+    [Tooltip("スティック前方を直進として扱う左右の角度（度）。境界を越えた旋回入力は滑らかに強くなります。")]
+    [SerializeField, Range(0.0f, 45.0f)]
+    private float m_forwardStickGraceAngle = 15.0f;
 
     // 停止中チャージ時の回転速度（度/秒）
     // チャージ率による補正は行わず、常に一定の速度で回転する
@@ -172,7 +195,7 @@ public sealed class PlayerBoostChargingParameterAsset : ScriptableObject
     /// チャージ中の移動速度倍率を取得します。
     /// </summary>
     public float ChargeMoveSpeedRate =>
-        m_chargeMoveSpeedRate;
+        Mathf.Max(0.0f, m_chargeMoveSpeedRate);
 
     /// <summary>
     /// チャージ開始直後の曲がりやすさ（度/秒）を取得します。
@@ -212,6 +235,80 @@ public sealed class PlayerBoostChargingParameterAsset : ScriptableObject
     /// </summary>
     public float SteeringDeadZone =>
         m_steeringDeadZone;
+
+    /// <summary>
+    /// スティック前方を直進として扱う左右の角度を取得します。
+    /// </summary>
+    public float ForwardStickGraceAngle =>
+        Mathf.Clamp(m_forwardStickGraceAngle, 0.0f, 45.0f);
+
+    /// <summary>
+    /// 正面の角度猶予とデッドゾーンを適用した旋回入力を取得します。
+    /// 正面猶予の境界から旋回量を滑らかに増加させます。
+    /// </summary>
+    /// <param name="input">正規化前または正規化済みのスティック入力。</param>
+    /// <returns>左は負、右は正、直進または無入力は0となる旋回入力。</returns>
+    public float GetSmoothedSteeringInput(Vector2 input)
+    {
+        float inputMagnitude =
+            Mathf.Clamp01(input.magnitude);
+
+        if (inputMagnitude <= SteeringDeadZone ||
+            Mathf.Abs(input.x) <= SteeringDeadZone)
+        {
+            return 0.0f;
+        }
+
+        // 後方入力は正面方向の猶予対象外とし、従来の横入力を維持します。
+        if (input.y <= 0.0f)
+        {
+            return input.x;
+        }
+
+        float graceHorizontalInput =
+            inputMagnitude *
+            Mathf.Sin(
+                ForwardStickGraceAngle *
+                Mathf.Deg2Rad);
+
+        float horizontalInput =
+            Mathf.Abs(input.x);
+
+        if (horizontalInput <= graceHorizontalInput)
+        {
+            return 0.0f;
+        }
+
+        float steeringRate =
+            Mathf.InverseLerp(
+                graceHorizontalInput,
+                inputMagnitude,
+                horizontalInput);
+
+        steeringRate =
+            Mathf.SmoothStep(
+                0.0f,
+                1.0f,
+                steeringRate);
+
+        return
+            Mathf.Sign(input.x) *
+            inputMagnitude *
+            steeringRate;
+    }
+
+    /// <summary>
+    /// チャージ開始に使用できる左右入力があるか判定します。
+    /// </summary>
+    /// <param name="input">スティック入力。</param>
+    /// <returns>true：正面猶予を越えた左右入力がある。false：正面または無入力。</returns>
+    public bool HasLateralChargeInput(Vector2 input)
+    {
+        return
+            !Mathf.Approximately(
+                GetSmoothedSteeringInput(input),
+                0.0f);
+    }
 
     /// <summary>
     /// 停止中チャージ時の回転速度（度/秒）を取得します。

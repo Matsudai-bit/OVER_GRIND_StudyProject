@@ -16,6 +16,9 @@ public sealed class PlayerMotor : MonoBehaviour
     // これ未満の速度では障害物検知を行わない（静止判定のノイズ回避）
     private const float OBSTACLE_CHECK_SPEED_THRESHOLD = 0.01f;
 
+    // 停止状態と判定する水平速度の閾値
+    private const float STOP_SPEED_THRESHOLD = 0.01f;
+
     // カメラ基準移動に使用するTransform
     [SerializeField, Header("移動基準")]
     private Transform m_movementReference;
@@ -843,6 +846,12 @@ public sealed class PlayerMotor : MonoBehaviour
             return velocity.magnitude;
         }
     }
+
+    /// <summary>
+    /// プレイヤーの水平移動が停止しているか取得します。
+    /// </summary>
+    public bool IsHorizontallyStopped =>
+        HorizontalSpeed <= STOP_SPEED_THRESHOLD;
 
     /// <summary>
     /// 指定した速度で移動します。
