@@ -71,6 +71,9 @@ public class PlayerCamera : MonoBehaviour
         m_chargeCameraVerticalAngle = m_parameter.m_chargeCameraVerticalAngle;
         m_chargeCameraVerticalTurnSpeed = m_parameter.m_chargeCameraVerticalTurnSpeed;
 
+        // 検証用: ビルドでDecolliderが有効かを確認(PlayerCameraのStartなどに一時追加)
+        var decollider = m_cinemachineCamera.GetComponent<CinemachineDecollider>();
+        Debug.Log($"Decollider: {(decollider != null ? "あり enabled=" + decollider.enabled : "なし")}");
 
 
 
