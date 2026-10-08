@@ -23,8 +23,9 @@ public class GameDirector : MonoBehaviour
 
         m_gameFlowStateChangedEvent.RegisterListener((flowStateID) =>
         {
-            if (flowStateID.CurrentState == GameFlowStateType.INTRO) { }
+            if (flowStateID.CurrentState == GameFlowStateType.INTRO) 
             {
+                Debug.Log("シーケンス依頼");
                 m_sequenceController.StartSequence(m_sequenceAsset);
             }
         });
