@@ -16,6 +16,7 @@ public class GameDirector : MonoBehaviour
 
     private void Awake()
     {
+        Application.targetFrameRate = 60;
         if (!m_gameFlowStateChangedEvent)
         {
             Debug.LogError(typeof(GameFlowStateChangedEvent).Name+"‚ªİ’è‚³‚ê‚Ä‚¢‚Ü‚¹‚ñ");

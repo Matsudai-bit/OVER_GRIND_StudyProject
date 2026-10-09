@@ -25,9 +25,9 @@ public class TimerUiModel : MonoBehaviour
     /// <summary>
     /// 経過時間の更新
     /// </summary>
-    private void Update()
+    private void FixedUpdate()
     {
         // 毎フレーム時間を進める
-        AddTime(Time.deltaTime);
+        AddTime(Time.fixedDeltaTime);
     }
 }
