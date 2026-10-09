@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 
 /// <summary>
@@ -588,8 +589,13 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
     private float m_knockbackDuration = 0.8f;
     [SerializeField, Min(0.0f)]
     private float m_hitRecoveryDuration = 0.2f;
+    [SerializeField, Tooltip("被弾状態終了後の無敵時間設定。")]
+    private PlayerInvincibilityParameterAsset m_invincibilityParameterAsset;
     [SerializeField, Tooltip("吹き飛びを終了させる地形・壁のレイヤー")]
     private LayerMask m_hitEnvironmentLayerMask = ~0;
+
+    private Coroutine m_postHitInvincibilityCoroutine;
+    private bool m_isPostHitInvincible;
 
     /// <summary>被弾中の無敵状態を取得します。</summary>
     public bool IsHitReacting { get; private set; }
@@ -602,6 +608,7 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
     /// </remarks>
     public bool IsInvincible =>
         IsHitReacting ||
+        m_isPostHitInvincible ||
         (m_stateMachine != null &&
          m_stateMachine.IsCurrentState<PlayerHitState>());
     /// <summary>被弾中に地形へ衝突したかを取得します。</summary>
@@ -660,6 +667,41 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
     {
         IsHitReacting = false;
         HasHitEnvironment = false;
+        StartPostHitInvincibility();
+    }
+
+    /// <summary>被弾状態終了後の無敵時間を開始します。</summary>
+    private void StartPostHitInvincibility()
+    {
+        if (m_postHitInvincibilityCoroutine != null)
+        {
+            StopCoroutine(m_postHitInvincibilityCoroutine);
+            m_postHitInvincibilityCoroutine = null;
+        }
+
+        float duration = m_invincibilityParameterAsset != null
+            ? m_invincibilityParameterAsset.PostHitDuration
+            : 0.0f;
+
+        if (duration <= 0.0f)
+        {
+            m_isPostHitInvincible = false;
+            return;
+        }
+
+        m_isPostHitInvincible = true;
+        m_postHitInvincibilityCoroutine =
+            StartCoroutine(WaitForPostHitInvincibility(duration));
+    }
+
+    /// <summary>指定時間の経過後、被弾後の無敵状態を解除します。</summary>
+    /// <param name="duration">無敵状態を維持する秒数。</param>
+    private IEnumerator WaitForPostHitInvincibility(float duration)
+    {
+        yield return new WaitForSeconds(duration);
+
+        m_isPostHitInvincible = false;
+        m_postHitInvincibilityCoroutine = null;
     }
 
     /// <summary>地形との新たな接触を被弾終了判定へ渡します。</summary>
