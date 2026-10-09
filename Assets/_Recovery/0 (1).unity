@@ -3196,7 +3196,6 @@ GameObject:
   - component: {fileID: 417082404}
   - component: {fileID: 417082406}
   - component: {fileID: 417082405}
-  - component: {fileID: 417082407}
   m_Layer: 7
   m_Name: LeftLeg
   m_TagString: Untagged
@@ -3261,19 +3260,6 @@ PositionConstraint:
   m_Sources:
   - sourceTransform: {fileID: 1374405087}
     weight: 1
---- !u!114 &417082407
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 417082403}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c8bd802d219ef604eaf73e266e667b7b, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::TargetPoint
-  m_targetTransform: {fileID: 417082404}
 --- !u!4 &421649503 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 4949271048908120665, guid: 02c90e5e6fed2604d85b89bafbff04ed, type: 3}
@@ -7685,7 +7671,6 @@ GameObject:
   - component: {fileID: 1054090517}
   - component: {fileID: 1054090519}
   - component: {fileID: 1054090518}
-  - component: {fileID: 1054090520}
   m_Layer: 7
   m_Name: RightLeg
   m_TagString: Untagged
@@ -7750,19 +7735,6 @@ PositionConstraint:
   m_Sources:
   - sourceTransform: {fileID: 1143806733}
     weight: 1
---- !u!114 &1054090520
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1054090516}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c8bd802d219ef604eaf73e266e667b7b, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::TargetPoint
-  m_targetTransform: {fileID: 1054090517}
 --- !u!4 &1071999311 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 8942335866221056473, guid: 02c90e5e6fed2604d85b89bafbff04ed, type: 3}
@@ -17494,8 +17466,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TargetableEnemy
   m_targetPoints:
-  - {fileID: 417082407}
-  - {fileID: 1054090520}
+  - {fileID: 0}
+  - {fileID: 0}
 --- !u!114 &209138561857368949
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -48,6 +48,8 @@ public sealed class PlayerVRunningState
     // チャージ終了時に確定したダッシュ方向
     // BOOST_DASH中はこの方向から変更しない
     private Vector3 m_boostDashDirection;
+    private Vector3 m_movingChargeStartDirection;
+    private bool m_isWaitingForMovingCharge;
 
 
     /// <summary>
@@ -57,6 +59,8 @@ public sealed class PlayerVRunningState
     /// </summary>
     protected override void OnStartState()
     {
+        m_isWaitingForMovingCharge = false;
+
         PlayerMoveParameters normalParameters =
             Owner.MovementParameterAsset
                 .CreateMoveParameters();
@@ -223,7 +227,7 @@ public sealed class PlayerVRunningState
 
         // ジャンプ入力を確認
         // 同様に打ち切らず中断し、着地後に復帰させる
-        if (Owner.Monitor.IsGrounded &&
+        if (Owner.Monitor.CanStartJump &&
             Owner.InputReader.HasJumpInput)
         {
             SuspendBoost();
@@ -235,6 +239,26 @@ public sealed class PlayerVRunningState
         UpdatePhaseMovement();
     }
 
+
+    /// <summary>チャージボタン押下時の実移動方向を開始判定用に保持します。</summary>
+    private void UpdateMovingChargeStartDirection()
+    {
+        if (!Owner.InputReader.IsVBoostHeld)
+        {
+            m_isWaitingForMovingCharge = false;
+            return;
+        }
+
+        if (m_isWaitingForMovingCharge ||
+            !Owner.InputReader.ConsumeVBoostStarted())
+        {
+            return;
+        }
+
+        m_movingChargeStartDirection =
+            Owner.Motor.HorizontalDirection;
+        m_isWaitingForMovingCharge = true;
+    }
 
     /// <summary>
     /// 状態終了時に呼ばれます。
@@ -289,6 +313,10 @@ private void UpdatePhaseMovement()
         {
             case VBoostPhase.BOOST_DASH:
 
+                // ダッシュ中に押されたチャージ入力を通常移動へ持ち越しません。
+                // 押し続けた場合も、いったん離して再度押すまで再チャージを禁止します。
+                Owner.InputReader.DiscardVBoostPendingInput();
+
                 // ------------------------------------------------
                 // ブーストダッシュ
                 // ------------------------------------------------
@@ -339,24 +367,26 @@ private void UpdatePhaseMovement()
                 // 新しいVブーストチャージ
                 // ------------------------------------------------
                 //
-                // 現在のVブーストゲージが残っていても、
-                // 新しい長押しが成立した場合は
-                // 一度残りゲージを破棄してチャージを開始する。
+                // 現在のVブーストゲージが残っている場合は、
+                // 新しい長押し成立時に残量を引き継いでチャージを再開する。
                 //
-                // PlayerBoostChargingStateではチャージ時間を
-                // 0から計測するため、新しいチャージは0%から開始される。
-                //
+
+                UpdateMovingChargeStartDirection();
 
                 if (Owner.Monitor.IsGrounded &&
+                    m_isWaitingForMovingCharge &&
+                    Owner.InputReader.HasVBoostHoldStarted &&
+                    Owner.BoostChargingParameterAsset.HasLateralChargeInput(
+                        Owner.InputReader.MoveInput) &&
+                    Owner.BoostChargingParameterAsset.HasExceededFreeSteeringAngle(
+                        m_movingChargeStartDirection,
+                        Owner.Motor.HorizontalDirection) &&
                     Owner.InputReader.ConsumeVBoostHoldStarted())
                 {
-                    Owner.SuspendedBoostGaugeRate = 0.0f;
-                    Owner.CarriedBoostGaugeRate = 0.0f;
-
                     Debug.Log(
-                        "[PlayerVRunningState] " +
-                        "新しいVブーストチャージを開始します。" +
-                        "残りゲージを破棄して0%から再チャージします。",
+                        $"[PlayerVRunningState] " +
+                        $"残りゲージを引き継いでVブーストチャージを開始します。" +
+                        $"引き継ぎ率={Owner.SuspendedBoostGaugeRate:P1}",
                         Owner);
 
                     Machine.ChangeState<PlayerBoostChargingState>();
