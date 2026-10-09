@@ -70,23 +70,33 @@ public sealed class PlayerHealth : MonoBehaviour, IDirectionalDamageable
     }
 
     /// <summary>攻撃位置を持たないダメージを受け、前方からの被弾として処理します。</summary>
-    public void TakeDamage(int damage)
+    public void TakeDamage(AttackDamageData damageData)
     {
-        TryTakeDamage(damage, transform.position + transform.forward);
+        TryTakeDamage(
+            damageData,
+            transform.position + transform.forward);
     }
 
     /// <summary>無敵・死亡中を除き、HPを減らして攻撃中心から吹き飛ばします。</summary>
-    public bool TryTakeDamage(int damage, Vector3 attackCenter)
+    public bool TryTakeDamage(
+        AttackDamageData damageData,
+        Vector3 attackCenter)
     {
-        return TryTakeDamage(damage, attackCenter, null);
+        return TryTakeDamage(damageData, attackCenter, null);
     }
 
     /// <summary>攻撃別のノックバック設定を指定して、通常の無敵・HP判定を通して被弾します。</summary>
-    public bool TryTakeDamage(int damage, Vector3 attackCenter, PlayerKnockbackProfile profile)
+    public bool TryTakeDamage(
+        AttackDamageData damageData,
+        Vector3 attackCenter,
+        PlayerKnockbackProfile profile)
     {
-        if (damage <= 0 || m_health == null || !m_health.IsInitialized || m_health.IsDead ||
+        if (damageData.Damage <= 0 ||
+            m_health == null ||
+            !m_health.IsInitialized ||
+            m_health.IsDead ||
             (m_hurtbox != null && !m_hurtbox.CanReceiveDamage) ||
-            (m_stateMachine != null && m_stateMachine.IsHitReacting))
+            (m_stateMachine != null && m_stateMachine.IsInvincible))
         {
             return false;
         }
@@ -94,9 +104,33 @@ public sealed class PlayerHealth : MonoBehaviour, IDirectionalDamageable
         // HP変更イベントから別の攻撃が発生しても、先に無敵化して多重被弾を防ぎます。
         if (m_stateMachine != null)
         {
-            m_stateMachine.TryStartHitReaction(attackCenter, profile);
+            m_stateMachine.TryStartHitReaction(
+                attackCenter,
+                profile,
+                damageData.AttackIdentifier);
         }
-        m_health.TakeDamage(damage);
+
+        m_health.TakeDamage(damageData.Damage);
         return true;
+    }
+
+    /// <summary>
+    /// ダメージ量から攻撃情報を生成して被弾します。
+    /// </summary>
+    /// <param name="damage">受けるダメージ量。</param>
+    /// <param name="attackCenter">攻撃中心のワールド座標。</param>
+    /// <param name="profile">使用するノックバックプロファイル。</param>
+    /// <param name="attackIdentifier">受けた攻撃のID。</param>
+    /// <returns>true：ダメージを受け付けた。false：ダメージを拒否した。</returns>
+    public bool TryTakeDamage(
+        int damage,
+        Vector3 attackCenter,
+        PlayerKnockbackProfile profile = null,
+        AttackIdentifier attackIdentifier = null)
+    {
+        return TryTakeDamage(
+            new AttackDamageData(damage, attackIdentifier),
+            attackCenter,
+            profile);
     }
 }

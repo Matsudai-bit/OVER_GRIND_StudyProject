@@ -13,6 +13,10 @@ public sealed class PlayerRailJumpingState : StateBase<PlayerStateMachineCompone
     private bool m_isFollowingRail;
     private bool m_hasLeftSourceRail;
     private bool m_isTransitionPending;
+    private PlayerContinuousAttack m_airAttack;
+    // 速度切れ後、同じ長押しで攻撃を自動再開しないようにします。
+    private bool m_hasStartedAttackWhileHeld;
+    private const float ATTACK_SPEED_EPSILON = 0.01f;
     private const float DASH_DISTANCE_EPSILON = 0.001f;
     private const float DASH_BLOCKED_SPEED_RATIO = 0.5f;
     private bool m_isDashing;
@@ -81,6 +85,7 @@ public sealed class PlayerRailJumpingState : StateBase<PlayerStateMachineCompone
             launchVelocity = exitVelocity + Vector3.up * m_upSpeed;
         }
         Owner.Motor.SetWorldVelocity(launchVelocity);
+        Owner.Motor.AlignFacingToDirection(launchVelocity);
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         m_isDirectionalJump = m_moveInput.sqrMagnitude > parameters.DirectionDeadZone * parameters.DirectionDeadZone;
         m_diagnosticLaunchVelocity = launchVelocity;
@@ -91,10 +96,14 @@ public sealed class PlayerRailJumpingState : StateBase<PlayerStateMachineCompone
         if (m_isFollowingRail) Owner.Motor.BeginRailMotion();
     }
 
-    /// <summary>ジャンプ中の攻撃入力を消費し、着地後へ持ち越さないようにします。</summary>
+    /// <summary>入力解除時は空中攻撃を終了し、落下を継続します。</summary>
     protected override void OnUpdate(float deltaTime)
     {
-        Owner.InputReader.ConsumeAttackInput();
+        if (!Owner.InputReader.IsAttackHeld)
+        {
+            m_hasStartedAttackWhileHeld = false;
+            StopAirAttack();
+        }
     }
 
     /// <summary>軌道追従または慣性移動を続け、下降時に着地と再搭乗を判定します。</summary>
@@ -109,6 +118,35 @@ public sealed class PlayerRailJumpingState : StateBase<PlayerStateMachineCompone
         if (!Owner.Monitor.IsRailed || Owner.Monitor.HitRailInfo != m_sourceRail)
             m_hasLeftSourceRail = true;
 
+        Owner.InputReader.ConsumeAttackInput();
+        if (!Owner.InputReader.IsAttackHeld) m_hasStartedAttackWhileHeld = false;
+        bool hasLanded = Owner.Monitor.IsGrounded &&
+            (m_airAttack == null || Owner.Monitor.HasGroundSupport());
+        if (m_airAttack != null && hasLanded && Owner.Motor.VerticalVelocity <= 0.0f)
+            StopAirAttack();
+
+        // 離陸直前からRTを押していても、接地判定が外れた時点で開始できます。
+        if (!m_hasStartedAttackWhileHeld && m_airAttack == null && !Owner.Monitor.IsGrounded &&
+            Owner.InputReader.IsAttackHeld &&
+            (m_isFollowingRail ? m_path.Speed : Owner.Motor.HorizontalSpeed) > ATTACK_SPEED_EPSILON)
+        {
+            // レール追従と突進を終了し、通常の物理落下へ切り替えます。
+            if (m_isFollowingRail)
+            {
+                Owner.Motor.EndRailMotion(Owner.Motor.RailVelocity);
+                m_isFollowingRail = false;
+            }
+            m_isDashing = false;
+            Owner.GrindController.BlockRailUntilSeparated(m_sourceRail);
+            Owner.AnimationPresenter.StopJumpAnimation();
+            // 上昇速度は維持し、重力によって自然に下降へ移行します。
+            m_hasStartedAttackWhileHeld = true;
+            m_airAttack = new PlayerContinuousAttack(Owner, true);
+            m_airAttack.StartAttack();
+        }
+
+        if (m_airAttack != null && !m_airAttack.UpdateAttack(deltaTime)) StopAirAttack();
+
         if (m_isFollowingRail)
         {
             UpdateRailJump(deltaTime);
@@ -121,16 +159,18 @@ public sealed class PlayerRailJumpingState : StateBase<PlayerStateMachineCompone
         if (m_elapsedTime < m_landingDelay || Owner.Motor.VerticalVelocity > 0.0f) return;
 
         SplineRailInfo hitRail = Owner.Monitor.IsRailed ? Owner.Monitor.HitRailInfo : null;
-        if ((hitRail != m_sourceRail || m_hasLeftSourceRail) &&
+        if (m_airAttack == null && (hitRail != m_sourceRail || m_hasLeftSourceRail) &&
             Owner.GrindController.CanStartGrind(hitRail))
         {
+            StopAirAttack();
             m_isTransitionPending = true;
             Owner.RequestRailStateChange<PlayerGrindingState>(hitRail);
             return;
         }
 
-        if (Owner.Monitor.IsGrounded)
+        if (hasLanded)
         {
+            StopAirAttack();
             m_isTransitionPending = true;
             Owner.RequestRailStateChange<PlayerIdlingState>();
         }
@@ -233,11 +273,21 @@ public sealed class PlayerRailJumpingState : StateBase<PlayerStateMachineCompone
     /// <summary>被弾による中断時も、ジャンプ演出と溜まった入力を終了します。</summary>
     protected override void OnExitState()
     {
+        StopAirAttack();
         Owner.Motor.RestoreRailCollisions();
         if (m_isFollowingRail) Owner.Motor.EndRailMotion(Owner.Motor.RailVelocity);
         Owner.AnimationPresenter.StopJumpAnimation();
         Owner.InputReader.ConsumeAttackInput();
         Owner.InputReader.ConsumeJumpPress();
         Owner.InputReader.SuppressJumpUntilRelease();
+    }
+
+    /// <summary>空中攻撃の判定と滞空効果を終了します。</summary>
+    private void StopAirAttack()
+    {
+        if (m_airAttack == null) return;
+        m_airAttack.StopAttack();
+        m_airAttack = null;
+        Owner.AnimationPresenter.PlayJumpAnimation();
     }
 }

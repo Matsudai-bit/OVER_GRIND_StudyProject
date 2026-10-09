@@ -2,96 +2,106 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 
 /// <summary>
-/// ƒvƒŒƒCƒ„[“ü—Í‚ğæ“¾‚µ‚Ä•Û‚µ‚Ü‚·B
+/// ãƒ—ãƒ¬ã‚¤ãƒ¤ãƒ¼å…¥åŠ›ã‚’å–å¾—ã—ã¦ä¿æŒã—ã¾ã™ã€‚
 /// </summary>
 [DisallowMultipleComponent]
 public sealed class PlayerInputReader : MonoBehaviour
 {
-    // ˆÚ“®“ü—Í‚Ì—LŒø”»’è‚Ég—p‚·‚éè‡’l
+    // ç§»å‹•å…¥åŠ›ã®æœ‰åŠ¹åˆ¤å®šã«ä½¿ç”¨ã™ã‚‹é–¾å€¤
     private const float MOVE_INPUT_SQR_THRESHOLD = 0.0001f;
 
-    // Vƒu[ƒXƒg‚Ì’·‰Ÿ‚µ”»’èŠÔ
+    // Vãƒ–ãƒ¼ã‚¹ãƒˆã®é•·æŠ¼ã—åˆ¤å®šæ™‚é–“
     private const float V_BOOST_HOLD_TIME = 0.2f;
 
-    // ˆÚ“®“ü—ÍƒAƒNƒVƒ‡ƒ“
-    [SerializeField, Header("ˆÚ“®“ü—ÍƒAƒNƒVƒ‡ƒ“")]
+    // ç§»å‹•å…¥åŠ›ã‚¢ã‚¯ã‚·ãƒ§ãƒ³
+    [SerializeField, Header("ç§»å‹•å…¥åŠ›ã‚¢ã‚¯ã‚·ãƒ§ãƒ³")]
     private InputActionReference m_moveActionReference;
 
-    // UŒ‚“ü—ÍƒAƒNƒVƒ‡ƒ“
-    [SerializeField, Header("UŒ‚“ü—ÍƒAƒNƒVƒ‡ƒ“")]
+    // æ”»æ’ƒå…¥åŠ›ã‚¢ã‚¯ã‚·ãƒ§ãƒ³
+    [SerializeField, Header("æ”»æ’ƒå…¥åŠ›ã‚¢ã‚¯ã‚·ãƒ§ãƒ³")]
     private InputActionReference m_attackActionReference;
 
-    // ƒWƒƒƒ“ƒv“ü—ÍƒAƒNƒVƒ‡ƒ“
-    [SerializeField, Header("ƒWƒƒƒ“ƒv“ü—ÍƒAƒNƒVƒ‡ƒ“")]
+    // ã‚¸ãƒ£ãƒ³ãƒ—å…¥åŠ›ã‚¢ã‚¯ã‚·ãƒ§ãƒ³
+    [SerializeField, Header("ã‚¸ãƒ£ãƒ³ãƒ—å…¥åŠ›ã‚¢ã‚¯ã‚·ãƒ§ãƒ³")]
     private InputActionReference m_jumpActionReference;
 
-    // Vƒu[ƒXƒg“ü—ÍƒAƒNƒVƒ‡ƒ“
-    [SerializeField, Header("Vƒu[ƒXƒg“ü—ÍƒAƒNƒVƒ‡ƒ“")]
+    // Vãƒ–ãƒ¼ã‚¹ãƒˆå…¥åŠ›ã‚¢ã‚¯ã‚·ãƒ§ãƒ³
+    [SerializeField, Header("Vãƒ–ãƒ¼ã‚¹ãƒˆå…¥åŠ›ã‚¢ã‚¯ã‚·ãƒ§ãƒ³")]
     private InputActionReference m_vBoostActionReference;
 
-    // Œ»İ‚ÌˆÚ“®“ü—Í
+    // Input Actionsã‚¢ã‚»ãƒƒãƒˆã‹ã‚‰å–å¾—ã™ã‚‹ãƒãƒ£ãƒ¼ã‚¸ã‚¢ã‚¯ã‚·ãƒ§ãƒ³å
+    [SerializeField]
+    private InputActionAsset m_inputActionsAsset;
+
+    [SerializeField]
+    private string m_vBoostActionName = "Player/Charge";
+
+    // ç¾åœ¨ã®ç§»å‹•å…¥åŠ›
     private Vector2 m_moveInput;
 
-    // UŒ‚“ü—Í‚ª‚ ‚é‚©
+    // æ”»æ’ƒå…¥åŠ›ãŒã‚ã‚‹ã‹
     private bool m_hasAttackInput;
 
-    // UŒ‚“ü—Í‚ª‰Ÿ‚³‚ê‘±‚¯‚Ä‚¢‚é‚©
+    // æ”»æ’ƒå…¥åŠ›ãŒæŠ¼ã•ã‚Œç¶šã‘ã¦ã„ã‚‹ã‹
     private bool m_isAttackHeld;
 
-    // ƒWƒƒƒ“ƒv“ü—Í’†‚©
+    // ã‚¸ãƒ£ãƒ³ãƒ—å…¥åŠ›ä¸­ã‹
     private bool m_hasJumpInput;
 
-    // ‰Ÿ‰ºƒCƒxƒ“ƒg‚ğ•Û‚µA’Z‚¢“ü—Í‚àƒOƒ‰ƒCƒ“ƒh‘¤‚Åˆê“x‚¾‚¯Á”ï‚µ‚Ü‚·B
+    // æŠ¼ä¸‹ã‚¤ãƒ™ãƒ³ãƒˆã‚’ä¿æŒã—ã€çŸ­ã„å…¥åŠ›ã‚‚ã‚°ãƒ©ã‚¤ãƒ³ãƒ‰å´ã§ä¸€åº¦ã ã‘æ¶ˆè²»ã—ã¾ã™ã€‚
     private bool m_hasJumpPress;
     private bool m_suppressJumpUntilRelease;
 
-    // Vƒu[ƒXƒg“ü—Í‚ªŠJn‚³‚ê‚½‚©
+    // Vãƒ–ãƒ¼ã‚¹ãƒˆå…¥åŠ›ãŒé–‹å§‹ã•ã‚ŒãŸã‹
     private bool m_hasVBoostStarted;
 
-    // Vƒu[ƒXƒg“ü—Í’†‚©
+    // Vãƒ–ãƒ¼ã‚¹ãƒˆã‚’æŠ¼ã™ãŸã³ã«æ›´æ–°ã™ã‚‹è­˜åˆ¥ç•ªå·
+    private int m_vBoostPressId;
+
+    // Vãƒ–ãƒ¼ã‚¹ãƒˆå…¥åŠ›ä¸­ã‹
     private bool m_isVBoostHeld;
 
-    // Vƒu[ƒXƒg“ü—Í‚ª’·‰Ÿ‚µó‘Ô‚É‚È‚Á‚½‚©iŠO•”Á”ï—pƒtƒ‰ƒOj
+    // Vãƒ–ãƒ¼ã‚¹ãƒˆå…¥åŠ›ãŒé•·æŠ¼ã—çŠ¶æ…‹ã«ãªã£ãŸã‹ï¼ˆå¤–éƒ¨æ¶ˆè²»ç”¨ãƒ•ãƒ©ã‚°ï¼‰
     private bool m_hasVBoostHoldStarted;
 
-    // ¡‰ñ‚Ì‰Ÿ‰º’†‚É‚·‚Å‚É’·‰Ÿ‚µ‚ğƒgƒŠƒK[Ï‚İ‚©
-    // iConsume‚³‚ê‚Ä‚à–ß‚ç‚È‚¢A“à•”ê—pƒK[ƒhj
+    // ä»Šå›ã®æŠ¼ä¸‹ä¸­ã«ã™ã§ã«é•·æŠ¼ã—ã‚’ãƒˆãƒªã‚¬ãƒ¼æ¸ˆã¿ã‹
+    // ï¼ˆConsumeã•ã‚Œã¦ã‚‚æˆ»ã‚‰ãªã„ã€å†…éƒ¨å°‚ç”¨ã‚¬ãƒ¼ãƒ‰ï¼‰
     private bool m_vBoostHoldTriggeredThisPress;
 
-    // Vƒu[ƒXƒg“ü—Í‚ª—£‚³‚ê‚½‚©
+    // Vãƒ–ãƒ¼ã‚¹ãƒˆå…¥åŠ›ãŒé›¢ã•ã‚ŒãŸã‹
     private bool m_hasVBoostReleased;
 
-    // Vƒu[ƒXƒg‚ğ‰Ÿ‚µ‚Ä‚¢‚éŠÔ
+    // Vãƒ–ãƒ¼ã‚¹ãƒˆã‚’æŠ¼ã—ã¦ã„ã‚‹æ™‚é–“
     private float m_vBoostHoldTime;
 
-    // “ü—Í‚ª—LŒø‚©
+    // å…¥åŠ›ãŒæœ‰åŠ¹ã‹
     private bool m_isInputEnabled;
 
     /// <summary>
-    /// Œ»İ‚ÌˆÚ“®“ü—Í‚ğæ“¾‚µ‚Ü‚·B
+    /// ç¾åœ¨ã®ç§»å‹•å…¥åŠ›ã‚’å–å¾—ã—ã¾ã™ã€‚
     /// </summary>
     public Vector2 MoveInput => m_moveInput;
 
     /// <summary>
-    /// ˆÚ“®“ü—Í‚ª‚ ‚é‚©‚Ç‚¤‚©‚ğæ“¾‚µ‚Ü‚·B
+    /// ç§»å‹•å…¥åŠ›ãŒã‚ã‚‹ã‹ã©ã†ã‹ã‚’å–å¾—ã—ã¾ã™ã€‚
     /// </summary>
     public bool HasMoveInput =>
         m_moveInput.sqrMagnitude >
         MOVE_INPUT_SQR_THRESHOLD;
 
     /// <summary>
-    /// UŒ‚“ü—Í‚ª‰Ÿ‚³‚ê‘±‚¯‚Ä‚¢‚é‚©‚Ç‚¤‚©‚ğæ“¾‚µ‚Ü‚·B
-    /// ’nãUŒ‚‚È‚ÇA‰Ÿ‚µ‚Ä‚¢‚éŠÔŒp‘±‚·‚éUŒ‚‚Ì”»’è‚Ég—p‚µ‚Ü‚·B
+    /// æ”»æ’ƒå…¥åŠ›ãŒæŠ¼ã•ã‚Œç¶šã‘ã¦ã„ã‚‹ã‹ã©ã†ã‹ã‚’å–å¾—ã—ã¾ã™ã€‚
+    /// åœ°ä¸Šæ”»æ’ƒãªã©ã€æŠ¼ã—ã¦ã„ã‚‹é–“ç¶™ç¶šã™ã‚‹æ”»æ’ƒã®åˆ¤å®šã«ä½¿ç”¨ã—ã¾ã™ã€‚
     /// </summary>
     public bool IsAttackHeld => m_isAttackHeld;
 
     /// <summary>
-    /// ƒWƒƒƒ“ƒv“ü—Í’†‚©‚Ç‚¤‚©‚ğæ“¾‚µ‚Ü‚·B
+    /// ã‚¸ãƒ£ãƒ³ãƒ—å…¥åŠ›ä¸­ã‹ã©ã†ã‹ã‚’å–å¾—ã—ã¾ã™ã€‚
     /// </summary>
     public bool HasJumpInput => m_hasJumpInput && !m_suppressJumpUntilRelease;
 
-    /// <summary>ƒWƒƒƒ“ƒv‚Ì‰Ÿ‰º‚ğˆê“x‚¾‚¯æ“¾‚µ‚Ü‚·B’·‰Ÿ‚µó‘Ô‚Í•ÏX‚µ‚Ü‚¹‚ñB</summary>
-    /// <returns>trueF–¢Á”ï‚Ì‰Ÿ‰º‚ ‚èBfalseF‰Ÿ‰º‚È‚µB</returns>
+    /// <summary>ã‚¸ãƒ£ãƒ³ãƒ—ã®æŠ¼ä¸‹ã‚’ä¸€åº¦ã ã‘å–å¾—ã—ã¾ã™ã€‚é•·æŠ¼ã—çŠ¶æ…‹ã¯å¤‰æ›´ã—ã¾ã›ã‚“ã€‚</summary>
+    /// <returns>trueï¼šæœªæ¶ˆè²»ã®æŠ¼ä¸‹ã‚ã‚Šã€‚falseï¼šæŠ¼ä¸‹ãªã—ã€‚</returns>
     public bool ConsumeJumpPress()
     {
         bool hasPress = m_hasJumpPress;
@@ -99,7 +109,7 @@ public sealed class PlayerInputReader : MonoBehaviour
         return hasPress;
     }
 
-    /// <summary>Œ»İ‚Ì’·‰Ÿ‚µ‚É‚æ‚é’…’n’¼Œã‚ÌÄƒWƒƒƒ“ƒv‚ğAƒ{ƒ^ƒ“‚ğ—£‚·‚Ü‚Å—}§‚µ‚Ü‚·B</summary>
+    /// <summary>ç¾åœ¨ã®é•·æŠ¼ã—ã«ã‚ˆã‚‹ç€åœ°ç›´å¾Œã®å†ã‚¸ãƒ£ãƒ³ãƒ—ã‚’ã€ãƒœã‚¿ãƒ³ã‚’é›¢ã™ã¾ã§æŠ‘åˆ¶ã—ã¾ã™ã€‚</summary>
     public void SuppressJumpUntilRelease()
     {
         m_suppressJumpUntilRelease = m_hasJumpInput;
@@ -107,22 +117,34 @@ public sealed class PlayerInputReader : MonoBehaviour
     }
 
     /// <summary>
-    /// “ü—Í‚ª—LŒø‚©‚Ç‚¤‚©‚ğæ“¾‚µ‚Ü‚·B
+    /// å…¥åŠ›ãŒæœ‰åŠ¹ã‹ã©ã†ã‹ã‚’å–å¾—ã—ã¾ã™ã€‚
     /// </summary>
     public bool IsInputEnabled => m_isInputEnabled;
 
     /// <summary>
-    /// Vƒu[ƒXƒg“ü—Í‚ª‰Ÿ‚³‚ê‘±‚¯‚Ä‚¢‚é‚©æ“¾‚µ‚Ü‚·B
+    /// Vãƒ–ãƒ¼ã‚¹ãƒˆå…¥åŠ›ãŒæŠ¼ã•ã‚Œç¶šã‘ã¦ã„ã‚‹ã‹å–å¾—ã—ã¾ã™ã€‚
     /// </summary>
     public bool IsVBoostHeld =>
         m_isVBoostHeld;
 
     /// <summary>
-    /// UŒ‚“ü—Í‚ğæ“¾‚µ‚ÄÁ”ï‚µ‚Ü‚·B
+    /// æœªæ¶ˆè²»ã®Vãƒ–ãƒ¼ã‚¹ãƒˆé–‹å§‹å…¥åŠ›ãŒã‚ã‚‹ã‹å–å¾—ã—ã¾ã™ã€‚
+    /// </summary>
+    public bool HasVBoostStarted =>
+        m_hasVBoostStarted;
+
+    /// <summary>
+    /// ç¾åœ¨ã®Vãƒ–ãƒ¼ã‚¹ãƒˆæŠ¼ä¸‹ã‚’è­˜åˆ¥ã™ã‚‹ç•ªå·ã‚’å–å¾—ã—ã¾ã™ã€‚
+    /// </summary>
+    public int VBoostPressId =>
+        m_vBoostPressId;
+
+    /// <summary>
+    /// æ”»æ’ƒå…¥åŠ›ã‚’å–å¾—ã—ã¦æ¶ˆè²»ã—ã¾ã™ã€‚
     /// </summary>
     /// <returns>
-    /// trueFUŒ‚“ü—Í‚ª‚ ‚éB
-    /// falseFUŒ‚“ü—Í‚ª‚È‚¢B
+    /// trueï¼šæ”»æ’ƒå…¥åŠ›ãŒã‚ã‚‹ã€‚
+    /// falseï¼šæ”»æ’ƒå…¥åŠ›ãŒãªã„ã€‚
     /// </returns>
     public bool ConsumeAttackInput()
     {
@@ -136,30 +158,31 @@ public sealed class PlayerInputReader : MonoBehaviour
     }
 
     /// <summary>
-    /// Vƒu[ƒXƒg“ü—Í‚ğæ“¾‚µ‚ÄÁ”ï‚µ‚Ü‚·B
-    /// Šù‘¶‚ÌVƒu[ƒXƒgó‘Ô‚Æ‚ÌŒİŠ·«‚Ì‚½‚ß‚Éc‚µ‚Ü‚·B
+    /// Vãƒ–ãƒ¼ã‚¹ãƒˆå…¥åŠ›ã‚’å–å¾—ã—ã¦æ¶ˆè²»ã—ã¾ã™ã€‚
+    /// æ—¢å­˜ã®Vãƒ–ãƒ¼ã‚¹ãƒˆçŠ¶æ…‹ã¨ã®äº’æ›æ€§ã®ãŸã‚ã«æ®‹ã—ã¾ã™ã€‚
     /// </summary>
     /// <returns>
-    /// trueFVƒu[ƒXƒg“ü—Í‚ª‚ ‚éB
-    /// falseFVƒu[ƒXƒg“ü—Í‚ª‚È‚¢B
+    /// trueï¼šVãƒ–ãƒ¼ã‚¹ãƒˆå…¥åŠ›ãŒã‚ã‚‹ã€‚
+    /// falseï¼šVãƒ–ãƒ¼ã‚¹ãƒˆå…¥åŠ›ãŒãªã„ã€‚
     /// </returns>
     public bool ConsumeVBoostInput()
     {
-        if (!m_hasVBoostStarted)
+        if (!m_hasVBoostStarted && !m_hasVBoostHoldStarted)
         {
             return false;
         }
 
         m_hasVBoostStarted = false;
+        m_hasVBoostHoldStarted = false;
         return true;
     }
 
     /// <summary>
-    /// Vƒu[ƒXƒg‚Ì’·‰Ÿ‚µ¬—§‚ğæ“¾‚µ‚ÄÁ”ï‚µ‚Ü‚·B
+    /// Vãƒ–ãƒ¼ã‚¹ãƒˆã®é•·æŠ¼ã—æˆç«‹ã‚’å–å¾—ã—ã¦æ¶ˆè²»ã—ã¾ã™ã€‚
     /// </summary>
     /// <returns>
-    /// trueFVƒu[ƒXƒg‚Ì’·‰Ÿ‚µ‚ª¬—§‚µ‚½B
-    /// falseF¬—§‚µ‚Ä‚¢‚È‚¢B
+    /// trueï¼šVãƒ–ãƒ¼ã‚¹ãƒˆã®é•·æŠ¼ã—ãŒæˆç«‹ã—ãŸã€‚
+    /// falseï¼šæˆç«‹ã—ã¦ã„ãªã„ã€‚
     /// </returns>
     public bool ConsumeVBoostHoldStarted()
     {
@@ -173,12 +196,12 @@ public sealed class PlayerInputReader : MonoBehaviour
     }
 
     /// <summary>
-    /// Vƒu[ƒXƒg“ü—Í‚ªŠJn‚³‚ê‚½‚©æ“¾‚µ‚Ü‚·B
-    /// æ“¾‚·‚é‚ÆŠJn“ü—Í‚ğÁ”ï‚µ‚Ü‚·B
+    /// Vãƒ–ãƒ¼ã‚¹ãƒˆå…¥åŠ›ãŒé–‹å§‹ã•ã‚ŒãŸã‹å–å¾—ã—ã¾ã™ã€‚
+    /// å–å¾—ã™ã‚‹ã¨é–‹å§‹å…¥åŠ›ã‚’æ¶ˆè²»ã—ã¾ã™ã€‚
     /// </summary>
     /// <returns>
-    /// trueFVƒu[ƒXƒg“ü—Í‚ªŠJn‚³‚ê‚½B
-    /// falseFŠJn‚³‚ê‚Ä‚¢‚È‚¢B
+    /// trueï¼šVãƒ–ãƒ¼ã‚¹ãƒˆå…¥åŠ›ãŒé–‹å§‹ã•ã‚ŒãŸã€‚
+    /// falseï¼šé–‹å§‹ã•ã‚Œã¦ã„ãªã„ã€‚
     /// </returns>
     public bool ConsumeVBoostStarted()
     {
@@ -192,18 +215,22 @@ public sealed class PlayerInputReader : MonoBehaviour
     }
 
     /// <summary>
-    /// Vƒu[ƒXƒg“ü—Í‚ª‰Ÿ‚³‚ê‘±‚¯‚Ä‚¢‚é‚©æ“¾‚µ‚Ü‚·B
+    /// Vãƒ–ãƒ¼ã‚¹ãƒˆå…¥åŠ›ãŒæŠ¼ã•ã‚Œç¶šã‘ã¦ã„ã‚‹ã‹å–å¾—ã—ã¾ã™ã€‚
     /// </summary>
     public bool IsVBoostHeldInput =>
         m_isVBoostHeld;
 
+    /// <summary>Vãƒ–ãƒ¼ã‚¹ãƒˆã®é•·æŠ¼ã—ãŒæˆç«‹ã—ã€ã¾ã ãƒãƒ£ãƒ¼ã‚¸é–‹å§‹ã«ä½¿ç”¨ã•ã‚Œã¦ã„ãªã„ã‹å–å¾—ã—ã¾ã™ã€‚</summary>
+    public bool HasVBoostHoldStarted =>
+        m_hasVBoostHoldStarted;
+
     /// <summary>
-    /// Vƒu[ƒXƒg“ü—Í‚ª—£‚³‚ê‚½‚©æ“¾‚µ‚Ü‚·B
-    /// æ“¾‚·‚é‚Æ—£‚µ‚½“ü—Í‚ğÁ”ï‚µ‚Ü‚·B
+    /// Vãƒ–ãƒ¼ã‚¹ãƒˆå…¥åŠ›ãŒé›¢ã•ã‚ŒãŸã‹å–å¾—ã—ã¾ã™ã€‚
+    /// å–å¾—ã™ã‚‹ã¨é›¢ã—ãŸå…¥åŠ›ã‚’æ¶ˆè²»ã—ã¾ã™ã€‚
     /// </summary>
     /// <returns>
-    /// trueFVƒu[ƒXƒg“ü—Í‚ª—£‚³‚ê‚½B
-    /// falseF—£‚³‚ê‚Ä‚¢‚È‚¢B
+    /// trueï¼šVãƒ–ãƒ¼ã‚¹ãƒˆå…¥åŠ›ãŒé›¢ã•ã‚ŒãŸã€‚
+    /// falseï¼šé›¢ã•ã‚Œã¦ã„ãªã„ã€‚
     /// </returns>
     public bool ConsumeVBoostReleased()
     {
@@ -217,7 +244,25 @@ public sealed class PlayerInputReader : MonoBehaviour
     }
 
     /// <summary>
-    /// ƒvƒŒƒCƒ„[“ü—Í‚ğ—LŒø‰»‚µ‚Ü‚·B
+    /// ãƒãƒ£ãƒ¼ã‚¸é–‹å§‹å¾…ã¡ã®å…¥åŠ›çŠ¶æ…‹ã‚’ç ´æ£„ã—ã¾ã™ã€‚
+    /// æ”»æ’ƒãªã©ã€ãƒãƒ£ãƒ¼ã‚¸ã‚ˆã‚Šå„ªå…ˆã™ã‚‹çŠ¶æ…‹ã¸é·ç§»ã—ãŸã¨ãã«ä½¿ç”¨ã—ã¾ã™ã€‚
+    /// </summary>
+    public void DiscardVBoostPendingInput()
+    {
+        m_hasVBoostStarted = false;
+        m_hasVBoostHoldStarted = false;
+        m_hasVBoostReleased = false;
+        m_vBoostHoldTime = 0.0f;
+
+        // æŠ¼ã—ã£ã±ãªã—ä¸­ã«æ”»æ’ƒã¸é·ç§»ã—ãŸå ´åˆã€æ”»æ’ƒçµ‚äº†ç›´å¾Œã®å†ãƒãƒ£ãƒ¼ã‚¸ã‚’é˜²ãã¾ã™ã€‚
+        if (m_isVBoostHeld)
+        {
+            m_vBoostHoldTriggeredThisPress = true;
+        }
+    }
+
+    /// <summary>
+    /// ãƒ—ãƒ¬ã‚¤ãƒ¤ãƒ¼å…¥åŠ›ã‚’æœ‰åŠ¹åŒ–ã—ã¾ã™ã€‚
     /// </summary>
     public void EnableInput()
     {
@@ -268,9 +313,7 @@ public sealed class PlayerInputReader : MonoBehaviour
             jumpAction.Enable();
         }
 
-        if (TryGetAction(
-            m_vBoostActionReference,
-            out InputAction vBoostAction))
+        if (TryGetVBoostAction(out InputAction vBoostAction))
         {
             vBoostAction.started +=
                 HandleVBoostStarted;
@@ -285,7 +328,7 @@ public sealed class PlayerInputReader : MonoBehaviour
     }
 
     /// <summary>
-    /// ƒvƒŒƒCƒ„[“ü—Í‚ğ–³Œø‰»‚µ‚Ü‚·B
+    /// ãƒ—ãƒ¬ã‚¤ãƒ¤ãƒ¼å…¥åŠ›ã‚’ç„¡åŠ¹åŒ–ã—ã¾ã™ã€‚
     /// </summary>
     public void DisableInput()
     {
@@ -334,9 +377,7 @@ public sealed class PlayerInputReader : MonoBehaviour
             jumpAction.Disable();
         }
 
-        if (TryGetAction(
-            m_vBoostActionReference,
-            out InputAction vBoostAction))
+        if (TryGetVBoostAction(out InputAction vBoostAction))
         {
             vBoostAction.started -=
                 HandleVBoostStarted;
@@ -353,7 +394,7 @@ public sealed class PlayerInputReader : MonoBehaviour
     }
 
     /// <summary>
-    /// ƒRƒ“ƒ|[ƒlƒ“ƒg–³Œø‰»‚É“ü—Í‚ğ’â~‚µ‚Ü‚·B
+    /// ã‚³ãƒ³ãƒãƒ¼ãƒãƒ³ãƒˆç„¡åŠ¹åŒ–æ™‚ã«å…¥åŠ›ã‚’åœæ­¢ã—ã¾ã™ã€‚
     /// </summary>
     private void OnDisable()
     {
@@ -361,7 +402,7 @@ public sealed class PlayerInputReader : MonoBehaviour
     }
 
     /// <summary>
-    /// –ˆƒtƒŒ[ƒ€“ü—Íó‘Ô‚ğXV‚µ‚Ü‚·B
+    /// æ¯ãƒ•ãƒ¬ãƒ¼ãƒ å…¥åŠ›çŠ¶æ…‹ã‚’æ›´æ–°ã—ã¾ã™ã€‚
     /// </summary>
     private void Update()
     {
@@ -369,7 +410,7 @@ public sealed class PlayerInputReader : MonoBehaviour
     }
 
     /// <summary>
-    /// Vƒu[ƒXƒg‚Ì’·‰Ÿ‚µó‘Ô‚ğXV‚µ‚Ü‚·B
+    /// Vãƒ–ãƒ¼ã‚¹ãƒˆã®é•·æŠ¼ã—çŠ¶æ…‹ã‚’æ›´æ–°ã—ã¾ã™ã€‚
     /// </summary>
     private void UpdateVBoostHold()
     {
@@ -379,10 +420,10 @@ public sealed class PlayerInputReader : MonoBehaviour
             return;
         }
 
-        // ‚·‚Å‚É‚±‚Ì‰Ÿ‰º’†‚É’·‰Ÿ‚µ‚ğƒgƒŠƒK[Ï‚İ‚È‚çÄ”»’è‚µ‚È‚¢
-        // iConsumeVBoostHoldStarted()‚ÅŠO•”ƒtƒ‰ƒO‚ªÁ”ï‚³‚ê‚Ä‚à
-        // @‚±‚Ì“à•”ƒK[ƒh‚Í–ß‚ç‚È‚¢‚½‚ßA‰Ÿ‚µ‚Á‚Ï‚È‚µ’†‚Ì
-        // @‘½dƒgƒŠƒK[‚ğ–h‚°‚éj
+        // ã™ã§ã«ã“ã®æŠ¼ä¸‹ä¸­ã«é•·æŠ¼ã—ã‚’ãƒˆãƒªã‚¬ãƒ¼æ¸ˆã¿ãªã‚‰å†åˆ¤å®šã—ãªã„
+        // ï¼ˆConsumeVBoostHoldStarted()ã§å¤–éƒ¨ãƒ•ãƒ©ã‚°ãŒæ¶ˆè²»ã•ã‚Œã¦ã‚‚
+        // ã€€ã“ã®å†…éƒ¨ã‚¬ãƒ¼ãƒ‰ã¯æˆ»ã‚‰ãªã„ãŸã‚ã€æŠ¼ã—ã£ã±ãªã—ä¸­ã®
+        // ã€€å¤šé‡ãƒˆãƒªã‚¬ãƒ¼ã‚’é˜²ã’ã‚‹ï¼‰
         if (m_vBoostHoldTriggeredThisPress)
         {
             return;
@@ -400,9 +441,9 @@ public sealed class PlayerInputReader : MonoBehaviour
     }
 
     /// <summary>
-    /// ˆÚ“®“ü—Í‚ğXV‚µ‚Ü‚·B
+    /// ç§»å‹•å…¥åŠ›ã‚’æ›´æ–°ã—ã¾ã™ã€‚
     /// </summary>
-    /// <param name="context">“ü—Íî•ñB</param>
+    /// <param name="context">å…¥åŠ›æƒ…å ±ã€‚</param>
     private void HandleMovePerformed(
         InputAction.CallbackContext context)
     {
@@ -411,9 +452,9 @@ public sealed class PlayerInputReader : MonoBehaviour
     }
 
     /// <summary>
-    /// ˆÚ“®“ü—Í‚ğƒŠƒZƒbƒg‚µ‚Ü‚·B
+    /// ç§»å‹•å…¥åŠ›ã‚’ãƒªã‚»ãƒƒãƒˆã—ã¾ã™ã€‚
     /// </summary>
-    /// <param name="context">“ü—Íî•ñB</param>
+    /// <param name="context">å…¥åŠ›æƒ…å ±ã€‚</param>
     private void HandleMoveCanceled(
         InputAction.CallbackContext context)
     {
@@ -421,9 +462,9 @@ public sealed class PlayerInputReader : MonoBehaviour
     }
 
     /// <summary>
-    /// UŒ‚“ü—Í‚ğæ“¾‚µ‚Ü‚·B
+    /// æ”»æ’ƒå…¥åŠ›ã‚’å–å¾—ã—ã¾ã™ã€‚
     /// </summary>
-    /// <param name="context">“ü—Íî•ñB</param>
+    /// <param name="context">å…¥åŠ›æƒ…å ±ã€‚</param>
     private void HandleAttackPerformed(
         InputAction.CallbackContext context)
     {
@@ -432,9 +473,9 @@ public sealed class PlayerInputReader : MonoBehaviour
     }
 
     /// <summary>
-    /// UŒ‚“ü—Í‚ª—£‚³‚ê‚½‚±‚Æ‚ğ‹L˜^‚µ‚Ü‚·B
+    /// æ”»æ’ƒå…¥åŠ›ãŒé›¢ã•ã‚ŒãŸã“ã¨ã‚’è¨˜éŒ²ã—ã¾ã™ã€‚
     /// </summary>
-    /// <param name="context">“ü—Íî•ñB</param>
+    /// <param name="context">å…¥åŠ›æƒ…å ±ã€‚</param>
     private void HandleAttackCanceled(
         InputAction.CallbackContext context)
     {
@@ -442,9 +483,9 @@ public sealed class PlayerInputReader : MonoBehaviour
     }
 
     /// <summary>
-    /// ƒWƒƒƒ“ƒv“ü—Í‚ğŠJn‚µ‚Ü‚·B
+    /// ã‚¸ãƒ£ãƒ³ãƒ—å…¥åŠ›ã‚’é–‹å§‹ã—ã¾ã™ã€‚
     /// </summary>
-    /// <param name="context">“ü—Íî•ñB</param>
+    /// <param name="context">å…¥åŠ›æƒ…å ±ã€‚</param>
     private void HandleJumpPerformed(
         InputAction.CallbackContext context)
     {
@@ -456,9 +497,9 @@ public sealed class PlayerInputReader : MonoBehaviour
     }
 
     /// <summary>
-    /// ƒWƒƒƒ“ƒv“ü—Í‚ğI—¹‚µ‚Ü‚·B
+    /// ã‚¸ãƒ£ãƒ³ãƒ—å…¥åŠ›ã‚’çµ‚äº†ã—ã¾ã™ã€‚
     /// </summary>
-    /// <param name="context">“ü—Íî•ñB</param>
+    /// <param name="context">å…¥åŠ›æƒ…å ±ã€‚</param>
     private void HandleJumpCanceled(
         InputAction.CallbackContext context)
     {
@@ -467,39 +508,45 @@ public sealed class PlayerInputReader : MonoBehaviour
     }
 
     /// <summary>
-    /// Vƒu[ƒXƒg“ü—Í‚ğŠJn‚µ‚Ü‚·B
+    /// Vãƒ–ãƒ¼ã‚¹ãƒˆå…¥åŠ›ã‚’é–‹å§‹ã—ã¾ã™ã€‚
     /// </summary>
-    /// <param name="context">“ü—Íî•ñB</param>
+    /// <param name="context">å…¥åŠ›æƒ…å ±ã€‚</param>
     private void HandleVBoostStarted(
         InputAction.CallbackContext context)
     {
-        // ‘O‰ñ‚Ì“ü—Íó‘Ô‚ğƒŠƒZƒbƒg
+        // å‰å›ã®å…¥åŠ›çŠ¶æ…‹ã‚’ãƒªã‚»ãƒƒãƒˆ
         m_hasVBoostReleased = false;
         m_hasVBoostHoldStarted = false;
         m_vBoostHoldTriggeredThisPress = false;
         m_vBoostHoldTime = 0.0f;
 
-        // ¡‰ñ‚ÌVƒu[ƒXƒgŠJn‚ğ‹L˜^
+        // ä»Šå›ã®Vãƒ–ãƒ¼ã‚¹ãƒˆé–‹å§‹ã‚’è¨˜éŒ²
         m_hasVBoostStarted = true;
+        unchecked
+        {
+            m_vBoostPressId++;
+        }
 
-        // Œ»İVƒu[ƒXƒg“ü—Í‚ª‰Ÿ‚³‚ê‚Ä‚¢‚é
+        // ç¾åœ¨Vãƒ–ãƒ¼ã‚¹ãƒˆå…¥åŠ›ãŒæŠ¼ã•ã‚Œã¦ã„ã‚‹
         m_isVBoostHeld = true;
     }
 
 
 /// <summary>
-/// Vƒu[ƒXƒg“ü—Í‚ğI—¹‚µ‚Ü‚·B
+/// Vãƒ–ãƒ¼ã‚¹ãƒˆå…¥åŠ›ã‚’çµ‚äº†ã—ã¾ã™ã€‚
 /// </summary>
-/// <param name="context">“ü—Íî•ñB</param>
+/// <param name="context">å…¥åŠ›æƒ…å ±ã€‚</param>
 private void HandleVBoostCanceled(
     InputAction.CallbackContext context)
     {
         m_isVBoostHeld = false;
+        // æŠ¼ä¸‹ã‚¤ãƒ™ãƒ³ãƒˆã‚’é›¢ã—ãŸå¾Œã«çŠ¶æ…‹é·ç§»ã—ã¦ã‚‚ã€å¤ã„é–‹å§‹è¦æ±‚ã‚’å†åˆ©ç”¨ã—ãªã„ã€‚
+        m_hasVBoostStarted = false;
         m_hasVBoostReleased = true;
 
-        // ƒ{ƒ^ƒ“‚ğ—£‚µ‚½“_‚Å’·‰Ÿ‚µ¬—§ƒtƒ‰ƒO‚ğÁ”ï‚·‚éB
-        // ’·‰Ÿ‚µ¬—§‚Í‚·‚Å‚Éƒ`ƒƒ[ƒWŠJn‚Ég—p‚³‚ê‚Ä‚¢‚é‚½‚ßA
-        // Ÿ‚ÌWalkingState‚ÅÄ“xƒ`ƒƒ[ƒW‚ªn‚Ü‚é‚±‚Æ‚ğ–h‚®B
+        // ãƒœã‚¿ãƒ³ã‚’é›¢ã—ãŸæ™‚ç‚¹ã§é•·æŠ¼ã—æˆç«‹ãƒ•ãƒ©ã‚°ã‚’æ¶ˆè²»ã™ã‚‹ã€‚
+        // é•·æŠ¼ã—æˆç«‹ã¯ã™ã§ã«ãƒãƒ£ãƒ¼ã‚¸é–‹å§‹ã«ä½¿ç”¨ã•ã‚Œã¦ã„ã‚‹ãŸã‚ã€
+        // æ¬¡ã®WalkingStateã§å†åº¦ãƒãƒ£ãƒ¼ã‚¸ãŒå§‹ã¾ã‚‹ã“ã¨ã‚’é˜²ãã€‚
         m_hasVBoostHoldStarted = false;
 
         m_vBoostHoldTime = 0.0f;
@@ -508,7 +555,7 @@ private void HandleVBoostCanceled(
 
 
     /// <summary>
-    /// Œ»İ‚Ì“ü—Íó‘Ô‚ğƒŠƒZƒbƒg‚µ‚Ü‚·B
+    /// ç¾åœ¨ã®å…¥åŠ›çŠ¶æ…‹ã‚’ãƒªã‚»ãƒƒãƒˆã—ã¾ã™ã€‚
     /// </summary>
     private void ClearInput()
     {
@@ -527,13 +574,13 @@ private void HandleVBoostCanceled(
     }
 
     /// <summary>
-    /// InputAction‚ğæ“¾‚µ‚Ü‚·B
+    /// InputActionã‚’å–å¾—ã—ã¾ã™ã€‚
     /// </summary>
-    /// <param name="actionReference">“ü—ÍƒAƒNƒVƒ‡ƒ“QÆB</param>
-    /// <param name="action">æ“¾‚µ‚½“ü—ÍƒAƒNƒVƒ‡ƒ“B</param>
+    /// <param name="actionReference">å…¥åŠ›ã‚¢ã‚¯ã‚·ãƒ§ãƒ³å‚ç…§ã€‚</param>
+    /// <param name="action">å–å¾—ã—ãŸå…¥åŠ›ã‚¢ã‚¯ã‚·ãƒ§ãƒ³ã€‚</param>
     /// <returns>
-    /// trueF“ü—ÍƒAƒNƒVƒ‡ƒ“‚ğæ“¾‚Å‚«‚½B
-    /// falseF“ü—ÍƒAƒNƒVƒ‡ƒ“‚ğæ“¾‚Å‚«‚È‚©‚Á‚½B
+    /// trueï¼šå…¥åŠ›ã‚¢ã‚¯ã‚·ãƒ§ãƒ³ã‚’å–å¾—ã§ããŸã€‚
+    /// falseï¼šå…¥åŠ›ã‚¢ã‚¯ã‚·ãƒ§ãƒ³ã‚’å–å¾—ã§ããªã‹ã£ãŸã€‚
     /// </returns>
     private bool TryGetAction(
         InputActionReference actionReference,
@@ -545,7 +592,7 @@ private void HandleVBoostCanceled(
         {
             Debug.LogError(
                 $"[{nameof(PlayerInputReader)}] " +
-                "InputActionReference‚ªİ’è‚³‚ê‚Ä‚¢‚Ü‚¹‚ñB",
+                "InputActionReferenceãŒè¨­å®šã•ã‚Œã¦ã„ã¾ã›ã‚“ã€‚",
                 this);
 
             return false;
@@ -557,7 +604,7 @@ private void HandleVBoostCanceled(
         {
             Debug.LogError(
                 $"[{nameof(PlayerInputReader)}] " +
-                "InputAction‚ğæ“¾‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½B",
+                "InputActionã‚’å–å¾—ã§ãã¾ã›ã‚“ã§ã—ãŸã€‚",
                 this);
 
             return false;
@@ -565,7 +612,39 @@ private void HandleVBoostCanceled(
 
         return true;
     }
-    /// <summary>“ü—ÍƒAƒNƒVƒ‡ƒ“‚Ì—LŒøó‘Ô‚ğ•ÏX‚¹‚¸A”í’e’†‚Ì“ü—Í‚ğ”jŠü‚µ‚Ü‚·B</summary>
+
+    /// <summary>Input Actionsã‚¢ã‚»ãƒƒãƒˆã‹ã‚‰ãƒãƒ£ãƒ¼ã‚¸ã‚¢ã‚¯ã‚·ãƒ§ãƒ³ã‚’å–å¾—ã—ã¾ã™ã€‚</summary>
+    /// <param name="action">å–å¾—ã—ãŸãƒãƒ£ãƒ¼ã‚¸ã‚¢ã‚¯ã‚·ãƒ§ãƒ³ã€‚</param>
+    /// <returns>trueï¼šå–å¾—æˆåŠŸã€‚falseï¼šå‚ç…§ã¾ãŸã¯ã‚¢ã‚¯ã‚·ãƒ§ãƒ³ãŒæœªè¨­å®šã€‚</returns>
+    private bool TryGetVBoostAction(out InputAction action)
+    {
+        action = null;
+        InputActionAsset actionAsset = m_inputActionsAsset != null
+            ? m_inputActionsAsset
+            : InputSystem.actions;
+        if (actionAsset != null && !string.IsNullOrWhiteSpace(m_vBoostActionName))
+        {
+            // FindActionã®ãƒ‘ã‚¹æŒ‡å®šã¨åå‰æŒ‡å®šã®ä¸¡æ–¹ã«å¯¾å¿œã—ã¾ã™ã€‚
+            action = actionAsset.FindAction(m_vBoostActionName, false);
+            if (action == null)
+            {
+                int separatorIndex = m_vBoostActionName.LastIndexOf('/');
+                string actionName = separatorIndex >= 0
+                    ? m_vBoostActionName.Substring(separatorIndex + 1)
+                    : m_vBoostActionName;
+                InputActionMap playerMap = actionAsset.FindActionMap("Player", false);
+                action = playerMap?.FindAction(actionName, false);
+            }
+            if (action != null) return true;
+        }
+
+        Debug.LogError(
+            $"[{nameof(PlayerInputReader)}] ãƒãƒ£ãƒ¼ã‚¸ã‚¢ã‚¯ã‚·ãƒ§ãƒ³ã‚’å–å¾—ã§ãã¾ã›ã‚“ã€‚" +
+            $"Asset={actionAsset?.name}, Name={m_vBoostActionName}",
+            this);
+        return TryGetAction(m_vBoostActionReference, out action);
+    }
+    /// <summary>å…¥åŠ›ã‚¢ã‚¯ã‚·ãƒ§ãƒ³ã®æœ‰åŠ¹çŠ¶æ…‹ã‚’å¤‰æ›´ã›ãšã€è¢«å¼¾ä¸­ã®å…¥åŠ›ã‚’ç ´æ£„ã—ã¾ã™ã€‚</summary>
     public void DiscardInput()
     {
         ClearInput();

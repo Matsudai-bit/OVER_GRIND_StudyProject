@@ -8,12 +8,16 @@ public sealed class PlayerWalkingState
 {
     // 通常移動パラメータ
     private PlayerMoveParameters m_moveParameters;
+    private Vector3 m_movingChargeStartDirection;
+    private bool m_isWaitingForMovingCharge;
 
     /// <summary>
     /// 状態開始時に呼ばれます。
     /// </summary>
     protected override void OnStartState()
     {
+        m_isWaitingForMovingCharge = false;
+
         m_moveParameters =
             Owner.MovementParameterAsset.CreateMoveParameters();
 
@@ -26,7 +30,7 @@ public sealed class PlayerWalkingState
     protected override void OnFixedUpdate()
     {
         // 攻撃入力を確認
-        if (Owner.InputReader.ConsumeAttackInput())
+        if (Owner.InputReader.ConsumeAttackInput() && Owner.Monitor.IsGrounded)
         {
             Machine.ChangeState<PlayerAttackingState>();
             return;
@@ -43,7 +47,7 @@ public sealed class PlayerWalkingState
         }
 
         // ジャンプ入力を確認
-        if (Owner.Monitor.IsGrounded &&
+        if (Owner.Monitor.CanStartJump &&
             Owner.InputReader.HasJumpInput)
         {
             Machine.ChangeState<PlayerJumpingState>();
@@ -52,7 +56,16 @@ public sealed class PlayerWalkingState
 
         // Vブーストの長押し成立を確認。
         // ただし新規のブースト開始は接地中のみ許可する
+        UpdateMovingChargeStartDirection();
+
         if (Owner.Monitor.IsGrounded &&
+            m_isWaitingForMovingCharge &&
+            Owner.InputReader.HasVBoostHoldStarted &&
+            Owner.BoostChargingParameterAsset.HasLateralChargeInput(
+                Owner.InputReader.MoveInput) &&
+            Owner.BoostChargingParameterAsset.HasExceededFreeSteeringAngle(
+                m_movingChargeStartDirection,
+                Owner.Motor.HorizontalDirection) &&
             Owner.InputReader.ConsumeVBoostHoldStarted())
         {
             Machine.ChangeState<PlayerBoostChargingState>();
@@ -64,6 +77,26 @@ public sealed class PlayerWalkingState
             Owner.InputReader.MoveInput,
             m_moveParameters,
             Time.fixedDeltaTime);
+    }
+
+    /// <summary>チャージボタン押下時の実移動方向を開始判定用に保持します。</summary>
+    private void UpdateMovingChargeStartDirection()
+    {
+        if (!Owner.InputReader.IsVBoostHeld)
+        {
+            m_isWaitingForMovingCharge = false;
+            return;
+        }
+
+        if (m_isWaitingForMovingCharge ||
+            !Owner.InputReader.ConsumeVBoostStarted())
+        {
+            return;
+        }
+
+        m_movingChargeStartDirection =
+            Owner.Motor.HorizontalDirection;
+        m_isWaitingForMovingCharge = true;
     }
 
     /// <summary>
