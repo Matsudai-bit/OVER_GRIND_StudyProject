@@ -1,6 +1,7 @@
 using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.Events;
 
 public class ConfigSelectParamater : MonoBehaviour
 {
@@ -28,6 +29,10 @@ public class ConfigSelectParamater : MonoBehaviour
     // パラメータ変更時に呼び出す関数
     [SerializeField]
     private UnityEngine.Events.UnityEvent<string> m_handleParameterChange;
+
+    //セーブデータ保存用のイベント(数値)
+    [SerializeField]
+    private UnityEvent<int> m_handleIndexChange;
 
     [Header("入力判定関連")]
     // 上キーが押される判定
@@ -68,76 +73,104 @@ public class ConfigSelectParamater : MonoBehaviour
 
         // 表示するテクスチャの初期化
         m_paramaterText.text = m_paramaterName;
-        m_selectText.text = m_selectName[m_defaultValue];
 
-        // 値の初期化を通知する
-        if(m_handleParameterChange.GetPersistentEventCount() > 0)
-        {
-            m_handleParameterChange.Invoke(
-                m_selectName[m_defaultValue]
-            );
-        }
+        //初期状態を反映させる
+        ApplyParameterChange();
+        //m_selectText.text = m_selectName[m_defaultValue];
+
+        //// 値の初期化を通知する
+        //if(m_handleParameterChange.GetPersistentEventCount() > 0)
+        //{
+        //    m_handleParameterChange.Invoke(
+        //        m_selectName[m_defaultValue]
+        //    );
+        //}
     }
 
     private void Update()
     {
-        // 入力方向
-        Vector2 nav = m_navigateActionRef.action.ReadValue<Vector2>();
+        //// 入力方向
+        //Vector2 nav = m_navigateActionRef.action.ReadValue<Vector2>();
 
-        // 固定されていなければ
+        //// 固定されていなければ
+        //if (!m_isLocked)
+        //{
+        //    // 左キーが押されたら
+        //    if (nav.x < -NAVIGATE_THRESHOLD &&
+        //        m_previousNav.x >= -NAVIGATE_THRESHOLD)
+        //    {
+        //        // 値を減少させる
+        //        m_defaultValue--;
+
+        //        // 値が0以下になった場合
+        //        if (m_defaultValue < 0)
+        //        {
+        //            // 最後尾に戻す
+        //            m_defaultValue = m_selectName.Length - 1;
+        //        }
+
+        //        // 値変更を通知する
+        //        if (m_handleParameterChange.GetPersistentEventCount() > 0)
+        //        {
+        //            m_handleParameterChange.Invoke(
+        //                m_selectName[m_defaultValue]
+        //            );
+        //        }
+        //    }
+        //    // 右キーが押されたら
+        //    if (nav.x > NAVIGATE_THRESHOLD &&
+        //        m_previousNav.x <= NAVIGATE_THRESHOLD)
+        //    {
+        //        // 値を増加させる
+        //        m_defaultValue++;
+
+        //        // 値が配列の長さを超過した場合
+        //        if(m_defaultValue >= m_selectName.Length)
+        //        {
+        //            // 最初に戻す
+        //            m_defaultValue = 0;
+        //        }
+
+        //        // 値変更を通知する
+        //        if (m_handleParameterChange.GetPersistentEventCount() > 0)
+        //        {
+        //            m_handleParameterChange.Invoke(
+        //                m_selectName[m_defaultValue]
+        //            );
+        //        }
+        //    }
+        //}
+
+        //// 値に合わせたテクスチャを表示する
+        //m_selectText.text = m_selectName[m_defaultValue];
+
+        //// 今フレームの値を保存し、次フレームの比較に使う
+        //m_previousNav = nav;
+
+        //入力方向
+        Vector2 nav = m_navigateActionRef.action.ReadValue<Vector2>();
+        //固定されていないかチェック
         if (!m_isLocked)
         {
-            // 左キーが押されたら
-            if (nav.x < -NAVIGATE_THRESHOLD &&
-                m_previousNav.x >= -NAVIGATE_THRESHOLD)
+            //左キーが押されたら
+            if(nav.x < -NAVIGATE_THRESHOLD &&
+                 m_previousNav.x >= -NAVIGATE_THRESHOLD)
             {
-                // 値を減少させる
-                m_defaultValue--;
-
-                // 値が0以下になった場合
-                if (m_defaultValue < 0)
-                {
-                    // 最後尾に戻す
-                    m_defaultValue = m_selectName.Length - 1;
-                }
-
-                // 値変更を通知する
-                if (m_handleParameterChange.GetPersistentEventCount() > 0)
-                {
-                    m_handleParameterChange.Invoke(
-                        m_selectName[m_defaultValue]
-                    );
-                }
+                //左の行動を入力
+                LeftNavAction();
             }
-            // 右キーが押されたら
-            if (nav.x > NAVIGATE_THRESHOLD &&
-                m_previousNav.x <= NAVIGATE_THRESHOLD)
+            //右キーが押されたら
+            if(nav.x > NAVIGATE_THRESHOLD &&
+                 m_previousNav.x <= NAVIGATE_THRESHOLD)
             {
-                // 値を増加させる
-                m_defaultValue++;
-
-                // 値が配列の長さを超過した場合
-                if(m_defaultValue >= m_selectName.Length)
-                {
-                    // 最初に戻す
-                    m_defaultValue = 0;
-                }
-
-                // 値変更を通知する
-                if (m_handleParameterChange.GetPersistentEventCount() > 0)
-                {
-                    m_handleParameterChange.Invoke(
-                        m_selectName[m_defaultValue]
-                    );
-                }
+                RightNavAction();
             }
+
         }
 
-        // 値に合わせたテクスチャを表示する
-        m_selectText.text = m_selectName[m_defaultValue];
-
-        // 今フレームの値を保存し、次フレームの比較に使う
+        // 今フリームの値を保存し、次のフレームと比較する
         m_previousNav = nav;
+        
     }
 
     public void OnCursor()
@@ -148,5 +181,69 @@ public class ConfigSelectParamater : MonoBehaviour
     public void OnCursorExit()
     {
         m_isLocked = true;
+    }
+
+    public void LeftNavAction()
+    {
+        // 値を減少させる
+        m_defaultValue--;
+
+        // 値が0未満になった場合
+        if (m_defaultValue < 0)
+        {
+            // 最後尾に戻す
+            m_defaultValue = m_selectName.Length - 1;
+        }
+
+        // 変更を反映
+        ApplyParameterChange();
+    }
+
+    public void RightNavAction()
+    {
+        // 値を増加させる
+        m_defaultValue++;
+
+        // 値が配列の長さを超過した場合
+        if (m_defaultValue >= m_selectName.Length)
+        {
+            // 最初に戻す
+            m_defaultValue = 0;
+        }
+
+        // 変更を反映
+        ApplyParameterChange();
+    }
+
+    // ----------------------------------------------------
+    // ★追加: 外部（セーブデータ）から初期値をUIにセットするメソッド
+    // ----------------------------------------------------
+    public void SetDefaultIndex(int index)
+    {
+        // 範囲外のエラーを防ぐため、0 ～ 配列の最大値 の間に収める
+        m_defaultValue = Mathf.Clamp(index, 0, m_selectName.Length - 1);
+
+        // テキストを更新
+        m_selectText.text = m_selectName[m_defaultValue];
+    }
+
+    // ----------------------------------------------------
+    // ★修正: 文字列だけでなく「数値(インデックス)」も通知するように変更
+    // ----------------------------------------------------
+    private void ApplyParameterChange()
+    {
+        m_selectText.text = m_selectName[m_defaultValue];
+
+        // UI表示用などの通知 (文字列)
+        if (m_handleParameterChange != null && m_handleParameterChange.GetPersistentEventCount() > 0)
+        {
+            m_handleParameterChange.Invoke(m_selectName[m_defaultValue]);
+        }
+
+        // SaveDataに渡すための通知 (数値)
+        if (m_handleIndexChange != null && m_handleIndexChange.GetPersistentEventCount() > 0)
+        {
+            m_handleIndexChange.Invoke(m_defaultValue);
+        }
     }
 }

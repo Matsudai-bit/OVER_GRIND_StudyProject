@@ -1,6 +1,8 @@
 using TMPro;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.InputSystem;
+using UnityEngine.UI;
 
 public class ConfigGaugeParamater : MonoBehaviour
 {
@@ -30,14 +32,14 @@ public class ConfigGaugeParamater : MonoBehaviour
     [SerializeField]
     private TextMeshProUGUI m_valueText;
 
-    // パラメータ変更時に呼び出す関数
+    // パラメータ変更時に呼び出す関数 (セーブデータ等への通知用 float)
     [SerializeField]
-    private UnityEngine.Events.UnityEvent<float> m_handleParameterChange;
+    private UnityEvent<float> m_handleParameterChange;
 
     [Header("テクスチャ関連")]
     // ゲージテクスチャイメージコンポーネント
     [SerializeField]
-    private UnityEngine.UI.Image m_gaugeImage;
+    private Image m_gaugeImage;
 
     [Header("入力判定関連")]
     // 上キーが押される判定
@@ -69,15 +71,14 @@ public class ConfigGaugeParamater : MonoBehaviour
 
     private void Start()
     {
-        // 文字の置き換え
-        m_valueText.text = m_defaultValue.ToString();
-        m_paramaterText.text = m_paramaterName;
-
-        // 値の初期化を通知する
-        if (m_handleParameterChange.GetPersistentEventCount() > 0)
+        // パラメータ名の表示セット
+        if (m_paramaterText != null)
         {
-            m_handleParameterChange.Invoke(m_defaultValue);
+            m_paramaterText.text = m_paramaterName;
         }
+
+        // 初期描画および初期値のイベント通知
+        ApplyParameterChange();
     }
 
     private void Update()
@@ -92,38 +93,15 @@ public class ConfigGaugeParamater : MonoBehaviour
             if (nav.x < -NAVIGATE_THRESHOLD &&
                 m_previousNav.x >= -NAVIGATE_THRESHOLD)
             {
-                // 値を減少させる
-                m_defaultValue -= VALUE_AMOUNT;
-
-                // 値変更を通知する
-                if (m_handleParameterChange.GetPersistentEventCount() > 0)
-                {
-                    m_handleParameterChange.Invoke(m_defaultValue);
-                }
+                LeftNavAction();
             }
             // 右キーが押されたら
             if (nav.x > NAVIGATE_THRESHOLD &&
                 m_previousNav.x <= NAVIGATE_THRESHOLD)
             {
-                // 値を増加させる
-                m_defaultValue += VALUE_AMOUNT;
-
-                // 値変更を通知する
-                if (m_handleParameterChange.GetPersistentEventCount() > 0)
-                {
-                    m_handleParameterChange.Invoke(m_defaultValue);
-                }
+                RightNavAction();
             }
         }
-
-        // 値の制限
-        m_defaultValue = Mathf.Clamp(m_defaultValue, MIN_VALUE, MAX_VALUE);
-
-        // 文字の置き換え
-        m_valueText.text = m_defaultValue.ToString("F1");
-
-        // イメージの割合表示
-        m_gaugeImage.fillAmount = m_defaultValue;
 
         // 今フレームの値を保存し、次フレームの比較に使う
         m_previousNav = nav;
@@ -131,11 +109,84 @@ public class ConfigGaugeParamater : MonoBehaviour
 
     public void OnCursor()
     {
+        // 画面内のすべてのゲージを一度ロック状態にする（誤作動防止）
+        var allGauges = FindObjectsByType<ConfigGaugeParamater>(FindObjectsSortMode.None);
+        foreach (var gauge in allGauges)
+        {
+            gauge.OnCursorExit();
+        }
+
+        // 自分だけ操作を許可する
         m_isLocked = false;
     }
 
     public void OnCursorExit()
     {
         m_isLocked = true;
+    }
+
+    public void LeftNavAction()
+    {
+        // 値を減少させる
+        m_defaultValue -= VALUE_AMOUNT;
+
+        // 変更を反映
+        ApplyParameterChange();
+    }
+
+    public void RightNavAction()
+    {
+        // 値を増加させる
+        m_defaultValue += VALUE_AMOUNT;
+
+        // 変更を反映
+        ApplyParameterChange();
+    }
+
+    /// <summary>
+    /// 外部（セーブデータ）から初期値をUIに反映させるメソッド
+    /// </summary>
+    public void SetDefaultValue(float value)
+    {
+        m_defaultValue = Mathf.Clamp(value, MIN_VALUE, MAX_VALUE);
+
+        // UI表示のみ更新（読み込み時は書き込みイベントを発火させない）
+        UpdateUI();
+    }
+
+    /// <summary>
+    /// 値の制限・UI更新およびイベント通知を行う共通処理
+    /// </summary>
+    private void ApplyParameterChange()
+    {
+        // 値の制限
+        m_defaultValue = Mathf.Clamp(m_defaultValue, MIN_VALUE, MAX_VALUE);
+
+        // UI表示の更新
+        UpdateUI();
+
+        // 値変更を通知する
+        if (m_handleParameterChange != null && m_handleParameterChange.GetPersistentEventCount() > 0)
+        {
+            m_handleParameterChange.Invoke(m_defaultValue);
+        }
+    }
+
+    /// <summary>
+    /// テキストとゲージ画像の表示を更新する
+    /// </summary>
+    private void UpdateUI()
+    {
+        if (m_valueText != null)
+        {
+            m_valueText.text = m_defaultValue.ToString("F1");
+        }
+
+        if (m_gaugeImage != null)
+        {
+            // MIN_VALUE ? MAX_VALUE の範囲内での割合（0.0 ? 1.0）を計算して fillAmount に設定
+            float range = MAX_VALUE - MIN_VALUE;
+            m_gaugeImage.fillAmount = range > 0 ? (m_defaultValue - MIN_VALUE) / range : 0f;
+        }
     }
 }
