@@ -12,7 +12,11 @@ public sealed class MissileExplosion : MonoBehaviour
     /// <summary>
     /// 現在位置に爆発オブジェクトを生成します。
     /// </summary>
-    public void Explode(Transform parent)
+    /// <param name="parent">爆発を生成する親Transform。</param>
+    /// <param name="attackIdentifier">爆発に引き継ぐ攻撃ID。</param>
+    public void Explode(
+        Transform parent,
+        AttackIdentifier attackIdentifier = null)
     {
         if (m_explosionPrefab == null)
         {
@@ -35,7 +39,11 @@ public sealed class MissileExplosion : MonoBehaviour
         {
             Debug.LogError("ヒットボックスがアタッチされていません");
         }
-        hitbox.EnableHitbox();
+        AttackDamageData damageData = new AttackDamageData(
+            hitbox.CurrentDamage,
+            attackIdentifier);
+
+        hitbox.EnableHitbox(damageData);
 
         Destroy(gameObject);
     }

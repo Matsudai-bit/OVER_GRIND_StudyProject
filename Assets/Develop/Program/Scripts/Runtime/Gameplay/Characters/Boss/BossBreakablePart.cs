@@ -77,10 +77,10 @@ public sealed class BossBreakablePart : MonoBehaviour, IDamageable
     /// <summary>
     /// ダメージを受け取ります。
     /// </summary>
-    /// <param name="damage">受けるダメージ量。</param>
-    public void TakeDamage(int damage)
+    /// <param name="damageData">受けるダメージと攻撃識別情報。</param>
+    public void TakeDamage(AttackDamageData damageData)
     {
-        if (damage <= 0 ||
+        if (damageData.Damage <= 0 ||
             m_health == null ||
             m_health.IsDead ||
             m_currentState != BossBreakablePartState.NORMAL)
@@ -88,7 +88,7 @@ public sealed class BossBreakablePart : MonoBehaviour, IDamageable
             return;
         }
 
-        m_health.TakeDamage(damage);
+        m_health.TakeDamage(damageData.Damage);
 
         bool willBreak = m_health.IsDead;
         StartDamageFeedback(willBreak);

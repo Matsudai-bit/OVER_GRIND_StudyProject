@@ -34,6 +34,9 @@ public sealed class S1P1BossMissileState :
     // Animator Trigger ID
     private int m_animationTriggerID;
 
+    // 爆発Hitboxへ渡す攻撃ID
+    private AttackIdentifier m_attackIdentifier;
+
     // AnimationEvent受信
     private AnimationEventReceiver m_animationEventReceiver;
 
@@ -139,6 +142,7 @@ public sealed class S1P1BossMissileState :
         m_parameters = null;
         m_playerTransform = null;
         m_animationEventReceiver = null;
+        m_attackIdentifier = null;
 
         Owner.SetStateExecutionStatus(
       StateExecutionStatus.SUCCEEDED);
@@ -209,7 +213,8 @@ public sealed class S1P1BossMissileState :
             missile.Initialize(
                 m_parameters.MissileParameterAsset,
                 m_playerTransform,
-                m_parameters.MissileUpwardDuration);
+                m_parameters.MissileUpwardDuration,
+                m_attackIdentifier);
 
             missile.Launch();
 
@@ -362,7 +367,7 @@ public sealed class S1P1BossMissileState :
 
         if (!attackSettings.TryGetAttackSetting(
                 S1P1BossAttackType.MISSILE,
-                out _,
+                out m_attackIdentifier,
                 out string animationTriggerName))
         {
             return false;

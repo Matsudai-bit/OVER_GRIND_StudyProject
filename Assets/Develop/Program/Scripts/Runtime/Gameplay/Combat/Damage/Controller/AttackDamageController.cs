@@ -151,7 +151,9 @@ public abstract class AttackDamageController<THitboxId> :
 
             SetDamageToHitboxes(
                 attackHitboxes,
-                hitboxParameter.Damage);
+                new AttackDamageData(
+                    hitboxParameter.Damage,
+                    attackIdentifier));
         }
 
         return isValid;
@@ -161,10 +163,10 @@ public abstract class AttackDamageController<THitboxId> :
     /// 指定したHitbox一覧へダメージを設定します。
     /// </summary>
     /// <param name="attackHitboxes">対象Hitbox一覧。</param>
-    /// <param name="damage">設定するダメージ。</param>
+    /// <param name="damageData">設定するダメージと攻撃識別情報。</param>
     private static void SetDamageToHitboxes(
         IReadOnlyList<AttackHitbox> attackHitboxes,
-        int damage)
+        AttackDamageData damageData)
     {
         if (attackHitboxes == null)
         {
@@ -179,8 +181,8 @@ public abstract class AttackDamageController<THitboxId> :
                 continue;
             }
 
-            attackHitbox.SetDamage(
-                damage);
+            attackHitbox.SetDamageData(
+                damageData);
         }
     }
 
