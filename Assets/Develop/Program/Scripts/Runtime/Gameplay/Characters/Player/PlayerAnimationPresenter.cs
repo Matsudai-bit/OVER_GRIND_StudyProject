@@ -17,6 +17,7 @@ public sealed class PlayerAnimationPresenter : MonoBehaviour
     private const string WALK_PARAMETER_NAME = "Walk";
     private const string HIT_PARAMETER_NAME = "Hit";
     private const string V_RUNNING_PARAMETER_NAME = "VRunning";
+    private const string STATIONARY_BOOST_CHARGING_PARAMETER_NAME =  "StationaryBoostCharging";
 
 
     // Animatorパラメーターのハッシュ値
@@ -39,6 +40,8 @@ public sealed class PlayerAnimationPresenter : MonoBehaviour
         Animator.StringToHash(WALK_PARAMETER_NAME);
     private static readonly int V_RUNNING_HASH =
         Animator.StringToHash(V_RUNNING_PARAMETER_NAME);
+    private static readonly int STATIONARY_BOOST_CHARGING_HASH =
+        Animator.StringToHash(STATIONARY_BOOST_CHARGING_PARAMETER_NAME);
 
     // プレイヤーのAnimator
     [SerializeField]
@@ -63,6 +66,8 @@ public sealed class PlayerAnimationPresenter : MonoBehaviour
     private bool m_hasWalkParameter;
     // Vブースト走行パラメーターが存在するか
     private bool m_hasVRunningParameter;
+    // その場Vブーストチャージパラメーターが存在するか
+    private bool m_hasStationaryBoostChargingParameter;
 
     // 初期化されているか
     private bool m_isInitialized;
@@ -206,7 +211,37 @@ public sealed class PlayerAnimationPresenter : MonoBehaviour
             V_RUNNING_HASH,
             true);
     }
+    /// <summary>
+    /// その場Vブーストチャージアニメーションを要求します。
+    /// </summary>
+    public void PlayStationaryBoostChargingAnimation()
+    {
+        if (!CanControlAnimator() ||
+            !m_hasStationaryBoostChargingParameter)
+        {
+            return;
+        }
 
+        m_animator.SetBool(
+            STATIONARY_BOOST_CHARGING_HASH,
+            true);
+    }
+
+    /// <summary>
+    /// その場Vブーストチャージアニメーションの停止を要求します。
+    /// </summary>
+    public void StopStationaryBoostChargingAnimation()
+    {
+        if (!CanControlAnimator() ||
+            !m_hasStationaryBoostChargingParameter)
+        {
+            return;
+        }
+
+        m_animator.SetBool(
+            STATIONARY_BOOST_CHARGING_HASH,
+            false);
+    }
     /// <summary>
     /// Vブースト走行アニメーションの停止を要求します。
     /// </summary>
@@ -351,7 +386,9 @@ public sealed class PlayerAnimationPresenter : MonoBehaviour
         m_hasVRunningParameter = HasAnimatorParameter(
             V_RUNNING_HASH,
             AnimatorControllerParameterType.Bool);
-
+        m_hasStationaryBoostChargingParameter = HasAnimatorParameter(
+            STATIONARY_BOOST_CHARGING_HASH,
+            AnimatorControllerParameterType.Bool);
         LogMissingParameters();
     }
 
@@ -414,6 +451,10 @@ public sealed class PlayerAnimationPresenter : MonoBehaviour
         LogMissingParameter(
             m_hasVRunningParameter,
             V_RUNNING_PARAMETER_NAME,
+            AnimatorControllerParameterType.Bool);
+        LogMissingParameter(
+            m_hasStationaryBoostChargingParameter,
+            STATIONARY_BOOST_CHARGING_PARAMETER_NAME,
             AnimatorControllerParameterType.Bool);
     }
 
