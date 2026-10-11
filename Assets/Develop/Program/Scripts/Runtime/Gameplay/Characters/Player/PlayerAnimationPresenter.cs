@@ -18,6 +18,7 @@ public sealed class PlayerAnimationPresenter : MonoBehaviour
     private const string HIT_PARAMETER_NAME = "Hit";
     private const string V_RUNNING_PARAMETER_NAME = "VRunning";
     private const string STATIONARY_BOOST_CHARGING_PARAMETER_NAME =  "StationaryBoostCharging";
+    private const string RAIL_GRIND_PARAMETER_NAME =  "RailGrind";
 
 
     // Animatorパラメーターのハッシュ値
@@ -42,6 +43,8 @@ public sealed class PlayerAnimationPresenter : MonoBehaviour
         Animator.StringToHash(V_RUNNING_PARAMETER_NAME);
     private static readonly int STATIONARY_BOOST_CHARGING_HASH =
         Animator.StringToHash(STATIONARY_BOOST_CHARGING_PARAMETER_NAME);
+    private static readonly int RAIL_GRIND_HASH =
+        Animator.StringToHash(RAIL_GRIND_PARAMETER_NAME);
 
     // プレイヤーのAnimator
     [SerializeField]
@@ -68,6 +71,8 @@ public sealed class PlayerAnimationPresenter : MonoBehaviour
     private bool m_hasVRunningParameter;
     // その場Vブーストチャージパラメーターが存在するか
     private bool m_hasStationaryBoostChargingParameter;
+    // レールグラインドパラメーターが存在するか
+    private bool m_hasRailGrindParameter;
 
     // 初期化されているか
     private bool m_isInitialized;
@@ -184,7 +189,37 @@ public sealed class PlayerAnimationPresenter : MonoBehaviour
 
         m_animator.SetBool(WALK_HASH, true);
     }
+    /// <summary>
+    /// レールグラインドアニメーションを要求します。
+    /// </summary>
+    public void PlayRailGrindAnimation()
+    {
+        if (!CanControlAnimator() ||
+            !m_hasRailGrindParameter)
+        {
+            return;
+        }
 
+        m_animator.SetBool(
+            RAIL_GRIND_HASH,
+            true);
+    }
+
+    /// <summary>
+    /// レールグラインドアニメーションの停止を要求します。
+    /// </summary>
+    public void StopRailGrindAnimation()
+    {
+        if (!CanControlAnimator() ||
+            !m_hasRailGrindParameter)
+        {
+            return;
+        }
+
+        m_animator.SetBool(
+            RAIL_GRIND_HASH,
+            false);
+    }
     /// <summary>
     /// 歩くアニメーション停止を要求します。
     /// </summary>
@@ -389,6 +424,10 @@ public sealed class PlayerAnimationPresenter : MonoBehaviour
         m_hasStationaryBoostChargingParameter = HasAnimatorParameter(
             STATIONARY_BOOST_CHARGING_HASH,
             AnimatorControllerParameterType.Bool);
+        m_hasRailGrindParameter = HasAnimatorParameter(
+            RAIL_GRIND_HASH,
+            AnimatorControllerParameterType.Bool);
+
         LogMissingParameters();
     }
 
@@ -455,6 +494,10 @@ public sealed class PlayerAnimationPresenter : MonoBehaviour
         LogMissingParameter(
             m_hasStationaryBoostChargingParameter,
             STATIONARY_BOOST_CHARGING_PARAMETER_NAME,
+            AnimatorControllerParameterType.Bool);
+        LogMissingParameter(
+            m_hasRailGrindParameter,
+            RAIL_GRIND_PARAMETER_NAME,
             AnimatorControllerParameterType.Bool);
     }
 
