@@ -37,7 +37,7 @@ public class ConfigMenuManager : MonoBehaviour
         }
 
         // Às’†‚Ìİ’èƒf[ƒ^‚ğæ“¾
-        GameSettingsSaveData settings = m_saveDataController.Settings;
+        GameSettingsSaveData settings = m_saveDataController.CurrentData.Settings;
 
         // y‰æ–ÊƒTƒCƒY‚Ì”½‰fz(intŒ^)
         if (m_screenSizeSelect != null)
@@ -123,6 +123,16 @@ public class ConfigMenuManager : MonoBehaviour
         if (m_saveDataController != null)
         {
             m_saveDataController.SetCameraSensitivity(sensitivity);
+        }
+    }
+
+    [SerializeField, Header("ƒJƒƒ‰”½“]‚·‚é‚©‚Ç‚¤‚©")]
+    bool cameraReverse = false;
+    public void OnCameraReverseChanged(bool flag)
+    {
+        if (m_saveDataController != null)
+        {
+            cameraReverse = flag;
         }
     }
 

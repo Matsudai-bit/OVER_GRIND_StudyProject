@@ -1863,9 +1863,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0bf1c5705b78d664eb568da61b40efd4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SaveDataController
-  m_defaultSaveData: {fileID: 11400000, guid: 5f178d95ee4c03c46821cfb1ab07fd6d, type: 2}
+  m_defaultSaveData: {fileID: 11400000, guid: 1417d56afb27c7c409bb4e0226b1e72c, type: 2}
   m_saveFileName: savedata.json
-  m_runtimeSaveData: {fileID: 11400000, guid: 1417d56afb27c7c409bb4e0226b1e72c, type: 2}
+  m_runtimeSaveData: {fileID: 0}
   m_saveRequestEvent: {fileID: 11400000, guid: 775283ddd1722f8499be4e3a2468f3b7, type: 2}
   m_saveChangedEvent: {fileID: 11400000, guid: b9da027596e888c4aafb3b52a2b02ff3, type: 2}
 --- !u!4 &599088776
@@ -4080,6 +4080,7 @@ MonoBehaviour:
   m_bgmVolumeGauge: {fileID: 1733007063}
   m_seVolumeGauge: {fileID: 973258046}
   m_cameraSensitivityGauge: {fileID: 1814480936}
+  cameraReverse: 0
 --- !u!114 &1361942352
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5348,55 +5349,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7c547b8ddf07df04d80bf847b3f0d5ce, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GaugeParamater
---- !u!1 &1782888578
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1782888580}
-  - component: {fileID: 1782888579}
-  m_Layer: 0
-  m_Name: SaveData_Prot_Objects
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &1782888579
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1782888578}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0bf1c5705b78d664eb568da61b40efd4, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::SaveDataController
-  m_defaultSaveData: {fileID: 11400000, guid: 1417d56afb27c7c409bb4e0226b1e72c, type: 2}
-  m_saveFileName: savedata.json
-  m_runtimeSaveData: {fileID: 11400000, guid: 5f178d95ee4c03c46821cfb1ab07fd6d, type: 2}
-  m_saveRequestEvent: {fileID: 11400000, guid: 775283ddd1722f8499be4e3a2468f3b7, type: 2}
-  m_saveChangedEvent: {fileID: 11400000, guid: b9da027596e888c4aafb3b52a2b02ff3, type: 2}
---- !u!4 &1782888580
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1782888578}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 323, y: 181.62498, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1802690900 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 6864989374998589970, guid: 59dd732dde41caf4a8e9673e6b8df584, type: 3}
@@ -6377,12 +6329,32 @@ PrefabInstance:
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 6002238999498960464, guid: 44e1cd035cd5d0144b36602a54b4e36b, type: 3}
+      propertyPath: m_handleParameterChange.m_PersistentCalls.m_Calls.Array.data[0].m_Mode
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6002238999498960464, guid: 44e1cd035cd5d0144b36602a54b4e36b, type: 3}
       propertyPath: m_handleParameterChange.m_PersistentCalls.m_Calls.Array.data[0].m_Target
       value: 
-      objectReference: {fileID: 1361942347}
+      objectReference: {fileID: 1361942351}
     - target: {fileID: 6002238999498960464, guid: 44e1cd035cd5d0144b36602a54b4e36b, type: 3}
       propertyPath: m_handleParameterChange.m_PersistentCalls.m_Calls.Array.data[0].m_CallState
-      value: 2
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6002238999498960464, guid: 44e1cd035cd5d0144b36602a54b4e36b, type: 3}
+      propertyPath: m_handleParameterChange.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
+      value: OnCameraReverseChanged
+      objectReference: {fileID: 0}
+    - target: {fileID: 6002238999498960464, guid: 44e1cd035cd5d0144b36602a54b4e36b, type: 3}
+      propertyPath: m_handleParameterChange.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
+      value: ConfigMenuManager, Assembly-CSharp
+      objectReference: {fileID: 0}
+    - target: {fileID: 6002238999498960464, guid: 44e1cd035cd5d0144b36602a54b4e36b, type: 3}
+      propertyPath: m_handleParameterChange.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_BoolArgument
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6002238999498960464, guid: 44e1cd035cd5d0144b36602a54b4e36b, type: 3}
+      propertyPath: m_handleParameterChange.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_ObjectArgumentAssemblyTypeName
+      value: UnityEngine.Object, UnityEngine
       objectReference: {fileID: 0}
     - target: {fileID: 7158010899284104181, guid: 44e1cd035cd5d0144b36602a54b4e36b, type: 3}
       propertyPath: m_onClickAction.m_PersistentCalls.m_Calls.Array.size
@@ -6542,6 +6514,5 @@ SceneRoots:
   - {fileID: 1989803774}
   - {fileID: 1821998665}
   - {fileID: 1549558366}
-  - {fileID: 1782888580}
   - {fileID: 599088776}
   - {fileID: 1361942349}
