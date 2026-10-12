@@ -6,6 +6,11 @@ public readonly struct PlayerCameraParameter
         float cameraSensitivityX,
         float cameraSensitivityY,
         bool cameraReverseY,
+        float cameraBaseDistance,
+        float cameraMinDistance,
+        float cameraMaxDistance,
+        Vector3 cameraDefaultOffset,
+        float cameraFollowSpeed,
         float chargeCameraDirectionInfluence,
         float chargeCameraVerticalAngle,
         float chargeCameraVerticalTurnSpeed)
@@ -13,6 +18,12 @@ public readonly struct PlayerCameraParameter
         m_cameraSensitivityX = cameraSensitivityX;
         m_cameraSensitivityY = cameraSensitivityY;
         m_isCameraReverseY = cameraReverseY;
+
+        m_cameraBaseDistance = cameraBaseDistance;
+        m_cameraMinDistance = cameraMinDistance;
+        m_cameraMaxDistance = cameraMaxDistance;
+        m_cameraDefaultOffset = cameraDefaultOffset;
+        m_cameraFollowSpeed = cameraFollowSpeed;
 
         m_chargeCameraDirectionInfluence = chargeCameraDirectionInfluence;
         m_chargeCameraVerticalAngle = chargeCameraVerticalAngle;
@@ -33,6 +44,33 @@ public readonly struct PlayerCameraParameter
     /// Y軸カメラの操作を反転させるかどうかを取得します。
     /// </summary>
     public bool m_isCameraReverseY { get; }
+
+
+    /// <summary>
+    /// プレイヤーとの基本距離を取得します。
+    /// </summary> 
+    public float m_cameraBaseDistance { get; }
+
+    /// <summary>
+    /// プレイヤーとの最小距離を取得します。
+    /// </summary>
+    public float m_cameraMinDistance { get; }
+
+    /// <summary>
+    /// プレイヤーとの最大距離を取得します。
+    /// </summary>
+    public float m_cameraMaxDistance { get; }
+
+    /// <summary>
+    /// カメラの初期位置 / 基準位置を取得します。
+    /// </summary>
+    public Vector3 m_cameraDefaultOffset { get; }
+
+    /// <summary>
+    /// プレイヤーへの追従速度を取得します。
+    /// </summary>
+    public float m_cameraFollowSpeed { get; }
+
 
     /// <summary>
     /// チャージ中に進行方向へ向く割合を取得します。

@@ -21,6 +21,22 @@ public class PlayerCameraParameterAssetEditor : Editor
     private SerializedProperty m_isCameraReverseYProperty;
 
 
+    // プレイヤーとの基本距離
+    private SerializedProperty m_cameraBaseDistanceProperty;
+
+    // プレイヤーとの最小距離
+    private SerializedProperty m_cameraMinDistanceProperty;
+
+    // プレイヤーとの最大距離
+    private SerializedProperty m_cameraMaxDistanceProperty;
+
+    // カメラの初期位置 / 基準位置
+    private SerializedProperty m_cameraDefaultOffsetProperty;
+
+    // プレイヤーへの追従速度
+    private SerializedProperty m_cameraFollowSpeedProperty;
+
+
     // チャージ中に進行方向へ向く割合。0でチャージ開始時の向き、1で進行方向を向きます。
     private SerializedProperty m_chargeCameraDirectionInfluenceProperty;
 
@@ -42,6 +58,17 @@ public class PlayerCameraParameterAssetEditor : Editor
         m_isCameraReverseYProperty =
             serializedObject.FindProperty("m_isCameraReverseY");
 
+        m_cameraBaseDistanceProperty =
+            serializedObject.FindProperty("m_cameraBaseDistance");
+        m_cameraMinDistanceProperty =
+            serializedObject.FindProperty("m_cameraMinDistance");
+        m_cameraMaxDistanceProperty =
+            serializedObject.FindProperty("m_cameraMaxDistance");
+        m_cameraDefaultOffsetProperty =
+            serializedObject.FindProperty("m_cameraDefaultOffset");
+        m_cameraFollowSpeedProperty =
+            serializedObject.FindProperty("m_cameraFollowSpeed");
+
         m_chargeCameraDirectionInfluenceProperty =
             serializedObject.FindProperty("m_chargeCameraDirectionInfluence");
         m_chargeCameraVerticalAngleProperty =
@@ -62,6 +89,10 @@ public class PlayerCameraParameterAssetEditor : Editor
         EditorGUILayout.Space(SECTION_SPACE);
 
         DrawCameraParameter();
+
+        EditorGUILayout.Space(SECTION_SPACE);
+
+        DrawDistanceSection();
 
         EditorGUILayout.Space(SECTION_SPACE);
 
@@ -113,6 +144,56 @@ public class PlayerCameraParameterAssetEditor : Editor
             new GUIContent(
                 "Y軸カメラの操作を反転させるかどうか。",
                 " TRUE の場合は反転させる、 FALSE の場合は反転させません。"
+                )
+            );
+
+        EditorGUILayout.EndVertical();
+    }
+
+    /// <summary>
+    /// カメラの距離パラメータを表示します。
+    /// </summary>
+    private void DrawDistanceSection()
+    {
+        EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+
+        EditorGUILayout.LabelField(
+            "カメラの距離パラメータ",
+            EditorStyles.boldLabel
+        );
+
+        EditorGUILayout.PropertyField(
+            m_cameraBaseDistanceProperty,
+            new GUIContent(
+                "プレイヤーとの基本距離。"
+                )
+            );
+
+        EditorGUILayout.PropertyField(
+            m_cameraMinDistanceProperty,
+            new GUIContent(
+                "プレイヤーとの最小距離。"
+                )
+            );
+
+        EditorGUILayout.PropertyField(
+            m_cameraMaxDistanceProperty,
+            new GUIContent(
+                "プレイヤーとの最大距離。"
+                )
+            );
+
+        EditorGUILayout.PropertyField(
+            m_cameraDefaultOffsetProperty,
+            new GUIContent(
+                "カメラの初期位置 / 基準位置。"
+                )
+            );
+
+        EditorGUILayout.PropertyField(
+            m_cameraFollowSpeedProperty,
+            new GUIContent(
+                "プレイヤーへの追従速度。"
                 )
             );
 

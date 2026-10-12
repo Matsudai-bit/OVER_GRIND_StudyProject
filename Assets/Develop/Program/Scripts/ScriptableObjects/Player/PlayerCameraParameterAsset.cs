@@ -18,6 +18,27 @@ public class PlayerCameraParameterAsset : ScriptableObject
     private bool m_isCameraReverseY = false;
 
 
+    [SerializeField]
+    [Tooltip("プレイヤーとの基本距離。")]
+    private float m_cameraBaseDistance;
+
+    [SerializeField]
+    [Tooltip("プレイヤーとの最小距離。")]
+    private float m_cameraMinDistance;
+
+    [SerializeField]
+    [Tooltip("プレイヤーとの最大距離。")]
+    private float m_cameraMaxDistance;
+
+    [SerializeField]
+    [Tooltip("カメラの初期位置 / 基準位置。")]
+    private Vector3 m_cameraDefaultOffset;
+
+    [SerializeField]
+    [Tooltip("プレイヤーへの追従速度。")]
+    private float m_cameraFollowSpeed;
+
+
     [SerializeField, Range(0.0f, 1.0f)]
     [Tooltip("チャージ中に進行方向へ向く割合。0でチャージ開始時の向き、1で進行方向を向きます。")]
     private float m_chargeCameraDirectionInfluence = 1.0f;
@@ -36,6 +57,11 @@ public class PlayerCameraParameterAsset : ScriptableObject
             m_cameraSensitivityX,
             m_cameraSensitivityY,
             m_isCameraReverseY,
+            m_cameraBaseDistance,
+            m_cameraMinDistance,
+            m_cameraMaxDistance,
+            m_cameraDefaultOffset,
+            m_cameraFollowSpeed,
             m_chargeCameraDirectionInfluence,
             m_chargeCameraVerticalAngle,
             m_chargeCameraVerticalTurnSpeed
