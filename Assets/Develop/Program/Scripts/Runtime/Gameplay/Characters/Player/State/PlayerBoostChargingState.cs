@@ -179,7 +179,16 @@ public sealed class PlayerBoostChargingState
             Owner.PlayerCamera.BeginDriftLookOverride();
         }
 
-        Owner.AnimationPresenter.PlayWalkAnimation();
+        // チャージ開始時の状態に応じてアニメーションを切り替える
+        if (m_startedFromStationary)
+        {
+            Owner.AnimationPresenter
+                .PlayStationaryBoostChargingAnimation();
+        }
+        else
+        {
+            Owner.AnimationPresenter.PlayWalkAnimation();
+        }
     }
 
     /// <summary>
@@ -647,19 +656,33 @@ public sealed class PlayerBoostChargingState
             Owner.PlayerCamera.EndDriftLookOverride();
         }
 
-        // 見た目の横滑り角度を移動へ持ち越さず、終了時の進行方向へ本体を合わせます。
+        // 移動開始チャージの場合のみ、
+        // 終了時の進行方向へ本体を合わせる
         if (!m_startedFromStationary)
-            Owner.Motor.AlignFacingToDirection(m_isDashRequested
-                ? Owner.BoostDashDirection : m_currentVelocityDirection);
+        {
+            Owner.Motor.AlignFacingToDirection(
+                m_isDashRequested
+                    ? Owner.BoostDashDirection
+                    : m_currentVelocityDirection);
+        }
 
-        // モデルオブジェクトの回転をPrefabで設定された元の姿勢へ戻す
+        // モデルを元の姿勢へ戻す
         if (Owner.ModelTransform != null)
         {
             Owner.ModelTransform.localRotation =
                 m_defaultModelLocalRotation;
         }
 
-        Owner.AnimationPresenter.StopWalkAnimation();
+        // 開始状態に対応したアニメーションを停止
+        if (m_startedFromStationary)
+        {
+            Owner.AnimationPresenter
+                .StopStationaryBoostChargingAnimation();
+        }
+        else
+        {
+            Owner.AnimationPresenter.StopWalkAnimation();
+        }
     }
 
     /// <summary>

@@ -84,15 +84,9 @@ public sealed class PlayerVRunningState
         Owner.SetBoostGaugeDepletionRate(
             1.0f / fullTankDuration);
 
-
         if (Owner.IsBoostSuspended)
         {
-            // ----------------------------------------------------
             // 中断された状態からの復帰
-            // ----------------------------------------------------
-
-            // ダッシュフェーズは終えている前提で
-            // 通常移動フェーズから再開する。
             m_currentPhase =
                 VBoostPhase.NORMAL_MOVE;
 
@@ -108,10 +102,7 @@ public sealed class PlayerVRunningState
         }
         else
         {
-            // ----------------------------------------------------
-            // 通常のブーストチャージからの新規開始
-            // ----------------------------------------------------
-
+            // 新規Vブースト開始
             Owner.SuspendedBoostGaugeRate =
                 Owner.CarriedBoostGaugeRate;
 
@@ -120,20 +111,13 @@ public sealed class PlayerVRunningState
 
             m_elapsedTime = 0.0f;
 
-            // ----------------------------------------------------
-            // チャージ終了時に保存した方向を取得
-            // ----------------------------------------------------
-
             m_boostDashDirection =
                 Owner.BoostDashDirection;
 
-            // 念のためY方向を除去
             m_boostDashDirection.y = 0.0f;
 
             if (m_boostDashDirection.sqrMagnitude <= 0.0001f)
             {
-                // 万が一方向が保存されていなかった場合のみ、
-                // 現在のプレイヤーの向きを使用する
                 m_boostDashDirection =
                     Owner.transform.forward;
 
@@ -141,18 +125,6 @@ public sealed class PlayerVRunningState
             }
 
             m_boostDashDirection.Normalize();
-
-            // ----------------------------------------------------
-            // ここではPlayerの向きを変更しない
-            // ----------------------------------------------------
-            //
-            // チャージ終了直後に一瞬でダッシュ方向を向かせると
-            // 不自然になるため、ダッシュ中に徐々に向きを変更する。
-            //
-            // ダッシュの移動方向自体は
-            // m_boostDashDirectionに固定される。
-            //
-
 
             Debug.Log(
                 $"[PlayerVRunningState] ブーストダッシュ開始 " +
@@ -165,9 +137,11 @@ public sealed class PlayerVRunningState
                 Owner);
         }
 
-        Owner.AnimationPresenter.PlayWalkAnimation();
+        // Vブースト走行アニメーションを開始
+        Owner.AnimationPresenter.PlayVBoostRunningAnimation();
 
-        Owner.VGaugePlaceModel.SetGaugeRate(Owner.SuspendedBoostGaugeRate);
+        Owner.VGaugePlaceModel.SetGaugeRate(
+            Owner.SuspendedBoostGaugeRate);
 
         if (Owner.VGaugeUI != null)
         {
@@ -265,7 +239,8 @@ public sealed class PlayerVRunningState
     /// </summary>
     protected override void OnExitState()
     {
-        Owner.AnimationPresenter.StopWalkAnimation();
+        // Vブースト走行アニメーションを停止
+        Owner.AnimationPresenter.StopVBoostRunningAnimation();
 
         // 中断による終了の場合は、後で再開するため
         // ゲージ表示・演出をリセットしない
@@ -274,8 +249,7 @@ public sealed class PlayerVRunningState
             return;
         }
 
-        // それ以外（ゲージを消費しきった等）の
-        // 正真正銘の終了時は、表示・演出をリセットする
+        // ゲージを消費しきった場合などの完全終了
         Owner.VGaugePlaceModel.SetGaugeRate(0.0f);
 
         if (Owner.VGaugeUI != null)
