@@ -142,11 +142,6 @@ public sealed class PlayerVRunningState
 
         Owner.VGaugePlaceModel.SetGaugeRate(
             Owner.SuspendedBoostGaugeRate);
-
-        if (Owner.VGaugeUI != null)
-        {
-            Owner.VGaugeUI.SetCharging(true);
-        }
     }
 
 
@@ -251,11 +246,6 @@ public sealed class PlayerVRunningState
 
         // ゲージを消費しきった場合などの完全終了
         Owner.VGaugePlaceModel.SetGaugeRate(0.0f);
-
-        if (Owner.VGaugeUI != null)
-        {
-            Owner.VGaugeUI.SetCharging(false);
-        }
     }
 
 

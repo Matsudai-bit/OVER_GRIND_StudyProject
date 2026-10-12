@@ -168,12 +168,6 @@ public sealed class PlayerBoostChargingState
             Owner);
 
         Owner.VGaugePlaceModel.SetGaugeRate(ChargeRate);
-
-        if (Owner.VGaugeUI != null)
-        {
-            Owner.VGaugeUI.SetCharging(true);
-        }
-
         if (Owner.PlayerCamera != null)
         {
             Owner.PlayerCamera.BeginDriftLookOverride();
@@ -213,11 +207,6 @@ public sealed class PlayerBoostChargingState
 
             // UIのチャージゲージも0にする
             Owner.VGaugePlaceModel.SetGaugeRate(0.0f);
-
-            if (Owner.VGaugeUI != null)
-            {
-                Owner.VGaugeUI.SetCharging(false);
-            }
 
             Debug.Log(
                 "[PlayerBoostChargingState] " +
@@ -732,11 +721,6 @@ public sealed class PlayerBoostChargingState
             Owner);
 
         Owner.VGaugePlaceModel.SetGaugeRate(0.0f);
-
-        if (Owner.VGaugeUI != null)
-        {
-            Owner.VGaugeUI.SetCharging(false);
-        }
 
         Machine.ChangeState<PlayerWalkingState>();
     }

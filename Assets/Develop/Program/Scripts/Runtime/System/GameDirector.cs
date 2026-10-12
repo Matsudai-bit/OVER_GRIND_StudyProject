@@ -4,6 +4,9 @@ using UnityEngine;
 public class GameDirector : MonoBehaviour
 {
     [SerializeField]
+    private ElapsedTimer m_gameProgressElapsedTimer;
+
+    [SerializeField]
     private GameFlowStateChangedEvent m_gameFlowStateChangedEvent;
     [SerializeField]
     GameFlowController m_gameFlowController;
@@ -11,6 +14,10 @@ public class GameDirector : MonoBehaviour
     GameplaySequenceController m_sequenceController;
     [SerializeField]
     GameplaySequenceAsset m_sequenceAsset;
+    [SerializeField]
+    GameplayModeController m_modeController;
+    [SerializeField]
+    GameplaySequenceChangedEvent m_gameplaySequenceChangedEvent;
 
     bool start = false;
 
@@ -27,7 +34,16 @@ public class GameDirector : MonoBehaviour
             if (flowStateID.CurrentState == GameFlowStateType.INTRO) 
             {
                 Debug.Log("シーケンス依頼");
+                m_gameplaySequenceChangedEvent.RegisterListener((data) => {
+                    if (data.EventType == GameplaySequenceEventType.FINISHED && data.Sequence == m_sequenceAsset) 
+                    { 
+                        m_gameFlowController.EnterPlaying(); 
+                        m_modeController.ActivateGameplay();
+                        m_gameProgressElapsedTimer.StartTimer();
+                    } 
+                });
                 m_sequenceController.StartSequence(m_sequenceAsset);
+                
             }
         });
     }
