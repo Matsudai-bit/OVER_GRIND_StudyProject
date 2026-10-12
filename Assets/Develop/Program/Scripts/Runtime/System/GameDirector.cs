@@ -1,3 +1,5 @@
+using System;
+using System.Collections;
 using Unity.VisualScripting;
 using UnityEngine;
 
@@ -19,6 +21,13 @@ public class GameDirector : MonoBehaviour
     [SerializeField]
     GameplaySequenceChangedEvent m_gameplaySequenceChangedEvent;
 
+    [SerializeField]
+    CollisionSensor m_startSensor;
+    [SerializeField]
+    Transform m_startTransform;
+    [SerializeField]
+    Rigidbody m_playerTransform;
+
     bool start = false;
 
     private void Awake()
@@ -33,16 +42,7 @@ public class GameDirector : MonoBehaviour
         {
             if (flowStateID.CurrentState == GameFlowStateType.INTRO) 
             {
-                Debug.Log("シーケンス依頼");
-                m_gameplaySequenceChangedEvent.RegisterListener((data) => {
-                    if (data.EventType == GameplaySequenceEventType.FINISHED && data.Sequence == m_sequenceAsset) 
-                    { 
-                        m_gameFlowController.EnterPlaying(); 
-                        m_modeController.ActivateGameplay();
-                        m_gameProgressElapsedTimer.StartTimer();
-                    } 
-                });
-                m_sequenceController.StartSequence(m_sequenceAsset);
+                
                 
             }
         });
@@ -50,7 +50,9 @@ public class GameDirector : MonoBehaviour
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
+        m_startSensor.CollisionDetected += StartGame;
         start = false;
+        m_modeController.ActivateGameplay();
    
     }
     void Update()
@@ -63,11 +65,41 @@ public class GameDirector : MonoBehaviour
 
     }
 
-    void StartGameplay()
+    void StartGame(Vector3 position)
     {
 
-        m_gameFlowController.ChangeState(GameFlowStateType.INTRO);
+        m_startSensor.CollisionDetected -= StartGame;
+        m_startSensor.enabled = false;
+
+        Debug.Log("シーケンス依頼");
+        m_gameplaySequenceChangedEvent.RegisterListener((data) =>
+        {
+            if (data.EventType == GameplaySequenceEventType.STARTED)
+            {
+                StartCoroutine(DelayAction(1.0f, () => {
+
+                    m_playerTransform.position = m_startTransform.position;
+                    m_playerTransform.rotation = m_startTransform.rotation;
+                }));
+            }
+            if (data.EventType == GameplaySequenceEventType.FINISHED && data.Sequence == m_sequenceAsset)
+            {
+                m_gameFlowController.EnterPlaying();
+                m_gameProgressElapsedTimer.StartTimer();
+            }
+        });
+        m_sequenceController.StartSequence(m_sequenceAsset);
+         
     }
+ 
+
+    IEnumerator DelayAction(float delaySeconds, Action callback)
+    {
+        yield return new WaitForSeconds(delaySeconds);
+        callback?.Invoke();
+    }
+
+   
 
 
 }

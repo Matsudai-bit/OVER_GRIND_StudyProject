@@ -290,6 +290,7 @@ public sealed class GameInputController : MonoBehaviour
         switch (m_currentGameFlowState)
         {
             case GameFlowStateType.PLAYING:
+            case GameFlowStateType.INTRO:
                 GetGameplayInputState(
                     out enablePlayer,
                     out enableQTE);
@@ -299,7 +300,6 @@ public sealed class GameInputController : MonoBehaviour
                 enableUI = true;
                 break;
 
-            case GameFlowStateType.INTRO:
             case GameFlowStateType.ENDING:
             case GameFlowStateType.NONE:
             default:
