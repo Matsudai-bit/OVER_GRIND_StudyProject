@@ -7,10 +7,6 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public sealed class ActorControlController : MonoBehaviour
 {
-    // ゲーム進行状態変更イベント
-    [SerializeField, Header("ゲーム進行イベント")]
-    private GameFlowStateChangedEvent m_gameFlowStateChangedEvent;
-
     // シーケンス状態変更イベント
     [SerializeField, Header("シーケンスイベント")]
     private GameplaySequenceChangedEvent m_sequenceChangedEvent;
@@ -22,10 +18,12 @@ public sealed class ActorControlController : MonoBehaviour
     // Actor制御を停止するシーケンスモード
     [SerializeField, Header("Actor制御停止対象モード")]
     private List<GameplayModeType> m_controlLockSequenceModes = new();
-
     // 制御対象ActorのRoot
     [SerializeField, Header("制御対象Actor")]
     private List<GameObject> m_actorObjects = new();
+    // 制御対象Actor
+    //[SerializeField, Header("制御対象Actor")]
+    //private List<MonoBehaviour> m_actorComponents = new();
 
     // Actorの制御停止理由
     private readonly HashSet<ActorControlLockReason> m_lockReasons = new();
@@ -102,18 +100,6 @@ public sealed class ActorControlController : MonoBehaviour
     /// </summary>
     private void RegisterEvents()
     {
-        if (m_gameFlowStateChangedEvent != null)
-        {
-            m_gameFlowStateChangedEvent.RegisterListener(
-                OnGameFlowStateChanged);
-        }
-        else
-        {
-            Debug.LogWarning(
-                $"{nameof(GameFlowStateChangedEvent)} が設定されていません。",
-                this);
-        }
-
         if (m_sequenceChangedEvent != null)
         {
             m_sequenceChangedEvent.RegisterListener(
@@ -144,12 +130,6 @@ public sealed class ActorControlController : MonoBehaviour
     /// </summary>
     private void UnregisterEvents()
     {
-        if (m_gameFlowStateChangedEvent != null)
-        {
-            m_gameFlowStateChangedEvent.UnregisterListener(
-                OnGameFlowStateChanged);
-        }
-
         if (m_sequenceChangedEvent != null)
         {
             m_sequenceChangedEvent.UnregisterListener(
@@ -162,6 +142,8 @@ public sealed class ActorControlController : MonoBehaviour
                 OnPauseChanged);
         }
     }
+
+  
 
     /// <summary>
     /// 制御対象Actorを取得します。
@@ -195,25 +177,6 @@ public sealed class ActorControlController : MonoBehaviour
                 m_actorControls.Add(actorControl);
             }
         }
-    }
-
-    /// <summary>
-    /// ゲーム進行状態変更を受け取ります。
-    /// </summary>
-    /// <param name="eventData">ゲーム進行状態変更情報。</param>
-    private void OnGameFlowStateChanged(
-        GameFlowStateChangedEventData eventData)
-    {
-        if (eventData.CurrentState == GameFlowStateType.INTRO)
-        {
-            AddControlLock(
-                ActorControlLockReason.INTRO);
-
-            return;
-        }
-
-        RemoveControlLock(
-            ActorControlLockReason.INTRO);
     }
 
     /// <summary>
@@ -275,8 +238,7 @@ public sealed class ActorControlController : MonoBehaviour
     /// </summary>
     private void RefreshActorControl()
     {
-        bool isControlEnabled =
-            m_lockReasons.Count == 0;
+        bool isControlEnabled = m_lockReasons.Count == 0;
 
         if (m_isControlEnabled == isControlEnabled)
         {

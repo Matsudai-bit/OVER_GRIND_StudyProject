@@ -3,7 +3,6 @@
 /// </summary>
 public enum ActorControlLockReason
 {
-    INTRO,
     CUTSCENE,
     PAUSE
 }
