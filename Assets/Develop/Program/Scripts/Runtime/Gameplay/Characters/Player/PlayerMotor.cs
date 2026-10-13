@@ -19,6 +19,9 @@ public sealed class PlayerMotor : MonoBehaviour
     // 停止状態と判定する水平速度の閾値
     private const float STOP_SPEED_THRESHOLD = 0.01f;
 
+    // 停止後に再加速を許可する、体と入力方向の角度差（度）
+    private const float START_FACING_TOLERANCE = 1.0f;
+
     // カメラ基準移動に使用するTransform
     [SerializeField, Header("移動基準")]
     private Transform m_movementReference;
@@ -483,6 +486,32 @@ public sealed class PlayerMotor : MonoBehaviour
         Vector3 currentHorizontalVelocity =
             GetHorizontalVelocity();
 
+        if (ShouldBrakeForReverseInput(currentHorizontalVelocity, moveDirection))
+        {
+            // 通常の減速度に倍率を掛け、向きを維持したまま急ブレーキをかけます。
+            float brakeAcceleration = CalculateAcceleration(maxMoveSpeed, parameters.TimeToStop)
+                * Mathf.Max(1.0f, parameters.ReverseBrakeMultiplier);
+            Vector3 brakingVelocity = Vector3.MoveTowards(
+                currentHorizontalVelocity, Vector3.zero, brakeAcceleration * deltaTime);
+            ApplyHorizontalVelocity(brakingVelocity, deltaTime, applyObstacleAvoidance);
+            return;
+        }
+
+        if (currentHorizontalVelocity.sqrMagnitude <=
+            STOP_SPEED_THRESHOLD * STOP_SPEED_THRESHOLD &&
+            moveDirection.sqrMagnitude > DIRECTION_SQR_THRESHOLD)
+        {
+            Vector3 facingDirection = m_playerRigidbody.rotation * Vector3.forward;
+            facingDirection.y = 0.0f;
+            if (Vector3.Angle(facingDirection, moveDirection) > START_FACING_TOLERANCE)
+            {
+                // 水平速度を0に保って方向転換し、向きが揃った次の更新から加速します。
+                ApplyHorizontalVelocity(Vector3.zero, deltaTime, applyObstacleAvoidance);
+                RotateTowardsMoveDirection(moveDirection, parameters.RotationSpeed, deltaTime);
+                return;
+            }
+        }
+
         float acceleration =
             CalculateAcceleration(
                 maxMoveSpeed,
@@ -504,6 +533,19 @@ public sealed class PlayerMotor : MonoBehaviour
             moveDirection,
             parameters.RotationSpeed,
             deltaTime);
+    }
+
+    /// <summary>
+    /// 現在の進行方向に対して入力が逆向きか判定します。
+    /// </summary>
+    /// <param name="horizontalVelocity">現在の水平速度。</param>
+    /// <param name="inputDirection">カメラ基準で変換した入力方向。</param>
+    /// <returns>true：移動中に90度を超える逆入力。false：停止中、無入力、または順方向。</returns>
+    private bool ShouldBrakeForReverseInput(Vector3 horizontalVelocity, Vector3 inputDirection)
+    {
+        return horizontalVelocity.sqrMagnitude > STOP_SPEED_THRESHOLD * STOP_SPEED_THRESHOLD &&
+            inputDirection.sqrMagnitude > DIRECTION_SQR_THRESHOLD &&
+            Vector3.Dot(horizontalVelocity, inputDirection) < 0.0f;
     }
 
     /// <summary>

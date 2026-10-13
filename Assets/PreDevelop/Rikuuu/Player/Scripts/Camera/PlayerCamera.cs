@@ -46,6 +46,9 @@ public class PlayerCamera : MonoBehaviour
     private PlayerLockOnCamera m_lockOnCamera;
     private bool m_isDriftOverrideActive;
     private float m_overrideStartAngle;
+    private float m_overrideTargetAngle;
+    private float m_overrideBlendElapsedTime;
+    private bool m_hasOverrideTarget;
     private bool m_restoreInput;
 
     /// <summary>ドリフト方向へのカメラ制御が有効かを取得します。</summary>
@@ -101,11 +104,17 @@ public class PlayerCamera : MonoBehaviour
     }
 
     /// <summary>
-    /// 進行方向を向かせるオーバーライドを開始します。
+    /// チャージ開始時のカメラ方向と進行方向から、固定の注視角度を確定します。
     /// </summary>
-    public void BeginDriftLookOverride()
+    /// <param name="worldDirection">チャージ開始時の進行方向。</param>
+    /// <param name="blendRate">開始時のカメラ方向を0、進行方向を1とする補間割合。</param>
+    public void BeginDriftLookOverride(
+        Vector3 worldDirection,
+        float blendRate)
     {
         m_isDriftOverrideActive = true;
+        m_hasOverrideTarget = false;
+        m_overrideBlendElapsedTime = 0.0f;
 
         if (m_inputAxisController != null)
         {
@@ -116,6 +125,8 @@ public class PlayerCamera : MonoBehaviour
         {
             m_overrideStartAngle =
                 m_orbitalFollow.HorizontalAxis.Value;
+
+            SetDriftOverrideTarget(worldDirection, blendRate);
         }
     }
 
@@ -136,48 +147,18 @@ public class PlayerCamera : MonoBehaviour
     }
 
     /// <summary>
-    /// 進行方向へカメラを向けます。
+    /// 現在の目標角度へ一定速度でカメラを向け、到達後は停止します。
     /// </summary>
     public void UpdateDriftLookDirection(
-        Vector3 worldDirection,
-        float blendRate,
         float turnSpeedDegreesPerSecond,
         float deltaTime)
     {
         if (!m_isDriftOverrideActive ||
-            m_orbitalFollow == null)
+            m_orbitalFollow == null ||
+            !m_hasOverrideTarget)
         {
             return;
         }
-
-        worldDirection.y = 0.0f;
-
-        if (worldDirection.sqrMagnitude <= MIN_TARGET_DISTANCE)
-        {
-            return;
-        }
-
-        worldDirection.Normalize();
-
-        float directionAngle =
-            Mathf.Atan2(
-                worldDirection.x,
-                worldDirection.z) *
-            Mathf.Rad2Deg;
-
-        float clampedBlendRate =
-            Mathf.Clamp01(blendRate) *
-            m_chargeCameraDirectionInfluence;
-
-        float targetAngle =
-            Mathf.MoveTowardsAngle(
-                m_overrideStartAngle,
-                directionAngle,
-                Mathf.Abs(
-                    Mathf.DeltaAngle(
-                        m_overrideStartAngle,
-                        directionAngle)) *
-                clampedBlendRate);
 
         float currentAngle =
             m_orbitalFollow.HorizontalAxis.Value;
@@ -185,7 +166,7 @@ public class PlayerCamera : MonoBehaviour
         float nextAngle =
             Mathf.MoveTowardsAngle(
                 currentAngle,
-                targetAngle,
+                m_overrideTargetAngle,
                 Mathf.Max(turnSpeedDegreesPerSecond, 0.0f) *
                 deltaTime);
 
@@ -196,40 +177,72 @@ public class PlayerCamera : MonoBehaviour
     }
 
     /// <summary>
-    /// 残り時間に応じて水平角度を補間し、時間終了時には最新の目標方向へ合わせます。
+    /// 開始時の水平角度から現在の目標角度へ指定時間で補間します。
     /// </summary>
-    /// <param name="worldDirection">カメラが向くワールド方向。</param>
-    /// <param name="remainingTime">呼び出し側で減算する、到達までの残り時間（秒）。0以下で即座に向きます。</param>
+    /// <param name="duration">目標角度への到達時間（秒）。0以下で即座に向きます。</param>
     /// <param name="deltaTime">今回の更新で進める時間（秒）。</param>
     public void UpdateDriftLookDirectionOverTime(
-        Vector3 worldDirection,
-        float remainingTime,
+        float duration,
         float deltaTime)
     {
-        if (!m_isDriftOverrideActive || m_orbitalFollow == null)
+        if (!m_isDriftOverrideActive ||
+            m_orbitalFollow == null ||
+            !m_hasOverrideTarget)
         {
             return;
         }
 
+        m_overrideBlendElapsedTime += Mathf.Max(deltaTime, 0.0f);
+        float progress = duration > 0.0f
+            ? Mathf.Clamp01(m_overrideBlendElapsedTime / duration)
+            : 1.0f;
+
+        m_orbitalFollow.HorizontalAxis.Value = Mathf.LerpAngle(
+            m_overrideStartAngle,
+            m_overrideTargetAngle,
+            progress);
+        UpdateChargeCameraHeight(deltaTime);
+    }
+
+    /// <summary>
+    /// 開始時のカメラ角度を基準に、現在の体の向きから目標を更新します。
+    /// </summary>
+    /// <param name="worldDirection">現在の体のワールド方向。</param>
+    /// <param name="blendRate">開始方向を0、体の方向を1とする補間割合。</param>
+    public void UpdateDriftLookTarget(Vector3 worldDirection, float blendRate)
+    {
+        if (!m_isDriftOverrideActive || m_orbitalFollow == null) return;
+        SetDriftOverrideTarget(worldDirection, blendRate);
+    }
+
+    /// <summary>
+    /// 開始時のカメラ角度を0、指定方向を1として目標角度を設定します。
+    /// </summary>
+    /// <param name="worldDirection">チャージ開始時の進行方向。</param>
+    /// <param name="blendRate">開始方向と進行方向の補間割合。</param>
+    private void SetDriftOverrideTarget(
+        Vector3 worldDirection,
+        float blendRate)
+    {
         worldDirection.y = 0.0f;
         if (worldDirection.sqrMagnitude <= MIN_TARGET_DISTANCE)
         {
             return;
         }
 
-        float directionAngle = Mathf.Atan2(worldDirection.x, worldDirection.z) * Mathf.Rad2Deg;
-        float targetAngle = Mathf.LerpAngle(
+        float directionAngle =
+            Mathf.Atan2(worldDirection.x, worldDirection.z) *
+            Mathf.Rad2Deg;
+
+        float clampedBlendRate =
+            Mathf.Clamp01(blendRate) *
+            Mathf.Clamp01(m_chargeCameraDirectionInfluence);
+
+        m_overrideTargetAngle = Mathf.LerpAngle(
             m_overrideStartAngle,
             directionAngle,
-            m_chargeCameraDirectionInfluence);
-        float progress = remainingTime > 0.0f
-            ? Mathf.Clamp01(Mathf.Max(deltaTime, 0.0f) / remainingTime)
-            : 1.0f;
-
-        // 毎回一定割合で近づけると到達しないため、残り時間に対する割合で補間する。
-        m_orbitalFollow.HorizontalAxis.Value = Mathf.LerpAngle(
-            m_orbitalFollow.HorizontalAxis.Value, targetAngle, progress);
-        UpdateChargeCameraHeight(deltaTime);
+            clampedBlendRate);
+        m_hasOverrideTarget = true;
     }
 
     /// <summary>チャージ中のカメラ高さをPlayerの少し上へ戻します。</summary>
