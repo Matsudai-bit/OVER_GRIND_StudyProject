@@ -6,6 +6,9 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public sealed class PlayerMotor : MonoBehaviour
 {
+    [SerializeField, Header("Parameter Asset")]
+    private PlayerMotorComponentParameterAsset m_parameterAsset;
+
     // 時間パラメータの最小値
     private const float MIN_TIME = 0.01f;
 
@@ -406,6 +409,8 @@ public sealed class PlayerMotor : MonoBehaviour
     /// <param name="playerRigidbody">プレイヤーのRigidbody。</param>
     public void Initialize(Rigidbody playerRigidbody)
     {
+        ApplyParameterAsset();
+
         if (playerRigidbody == null)
         {
             Debug.LogError(
@@ -1308,4 +1313,13 @@ public sealed class PlayerMotor : MonoBehaviour
 
         return (m_obstacleLayerMask.value & layerMask) != 0;
     }
+    /// <summary>Applies the assigned parameter asset.</summary>
+    private void ApplyParameterAsset()
+    {
+        if (m_parameterAsset == null) return;
+        m_obstacleLayerMask = m_parameterAsset.ObstacleLayerMask;
+        m_obstacleSkinWidth = m_parameterAsset.ObstacleSkinWidth;
+        m_obstacleDecelerationPerSecond = m_parameterAsset.ObstacleDecelerationPerSecond;
+    }
+
 }
