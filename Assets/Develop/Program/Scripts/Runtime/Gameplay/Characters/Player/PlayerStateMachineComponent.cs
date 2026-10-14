@@ -7,6 +7,9 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public sealed class PlayerStateMachineComponent : MonoBehaviour
 {
+    [SerializeField, Header("Parameter Asset")]
+    private PlayerStateMachineParameterAsset m_parameterAsset;
+
     [SerializeField, Header("ÉåÅ[ÉãÉWÉÉÉìÉv")]
     private PlayerRailJumpParameterAsset m_railJumpParameterAsset;
 
@@ -330,6 +333,8 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
         VGaugePlaceModel vGaugePlaceModel,
         SpeedPlaceModel speedPlaceModel)
     {
+        ApplyParameterAsset();
+
         if (inputReader == null ||
             monitor == null ||
             motor == null ||
@@ -730,4 +735,19 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
             return;
         }
     }
+    /// <summary>Applies the assigned parameter asset.</summary>
+    private void ApplyParameterAsset()
+    {
+        if (m_parameterAsset == null) return;
+        m_railJumpParameterAsset = m_parameterAsset.RailJumpParameterAsset;
+        m_knockbackSpeed = m_parameterAsset.KnockbackSpeed;
+        m_knockbackRate = m_parameterAsset.KnockbackRate;
+        m_defaultKnockbackProfile = m_parameterAsset.DefaultKnockbackProfile;
+        m_knockbackLiftSpeed = m_parameterAsset.KnockbackLiftSpeed;
+        m_knockbackDuration = m_parameterAsset.KnockbackDuration;
+        m_hitRecoveryDuration = m_parameterAsset.HitRecoveryDuration;
+        m_invincibilityParameterAsset = m_parameterAsset.InvincibilityParameterAsset;
+        m_hitEnvironmentLayerMask = m_parameterAsset.HitEnvironmentLayerMask;
+    }
+
 }

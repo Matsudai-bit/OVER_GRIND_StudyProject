@@ -80,6 +80,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerCamera
   m_cinemachineCamera: {fileID: 1812006397312950562}
   m_inputAxisController: {fileID: 1163282603766494091}
+  m_controllerParameterAsset: {fileID: 11400000, guid: f2a0000000000000000000000000000d, type: 2}
   m_chargeCameraDirectionInfluence: 1
   m_chargeCameraVerticalAngle: 8
   m_chargeCameraVerticalTurnSpeed: 120
@@ -339,6 +340,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5cb361fd7a0bc6145823e642f3546ca4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerInputReader
+  m_parameterAsset: {fileID: 11400000, guid: f2a00000000000000000000000000001, type: 2}
   m_moveActionReference: {fileID: -1680190386980627800, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_attackActionReference: {fileID: 1120369429361536294, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_jumpActionReference: {fileID: -2099379676528639254, guid: 052faaac586de48259a63d0c4782560b, type: 3}
@@ -357,6 +359,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c64340315981af84e832b958e4e63520, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerMonitor
+  m_parameterAsset: {fileID: 11400000, guid: f2a00000000000000000000000000002, type: 2}
   m_groundCheckOrigin: {fileID: 530793677067370159}
   m_groundCheckRadius: 0.62
   m_groundLayerMask:
@@ -378,6 +381,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 97f94f6461453bc4ea642ef479aa1b47, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerMotor
+  m_parameterAsset: {fileID: 11400000, guid: f2a00000000000000000000000000003, type: 2}
   m_movementReference: {fileID: 3994456450058773638}
   m_obstacleSkinWidth: 0.05
   m_obstacleDecelerationPerSecond: 20
@@ -393,6 +397,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 57fd4ddafe7cfc7408b9dd19920404a8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerStateMachineComponent
+  m_parameterAsset: {fileID: 11400000, guid: f2a00000000000000000000000000004, type: 2}
   m_railJumpParameterAsset: {fileID: 11400000, guid: 8595fb7b004046f999f45c29daab1952, type: 2}
   m_railJumpParameters:
     m_onRailUpSpeed: 8
@@ -425,6 +430,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 667a824e7917dd54c971803798939e82, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerRootController
+  m_parameterAsset: {fileID: 11400000, guid: f2a0000000000000000000000000000b, type: 2}
   m_movementParameterAsset: {fileID: 11400000, guid: ffef782441d77c84ab444d12ef66cf45, type: 2}
   m_vBoostMovementParameterAsset: {fileID: 11400000, guid: 8cab05a74b786e8408497af5277c643d, type: 2}
   m_boostChargingParameterAsset: {fileID: 11400000, guid: 9d7f3e42838ee0c4ab216216db4d5332, type: 2}
@@ -454,6 +460,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9b525f9262be99b4db7565447411efa9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerAnimationPresenter
+  m_parameterAsset: {fileID: 11400000, guid: f2a00000000000000000000000000005, type: 2}
   m_animator: {fileID: 3051361112923828860}
   m_moveSpeedDampTime: 0.1
 --- !u!114 &8572377566809189294
@@ -468,6 +475,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c80d2390ab95b05458f22c4a12f5164e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerAttackController
+  m_parameterAsset: {fileID: 11400000, guid: f2a00000000000000000000000000006, type: 2}
   m_airAttachHoldDuration: 0.15
   m_airAttachFallAcceleration: 0.75
   m_airAttachContactGrace: 0.2
@@ -493,6 +501,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f454a4d0a1b9f26478316a9fca1909d0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SplineGrindController
+  m_parameterAsset: {fileID: 11400000, guid: f2a00000000000000000000000000007, type: 2}
   baseGrindSpeed: 15
   maxGrindSpeed: 40
   exitSpeedScale: 1
@@ -517,7 +526,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Health
   m_maxHealth: 100
   m_currentHealth: 0
-  m_healthValueParameterAsset: {fileID: 0}
+  m_healthValueParameterAsset: {fileID: 11400000, guid: f2a0000000000000000000000000000c, type: 2}
 --- !u!114 &7405796748971180126
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -543,6 +552,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b4e306724d304bf994410f3ace0bfb9f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerHitDebugInput
+  m_parameterAsset: {fileID: 11400000, guid: f2a00000000000000000000000000008, type: 2}
   m_hitKey: 101
   m_attackCenter: {fileID: 0}
   m_localAttackCenterOffset: {x: 0, y: 0, z: 2}
@@ -562,6 +572,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 588d23141549917469ee97909cad195c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Hurtbox
+  m_parameterAsset: {fileID: 11400000, guid: f2a00000000000000000000000000009, type: 2}
   m_damageReceiverComponent: {fileID: 7405796748971180126}
   m_damageMultiplier: 1
   m_canReceiveDamage: 1
@@ -577,6 +588,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 684248461fd5bc24ca54a907b3ebabd8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerTargetingController
+  m_parameterAsset: {fileID: 11400000, guid: f2a0000000000000000000000000000a, type: 2}
   m_targetSearchRadius: 60
   m_targetLayer:
     serializedVersion: 2
@@ -2347,6 +2359,7 @@ GameObject:
   - component: {fileID: 3632387017047789862}
   - component: {fileID: 7072488265624140057}
   - component: {fileID: 1163282603766494091}
+  - component: {fileID: 6842484610000000002}
   m_Layer: 0
   m_Name: CinemachineCamera
   m_TagString: Untagged
@@ -2556,3 +2569,20 @@ MonoBehaviour:
         DecelTime: 0
   PlayerIndex: -1
   AutoEnableInputs: 1
+--- !u!114 &6842484610000000002
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8690278387845699989}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9a7e39fd7c384913a1a5292b8b7d1248, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerLockOnCamera
+  m_parameterAsset: {fileID: 11400000, guid: f2a0000000000000000000000000000e, type: 2}
+  m_screenMargin: 0.12
+  m_pitch: 8
+  m_bodyPadding: 0.2
+  m_minimumDistance: 5
