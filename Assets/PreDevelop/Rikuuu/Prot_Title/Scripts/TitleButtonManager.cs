@@ -7,13 +7,17 @@ public class TitleButtonManager : MonoBehaviour
     // ボタンセレクター
     [SerializeField]
     ButtonSelector m_buttonSelector;
+    [SerializeField]
+    UIOverlaySceneManager m_uIOverlaySceneManager;
     // カーソルの座標
     Vector3 m_cursorPosition = Vector3.zero;
+
+    bool m_lock = false;
 
     private void Start()
     {
         // ボタンセレクターのロックを解除する
-        m_buttonSelector.UnLockCursor();
+        EnableInput();
     }
 
     public void MoveCursor(
@@ -33,5 +37,33 @@ public class TitleButtonManager : MonoBehaviour
 
         cursor.transform.DOMove(targetPosition, 0.2f);
 
+    }
+
+    public void EnableInput()
+    {
+        m_buttonSelector.UnLockCursor();
+        m_lock = false;
+    }
+    public void DisableInput()
+    {
+        m_buttonSelector.LockCursor();
+        m_lock = true;
+    }
+
+    public void OnOpenMenu(InputAction.CallbackContext context)
+    {
+        if (!context.performed)
+        {
+            return;
+        }
+
+        Debug.Log("OpenMenu Input");
+
+        if (m_lock)
+        {
+            return;
+        }
+
+        m_uIOverlaySceneManager.OpenOverlayScene();
     }
 }
