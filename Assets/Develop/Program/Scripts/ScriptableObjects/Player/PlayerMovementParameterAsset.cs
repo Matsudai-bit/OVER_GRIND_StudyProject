@@ -32,6 +32,10 @@ public sealed class PlayerMovementParameterAsset : ScriptableObject
     [Min(MIN_TIME)]
     private float m_timeToStop = 0.25f;
 
+    [SerializeField, Min(1.0f)]
+    [Tooltip("‹t“ü—Í‚ÌŒ¸‘¬“x”{—¦B1‚Å’ÊíŒ¸‘¬‚Æ“¯‚¶A3‚Å3”{‚Ì‹}ƒuƒŒ[ƒL‚É‚È‚è‚Ü‚·B")]
+    private float m_reverseBrakeMultiplier = 3.0f;
+
     // ’ÊíˆÚ“®’†‚Ì‰ñ“]‘¬“x
     [SerializeField]
     [Tooltip("’ÊíˆÚ“®’†‚Ì1•bŠÔ‚ÌÅ‘å‰ñ“]Šp“x‚Å‚·B")]
@@ -149,6 +153,7 @@ private float m_attackDecelerationMultiplier = 3.0f;
             m_maxMoveSpeed,
             m_timeToMaxSpeed,
             m_timeToStop,
-            m_rotationSpeed);
+            m_rotationSpeed,
+            Mathf.Max(1.0f, m_reverseBrakeMultiplier));
     }
 }

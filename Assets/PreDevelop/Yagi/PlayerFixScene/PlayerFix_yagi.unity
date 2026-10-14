@@ -349,7 +349,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 38207492}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.21965717, y: 0.9755772, z: 0.00000016211445, w: 0.0000001324717}
+  m_LocalRotation: {x: 0.5, y: 0.5, z: -0.5, w: 0.5}
   m_LocalPosition: {x: 5.37, y: 2.55, z: 0}
   m_LocalScale: {x: 1, y: 1, z: -0.72}
   m_ConstrainProportionsScale: 1
@@ -859,8 +859,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 77205358}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.2955477, y: -0.634948, z: 0.3111929, w: 0.64237964}
-  m_LocalPosition: {x: -9.56, y: 28.9, z: -0.2699995}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0.09050274, y: -0.076646805, z: -1.0784857}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -3196,6 +3196,7 @@ GameObject:
   - component: {fileID: 417082404}
   - component: {fileID: 417082406}
   - component: {fileID: 417082405}
+  - component: {fileID: 417082407}
   m_Layer: 7
   m_Name: LeftLeg
   m_TagString: Untagged
@@ -3212,7 +3213,7 @@ Transform:
   m_GameObject: {fileID: 417082403}
   serializedVersion: 2
   m_LocalRotation: {x: -0.5, y: -0.5, z: 0.5, w: 0.5}
-  m_LocalPosition: {x: -9.6504965, y: 1.1109769, z: 0.44531316}
+  m_LocalPosition: {x: 0, y: -1.99, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -3260,6 +3261,19 @@ PositionConstraint:
   m_Sources:
   - sourceTransform: {fileID: 1374405087}
     weight: 1
+--- !u!114 &417082407
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 417082403}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c8bd802d219ef604eaf73e266e667b7b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TargetPoint
+  m_targetTransform: {fileID: 417082404}
 --- !u!4 &421649503 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 4949271048908120665, guid: 02c90e5e6fed2604d85b89bafbff04ed, type: 3}
@@ -6433,7 +6447,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 856225946}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.9755771, y: -0.21965735, z: 0.00000006169741, w: -0.00000027402038}
+  m_LocalRotation: {x: 0.5, y: 0.5, z: -0.5, w: 0.5}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: -0.72}
   m_ConstrainProportionsScale: 1
@@ -7671,6 +7685,7 @@ GameObject:
   - component: {fileID: 1054090517}
   - component: {fileID: 1054090519}
   - component: {fileID: 1054090518}
+  - component: {fileID: 1054090520}
   m_Layer: 7
   m_Name: RightLeg
   m_TagString: Untagged
@@ -7687,7 +7702,7 @@ Transform:
   m_GameObject: {fileID: 1054090516}
   serializedVersion: 2
   m_LocalRotation: {x: -0.5, y: -0.5, z: 0.5, w: 0.5}
-  m_LocalPosition: {x: 9.6505, y: 1.110975, z: 0.44530985}
+  m_LocalPosition: {x: 0, y: -1.99, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -7735,6 +7750,19 @@ PositionConstraint:
   m_Sources:
   - sourceTransform: {fileID: 1143806733}
     weight: 1
+--- !u!114 &1054090520
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1054090516}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c8bd802d219ef604eaf73e266e667b7b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TargetPoint
+  m_targetTransform: {fileID: 1054090517}
 --- !u!4 &1071999311 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 8942335866221056473, guid: 02c90e5e6fed2604d85b89bafbff04ed, type: 3}
@@ -7893,6 +7921,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: PlayerRoot
       objectReference: {fileID: 0}
+    - target: {fileID: 7282053601130355310, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
+      propertyPath: m_parameterAsset
+      value: 
+      objectReference: {fileID: 11400000, guid: 8684caa4d10d86746b13e9b2fb80e102, type: 2}
     - target: {fileID: 7282053601130355310, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
       propertyPath: m_cinemachineCamera
       value: 
@@ -16954,7 +16986,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2121222643}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.64237964, y: -0.31119287, z: -0.6349479, w: 0.29554778}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 9.599, y: 28.405, z: 0.333}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -16998,7 +17030,7 @@ PositionConstraint:
   serializedVersion: 2
   m_Weight: 1
   m_TranslationAtRest: {x: 9.599, y: 28.405, z: 0.333}
-  m_TranslationOffset: {x: -0.05150318, y: -0.57164574, z: -0.47548705}
+  m_TranslationOffset: {x: 9.599, y: 28.405, z: 0.333}
   m_AffectTranslationX: 1
   m_AffectTranslationY: 1
   m_AffectTranslationZ: 1
@@ -17466,8 +17498,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TargetableEnemy
   m_targetPoints:
-  - {fileID: 0}
-  - {fileID: 0}
+  - {fileID: 417082407}
+  - {fileID: 1054090520}
 --- !u!114 &209138561857368949
 MonoBehaviour:
   m_ObjectHideFlags: 0
