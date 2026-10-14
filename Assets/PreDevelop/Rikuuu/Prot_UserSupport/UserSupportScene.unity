@@ -4080,7 +4080,8 @@ MonoBehaviour:
   m_bgmVolumeGauge: {fileID: 1733007063}
   m_seVolumeGauge: {fileID: 973258046}
   m_cameraSensitivityGauge: {fileID: 1814480936}
-  cameraReverse: 0
+  m_cameraReverseSwitch: {fileID: 927287229}
+  m_isCameraReverse: 0
 --- !u!114 &1361942352
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6026,6 +6027,18 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 91256002}
     m_Modifications:
+    - target: {fileID: 2880995502079547028, guid: 59dd732dde41caf4a8e9673e6b8df584, type: 3}
+      propertyPath: m_onCursorExitAction.m_PersistentCalls.m_Calls.Array.data[0].m_Target
+      value: 
+      objectReference: {fileID: 1361942352}
+    - target: {fileID: 2880995502079547028, guid: 59dd732dde41caf4a8e9673e6b8df584, type: 3}
+      propertyPath: m_onCursorExitAction.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
+      value: ApplyAndSave
+      objectReference: {fileID: 0}
+    - target: {fileID: 2880995502079547028, guid: 59dd732dde41caf4a8e9673e6b8df584, type: 3}
+      propertyPath: m_onCursorExitAction.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
+      value: SettingsUIController, Assembly-CSharp
+      objectReference: {fileID: 0}
     - target: {fileID: 4039569762896822316, guid: 59dd732dde41caf4a8e9673e6b8df584, type: 3}
       propertyPath: m_Pivot.x
       value: 0.5
@@ -6391,14 +6404,14 @@ PrefabInstance:
     - target: {fileID: 7158010899284104181, guid: 44e1cd035cd5d0144b36602a54b4e36b, type: 3}
       propertyPath: m_onCursorExitAction.m_PersistentCalls.m_Calls.Array.data[0].m_Target
       value: 
-      objectReference: {fileID: 927287229}
+      objectReference: {fileID: 1361942352}
     - target: {fileID: 7158010899284104181, guid: 44e1cd035cd5d0144b36602a54b4e36b, type: 3}
       propertyPath: m_onCursorExitAction.m_PersistentCalls.m_Calls.Array.data[0].m_CallState
       value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 7158010899284104181, guid: 44e1cd035cd5d0144b36602a54b4e36b, type: 3}
       propertyPath: m_onCursorExitAction.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
-      value: OnCursorExit
+      value: ApplyAndSave
       objectReference: {fileID: 0}
     - target: {fileID: 7158010899284104181, guid: 44e1cd035cd5d0144b36602a54b4e36b, type: 3}
       propertyPath: m_onCursorAction.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
@@ -6406,7 +6419,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7158010899284104181, guid: 44e1cd035cd5d0144b36602a54b4e36b, type: 3}
       propertyPath: m_onCursorExitAction.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
-      value: SwitchParamater, Assembly-CSharp
+      value: SettingsUIController, Assembly-CSharp
       objectReference: {fileID: 0}
     - target: {fileID: 7158010899284104181, guid: 44e1cd035cd5d0144b36602a54b4e36b, type: 3}
       propertyPath: m_onCursorAction.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_ObjectArgumentAssemblyTypeName

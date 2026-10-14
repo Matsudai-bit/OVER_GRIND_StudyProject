@@ -1,28 +1,54 @@
 using UnityEngine;
 
 /// <summary>
-/// 設定画面とセーブデータを繋ぐ中継クラス
+/// 設定画面のUIとセーブデータを繋ぐ中継クラス
 /// </summary>
 public class ConfigMenuManager : MonoBehaviour
 {
     [Header("セーブデータ管理")]
+    /// <summary>セーブデータ管理クラスの参照</summary>
     [SerializeField]
     private SaveDataController m_saveDataController;
 
     [Header("設定項目のUIパーツ (選択式 / int型)")]
-    [SerializeField] private ConfigSelectParamater m_screenSizeSelect;
+    /// <summary>画面サイズ設定のUIパーツ</summary>
+    [SerializeField]
+    private ConfigSelectParamater m_screenSizeSelect;
 
     [Header("設定項目のUIパーツ (ゲージ式 / float型)")]
-    [SerializeField] private ConfigGaugeParamater m_masterVolumeGauge;
-    [SerializeField] private ConfigGaugeParamater m_bgmVolumeGauge;
-    [SerializeField] private ConfigGaugeParamater m_seVolumeGauge;
-    [SerializeField] private ConfigGaugeParamater m_cameraSensitivityGauge;
+    /// <summary>マスター音量設定のUIパーツ</summary>
+    [SerializeField]
+    private ConfigGaugeParamater m_masterVolumeGauge;
+
+    /// <summary>BGM音量設定のUIパーツ</summary>
+    [SerializeField]
+    private ConfigGaugeParamater m_bgmVolumeGauge;
+
+    /// <summary>SE音量設定のUIパーツ</summary>
+    [SerializeField]
+    private ConfigGaugeParamater m_seVolumeGauge;
+
+    /// <summary>カメラ感度設定のUIパーツ</summary>
+    [SerializeField]
+    private ConfigGaugeParamater m_cameraSensitivityGauge;
+
+    [Header("UI参照 (スイッチ式 / bool型)")]
+    /// <summary>カメラ反転設定のUIパーツ</summary>
+    [SerializeField]
+    private ConfigSwitchParamater m_cameraReverseSwitch; 
+
+    [Header("その他の設定")]
+    /// <summary>カメラを反転させるかどうか</summary>
+    [SerializeField]
+    private bool m_isCameraReverse = false;
 
     private void Start()
     {
-        // --------------------------------------------------------
-        // 1. セーブデータから設定画面にパラメータを反映させる
-        // --------------------------------------------------------
+        ApplySaveDataToUI();
+    }
+
+    private void OnEnable()
+    {
         ApplySaveDataToUI();
     }
 
@@ -31,21 +57,18 @@ public class ConfigMenuManager : MonoBehaviour
     /// </summary>
     private void ApplySaveDataToUI()
     {
-        if (m_saveDataController == null || m_saveDataController.Settings == null)
+        if (m_saveDataController == null || m_saveDataController.CurrentData == null || m_saveDataController.CurrentData.Settings == null)
         {
             return;
         }
 
-        // 実行中の設定データを取得
-        GameSettingsSaveData settings = m_saveDataController.CurrentData.Settings;
+        var settings = m_saveDataController.CurrentData.Settings;
 
-        // 【画面サイズの反映】(int型)
         if (m_screenSizeSelect != null)
         {
             m_screenSizeSelect.SetDefaultIndex(settings.ScreenSize);
         }
 
-        // 【各種音量・カメラ感度の反映】(float型)
         if (m_masterVolumeGauge != null)
         {
             m_masterVolumeGauge.SetDefaultValue(settings.MasterVolume);
@@ -65,14 +88,19 @@ public class ConfigMenuManager : MonoBehaviour
         {
             m_cameraSensitivityGauge.SetDefaultValue(settings.CameraSensitivity);
         }
+
+        // セーブデータからカメラ反転フラグを変数に読み込む
+        m_isCameraReverse = settings.IsCameraReverse;
+
+        // UIにセーブデータの初期値を反映させる
+        if (m_cameraReverseSwitch != null)
+        {
+            m_cameraReverseSwitch.SetDefaultValue(m_isCameraReverse);
+        }
     }
 
-    // --------------------------------------------------------
-    // 2. 設定画面の設定をセーブデータに反映する
-    // --------------------------------------------------------
-
     /// <summary>
-    /// 画面サイズが変更された時 (ConfigSelectParamaterから呼ばれる)
+    /// 画面サイズが変更された時に呼び出されます。
     /// </summary>
     public void OnScreenSizeChanged(int index)
     {
@@ -83,7 +111,7 @@ public class ConfigMenuManager : MonoBehaviour
     }
 
     /// <summary>
-    /// マスター音量が変更された時 (ConfigGaugeParamaterから呼ばれる)
+    /// マスター音量が変更された時に呼び出されます。
     /// </summary>
     public void OnMasterVolumeChanged(float volume)
     {
@@ -94,7 +122,7 @@ public class ConfigMenuManager : MonoBehaviour
     }
 
     /// <summary>
-    /// BGM音量が変更された時 (ConfigGaugeParamaterから呼ばれる)
+    /// BGM音量が変更された時に呼び出されます。
     /// </summary>
     public void OnBgmVolumeChanged(float volume)
     {
@@ -105,7 +133,7 @@ public class ConfigMenuManager : MonoBehaviour
     }
 
     /// <summary>
-    /// SE音量が変更された時 (ConfigGaugeParamaterから呼ばれる)
+    /// SE音量が変更された時に呼び出されます。
     /// </summary>
     public void OnSeVolumeChanged(float volume)
     {
@@ -116,7 +144,7 @@ public class ConfigMenuManager : MonoBehaviour
     }
 
     /// <summary>
-    /// カメラ感度が変更された時 (ConfigGaugeParamaterから呼ばれる)
+    /// カメラ感度が変更された時に呼び出されます。
     /// </summary>
     public void OnCameraSensitivityChanged(float sensitivity)
     {
@@ -126,19 +154,28 @@ public class ConfigMenuManager : MonoBehaviour
         }
     }
 
-    [SerializeField, Header("カメラ反転するかどうか")]
-    bool cameraReverse = false;
-    public void OnCameraReverseChanged(bool flag)
+    /// <summary>
+    /// カメラの反転設定が変更された時に呼び出されます。
+    /// </summary>
+    /// <param name="isReverse">反転させるかどうか。</param>
+    public void OnCameraReverseChanged(bool isReverse)
     {
+
+        m_isCameraReverse = isReverse;
+
         if (m_saveDataController != null)
         {
-            cameraReverse = flag;
+            m_saveDataController.SetCameraReverse(isReverse);
         }
     }
 
-    // --------------------------------------------------------
-    // 3. 書き込みの通知を送る動作
-    // --------------------------------------------------------
+    /// <summary>
+    /// 設定画面からカテゴリメニューに戻った時に呼び出されます。
+    /// </summary>
+    public void OnReturnToCategoryMenu()
+    {
+        SaveConfigToDisk();
+    }
 
     /// <summary>
     /// 変更があればファイルに保存し、通知イベントを発行します。
@@ -147,23 +184,7 @@ public class ConfigMenuManager : MonoBehaviour
     {
         if (m_saveDataController != null)
         {
-            // 未保存の変更が存在する場合のみ保存処理が走る
             m_saveDataController.SaveIfDirty();
         }
-    }
-
-    /// <summary>
-    /// ★追加：右側の詳細設定から左側のカテゴリメニューに戻った時に呼ぶ処理
-    /// </summary>
-    public void OnReturnToCategoryMenu()
-    {
-        // メニューに戻ったタイミングで、変更状態をチェックしてセーブを走らせる
-        SaveConfigToDisk();
-    }
-
-    private void OnEnable()
-    {
-        // 画面が開く（表示される）たびにセーブデータの値をUIへ反映する
-        ApplySaveDataToUI();
     }
 }
