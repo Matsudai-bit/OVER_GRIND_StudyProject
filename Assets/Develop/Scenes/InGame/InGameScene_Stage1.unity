@@ -3984,6 +3984,28 @@ Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 823705d15ca87814c8704ef08b0ae14a, type: 3}
   m_PrefabInstance: {fileID: 242956456}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &246553626 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 7831071542829783627, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
+  m_PrefabInstance: {fileID: 1080929309}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1092904635}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 57fd4ddafe7cfc7408b9dd19920404a8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerStateMachineComponent
+--- !u!114 &246553627 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 5667916083665077385, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
+  m_PrefabInstance: {fileID: 1080929309}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1092904635}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c64340315981af84e832b958e4e63520, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerMonitor
 --- !u!1 &250957251
 GameObject:
   m_ObjectHideFlags: 0
@@ -15992,6 +16014,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 415096441624393917, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1092904666}
+    - targetCorrespondingSourceObject: {fileID: 415096441624393917, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1092904667}
   m_SourcePrefab: {fileID: 100100000, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
 --- !u!4 &1080929310 stripped
 Transform:
@@ -16076,6 +16101,34 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7868d804d60c11a4daf7445c026fd34a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerAnimationEventReceiver
+--- !u!114 &1092904667
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1092904635}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5b0584e0de8e874aba37755d6415ba7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerChainsawShoeTrail
+  m_leftShoe: {fileID: 1485176339}
+  m_rightShoe: {fileID: 1485176338}
+  m_monitor: {fileID: 246553627}
+  m_stateMachine: {fileID: 246553626}
+  m_material: {fileID: 2100000, guid: 72a493dfc37cc164f964f882acab07eb, type: 2}
+  m_groundLayers:
+    serializedVersion: 2
+    m_Bits: 8
+  m_contactDistance: 0.25
+  m_sampleSpacing: 0.08
+  m_width: 0.13
+  m_surfaceOffset: 0.008
+  m_maxConnectionDistance: 1.5
+  m_lifetime: 2
+  m_fadeStartRatio: 0.5
+  m_capacity: 4096
 --- !u!1 &1104940941
 GameObject:
   m_ObjectHideFlags: 0
@@ -22755,6 +22808,16 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: b7220e1b42c81b14fb817808b7d439b6, type: 3}
+--- !u!4 &1485176338 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: -3254925966955540637, guid: b7220e1b42c81b14fb817808b7d439b6, type: 3}
+  m_PrefabInstance: {fileID: 1485176337}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &1485176339 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 4823368338838514482, guid: b7220e1b42c81b14fb817808b7d439b6, type: 3}
+  m_PrefabInstance: {fileID: 1485176337}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1491130879
 GameObject:
   m_ObjectHideFlags: 0
