@@ -9,6 +9,9 @@ public sealed class PlayerIdlingState
     // 通常移動パラメータ
     private PlayerMoveParameters m_moveParameters;
 
+    // 移動中に開始されたため、停止チャージへ使用できない押下番号
+    private int m_blockedStationaryChargePressId = -1;
+
     /// <summary>
     /// 待機開始時に呼ばれます。
     /// </summary>
@@ -29,7 +32,7 @@ public sealed class PlayerIdlingState
             return;
         }
 
-        if (Owner.Monitor.IsGrounded &&
+        if (Owner.Monitor.CanStartJump &&
             Owner.InputReader.HasJumpInput)
         {
             Machine.ChangeState<PlayerJumpingState>();
@@ -56,24 +59,31 @@ public sealed class PlayerIdlingState
                 return;
             }
 
-            // Vブースト入力が開始されたら
-            // ブーストチャージ状態へ遷移する。
-            // ただし新規のブースト開始は接地中のみ許可する
-            if (Owner.Monitor.IsGrounded &&
-                Owner.InputReader.ConsumeVBoostStarted())
-            {
-                Machine.ChangeState<PlayerBoostChargingState>();
-                return;
-            }
-
+            // 移動入力がある場合はWalkingStateでチャージ条件を判定する。
+            // 正面入力だけでチャージ状態へ直接遷移しない。
             Machine.ChangeState<PlayerWalkingState>();
             return;
         }
 
-        // Vブースト入力が開始されたら
-        // ブーストチャージ状態へ遷移する。
-        // 新規のブースト開始は接地中のみ許可する。
+
+        // 減速中に押されたチャージ入力は消費せず、後から左右入力された場合に
+        // WalkingStateの移動チャージ条件で使用できるよう保持する。
+        if (Owner.InputReader.HasVBoostStarted &&
+            !Owner.Motor.IsHorizontallyStopped)
+        {
+            m_blockedStationaryChargePressId =
+                Owner.InputReader.VBoostPressId;
+        }
+
+        bool wasPressedWhileMoving =
+            m_blockedStationaryChargePressId ==
+            Owner.InputReader.VBoostPressId;
+
+        // 停止チャージは、完全停止してから新しく押された入力だけを使用する。
+        // 移動中に押したまま無入力で停止しても、停止チャージへは流用しない。
         if (Owner.Monitor.IsGrounded &&
+            Owner.Motor.IsHorizontallyStopped &&
+            !wasPressedWhileMoving &&
             Owner.InputReader.ConsumeVBoostStarted())
         {
             Machine.ChangeState<PlayerBoostChargingState>();

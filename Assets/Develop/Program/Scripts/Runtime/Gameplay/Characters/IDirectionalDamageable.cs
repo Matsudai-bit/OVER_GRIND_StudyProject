@@ -4,5 +4,8 @@ using UnityEngine;
 public interface IDirectionalDamageable : IDamageable
 {
     /// <summary>攻撃中心からのダメージを適用し、実際に受け付けたかを返します。</summary>
-    bool TryTakeDamage(int damage, Vector3 attackCenter);
+    /// <param name="damageData">受けるダメージと攻撃識別情報。</param>
+    /// <param name="attackCenter">攻撃中心のワールド座標。</param>
+    /// <returns>true：ダメージを受け付けた。false：ダメージを拒否した。</returns>
+    bool TryTakeDamage(AttackDamageData damageData, Vector3 attackCenter);
 }

@@ -37,7 +37,8 @@ public sealed class PlayerTargetingController : MonoBehaviour
     [SerializeField]
     private PlayerCamera m_playerCamera;
 
-    [SerializeField, Min(0.0f)]
+    [SerializeField, Min(0.05f)]
+    [Tooltip("ロックオンボタンを押してから、ロックオン構図へ到達するまでの時間（秒）。")]
     private float m_cameraFocusDuration = 0.25f;
 
     [SerializeField]
@@ -175,6 +176,7 @@ public sealed class PlayerTargetingController : MonoBehaviour
     /// </summary>
     private void OnDisable()
     {
+        StopTargeting();
         m_targetAction.started -= OnTargetStarted;
         m_targetAction.canceled -= OnTargetCanceled;
 

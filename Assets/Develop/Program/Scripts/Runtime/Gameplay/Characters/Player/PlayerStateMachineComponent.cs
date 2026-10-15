@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 
 /// <summary>
@@ -60,12 +61,6 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
 
     // スプライングラインド機能
     private SplineGrindController m_splineGrindController;
-
-    // Vゲージ表示機能
-    private VGaugeUI m_vGaugeUI;
-
-    // 速度表示機能
-    private VSpeedUI m_vSpeedUI;
 
     // ParameterModel上の共有データ。UIがなくても更新します。
     private VGaugePlaceModel m_vGaugePlaceModel;
@@ -139,19 +134,6 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
     public SplineGrindController GrindController =>
         m_splineGrindController;
 
-    /// <summary>
-    /// Vゲージ表示機能を取得します。
-    /// シーンに配置されていない場合はnullを返すことがあります。
-    /// </summary>
-    public VGaugeUI VGaugeUI =>
-        m_vGaugeUI;
-
-    /// <summary>
-    /// 速度表示機能を取得します。
-    /// シーンに配置されていない場合はnullを返すことがあります。
-    /// </summary>
-    public VSpeedUI VSpeedUI =>
-        m_vSpeedUI;
 
     /// <summary>
     /// プレイヤーカメラ機能を取得します。
@@ -411,15 +393,12 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
         m_boostChargingParameterAsset =
             boostChargingParameterAsset;
 
-        m_vGaugeUI = vGaugeUI;
-        m_vSpeedUI = vSpeedUI;
         m_playerCamera = playerCamera;
         m_modelTransform = modelTransform;
         m_vGaugePlaceModel = vGaugePlaceModel;
         m_speedPlaceModel = speedPlaceModel;
         m_vGaugePlaceModel.ResetGauge();
         m_speedPlaceModel.ResetSpeed();
-        RefreshParameterDisplays();
 
         m_stateMachine =
             new StateMachine<PlayerStateMachineComponent>(
@@ -510,23 +489,6 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
         }
 
         m_speedPlaceModel.UpdateSpeed(m_motor.HorizontalSpeed);
-        RefreshParameterDisplays();
-    }
-
-    /// <summary>
-    /// モデルの値をUIへ渡します。将来の表示接続の変更箇所をここへまとめています。
-    /// </summary>
-    private void RefreshParameterDisplays()
-    {
-        if (m_vGaugeUI != null)
-        {
-            m_vGaugeUI.SetGaugeRate(m_vGaugePlaceModel.GetGaugeRate());
-        }
-
-        if (m_vSpeedUI != null)
-        {
-            m_vSpeedUI.SetSpeed(m_speedPlaceModel.Speed);
-        }
     }
 
     /// <summary>
@@ -552,11 +514,6 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
             m_isBoostSuspended)
         {
             m_isBoostSuspended = false;
-
-            if (m_vGaugeUI != null)
-            {
-                m_vGaugeUI.SetCharging(false);
-            }
         }
     }
 
@@ -588,11 +545,28 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
     private float m_knockbackDuration = 0.8f;
     [SerializeField, Min(0.0f)]
     private float m_hitRecoveryDuration = 0.2f;
+    [SerializeField, Tooltip("被弾状態終了後の無敵時間設定。")]
+    private PlayerInvincibilityParameterAsset m_invincibilityParameterAsset;
     [SerializeField, Tooltip("吹き飛びを終了させる地形・壁のレイヤー")]
     private LayerMask m_hitEnvironmentLayerMask = ~0;
 
+    private Coroutine m_postHitInvincibilityCoroutine;
+    private bool m_isPostHitInvincible;
+
     /// <summary>被弾中の無敵状態を取得します。</summary>
     public bool IsHitReacting { get; private set; }
+
+    /// <summary>
+    /// 被弾State中か、被弾Stateへの遷移直後かを取得します。
+    /// </summary>
+    /// <remarks>
+    /// 無敵判定は経過時間ではなく、PlayerHitStateの有効期間に連動します。
+    /// </remarks>
+    public bool IsInvincible =>
+        IsHitReacting ||
+        m_isPostHitInvincible ||
+        (m_stateMachine != null &&
+         m_stateMachine.IsCurrentState<PlayerHitState>());
     /// <summary>被弾中に地形へ衝突したかを取得します。</summary>
     public bool HasHitEnvironment { get; private set; }
     /// <summary>吹き飛びの水平速度を取得します。</summary>
@@ -649,6 +623,41 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
     {
         IsHitReacting = false;
         HasHitEnvironment = false;
+        StartPostHitInvincibility();
+    }
+
+    /// <summary>被弾状態終了後の無敵時間を開始します。</summary>
+    private void StartPostHitInvincibility()
+    {
+        if (m_postHitInvincibilityCoroutine != null)
+        {
+            StopCoroutine(m_postHitInvincibilityCoroutine);
+            m_postHitInvincibilityCoroutine = null;
+        }
+
+        float duration = m_invincibilityParameterAsset != null
+            ? m_invincibilityParameterAsset.PostHitDuration
+            : 0.0f;
+
+        if (duration <= 0.0f)
+        {
+            m_isPostHitInvincible = false;
+            return;
+        }
+
+        m_isPostHitInvincible = true;
+        m_postHitInvincibilityCoroutine =
+            StartCoroutine(WaitForPostHitInvincibility(duration));
+    }
+
+    /// <summary>指定時間の経過後、被弾後の無敵状態を解除します。</summary>
+    /// <param name="duration">無敵状態を維持する秒数。</param>
+    private IEnumerator WaitForPostHitInvincibility(float duration)
+    {
+        yield return new WaitForSeconds(duration);
+
+        m_isPostHitInvincible = false;
+        m_postHitInvincibilityCoroutine = null;
     }
 
     /// <summary>地形との新たな接触を被弾終了判定へ渡します。</summary>

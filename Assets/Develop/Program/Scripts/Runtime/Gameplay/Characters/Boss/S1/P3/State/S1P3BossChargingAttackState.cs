@@ -36,7 +36,7 @@ public sealed class S1P3BossChargingAttackState :
         }
 
         if (!Owner.PhaseController.TryGetCurrentPhaseComponent(
-                out m_references) )
+                out m_references))
         {
             SetFailed();
             return;
@@ -103,7 +103,7 @@ public sealed class S1P3BossChargingAttackState :
     /// </summary>
     private void StartCurrentCharge()
     {
-    
+
 
         Func<Vector3> targetPositionProvider;
 
@@ -193,6 +193,8 @@ public sealed class S1P3BossChargingAttackState :
     /// </summary>
     protected override void OnExitState()
     {
+        StartCoolTimeIfSucceeded();
+
         m_chargeExecutor?.Cancel();
 
         m_chargeExecutor = null;
@@ -207,6 +209,34 @@ public sealed class S1P3BossChargingAttackState :
             Owner.SetStateExecutionStatus(
                 StateExecutionStatus.FAILED);
         }
+    }
+
+    /// <summary>
+    /// 正常終了した行動のクールタイムを開始します。
+    /// </summary>
+    private void StartCoolTimeIfSucceeded()
+    {
+        if (Owner == null ||
+            Owner.GetStateExecutionStatus() !=
+            StateExecutionStatus.SUCCEEDED ||
+            m_references == null ||
+            m_references.DecisionParameterAsset == null)
+        {
+            return;
+        }
+
+        BossStateCoolTimeManager coolTimeManager =
+            Owner.GetComponent<BossStateCoolTimeManager>();
+
+        if (coolTimeManager == null)
+        {
+            return;
+        }
+
+        coolTimeManager.StartCoolTime<S1P3BossChargingAttackState>(
+            m_references.DecisionParameterAsset
+                .Charge
+                .CoolTime);
     }
 
     /// <summary>

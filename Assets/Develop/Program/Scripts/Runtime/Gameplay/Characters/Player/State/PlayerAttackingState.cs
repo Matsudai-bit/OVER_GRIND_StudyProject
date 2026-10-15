@@ -44,7 +44,8 @@ public sealed class PlayerAttackingState : StateBase<PlayerStateMachineComponent
             FinishAttack();
             return;
         }
-        if (Owner.InputReader.HasJumpInput)
+        if (Owner.Monitor.CanStartJump &&
+            Owner.InputReader.HasJumpInput)
         {
             m_isTransitionPending = true;
             StopAttack();

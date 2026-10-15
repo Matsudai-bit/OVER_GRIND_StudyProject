@@ -40,10 +40,10 @@ public sealed class AttackHitbox : MonoBehaviour
     {
         if (damageReceiver is IDirectionalDamageable directionalReceiver)
         {
-            return directionalReceiver.TryTakeDamage(m_currentDamage, AttackCenter);
+            return directionalReceiver.TryTakeDamage(m_currentDamageData, AttackCenter);
         }
 
-        damageReceiver.TakeDamage(m_currentDamage);
+        damageReceiver.TakeDamage(m_currentDamageData);
         return true;
     }
 
@@ -58,7 +58,7 @@ public sealed class AttackHitbox : MonoBehaviour
 
     [SerializeField, Header("現在のダメージ")]
     // 現在の攻撃で使用するダメージ量
-    private int m_currentDamage;
+    private AttackDamageData m_currentDamageData;
 
     [SerializeField, Header("外部からダメージが設定されているか")]
     // 外部からダメージが設定されているか
@@ -77,7 +77,12 @@ public sealed class AttackHitbox : MonoBehaviour
     /// <summary>
     /// 現在のダメージ量を取得します。
     /// </summary>
-    public int CurrentDamage => m_currentDamage;
+    public int CurrentDamage => m_currentDamageData.Damage;
+
+    /// <summary>
+    /// 現在の攻撃情報を取得します。
+    /// </summary>
+    public AttackDamageData CurrentDamageData => m_currentDamageData;
 
     /// <summary>
     /// 多段ヒットモード中、現在1体以上の対象と重なっているかどうかを取得します。
@@ -127,7 +132,7 @@ public sealed class AttackHitbox : MonoBehaviour
 
         if (!m_hasDamageOverride)
         {
-            m_currentDamage = m_defaultDamage;
+            m_currentDamageData = new AttackDamageData(m_defaultDamage);
         }
 
         // 新しい攻撃判定として命中履歴を初期化します。
@@ -144,6 +149,16 @@ public sealed class AttackHitbox : MonoBehaviour
     public void EnableHitbox(int damage)
     {
         SetDamage(damage);
+        EnableHitbox();
+    }
+
+    /// <summary>
+    /// 攻撃情報を指定して攻撃判定を単発ヒットモードで有効にします。
+    /// </summary>
+    /// <param name="damageData">使用するダメージと攻撃識別情報。</param>
+    public void EnableHitbox(AttackDamageData damageData)
+    {
+        SetDamageData(damageData);
         EnableHitbox();
     }
 
@@ -165,7 +180,7 @@ public sealed class AttackHitbox : MonoBehaviour
 
         if (!m_hasDamageOverride)
         {
-            m_currentDamage = m_defaultDamage;
+            m_currentDamageData = new AttackDamageData(m_defaultDamage);
         }
 
         m_hitTargetIds.Clear();
@@ -181,7 +196,16 @@ public sealed class AttackHitbox : MonoBehaviour
     /// <param name="damage">設定するダメージ量。</param>
     public void SetDamage(int damage)
     {
-        m_currentDamage = Mathf.Max(0, damage);
+        SetDamageData(new AttackDamageData(damage));
+    }
+
+    /// <summary>
+    /// 現在の攻撃で使用するダメージと攻撃識別情報を設定します。
+    /// </summary>
+    /// <param name="damageData">設定する攻撃情報。</param>
+    public void SetDamageData(AttackDamageData damageData)
+    {
+        m_currentDamageData = damageData;
         m_hasDamageOverride = true;
     }
 
@@ -190,7 +214,7 @@ public sealed class AttackHitbox : MonoBehaviour
     /// </summary>
     public void ResetDamage()
     {
-        m_currentDamage = Mathf.Max(0, m_defaultDamage);
+        m_currentDamageData = new AttackDamageData(m_defaultDamage);
         m_hasDamageOverride = false;
     }
 
