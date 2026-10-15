@@ -1,6 +1,8 @@
 using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.UI;
+using static Unity.Burst.Intrinsics.X86.Avx;
 
 [System.Serializable]
 public struct StageInfomation
@@ -75,13 +77,13 @@ public class StageSelectManager : MonoBehaviour
     private UnityEngine.UI.Image m_sectorNumber;
     // ステージ名（日本語）
     [SerializeField]
-    private TextMeshProUGUI m_stageNameJa;
+    private ScrambleText m_stageNameJa;
     // ステージ名（英語）
     [SerializeField]
-    private TextMeshProUGUI[] m_stageNameEng;
+    private ScrambleText[] m_stageNameEng;
     // ベストタイム
     [SerializeField]
-    private TextMeshProUGUI m_bestTime;
+    private ScrambleText m_bestTime;
 
     // カーソルの衝突の有無で表示非表示を切り替えるオブジェクト
     [Header("ステージ情報を表示するコンポーネント")]
@@ -201,10 +203,10 @@ public class StageSelectManager : MonoBehaviour
             m_sectorNumber.sprite = m_stagePoints[m_hoveredIndex].stageSectorNumber;
 
             // ステージ名の表示
-            m_stageNameJa.text = m_stagePoints[m_hoveredIndex].stageNameJa;
+            m_stageNameJa.Play(m_stagePoints[m_hoveredIndex].stageNameJa);
             foreach (var stageName in m_stageNameEng)
             {
-                stageName.text = m_stagePoints[m_hoveredIndex].stageNameEng;
+                stageName.Play(m_stagePoints[m_hoveredIndex].stageNameEng);  // ← .text = から変更
             }
 
             // ベストタイムの表示
@@ -213,7 +215,7 @@ public class StageSelectManager : MonoBehaviour
             float seconds = bestTime - (minutes * 60);
 
             string timeText = minutes.ToString("00") + ":" + seconds.ToString("00.00");
-            m_bestTime.text = timeText;
+            m_bestTime.Play(timeText);
 
             // イメージコンポーネントの表示
             m_onCursorImage.enabled = true;
@@ -390,14 +392,14 @@ public class StageSelectManager : MonoBehaviour
         m_sectorNumber.sprite = m_defaultSectorTexture;
 
         // ステージ名の初期化
-        m_stageNameJa.text = m_defaultStageNameJa;
+        m_stageNameJa.Play(m_defaultStageNameJa);
         foreach (var stageName in m_stageNameEng)
         {
-            stageName.text = m_defaultStageNameEn;
+            stageName.Play(m_defaultStageNameEn);
         }
 
         // ベストタイムの初期化
-        m_bestTime.text = m_defaultBestTime;
+        m_bestTime.Play(m_defaultBestTime);
 
         // イメージコンポーネントの非表示
         m_onCursorImage.enabled = false;
