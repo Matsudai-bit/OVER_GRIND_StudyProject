@@ -4,6 +4,7 @@ Shader "Hidden/CustomHeightFog"
     {
         _FogColor ("Fog Base Color", Color) = (0.5, 0.55, 0.6, 1)
         _FogDensity ("Overall Density", Range(0, 0.05)) = 0.003
+        _MaxFogOpacity ("Max Fog Opacity", Range(0, 1)) = 0.85 // ★追加：フォグの最大濃度の制限（1未満にすると完全に塗りつぶされなくなる）
         _FogStartDist ("Start Distance", Float) = 5.0
 
         _FogHeight ("Fog Base Height (Y)", Float) = 0.0
@@ -31,7 +32,6 @@ Shader "Hidden/CustomHeightFog"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/DeclareDepthTexture.hlsl"
 
-            // 頂点データの構造体（Fullscreen Pass用の頂点IDを受け取る）
             struct Attributes
             {
                 uint vertexID : SV_VertexID;
@@ -46,6 +46,7 @@ Shader "Hidden/CustomHeightFog"
             CBUFFER_START(UnityPerMaterial)
                 float4 _FogColor;
                 float _FogDensity;
+                float _MaxFogOpacity; // ★追加
                 float _FogStartDist;
                 float _FogHeight;
                 float _FogHeightFalloff;
@@ -57,7 +58,6 @@ Shader "Hidden/CustomHeightFog"
             TEXTURE2D(_BlitTexture);
             SAMPLER(sampler_BlitTexture);
 
-            // URPの標準関数を使って確実に画面全体にクアッドを描画する頂点シェーダー
             Varyings Vert(Attributes input)
             {
                 Varyings output;
@@ -68,7 +68,6 @@ Shader "Hidden/CustomHeightFog"
 
             float4 Frag(Varyings input) : SV_Target
             {
-
                 // 1. 元の画面カラーのサンプリング
                 float4 screenColor = SAMPLE_TEXTURE2D(_BlitTexture, sampler_BlitTexture, input.uv);
 
@@ -92,6 +91,9 @@ Shader "Hidden/CustomHeightFog"
                 
                 float fogFactor = 1.0 - exp(-dist * _FogDensity * heightFactor);
                 fogFactor = saturate(fogFactor);
+
+                // ★ここで最大不透明度（上限）を掛けることで、遠景が完全にベタ塗りされるのを防ぐ
+                fogFactor *= _MaxFogOpacity;
 
                 // 5. ディレクショナル・イン・スキャッタリング（太陽光の方向による輝き）
                 float3 sunDirNormalized = normalize(_SunDir.xyz);
