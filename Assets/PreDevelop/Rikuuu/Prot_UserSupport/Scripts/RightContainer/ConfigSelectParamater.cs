@@ -53,13 +53,13 @@ public class ConfigSelectParamater : MonoBehaviour
         }
 
         // —LŒø‚É‚·‚é
-        m_navigateActionRef?.action.Enable();
+        //m_navigateActionRef?.action.Enable();
     }
 
     private void OnDisable()
     {
         // –³Œø‚É‚·‚é
-        m_navigateActionRef?.action.Disable();
+        //m_navigateActionRef?.action.Disable();
     }
 
     private void Start()

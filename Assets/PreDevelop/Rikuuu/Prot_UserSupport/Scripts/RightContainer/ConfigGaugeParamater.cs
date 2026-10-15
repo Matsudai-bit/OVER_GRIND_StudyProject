@@ -66,7 +66,7 @@ public class ConfigGaugeParamater : MonoBehaviour
     private void OnDisable()
     {
         // –³Œø‚É‚·‚é
-        m_navigateActionRef?.action.Disable();
+        //m_navigateActionRef?.action.Disable();
     }
 
     private void Start()
