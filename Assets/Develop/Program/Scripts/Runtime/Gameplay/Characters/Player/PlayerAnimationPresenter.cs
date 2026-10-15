@@ -16,6 +16,10 @@ public sealed class PlayerAnimationPresenter : MonoBehaviour
     private const string ATTACK_PARAMETER_NAME = "Attack";
     private const string WALK_PARAMETER_NAME = "Walk";
     private const string HIT_PARAMETER_NAME = "Hit";
+    private const string V_RUNNING_PARAMETER_NAME = "VRunning";
+    private const string STATIONARY_BOOST_CHARGING_PARAMETER_NAME =  "StationaryBoostCharging";
+    private const string RAIL_GRIND_PARAMETER_NAME =  "RailGrind";
+
 
     // Animatorパラメーターのハッシュ値
     private static readonly int MOVE_SPEED_HASH =
@@ -35,6 +39,12 @@ public sealed class PlayerAnimationPresenter : MonoBehaviour
 
     private static readonly int WALK_HASH =
         Animator.StringToHash(WALK_PARAMETER_NAME);
+    private static readonly int V_RUNNING_HASH =
+        Animator.StringToHash(V_RUNNING_PARAMETER_NAME);
+    private static readonly int STATIONARY_BOOST_CHARGING_HASH =
+        Animator.StringToHash(STATIONARY_BOOST_CHARGING_PARAMETER_NAME);
+    private static readonly int RAIL_GRIND_HASH =
+        Animator.StringToHash(RAIL_GRIND_PARAMETER_NAME);
 
     // プレイヤーのAnimator
     [SerializeField]
@@ -57,6 +67,12 @@ public sealed class PlayerAnimationPresenter : MonoBehaviour
     private bool m_hasAttackParameter;
     private bool m_hasHitParameter;
     private bool m_hasWalkParameter;
+    // Vブースト走行パラメーターが存在するか
+    private bool m_hasVRunningParameter;
+    // その場Vブーストチャージパラメーターが存在するか
+    private bool m_hasStationaryBoostChargingParameter;
+    // レールグラインドパラメーターが存在するか
+    private bool m_hasRailGrindParameter;
 
     // 初期化されているか
     private bool m_isInitialized;
@@ -173,7 +189,37 @@ public sealed class PlayerAnimationPresenter : MonoBehaviour
 
         m_animator.SetBool(WALK_HASH, true);
     }
+    /// <summary>
+    /// レールグラインドアニメーションを要求します。
+    /// </summary>
+    public void PlayRailGrindAnimation()
+    {
+        if (!CanControlAnimator() ||
+            !m_hasRailGrindParameter)
+        {
+            return;
+        }
 
+        m_animator.SetBool(
+            RAIL_GRIND_HASH,
+            true);
+    }
+
+    /// <summary>
+    /// レールグラインドアニメーションの停止を要求します。
+    /// </summary>
+    public void StopRailGrindAnimation()
+    {
+        if (!CanControlAnimator() ||
+            !m_hasRailGrindParameter)
+        {
+            return;
+        }
+
+        m_animator.SetBool(
+            RAIL_GRIND_HASH,
+            false);
+    }
     /// <summary>
     /// 歩くアニメーション停止を要求します。
     /// </summary>
@@ -186,7 +232,65 @@ public sealed class PlayerAnimationPresenter : MonoBehaviour
 
         m_animator.SetBool(WALK_HASH, false);
     }
+    /// <summary>
+    /// Vブースト走行アニメーションを要求します。
+    /// </summary>
+    public void PlayVBoostRunningAnimation()
+    {
+        if (!CanControlAnimator() || !m_hasVRunningParameter)
+        {
+            return;
+        }
 
+        m_animator.SetBool(
+            V_RUNNING_HASH,
+            true);
+    }
+    /// <summary>
+    /// その場Vブーストチャージアニメーションを要求します。
+    /// </summary>
+    public void PlayStationaryBoostChargingAnimation()
+    {
+        if (!CanControlAnimator() ||
+            !m_hasStationaryBoostChargingParameter)
+        {
+            return;
+        }
+
+        m_animator.SetBool(
+            STATIONARY_BOOST_CHARGING_HASH,
+            true);
+    }
+
+    /// <summary>
+    /// その場Vブーストチャージアニメーションの停止を要求します。
+    /// </summary>
+    public void StopStationaryBoostChargingAnimation()
+    {
+        if (!CanControlAnimator() ||
+            !m_hasStationaryBoostChargingParameter)
+        {
+            return;
+        }
+
+        m_animator.SetBool(
+            STATIONARY_BOOST_CHARGING_HASH,
+            false);
+    }
+    /// <summary>
+    /// Vブースト走行アニメーションの停止を要求します。
+    /// </summary>
+    public void StopVBoostRunningAnimation()
+    {
+        if (!CanControlAnimator() || !m_hasVRunningParameter)
+        {
+            return;
+        }
+
+        m_animator.SetBool(
+            V_RUNNING_HASH,
+            false);
+    }
 
     /// <summary>
     /// アクション用Triggerをリセットします。
@@ -314,6 +418,15 @@ public sealed class PlayerAnimationPresenter : MonoBehaviour
         m_hasWalkParameter = HasAnimatorParameter(
             WALK_HASH,
             AnimatorControllerParameterType.Bool);
+        m_hasVRunningParameter = HasAnimatorParameter(
+            V_RUNNING_HASH,
+            AnimatorControllerParameterType.Bool);
+        m_hasStationaryBoostChargingParameter = HasAnimatorParameter(
+            STATIONARY_BOOST_CHARGING_HASH,
+            AnimatorControllerParameterType.Bool);
+        m_hasRailGrindParameter = HasAnimatorParameter(
+            RAIL_GRIND_HASH,
+            AnimatorControllerParameterType.Bool);
 
         LogMissingParameters();
     }
@@ -373,6 +486,19 @@ public sealed class PlayerAnimationPresenter : MonoBehaviour
         //    m_hasHitParameter,
         //    HIT_PARAMETER_NAME,
         //    AnimatorControllerParameterType.Trigger);
+
+        LogMissingParameter(
+            m_hasVRunningParameter,
+            V_RUNNING_PARAMETER_NAME,
+            AnimatorControllerParameterType.Bool);
+        LogMissingParameter(
+            m_hasStationaryBoostChargingParameter,
+            STATIONARY_BOOST_CHARGING_PARAMETER_NAME,
+            AnimatorControllerParameterType.Bool);
+        LogMissingParameter(
+            m_hasRailGrindParameter,
+            RAIL_GRIND_PARAMETER_NAME,
+            AnimatorControllerParameterType.Bool);
     }
 
     /// <summary>

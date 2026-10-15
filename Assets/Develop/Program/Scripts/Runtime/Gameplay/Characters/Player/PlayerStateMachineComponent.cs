@@ -62,12 +62,6 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
     // スプライングラインド機能
     private SplineGrindController m_splineGrindController;
 
-    // Vゲージ表示機能
-    private VGaugeUI m_vGaugeUI;
-
-    // 速度表示機能
-    private VSpeedUI m_vSpeedUI;
-
     // ParameterModel上の共有データ。UIがなくても更新します。
     private VGaugePlaceModel m_vGaugePlaceModel;
     private SpeedPlaceModel m_speedPlaceModel;
@@ -140,19 +134,6 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
     public SplineGrindController GrindController =>
         m_splineGrindController;
 
-    /// <summary>
-    /// Vゲージ表示機能を取得します。
-    /// シーンに配置されていない場合はnullを返すことがあります。
-    /// </summary>
-    public VGaugeUI VGaugeUI =>
-        m_vGaugeUI;
-
-    /// <summary>
-    /// 速度表示機能を取得します。
-    /// シーンに配置されていない場合はnullを返すことがあります。
-    /// </summary>
-    public VSpeedUI VSpeedUI =>
-        m_vSpeedUI;
 
     /// <summary>
     /// プレイヤーカメラ機能を取得します。
@@ -412,15 +393,12 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
         m_boostChargingParameterAsset =
             boostChargingParameterAsset;
 
-        m_vGaugeUI = vGaugeUI;
-        m_vSpeedUI = vSpeedUI;
         m_playerCamera = playerCamera;
         m_modelTransform = modelTransform;
         m_vGaugePlaceModel = vGaugePlaceModel;
         m_speedPlaceModel = speedPlaceModel;
         m_vGaugePlaceModel.ResetGauge();
         m_speedPlaceModel.ResetSpeed();
-        RefreshParameterDisplays();
 
         m_stateMachine =
             new StateMachine<PlayerStateMachineComponent>(
@@ -511,23 +489,6 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
         }
 
         m_speedPlaceModel.UpdateSpeed(m_motor.HorizontalSpeed);
-        RefreshParameterDisplays();
-    }
-
-    /// <summary>
-    /// モデルの値をUIへ渡します。将来の表示接続の変更箇所をここへまとめています。
-    /// </summary>
-    private void RefreshParameterDisplays()
-    {
-        if (m_vGaugeUI != null)
-        {
-            m_vGaugeUI.SetGaugeRate(m_vGaugePlaceModel.GetGaugeRate());
-        }
-
-        if (m_vSpeedUI != null)
-        {
-            m_vSpeedUI.SetSpeed(m_speedPlaceModel.Speed);
-        }
     }
 
     /// <summary>
@@ -553,11 +514,6 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
             m_isBoostSuspended)
         {
             m_isBoostSuspended = false;
-
-            if (m_vGaugeUI != null)
-            {
-                m_vGaugeUI.SetCharging(false);
-            }
         }
     }
 

@@ -336,6 +336,8 @@ public sealed class GameInputController : MonoBehaviour
                 break;
 
             case GameplayModeType.CINEMATIC:
+                enablePlayer = false;
+                break;
             case GameplayModeType.NONE:
             default:
                 break;
