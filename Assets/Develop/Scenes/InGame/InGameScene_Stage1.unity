@@ -5274,6 +5274,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 372065624}
+  - component: {fileID: 372065625}
   m_Layer: 8
   m_Name: Interactbox
   m_TagString: Untagged
@@ -5297,6 +5298,39 @@ Transform:
   - {fileID: 1820416129}
   m_Father: {fileID: 1080929314}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &372065625
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 372065623}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 99e8016ffc3bb104e89b0b35fc6e7e40, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ConstraintAutoBinder
+  m_boneRoot: {fileID: 1763284446}
+  m_constraintRoot: {fileID: 372065624}
+  m_bindings:
+  - m_constraintComponent: {fileID: 474883508}
+    m_sourceIndex: 0
+    m_boneName: Ankle_R
+  - m_constraintComponent: {fileID: 474883508}
+    m_sourceIndex: 1
+    m_boneName: Toes_R
+  - m_constraintComponent: {fileID: 474883510}
+    m_sourceIndex: 0
+    m_boneName: Ankle_R
+  - m_constraintComponent: {fileID: 1005664952}
+    m_sourceIndex: 0
+    m_boneName: Ankle_L
+  - m_constraintComponent: {fileID: 1005664952}
+    m_sourceIndex: 1
+    m_boneName: Toes_L
+  - m_constraintComponent: {fileID: 1005664951}
+    m_sourceIndex: 0
+    m_boneName: Ankle_L
 --- !u!1 &377076309
 GameObject:
   m_ObjectHideFlags: 0
