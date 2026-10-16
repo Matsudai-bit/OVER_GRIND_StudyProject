@@ -16385,7 +16385,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5069751796256331156, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
       propertyPath: m_ActionEvents.Array.size
-      value: 26
+      value: 27
       objectReference: {fileID: 0}
     - target: {fileID: 5069751796256331156, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
       propertyPath: m_ActionEvents.Array.data[20].m_ActionId
@@ -16412,6 +16412,10 @@ PrefabInstance:
       value: 0e905bab-f502-4a3c-96b5-e11de117a42f
       objectReference: {fileID: 0}
     - target: {fileID: 5069751796256331156, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
+      propertyPath: m_ActionEvents.Array.data[26].m_ActionId
+      value: fe38bb14-fdc4-46cf-a62b-14b545a0ceae
+      objectReference: {fileID: 0}
+    - target: {fileID: 5069751796256331156, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
       propertyPath: m_ActionEvents.Array.data[20].m_ActionName
       value: 'Player/Target[/XInputControllerWindows/buttonWest]'
       objectReference: {fileID: 0}
@@ -16434,6 +16438,10 @@ PrefabInstance:
     - target: {fileID: 5069751796256331156, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
       propertyPath: m_ActionEvents.Array.data[25].m_ActionName
       value: 'UI/TabRight[/XInputControllerWindows/rightShoulder,/Keyboard/e]'
+      objectReference: {fileID: 0}
+    - target: {fileID: 5069751796256331156, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
+      propertyPath: m_ActionEvents.Array.data[26].m_ActionName
+      value: InGame_System/New action
       objectReference: {fileID: 0}
     - target: {fileID: 5260446927991776623, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
       propertyPath: m_LocalPosition.x
@@ -16514,11 +16522,11 @@ PrefabInstance:
     - target: {fileID: 8122269946311702765, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
       propertyPath: m_animator
       value: 
-      objectReference: {fileID: 1979165011}
+      objectReference: {fileID: 0}
     - target: {fileID: 8572377566809189294, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
       propertyPath: m_animationEventReceiver
       value: 
-      objectReference: {fileID: 1979165013}
+      objectReference: {fileID: 0}
     - target: {fileID: 8572377566809189294, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
       propertyPath: 'm_attackHitboxes.Array.data[0]'
       value: 
@@ -16543,8 +16551,7 @@ PrefabInstance:
       propertyPath: m_Center.z
       value: 0
       objectReference: {fileID: 0}
-    m_RemovedComponents:
-    - {fileID: 8790272020204068037, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
+    m_RemovedComponents: []
     m_RemovedGameObjects:
     - {fileID: 8643358470131577532, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
     m_AddedGameObjects:
@@ -16561,6 +16568,12 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 415096441624393917, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1092904651}
+    - targetCorrespondingSourceObject: {fileID: 415096441624393917, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1092904681}
+    - targetCorrespondingSourceObject: {fileID: 415096441624393917, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1092904682}
   m_SourcePrefab: {fileID: 100100000, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
 --- !u!4 &1080929310 stripped
 Transform:
@@ -16633,6 +16646,40 @@ CapsuleCollider:
   m_Height: 1.94
   m_Direction: 1
   m_Center: {x: 0, y: 0.92, z: 0}
+--- !u!95 &1092904681
+Animator:
+  serializedVersion: 7
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1092904635}
+  m_Enabled: 1
+  m_Avatar: {fileID: 9000000, guid: b7220e1b42c81b14fb817808b7d439b6, type: 3}
+  m_Controller: {fileID: 9100000, guid: 6ef5658b53e3eaf47a68821dee919321, type: 2}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_StabilizeFeet: 0
+  m_AnimatePhysics: 0
+  m_WarningMessage: 
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &1092904682
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1092904635}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7868d804d60c11a4daf7445c026fd34a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerAnimationEventReceiver
 --- !u!1 &1104940941
 GameObject:
   m_ObjectHideFlags: 0
@@ -24133,16 +24180,14 @@ PrefabInstance:
       propertyPath: m_LocalPosition.z
       value: -1.7763568e-17
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 5866666021909216657, guid: b7220e1b42c81b14fb817808b7d439b6, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: b7220e1b42c81b14fb817808b7d439b6, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1979165012}
-    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: b7220e1b42c81b14fb817808b7d439b6, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 1979165013}
   m_SourcePrefab: {fileID: 100100000, guid: b7220e1b42c81b14fb817808b7d439b6, type: 3}
 --- !u!4 &1486497608 stripped
 Transform:
@@ -33440,11 +33485,6 @@ Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: b7220e1b42c81b14fb817808b7d439b6, type: 3}
   m_PrefabInstance: {fileID: 1485176337}
   m_PrefabAsset: {fileID: 0}
---- !u!95 &1979165011 stripped
-Animator:
-  m_CorrespondingSourceObject: {fileID: 5866666021909216657, guid: b7220e1b42c81b14fb817808b7d439b6, type: 3}
-  m_PrefabInstance: {fileID: 1485176337}
-  m_PrefabAsset: {fileID: 0}
 --- !u!114 &1979165012
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -33591,18 +33631,6 @@ MonoBehaviour:
   - {fileID: 1971843199}
   - {fileID: 487684080}
   - {fileID: 1822549005}
---- !u!114 &1979165013
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 744865306}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7868d804d60c11a4daf7445c026fd34a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PlayerAnimationEventReceiver
 --- !u!4 &1986007865 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -2154096166443206841, guid: b7220e1b42c81b14fb817808b7d439b6, type: 3}
