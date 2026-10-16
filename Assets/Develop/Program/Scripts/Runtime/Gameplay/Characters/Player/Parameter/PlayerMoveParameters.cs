@@ -10,16 +10,19 @@ public readonly struct PlayerMoveParameters
     /// <param name="timeToMaxSpeed">最高速度までの到達時間。</param>
     /// <param name="timeToStop">停止までの時間。</param>
     /// <param name="rotationSpeed">1秒間の最大回転角度。</param>
+    /// <param name="reverseBrakeMultiplier">逆入力時の減速度倍率。1で通常減速と同じ。</param>
     public PlayerMoveParameters(
         float maxMoveSpeed,
         float timeToMaxSpeed,
         float timeToStop,
-        float rotationSpeed)
+        float rotationSpeed,
+        float reverseBrakeMultiplier = 1.0f)
     {
         MaxMoveSpeed = maxMoveSpeed;
         TimeToMaxSpeed = timeToMaxSpeed;
         TimeToStop = timeToStop;
         RotationSpeed = rotationSpeed;
+        ReverseBrakeMultiplier = reverseBrakeMultiplier;
     }
 
     /// <summary>
@@ -41,4 +44,7 @@ public readonly struct PlayerMoveParameters
     /// 1秒間の最大回転角度を取得します。
     /// </summary>
     public float RotationSpeed { get; }
+
+    /// <summary>通常減速に対する逆入力ブレーキの減速度倍率を取得します。</summary>
+    public float ReverseBrakeMultiplier { get; }
 }
