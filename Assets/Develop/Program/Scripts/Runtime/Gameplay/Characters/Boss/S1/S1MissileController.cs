@@ -39,6 +39,9 @@ public sealed class S1MissileController : MonoBehaviour
 
     private MissileExplosion m_explosion;
 
+    // ”š”­Hitbox‚Ö“n‚·UŒ‚ID
+    private AttackIdentifier m_attackIdentifier;
+
 
     private void Awake()
     {
@@ -74,7 +77,8 @@ public sealed class S1MissileController : MonoBehaviour
     public void Initialize(
         MissileParameterAsset parameterAsset,
         Transform target,
-        float upwardDuration)
+        float upwardDuration,
+        AttackIdentifier attackIdentifier = null)
     {
         if (parameterAsset == null)
         {
@@ -94,6 +98,7 @@ public sealed class S1MissileController : MonoBehaviour
         m_homing.SetTarget(target);
 
         m_upwardDuration = upwardDuration;
+        m_attackIdentifier = attackIdentifier;
 
         m_isInitialized = true;
     }
@@ -117,7 +122,7 @@ public sealed class S1MissileController : MonoBehaviour
         m_steering.ResetSteering();
 
         // ”­Ë‚Éˆê“x‚¾‚¯ã•ûŒü‚Ö‰‘¬“x‚ğ—^‚¦‚é
-        m_motor.Launch(Vector3.up);
+        m_motor.Launch(transform.forward);
 
         m_currentState =
             MissileState.LAUNCH_UPWARD;
@@ -181,6 +186,8 @@ public sealed class S1MissileController : MonoBehaviour
 
     private void Explode()
     {
-        m_explosion.Explode(transform.parent);
+        m_explosion.Explode(
+            transform.parent,
+            m_attackIdentifier);
     }
 }

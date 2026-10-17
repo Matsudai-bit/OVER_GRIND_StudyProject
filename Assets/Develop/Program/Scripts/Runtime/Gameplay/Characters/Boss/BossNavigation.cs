@@ -213,7 +213,7 @@ public sealed class BossNavigation : MonoBehaviour
             if (m_navMeshSurface)
                 m_navMeshSurface.gameObject.SetActive(false);
             SetNavMeshSurface(navMeshSurface);
-            
+
             m_navMeshSurface.gameObject.SetActive(true);
         }
     }
@@ -305,12 +305,12 @@ public sealed class BossNavigation : MonoBehaviour
     }
 
     /// <summary>
-    /// 指定したFootprintが現在使用中のNavMesh内に収まっているか確認します。
+    /// 現在のFootprintがNavMesh内に収まっているか確認します。
     /// </summary>
-    /// <param name="footprint">確認するボスのNavMesh占有範囲。</param>
+    /// <param name="footprint">確認する占有範囲。</param>
     /// <returns>
-    /// true：Footprintの底面4隅がNavMesh内にあります。
-    /// false：1点以上NavMesh外にあります。
+    /// true：Footprint全体がNavMesh内です。
+    /// false：NavMesh外へ出ています。
     /// </returns>
     public bool IsFootprintInsideNavMesh(
         BossNavMeshFootprint footprint)
@@ -320,9 +320,53 @@ public sealed class BossNavigation : MonoBehaviour
             return false;
         }
 
-        Vector3[] corners = footprint.GetWorldCorners();
+        return AreFootprintCornersInsideNavMesh(
+            footprint.GetWorldCorners());
+    }
 
-        if (corners == null ||
+    /// <summary>
+    /// 指定PoseでFootprintがNavMesh内に収まるか確認します。
+    /// </summary>
+    /// <param name="footprint">確認する占有範囲。</param>
+    /// <param name="poseOrigin">移動基準Transform。</param>
+    /// <param name="position">予測位置。</param>
+    /// <param name="rotation">予測回転。</param>
+    /// <returns>
+    /// true：Footprint全体がNavMesh内です。
+    /// false：NavMesh外へ出ています。
+    /// </returns>
+    public bool IsFootprintInsideNavMesh(
+        BossNavMeshFootprint footprint,
+        Transform poseOrigin,
+        Vector3 position,
+        Quaternion rotation)
+    {
+        if (footprint == null ||
+            poseOrigin == null)
+        {
+            return false;
+        }
+
+        return AreFootprintCornersInsideNavMesh(
+            footprint.GetWorldCorners(
+                poseOrigin,
+                position,
+                rotation));
+    }
+
+    /// <summary>
+    /// Footprintの各頂点がNavMesh内にあるか確認します。
+    /// </summary>
+    /// <param name="corners">確認する頂点。</param>
+    /// <returns>
+    /// true：全頂点がNavMesh内です。
+    /// false：NavMesh外の頂点があります。
+    /// </returns>
+    private bool AreFootprintCornersInsideNavMesh(
+        Vector3[] corners)
+    {
+        if (m_navMeshSurface == null ||
+            corners == null ||
             corners.Length == 0)
         {
             return false;
@@ -331,7 +375,8 @@ public sealed class BossNavigation : MonoBehaviour
         NavMeshQueryFilter queryFilter =
             CreateQueryFilter();
 
-        foreach (Vector3 corner in corners)
+        foreach (Vector3 corner
+                 in corners)
         {
             if (!NavMesh.SamplePosition(
                     corner,
@@ -342,11 +387,12 @@ public sealed class BossNavigation : MonoBehaviour
                 return false;
             }
 
-            // NavMesh外の地点が境界へ吸着されていないか確認する
             Vector3 difference =
-                hit.position - corner;
+                hit.position -
+                corner;
 
-            difference.y = 0.0f;
+            difference.y =
+                0.0f;
 
             if (difference.sqrMagnitude >
                 FOOTPRINT_NAVMESH_TOLERANCE *

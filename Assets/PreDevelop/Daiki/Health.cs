@@ -76,6 +76,15 @@ public sealed class Health : MonoBehaviour, IDamageable
     }
 
     /// <summary>
+    /// 攻撃情報からダメージ量を取得して適用します。
+    /// </summary>
+    /// <param name="damageData">受けるダメージと攻撃識別情報。</param>
+    public void TakeDamage(AttackDamageData damageData)
+    {
+        TakeDamage(damageData.Damage);
+    }
+
+    /// <summary>
     /// HPを回復します。
     /// </summary>
     /// <param name="healAmount">回復するHP量。</param>

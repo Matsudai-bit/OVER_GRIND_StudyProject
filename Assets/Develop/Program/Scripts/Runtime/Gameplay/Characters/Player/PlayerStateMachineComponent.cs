@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 
 /// <summary>
@@ -6,6 +7,9 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public sealed class PlayerStateMachineComponent : MonoBehaviour
 {
+    [SerializeField, Header("Parameter Asset")]
+    private PlayerStateMachineParameterAsset m_parameterAsset;
+
     [SerializeField, Header("レールジャンプ")]
     private PlayerRailJumpParameterAsset m_railJumpParameterAsset;
 
@@ -61,11 +65,15 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
     // スプライングラインド機能
     private SplineGrindController m_splineGrindController;
 
-    // Vゲージ表示機能
-    private VGaugeUI m_vGaugeUI;
+    // ParameterModel上の共有データ。UIがなくても更新します。
+    private VGaugePlaceModel m_vGaugePlaceModel;
+    private SpeedPlaceModel m_speedPlaceModel;
 
-    // 速度表示機能
-    private VSpeedUI m_vSpeedUI;
+    /// <summary>Vゲージの値を管理するモデルを取得します。</summary>
+    public VGaugePlaceModel VGaugePlaceModel => m_vGaugePlaceModel;
+
+    /// <summary>毎フレーム更新する速度モデルを取得します。</summary>
+    public SpeedPlaceModel SpeedPlaceModel => m_speedPlaceModel;
 
     // プレイヤーカメラ機能
     private PlayerCamera m_playerCamera;
@@ -129,19 +137,6 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
     public SplineGrindController GrindController =>
         m_splineGrindController;
 
-    /// <summary>
-    /// Vゲージ表示機能を取得します。
-    /// シーンに配置されていない場合はnullを返すことがあります。
-    /// </summary>
-    public VGaugeUI VGaugeUI =>
-        m_vGaugeUI;
-
-    /// <summary>
-    /// 速度表示機能を取得します。
-    /// シーンに配置されていない場合はnullを返すことがあります。
-    /// </summary>
-    public VSpeedUI VSpeedUI =>
-        m_vSpeedUI;
 
     /// <summary>
     /// プレイヤーカメラ機能を取得します。
@@ -191,7 +186,7 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
     // （nullの場合は通常通りMotor.HorizontalSpeedを表示する）
     // 例：攻撃中に物理速度が実際の状況と異なる場合でも、
     // 　　攻撃継続リソースとしての速度を見た目上は減衰表示させたい場合に使用
-    private float? m_speedDisplayOverride;
+    // 表示上書きの値はSpeedPlaceModelで保持します。
 
     /// <summary>
     /// 速度UIへ表示する値を上書き設定します。
@@ -201,7 +196,7 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
     /// <param name="displaySpeed">表示する速度値。</param>
     public void SetSpeedDisplayOverride(float displaySpeed)
     {
-        m_speedDisplayOverride = Mathf.Max(0.0f, displaySpeed);
+        m_speedPlaceModel.SetSpeedDisplayOverride(displaySpeed);
     }
 
     /// <summary>
@@ -210,7 +205,7 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
     /// </summary>
     public void ClearSpeedDisplayOverride()
     {
-        m_speedDisplayOverride = null;
+        m_speedPlaceModel.ClearSpeedDisplayOverride();
     }
 
 
@@ -219,12 +214,11 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
     // ============================================================
 
     // チャージ解除時点でのゲージ量（0～1）
-    private float m_carriedBoostGaugeRate;
-
+    /// <summary>チャージ終了時の割合をモデル経由で取得・設定します。</summary>
     public float CarriedBoostGaugeRate
     {
-        get => m_carriedBoostGaugeRate;
-        set => m_carriedBoostGaugeRate = Mathf.Clamp01(value);
+        get => m_vGaugePlaceModel.CarriedBoostGaugeRate;
+        set => m_vGaugePlaceModel.CarriedBoostGaugeRate = value;
     }
 
     // ------------------------------------------------------------
@@ -263,12 +257,11 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
     // Vブースト中断時点／進行中の残りゲージ量（0～1）
     // PlayerVRunningStateが開始・参照・更新し、
     // 中断中（Idling/Jumping中）もこの本体側で消費し続けます
-    private float m_suspendedBoostGaugeRate;
-
+    /// <summary>中断中も維持するブースト残量をモデル経由で取得・設定します。</summary>
     public float SuspendedBoostGaugeRate
     {
-        get => m_suspendedBoostGaugeRate;
-        set => m_suspendedBoostGaugeRate = Mathf.Clamp01(value);
+        get => m_vGaugePlaceModel.SuspendedBoostGaugeRate;
+        set => m_vGaugePlaceModel.SuspendedBoostGaugeRate = value;
     }
 
     // Vブーストが中断中か
@@ -283,7 +276,7 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
 
     // ゲージを1秒あたりどれだけ消費するか
     // （VRunningState開始時に設定される）
-    private float m_boostGaugeDepletionRatePerSecond;
+    // 消費レートと残量の計算はVGaugePlaceModelが管理します。
 
     /// <summary>
     /// ゲージの1秒あたりの消費レートを設定します。
@@ -291,8 +284,7 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
     /// </summary>
     public void SetBoostGaugeDepletionRate(float ratePerSecond)
     {
-        m_boostGaugeDepletionRatePerSecond =
-            Mathf.Max(ratePerSecond, 0.0f);
+        m_vGaugePlaceModel.SetBoostGaugeDepletionRate(ratePerSecond);
     }
 
 
@@ -318,8 +310,12 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
         VGaugeUI vGaugeUI,
         VSpeedUI vSpeedUI,
         PlayerCamera playerCamera,
-        Transform modelTransform)
+        Transform modelTransform,
+        VGaugePlaceModel vGaugePlaceModel,
+        SpeedPlaceModel speedPlaceModel)
     {
+        ApplyParameterAsset();
+
         if (inputReader == null ||
             monitor == null ||
             motor == null ||
@@ -328,7 +324,9 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
             splineGrindController == null ||
             movementParameterAsset == null ||
             vBoostMovementParameterAsset == null ||
-            boostChargingParameterAsset == null)
+            boostChargingParameterAsset == null ||
+            vGaugePlaceModel == null ||
+            speedPlaceModel == null)
         {
             Debug.LogError(
                 $"[{nameof(PlayerStateMachineComponent)}] " +
@@ -400,10 +398,12 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
         m_boostChargingParameterAsset =
             boostChargingParameterAsset;
 
-        m_vGaugeUI = vGaugeUI;
-        m_vSpeedUI = vSpeedUI;
         m_playerCamera = playerCamera;
         m_modelTransform = modelTransform;
+        m_vGaugePlaceModel = vGaugePlaceModel;
+        m_speedPlaceModel = speedPlaceModel;
+        m_vGaugePlaceModel.ResetGauge();
+        m_speedPlaceModel.ResetSpeed();
 
         m_stateMachine =
             new StateMachine<PlayerStateMachineComponent>(
@@ -478,36 +478,27 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
         railStateChange?.Invoke();
         m_stateMachine.FixedUpdate();
 
-        // 現在のStateに関係なく、常に実速度をUIへ反映する
-        UpdateSpeedDisplay();
-
         // Vブースト中（中断中を含む）は、
         // 現在のStateに関係なく常にゲージを消費する
         UpdateSuspendableBoostGauge();
     }
 
     /// <summary>
-    /// 現在の水平速度をVSpeedUIへ反映します。
-    /// 速度表示オーバーライドが設定されている場合は、
-    /// 実際の物理速度の代わりにその値を表示します。
+    /// 物理更新とState更新の後に、毎フレーム速度をモデルへ保存して表示します。
     /// </summary>
-    private void UpdateSpeedDisplay()
+    private void LateUpdate()
     {
-        if (m_vSpeedUI == null)
+        if (!m_isInitialized)
         {
             return;
         }
 
-        float displaySpeed =
-            m_speedDisplayOverride ??
-            m_motor.HorizontalSpeed;
-
-        m_vSpeedUI.SetSpeed(displaySpeed);
+        m_speedPlaceModel.UpdateSpeed(m_motor.HorizontalSpeed);
     }
 
     /// <summary>
     /// Vブースト中（VRunningState中・中断中の両方）の
-    /// ゲージ消費とUI反映を、Stateに関係なく行います。
+    /// モデルのゲージ消費をStateに関係なく行います。表示はLateUpdateで反映します。
     /// </summary>
     private void UpdateSuspendableBoostGauge()
     {
@@ -520,32 +511,14 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
             return;
         }
 
-        m_suspendedBoostGaugeRate -=
-            m_boostGaugeDepletionRatePerSecond *
-            Time.fixedDeltaTime;
-
-        if (m_suspendedBoostGaugeRate < 0.0f)
-        {
-            m_suspendedBoostGaugeRate = 0.0f;
-        }
-
-        if (m_vGaugeUI != null)
-        {
-            m_vGaugeUI.SetGaugeRate(
-                m_suspendedBoostGaugeRate);
-        }
+        m_vGaugePlaceModel.ConsumeBoostGauge(Time.fixedDeltaTime);
 
         // 中断中にゲージを使い切った場合も、
         // 復帰しようがないため中断状態を解除しておく
-        if (m_suspendedBoostGaugeRate <= 0.0f &&
+        if (SuspendedBoostGaugeRate <= 0.0f &&
             m_isBoostSuspended)
         {
             m_isBoostSuspended = false;
-
-            if (m_vGaugeUI != null)
-            {
-                m_vGaugeUI.SetCharging(false);
-            }
         }
     }
 
@@ -577,11 +550,28 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
     private float m_knockbackDuration = 0.8f;
     [SerializeField, Min(0.0f)]
     private float m_hitRecoveryDuration = 0.2f;
+    [SerializeField, Tooltip("被弾状態終了後の無敵時間設定。")]
+    private PlayerInvincibilityParameterAsset m_invincibilityParameterAsset;
     [SerializeField, Tooltip("吹き飛びを終了させる地形・壁のレイヤー")]
     private LayerMask m_hitEnvironmentLayerMask = ~0;
 
+    private Coroutine m_postHitInvincibilityCoroutine;
+    private bool m_isPostHitInvincible;
+
     /// <summary>被弾中の無敵状態を取得します。</summary>
     public bool IsHitReacting { get; private set; }
+
+    /// <summary>
+    /// 被弾State中か、被弾Stateへの遷移直後かを取得します。
+    /// </summary>
+    /// <remarks>
+    /// 無敵判定は経過時間ではなく、PlayerHitStateの有効期間に連動します。
+    /// </remarks>
+    public bool IsInvincible =>
+        IsHitReacting ||
+        m_isPostHitInvincible ||
+        (m_stateMachine != null &&
+         m_stateMachine.IsCurrentState<PlayerHitState>());
     /// <summary>被弾中に地形へ衝突したかを取得します。</summary>
     public bool HasHitEnvironment { get; private set; }
     /// <summary>吹き飛びの水平速度を取得します。</summary>
@@ -600,7 +590,7 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
     }
 
     /// <summary>攻撃別設定を使って被弾を開始します。未指定時は標準設定を使用します。</summary>
-    public bool TryStartHitReaction(Vector3 attackCenter, PlayerKnockbackProfile profile)
+    public bool TryStartHitReaction(Vector3 attackCenter, PlayerKnockbackProfile profile, AttackIdentifier attackIdentifier = null)
     {
         if (!m_isInitialized || !isActiveAndEnabled || IsHitReacting) return false;
 
@@ -615,11 +605,13 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
         float recoveryDuration = HitRecoveryDuration;
         if (selectedProfile != null)
         {
-            rate *= selectedProfile.KnockbackRate;
-            horizontalSpeed = selectedProfile.HorizontalSpeed;
-            liftSpeed = selectedProfile.LiftSpeed;
-            duration = selectedProfile.Duration;
-            recoveryDuration = selectedProfile.RecoveryDuration;
+            // 攻撃IDが未設定・未登録なら、既存アセットの標準設定を使用します。
+            bool hasAttackSettings = selectedProfile.TryGetSettings(attackIdentifier, out PlayerAttackKnockbackSettings settings);
+            rate *= hasAttackSettings ? settings.KnockbackRate : selectedProfile.KnockbackRate;
+            horizontalSpeed = hasAttackSettings ? settings.HorizontalSpeed : selectedProfile.HorizontalSpeed;
+            liftSpeed = hasAttackSettings ? settings.LiftSpeed : selectedProfile.LiftSpeed;
+            duration = hasAttackSettings ? settings.Duration : selectedProfile.Duration;
+            recoveryDuration = hasAttackSettings ? settings.RecoveryDuration : selectedProfile.RecoveryDuration;
         }
 
         // 被弾開始時に値を確定し、共有アセットの変更で飛行途中の設定が変わることを防ぎます。
@@ -636,6 +628,41 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
     {
         IsHitReacting = false;
         HasHitEnvironment = false;
+        StartPostHitInvincibility();
+    }
+
+    /// <summary>被弾状態終了後の無敵時間を開始します。</summary>
+    private void StartPostHitInvincibility()
+    {
+        if (m_postHitInvincibilityCoroutine != null)
+        {
+            StopCoroutine(m_postHitInvincibilityCoroutine);
+            m_postHitInvincibilityCoroutine = null;
+        }
+
+        float duration = m_invincibilityParameterAsset != null
+            ? m_invincibilityParameterAsset.PostHitDuration
+            : 0.0f;
+
+        if (duration <= 0.0f)
+        {
+            m_isPostHitInvincible = false;
+            return;
+        }
+
+        m_isPostHitInvincible = true;
+        m_postHitInvincibilityCoroutine =
+            StartCoroutine(WaitForPostHitInvincibility(duration));
+    }
+
+    /// <summary>指定時間の経過後、被弾後の無敵状態を解除します。</summary>
+    /// <param name="duration">無敵状態を維持する秒数。</param>
+    private IEnumerator WaitForPostHitInvincibility(float duration)
+    {
+        yield return new WaitForSeconds(duration);
+
+        m_isPostHitInvincible = false;
+        m_postHitInvincibilityCoroutine = null;
     }
 
     /// <summary>地形との新たな接触を被弾終了判定へ渡します。</summary>
@@ -664,4 +691,19 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
             return;
         }
     }
+    /// <summary>Applies the assigned parameter asset.</summary>
+    private void ApplyParameterAsset()
+    {
+        if (m_parameterAsset == null) return;
+        m_railJumpParameterAsset = m_parameterAsset.RailJumpParameterAsset;
+        m_knockbackSpeed = m_parameterAsset.KnockbackSpeed;
+        m_knockbackRate = m_parameterAsset.KnockbackRate;
+        m_defaultKnockbackProfile = m_parameterAsset.DefaultKnockbackProfile;
+        m_knockbackLiftSpeed = m_parameterAsset.KnockbackLiftSpeed;
+        m_knockbackDuration = m_parameterAsset.KnockbackDuration;
+        m_hitRecoveryDuration = m_parameterAsset.HitRecoveryDuration;
+        m_invincibilityParameterAsset = m_parameterAsset.InvincibilityParameterAsset;
+        m_hitEnvironmentLayerMask = m_parameterAsset.HitEnvironmentLayerMask;
+    }
+
 }

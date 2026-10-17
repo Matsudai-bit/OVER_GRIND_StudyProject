@@ -23,6 +23,10 @@ public sealed class S1P2BossMissileStateParameters
     [SerializeField, Header("攻撃終了"), Min(0.0f)]
     private float m_idleDuration = 3.0f;
 
+    // LaunchSitesを何周発射するか
+    [SerializeField, Header("連続発射"), Min(1)]
+    private int m_volleyCount = 2;
+
     /// <summary>
     /// ミサイル本体のパラメータを取得します。
     /// </summary>
@@ -46,6 +50,14 @@ public sealed class S1P2BossMissileStateParameters
     /// </summary>
     public float IdleDuration =>
         m_idleDuration;
+
+    /// <summary>
+    /// LaunchSitesを周回して発射する回数を取得します。
+    /// </summary>
+    public int VolleyCount =>
+        Mathf.Max(
+            1,
+            m_volleyCount);
 
     /// <summary>
     /// 必要なパラメータが設定されているか確認します。

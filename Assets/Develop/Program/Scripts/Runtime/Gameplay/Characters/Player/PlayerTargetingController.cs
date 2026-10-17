@@ -13,6 +13,9 @@ public sealed class PlayerTargetingController : MonoBehaviour
 {
     private const float MIN_SEARCH_DISTANCE = 0.0001f;
 
+    [SerializeField, Header("Parameter Asset")]
+    private PlayerTargetingControllerParameterAsset m_parameterAsset;
+
     [Header("Target Search")]
 
     [SerializeField, Min(0.1f)]
@@ -37,7 +40,8 @@ public sealed class PlayerTargetingController : MonoBehaviour
     [SerializeField]
     private PlayerCamera m_playerCamera;
 
-    [SerializeField, Min(0.0f)]
+    [SerializeField, Min(0.05f)]
+    [Tooltip("ロックオンボタンを押してから、ロックオン構図へ到達するまでの時間（秒）。")]
     private float m_cameraFocusDuration = 0.25f;
 
     [SerializeField]
@@ -66,6 +70,7 @@ public sealed class PlayerTargetingController : MonoBehaviour
     /// </summary>
     private void Awake()
     {
+        ApplyParameterAsset();
         ResolveInputActions();
 
         if (m_targetReticlePrefab != null)
@@ -75,6 +80,22 @@ public sealed class PlayerTargetingController : MonoBehaviour
 
             m_targetReticle.gameObject.SetActive(false);
         }
+    }
+
+    /// <summary>設定済みの場合にParameterAssetの値を適用します。</summary>
+    private void ApplyParameterAsset()
+    {
+        if (m_parameterAsset == null)
+        {
+            return;
+        }
+
+        m_targetSearchRadius = m_parameterAsset.TargetSearchRadius;
+        m_targetLayer = m_parameterAsset.TargetLayer;
+        m_targetReticlePrefab = m_parameterAsset.TargetReticlePrefab;
+        m_reticleDistanceFromTarget = m_parameterAsset.ReticleDistanceFromTarget;
+        m_reticleMoveDuration = m_parameterAsset.ReticleMoveDuration;
+        m_cameraFocusDuration = m_parameterAsset.CameraFocusDuration;
     }
 
     /// <summary>
@@ -175,6 +196,7 @@ public sealed class PlayerTargetingController : MonoBehaviour
     /// </summary>
     private void OnDisable()
     {
+        StopTargeting();
         m_targetAction.started -= OnTargetStarted;
         m_targetAction.canceled -= OnTargetCanceled;
 

@@ -14,6 +14,9 @@ using UnityEngine;
 [RequireComponent(typeof(SplineGrindController))]
 public sealed class PlayerRootController : MonoBehaviour
 {
+    [SerializeField, Header("Parameter Asset")]
+    private PlayerRootControllerParameterAsset m_parameterAsset;
+
     // 通常移動パラメータ
     [SerializeField, Header("パラメータ")]
     private PlayerMovementParameterAsset
@@ -70,6 +73,13 @@ public sealed class PlayerRootController : MonoBehaviour
     [SerializeField]
     private VSpeedUI m_vSpeedUI;
 
+    // Scene内のParameterModelに付いているコンポーネントを設定します。
+    [SerializeField, Header("Parameter Model")]
+    private VGaugePlaceModel m_vGaugePlaceModel;
+
+    [SerializeField]
+    private SpeedPlaceModel m_speedPlaceModel;
+
     // プレイヤーカメラ機能
     [SerializeField]
     private PlayerCamera m_playerCamera;
@@ -87,6 +97,8 @@ public sealed class PlayerRootController : MonoBehaviour
     /// </summary>
     private void Awake()
     {
+        ApplyParameterAsset();
+
         ResolveReferences();
 
         if (!ValidateReferences())
@@ -126,7 +138,9 @@ public sealed class PlayerRootController : MonoBehaviour
     m_vGaugeUI,
     m_vSpeedUI,
     m_playerCamera,
-    m_modelTransform);
+    m_modelTransform,
+    m_vGaugePlaceModel,
+    m_speedPlaceModel);
 
         m_isInitialized =
             m_motor.IsInitialized &&
@@ -237,6 +251,33 @@ public sealed class PlayerRootController : MonoBehaviour
         {
             m_splineGrindController =
                 GetComponent<SplineGrindController>();
+        }
+
+        ResolveParameterModels();
+    }
+
+    /// <summary>
+    /// Inspector参照を優先し、このPlayer配下のモデルを解決します。
+    /// モデル未配置の既存Prefabのみ、Player自身へ補完します。
+    /// </summary>
+    private void ResolveParameterModels()
+    {
+        if (m_vGaugePlaceModel == null)
+        {
+            m_vGaugePlaceModel = GetComponentInChildren<VGaugePlaceModel>(true);
+            if (m_vGaugePlaceModel == null)
+            {
+                m_vGaugePlaceModel = gameObject.AddComponent<VGaugePlaceModel>();
+            }
+        }
+
+        if (m_speedPlaceModel == null)
+        {
+            m_speedPlaceModel = GetComponentInChildren<SpeedPlaceModel>(true);
+            if (m_speedPlaceModel == null)
+            {
+                m_speedPlaceModel = gameObject.AddComponent<SpeedPlaceModel>();
+            }
         }
     }
 
@@ -366,4 +407,13 @@ public sealed class PlayerRootController : MonoBehaviour
 
         return isValid;
     }
+    /// <summary>Applies the assigned parameter asset.</summary>
+    private void ApplyParameterAsset()
+    {
+        if (m_parameterAsset == null) return;
+        m_movementParameterAsset = m_parameterAsset.MovementParameterAsset;
+        m_vBoostMovementParameterAsset = m_parameterAsset.VBoostMovementParameterAsset;
+        m_boostChargingParameterAsset = m_parameterAsset.BoostChargingParameterAsset;
+    }
+
 }

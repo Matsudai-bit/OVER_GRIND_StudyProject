@@ -9,6 +9,7 @@ public enum S1P2BossAttackType
     CHARGING, // 突進
     MISSILE,
     HEAT_VENT,
-       TAIL_SLAM
-        
+       TAIL_SLAM,
+        MOVE_MISSILE
+
 }

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -6,6 +7,9 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public sealed class PlayerMonitor : MonoBehaviour
 {
+    [SerializeField, Header("Parameter Asset")]
+    private PlayerMonitorParameterAsset m_parameterAsset;
+
     // 接地判定を行う位置
     [SerializeField]
     private Transform m_groundCheckOrigin;
@@ -37,6 +41,9 @@ public sealed class PlayerMonitor : MonoBehaviour
     // 初期化されているか
     private bool m_isInitialized;
 
+    // 実際に足元を支えている接触先。検出球が着地前に地面へ届いた場合と区別します。
+    private readonly HashSet<int> m_groundContactColliderIds = new();
+
     private SplineRailInfo m_hitRailInfo;
     /// <summary>
     /// プレイヤーが接地しているかを取得します。
@@ -46,6 +53,24 @@ public sealed class PlayerMonitor : MonoBehaviour
     /// false：接地していません。
     /// </returns>
     public bool IsGrounded => m_isGrounded;
+
+    /// <summary>
+    /// 接地検出範囲内に加えて、上向きの物理接触で地面に支えられているかを取得します。
+    /// </summary>
+    /// <returns>true：実際に地面へ接触中。false：空中または接地検出範囲内のみ。</returns>
+    public bool CanStartJump =>
+        m_isGrounded &&
+        m_groundContactColliderIds.Count > 0;
+    /// <summary>足元の下向き判定で床面を確認し、側面への接触を除外します。</summary>
+    /// <returns>true：足元に上向きの支持面あり。false：側面接触または空中。</returns>
+    public bool HasGroundSupport()
+    {
+        if (!m_isInitialized || !m_isGrounded) return false;
+        Vector3 origin = m_groundCheckOrigin != null ? m_groundCheckOrigin.position : transform.position;
+        return Physics.Raycast(origin, Vector3.down, out RaycastHit hit,
+            m_groundCheckRadius, m_groundLayerMask, QueryTriggerInteraction.Ignore) &&
+            hit.normal.y >= 0.5f;
+    }
     public bool IsRailed => m_isRailed;
 
     public SplineRailInfo HitRailInfo => m_hitRailInfo;
@@ -82,6 +107,8 @@ public sealed class PlayerMonitor : MonoBehaviour
     /// <param name="playerRigidbody">プレイヤーの物理ボディ。</param>
     public void Initialize(Rigidbody playerRigidbody)
     {
+        ApplyParameterAsset();
+
         if (playerRigidbody == null)
         {
             Debug.LogError(
@@ -161,6 +188,59 @@ public sealed class PlayerMonitor : MonoBehaviour
         m_isRailed = m_hitRailInfo != null;
     }
 
+    /// <summary>衝突開始時に、ジャンプ可能な地面接触を記録します。</summary>
+    /// <param name="collision">衝突情報。</param>
+    private void OnCollisionEnter(Collision collision)
+    {
+        RefreshGroundContact(collision);
+    }
+
+    /// <summary>衝突継続中に、ジャンプ可能な地面接触を更新します。</summary>
+    /// <param name="collision">衝突情報。</param>
+    private void OnCollisionStay(Collision collision)
+    {
+        RefreshGroundContact(collision);
+    }
+
+    /// <summary>衝突終了時に、記録済みの地面接触を解除します。</summary>
+    /// <param name="collision">衝突情報。</param>
+    private void OnCollisionExit(Collision collision)
+    {
+        m_groundContactColliderIds.Remove(
+            collision.collider.GetInstanceID());
+    }
+
+    /// <summary>接触面の向きとレイヤーから、足元を支える接触かを更新します。</summary>
+    /// <param name="collision">衝突情報。</param>
+    private void RefreshGroundContact(Collision collision)
+    {
+        int colliderId = collision.collider.GetInstanceID();
+        int colliderLayerMask = 1 << collision.gameObject.layer;
+
+        if ((m_groundLayerMask.value & colliderLayerMask) == 0)
+        {
+            m_groundContactColliderIds.Remove(colliderId);
+            return;
+        }
+
+        for (int i = 0; i < collision.contactCount; i++)
+        {
+            if (collision.GetContact(i).normal.y >= 0.5f)
+            {
+                m_groundContactColliderIds.Add(colliderId);
+                return;
+            }
+        }
+
+        m_groundContactColliderIds.Remove(colliderId);
+    }
+
+    /// <summary>無効化時に物理接触の記録を破棄します。</summary>
+    private void OnDisable()
+    {
+        m_groundContactColliderIds.Clear();
+    }
+
     /// <summary>
     /// 接地判定と地上・空中のレール搭乗判定範囲をSceneビューに表示します。
     /// </summary>
@@ -179,4 +259,14 @@ public sealed class PlayerMonitor : MonoBehaviour
         Gizmos.DrawWireSphere(checkPosition, GetRailDetectionRadius(false));
         Gizmos.color = previousColor;
     }
+    /// <summary>Applies the assigned parameter asset.</summary>
+    private void ApplyParameterAsset()
+    {
+        if (m_parameterAsset == null) return;
+        m_groundCheckRadius = m_parameterAsset.GroundCheckRadius;
+        m_groundLayerMask = m_parameterAsset.GroundLayerMask;
+        m_railLayerMask = m_parameterAsset.RailLayerMask;
+        m_railDetectionParameter = m_parameterAsset.RailDetectionParameter;
+    }
+
 }
