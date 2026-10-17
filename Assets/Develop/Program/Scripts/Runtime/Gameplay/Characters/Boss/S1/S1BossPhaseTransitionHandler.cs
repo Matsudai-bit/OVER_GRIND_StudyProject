@@ -17,6 +17,9 @@ public sealed class S1BossPhaseTransitionHandler : MonoBehaviour
     // フェーズ管理
     private BossPhaseController m_phaseController;
 
+    [SerializeField]
+    private GameFlowController GameFlowController;
+
     /// <summary>
     /// 必要なコンポーネントを取得します。
     /// </summary>
@@ -98,6 +101,8 @@ public sealed class S1BossPhaseTransitionHandler : MonoBehaviour
         m_bossController.StateMachine
             .ChangeState<S1P1BossLegsCollapsingState>(
                 m_s1P1BossLegsController);
+
+        GameFlowController.ChangeState(GameFlowStateType.RESULT);
     }
 
     /// <summary>
