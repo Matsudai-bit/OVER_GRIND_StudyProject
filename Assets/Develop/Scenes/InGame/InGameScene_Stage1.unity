@@ -2225,11 +2225,11 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 1344811178541236351, guid: bdb5f829fb529744ab52481e6bd1fcde, type: 3}
       propertyPath: m_brokenMeshId
-      value: R_Lower_Tube_Breked
+      value: L_Lower_Tube_Breked
       objectReference: {fileID: 0}
     - target: {fileID: 1344811178541236351, guid: bdb5f829fb529744ab52481e6bd1fcde, type: 3}
       propertyPath: m_normalMeshId
-      value: R_Lower_Tube
+      value: L_Lower_Tube
       objectReference: {fileID: 0}
     - target: {fileID: 1344811178541236351, guid: bdb5f829fb529744ab52481e6bd1fcde, type: 3}
       propertyPath: m_meshReferenceRegistry
@@ -10439,7 +10439,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Hurtbox
   m_parameterAsset: {fileID: 0}
-  m_damageReceiverComponent: {fileID: 0}
+  m_damageReceiverComponent: {fileID: 111866247}
   m_damageMultiplier: 1
   m_canReceiveDamage: 1
 --- !u!65 &650216017
@@ -11525,7 +11525,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Hurtbox
   m_parameterAsset: {fileID: 0}
-  m_damageReceiverComponent: {fileID: 0}
+  m_damageReceiverComponent: {fileID: 2114662726}
   m_damageMultiplier: 1
   m_canReceiveDamage: 1
 --- !u!114 &716455662
@@ -14428,7 +14428,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 734408da4e186084f93f198e02228b1d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameFlowController
-  m_initialState: 1
+  m_initialState: 2
   m_stateChangedEvent: {fileID: 11400000, guid: 3c24164873d50a4479bdb3f6441eb8b1, type: 2}
 --- !u!4 &890991075 stripped
 Transform:
@@ -15297,6 +15297,11 @@ MeshFilter:
 --- !u!4 &950093708 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -5989013305971393637, guid: 547bdcb48addfd5449f128ba9d0976ea, type: 3}
+  m_PrefabInstance: {fileID: 996596696}
+  m_PrefabAsset: {fileID: 0}
+--- !u!137 &953721959 stripped
+SkinnedMeshRenderer:
+  m_CorrespondingSourceObject: {fileID: -2894360724461740291, guid: 547bdcb48addfd5449f128ba9d0976ea, type: 3}
   m_PrefabInstance: {fileID: 996596696}
   m_PrefabAsset: {fileID: 0}
 --- !u!1 &958771441
@@ -19636,7 +19641,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Hurtbox
   m_parameterAsset: {fileID: 0}
-  m_damageReceiverComponent: {fileID: 0}
+  m_damageReceiverComponent: {fileID: 8036882}
   m_damageMultiplier: 1
   m_canReceiveDamage: 1
 --- !u!65 &1111914772
@@ -21670,7 +21675,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 1344811178541236351, guid: bdb5f829fb529744ab52481e6bd1fcde, type: 3}
       propertyPath: m_brokenMeshId
-      value: R_Upper_Tube_Breked
+      value: R_Upper_Tube_Breaked
       objectReference: {fileID: 0}
     - target: {fileID: 1344811178541236351, guid: bdb5f829fb529744ab52481e6bd1fcde, type: 3}
       propertyPath: m_normalMeshId
@@ -26416,7 +26421,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Hurtbox
   m_parameterAsset: {fileID: 0}
-  m_damageReceiverComponent: {fileID: 0}
+  m_damageReceiverComponent: {fileID: 1261084086}
   m_damageMultiplier: 1
   m_canReceiveDamage: 1
 --- !u!65 &1590296080
@@ -27550,22 +27555,22 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::MeshReferenceRegistry
   m_modelRoot: {fileID: 1622825675}
   m_references:
-  - m_id: L_LowerLeg_Rail_Up
+  - m_id: L_Lower_Leg_Rail_Up
     m_relativePath: model:REX_MODEL_GEO_GRP/model:L_LEG_GEO_GRP/model:L_LowerLeg_rail
     m_renderer: {fileID: 746681276}
-  - m_id: L_Upper_Rail_Armor
+  - m_id: L_Lower_Rail_Armor
     m_relativePath: model:REX_MODEL_GEO_GRP/model:L_LEG_GEO_GRP/model:L_LowerLeg_armor
     m_renderer: {fileID: 76750226}
-  - m_id: L_LowerLeg_Rail_Down
+  - m_id: L_Lower_Leg_Rail_Down
     m_relativePath: model:REX_MODEL_GEO_GRP/model:L_LEG_GEO_GRP/model:L_LowerLeg_rail1
     m_renderer: {fileID: 96645853}
-  - m_id: R_LowerLeg_Rail_Up
+  - m_id: R_Lower_Leg_Rail_Up
     m_relativePath: model:REX_MODEL_GEO_GRP/model:R_LEG_GEO_GRP/model:R_LowerLeg_rail
     m_renderer: {fileID: 1612528056}
-  - m_id: R_Upper_Rail_Armor
+  - m_id: R_Lower_Rail_Armor
     m_relativePath: model:REX_MODEL_GEO_GRP/model:R_LEG_GEO_GRP/model:R_LowerLeg_armor
     m_renderer: {fileID: 1001677494}
-  - m_id: R_LowerLeg_Rail_Down
+  - m_id: R_Lower_Leg_Rail_Down
     m_relativePath: model:REX_MODEL_GEO_GRP/model:R_LEG_GEO_GRP/model:R_LowerLeg_rail1
     m_renderer: {fileID: 1264311635}
   - m_id: L_Lower_Tube
@@ -27580,6 +27585,18 @@ MonoBehaviour:
   - m_id: R_Lower_Tube_Breked
     m_relativePath: model:REX_MODEL_GEO_GRP/model:R_LEG_GEO_GRP/model:R_LowerLeg_tube1
     m_renderer: {fileID: 1844971069}
+  - m_id: R_Upper_Tube
+    m_relativePath: model:REX_MODEL_GEO_GRP/model:R_LEG_GEO_GRP/model:R_LowerLeg_GEO
+    m_renderer: {fileID: 1834471359}
+  - m_id: R_Upper_Tube_Breaked
+    m_relativePath: model:REX_MODEL_GEO_GRP/model:R_LEG_GEO_GRP/model:R_LowerLeg_GEO1
+    m_renderer: {fileID: 1834471360}
+  - m_id: L_Upper_Tube
+    m_relativePath: model:REX_MODEL_GEO_GRP/model:L_LEG_GEO_GRP/model:L_LowerLeg_GEO
+    m_renderer: {fileID: 1834471358}
+  - m_id: L_Upper_Tube_Breaked
+    m_relativePath: model:REX_MODEL_GEO_GRP/model:L_LEG_GEO_GRP/model:L_LowerLeg_GEO1
+    m_renderer: {fileID: 953721959}
 --- !u!4 &1642829996 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 6465738921727000328, guid: 547bdcb48addfd5449f128ba9d0976ea, type: 3}
@@ -32538,6 +32555,21 @@ MonoBehaviour:
 --- !u!4 &1829701237 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 3168527218850596986, guid: 547bdcb48addfd5449f128ba9d0976ea, type: 3}
+  m_PrefabInstance: {fileID: 996596696}
+  m_PrefabAsset: {fileID: 0}
+--- !u!137 &1834471358 stripped
+SkinnedMeshRenderer:
+  m_CorrespondingSourceObject: {fileID: -8681722961079702006, guid: 547bdcb48addfd5449f128ba9d0976ea, type: 3}
+  m_PrefabInstance: {fileID: 996596696}
+  m_PrefabAsset: {fileID: 0}
+--- !u!137 &1834471359 stripped
+SkinnedMeshRenderer:
+  m_CorrespondingSourceObject: {fileID: -1415677520160393393, guid: 547bdcb48addfd5449f128ba9d0976ea, type: 3}
+  m_PrefabInstance: {fileID: 996596696}
+  m_PrefabAsset: {fileID: 0}
+--- !u!137 &1834471360 stripped
+SkinnedMeshRenderer:
+  m_CorrespondingSourceObject: {fileID: 4985198088649746502, guid: 547bdcb48addfd5449f128ba9d0976ea, type: 3}
   m_PrefabInstance: {fileID: 996596696}
   m_PrefabAsset: {fileID: 0}
 --- !u!1 &1841588946
@@ -51711,8 +51743,14 @@ MonoBehaviour:
   m_destructionObjective: {fileID: 8092509961622672101}
   m_sequenceEventAsset: {fileID: 11400000, guid: fe05cabe0d02bcc488ea248ebee3abba, type: 2}
   m_meshReferenceRegistry: {fileID: 1641650836}
-  m_leftRailBodyMeshIds: []
-  m_rightRailBodyMeshIds: []
+  m_leftRailBodyMeshIds:
+  - L_Lower_Leg_Rail_Up
+  - L_Lower_Rail_Armor
+  - L_Lower_Leg_Rail_Down
+  m_rightRailBodyMeshIds:
+  - R_Lower_Leg_Rail_Up
+  - R_Lower_Rail_Armor
+  - R_Lower_Leg_Rail_Down
   m_railRoot: {fileID: 67616461}
   m_gameplaySequenceChangedEvent: {fileID: 11400000, guid: c19d0671df7fde64196577670e2de7ef, type: 2}
 --- !u!4 &8112486855308110141
