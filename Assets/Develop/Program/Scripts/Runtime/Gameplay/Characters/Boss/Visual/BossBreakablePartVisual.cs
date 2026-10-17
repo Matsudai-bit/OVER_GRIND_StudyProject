@@ -6,20 +6,21 @@ using UnityEngine;
 /// ボス破壊可能部位の見た目を制御します。
 /// </summary>
 [DisallowMultipleComponent]
-public sealed class BossBreakablePartVisual :
-    MonoBehaviour
+public sealed class BossBreakablePartVisual : MonoBehaviour
 {
-    // 通常時のRenderer
-    [SerializeField, Header("通常メッシュ")]
-    private Renderer m_renderer;
+    [Header("メッシュ参照")]
 
-    // 通常時のメッシュObject
+    // メッシュ参照管理
     [SerializeField]
-    private GameObject m_normalMeshObject;
+    private MeshReferenceRegistry m_meshReferenceRegistry;
 
-    // 破壊後のメッシュObject
-    [SerializeField, Header("破壊メッシュ")]
-    private GameObject m_brokenMeshObject;
+    // 通常時のメッシュID
+    [SerializeField]
+    private string m_normalMeshId;
+
+    // 破壊後のメッシュID
+    [SerializeField]
+    private string m_brokenMeshId;
 
     // Emissiveを操作するMaterial Slot
     [SerializeField, Header("Material")]
@@ -35,6 +36,12 @@ public sealed class BossBreakablePartVisual :
     [SerializeField, Header("被弾演出")]
     private BossBreakablePartFeedbackParameterAsset
         m_feedbackParameter;
+
+    // 通常時のRenderer
+    private Renderer m_normalRenderer;
+
+    // 破壊後のRenderer
+    private Renderer m_brokenRenderer;
 
     // Emissive操作用
     private MaterialPropertyBlock m_materialPropertyBlock;
@@ -64,9 +71,14 @@ public sealed class BossBreakablePartVisual :
         InitializeMeshReferences();
         InitializeEmissive();
 
-        if (m_brokenMeshObject != null)
+        if (m_normalRenderer != null)
         {
-            m_brokenMeshObject.SetActive(false);
+            m_normalRenderer.gameObject.SetActive(true);
+        }
+
+        if (m_brokenRenderer != null)
+        {
+            m_brokenRenderer.gameObject.SetActive(false);
         }
     }
 
@@ -77,11 +89,9 @@ public sealed class BossBreakablePartVisual :
     {
         if (m_feedbackCoroutine != null)
         {
-            StopCoroutine(
-                m_feedbackCoroutine);
+            StopCoroutine(m_feedbackCoroutine);
 
-            m_feedbackCoroutine =
-                null;
+            m_feedbackCoroutine = null;
         }
 
         /*
@@ -102,16 +112,14 @@ public sealed class BossBreakablePartVisual :
     {
         StopDamageFeedback();
 
-        if (m_normalMeshObject != null)
+        if (m_normalRenderer != null)
         {
-            m_normalMeshObject.SetActive(
-                false);
+            m_normalRenderer.gameObject.SetActive(false);
         }
 
-        if (m_brokenMeshObject != null)
+        if (m_brokenRenderer != null)
         {
-            m_brokenMeshObject.SetActive(
-                true);
+            m_brokenRenderer.gameObject.SetActive(true);
         }
     }
 
@@ -122,32 +130,47 @@ public sealed class BossBreakablePartVisual :
     {
         if (m_feedbackCoroutine != null)
         {
-            StopCoroutine(
-                m_feedbackCoroutine);
+            StopCoroutine(m_feedbackCoroutine);
 
-            m_feedbackCoroutine =
-                null;
+            m_feedbackCoroutine = null;
         }
 
         RestoreEmissive();
     }
 
     /// <summary>
-    /// メッシュ参照を初期化します。
+    /// メッシュ参照を取得します。
     /// </summary>
     private void InitializeMeshReferences()
     {
-        if (m_renderer == null)
+        if (m_meshReferenceRegistry == null)
         {
-            m_renderer =
-                GetComponentInChildren<Renderer>();
+            Debug.LogError(
+                $"[{nameof(BossBreakablePartVisual)}] " +
+                "MeshReferenceRegistryが設定されていません。",
+                this);
+
+            return;
         }
 
-        if (m_normalMeshObject == null &&
-            m_renderer != null)
+        if (!m_meshReferenceRegistry.TryGetRenderer(
+                m_normalMeshId,
+                out m_normalRenderer))
         {
-            m_normalMeshObject =
-                m_renderer.gameObject;
+            Debug.LogError(
+                $"[{nameof(BossBreakablePartVisual)}] " +
+                $"通常メッシュID「{m_normalMeshId}」が見つかりません。",
+                this);
+        }
+
+        if (!m_meshReferenceRegistry.TryGetRenderer(
+                m_brokenMeshId,
+                out m_brokenRenderer))
+        {
+            Debug.LogError(
+                $"[{nameof(BossBreakablePartVisual)}] " +
+                $"破壊メッシュID「{m_brokenMeshId}」が見つかりません。",
+                this);
         }
     }
 
@@ -156,10 +179,9 @@ public sealed class BossBreakablePartVisual :
     /// </summary>
     private void InitializeEmissive()
     {
-        m_canControlEmissive =
-            false;
+        m_canControlEmissive = false;
 
-        if (m_renderer == null ||
+        if (m_normalRenderer == null ||
             string.IsNullOrEmpty(
                 m_emissivePropertyName))
         {
@@ -167,11 +189,10 @@ public sealed class BossBreakablePartVisual :
         }
 
         Material[] materials =
-            m_renderer.sharedMaterials;
+            m_normalRenderer.sharedMaterials;
 
         if (m_materialSlotIndex < 0 ||
-            m_materialSlotIndex >=
-            materials.Length)
+            m_materialSlotIndex >= materials.Length)
         {
             Debug.LogError(
                 $"Material Slot Index " +
@@ -216,8 +237,7 @@ public sealed class BossBreakablePartVisual :
         m_materialPropertyBlock =
             new MaterialPropertyBlock();
 
-        m_canControlEmissive =
-            true;
+        m_canControlEmissive = true;
     }
 
     /// <summary>
@@ -230,8 +250,7 @@ public sealed class BossBreakablePartVisual :
         {
             FeedbackCompleted?.Invoke();
 
-            m_feedbackCoroutine =
-                null;
+            m_feedbackCoroutine = null;
 
             yield break;
         }
@@ -256,8 +275,7 @@ public sealed class BossBreakablePartVisual :
 
         RestoreEmissive();
 
-        m_feedbackCoroutine =
-            null;
+        m_feedbackCoroutine = null;
 
         FeedbackCompleted?.Invoke();
     }
@@ -277,30 +295,24 @@ public sealed class BossBreakablePartVisual :
     {
         if (duration <= 0.0f)
         {
-            SetEmissive(
-                endValue);
+            SetEmissive(endValue);
 
             yield break;
         }
 
-        float elapsedTime =
-            0.0f;
+        float elapsedTime = 0.0f;
 
-        while (elapsedTime <
-               duration)
+        while (elapsedTime < duration)
         {
-            elapsedTime +=
-                Time.deltaTime;
+            elapsedTime += Time.deltaTime;
 
             float normalizedTime =
                 Mathf.Clamp01(
-                    elapsedTime /
-                    duration);
+                    elapsedTime / duration);
 
             float curveValue =
                 curve != null
-                    ? curve.Evaluate(
-                        normalizedTime)
+                    ? curve.Evaluate(normalizedTime)
                     : normalizedTime;
 
             float emissive =
@@ -309,29 +321,27 @@ public sealed class BossBreakablePartVisual :
                     endValue,
                     curveValue);
 
-            SetEmissive(
-                emissive);
+            SetEmissive(emissive);
 
             yield return null;
         }
 
-        SetEmissive(
-            endValue);
+        SetEmissive(endValue);
     }
 
     /// <summary>
     /// Emissive値を設定します。
     /// </summary>
     /// <param name="value">設定値。</param>
-    private void SetEmissive(
-        float value)
+    private void SetEmissive(float value)
     {
-        if (!m_canControlEmissive)
+        if (!m_canControlEmissive ||
+            m_normalRenderer == null)
         {
             return;
         }
 
-        m_renderer.GetPropertyBlock(
+        m_normalRenderer.GetPropertyBlock(
             m_materialPropertyBlock,
             m_materialSlotIndex);
 
@@ -339,7 +349,7 @@ public sealed class BossBreakablePartVisual :
             m_emissivePropertyID,
             value);
 
-        m_renderer.SetPropertyBlock(
+        m_normalRenderer.SetPropertyBlock(
             m_materialPropertyBlock,
             m_materialSlotIndex);
     }
