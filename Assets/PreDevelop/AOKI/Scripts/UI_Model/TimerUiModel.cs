@@ -6,11 +6,18 @@ using System;
 /// </summary>
 public class TimerUiModel : MonoBehaviour
 {
+    [SerializeField]
+    private ElapsedTimer m_timer;
     /// <summary>現在の経過時間を取得します。</summary>
     public float CurrentTime { get; private set; }
 
     /// <summary>時間が変更された際に発火するイベントです。</summary>
     public event Action<float> OnTimeChanged;
+
+    private void Awake()
+    {
+        m_timer.ElapsedTimeChanged += (seconds) => { OnTimeChanged?.Invoke((float)(seconds)); };
+    }
 
     /// <summary>
     /// 経過時間を加算し、変更後の時間をイベントで通知します。

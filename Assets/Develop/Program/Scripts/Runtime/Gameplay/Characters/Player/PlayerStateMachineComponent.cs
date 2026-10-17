@@ -7,6 +7,9 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public sealed class PlayerStateMachineComponent : MonoBehaviour
 {
+    [SerializeField, Header("Parameter Asset")]
+    private PlayerStateMachineParameterAsset m_parameterAsset;
+
     [SerializeField, Header("レールジャンプ")]
     private PlayerRailJumpParameterAsset m_railJumpParameterAsset;
 
@@ -61,12 +64,6 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
 
     // スプライングラインド機能
     private SplineGrindController m_splineGrindController;
-
-    // Vゲージ表示機能
-    private VGaugeUI m_vGaugeUI;
-
-    // 速度表示機能
-    private VSpeedUI m_vSpeedUI;
 
     // ParameterModel上の共有データ。UIがなくても更新します。
     private VGaugePlaceModel m_vGaugePlaceModel;
@@ -140,19 +137,6 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
     public SplineGrindController GrindController =>
         m_splineGrindController;
 
-    /// <summary>
-    /// Vゲージ表示機能を取得します。
-    /// シーンに配置されていない場合はnullを返すことがあります。
-    /// </summary>
-    public VGaugeUI VGaugeUI =>
-        m_vGaugeUI;
-
-    /// <summary>
-    /// 速度表示機能を取得します。
-    /// シーンに配置されていない場合はnullを返すことがあります。
-    /// </summary>
-    public VSpeedUI VSpeedUI =>
-        m_vSpeedUI;
 
     /// <summary>
     /// プレイヤーカメラ機能を取得します。
@@ -330,6 +314,8 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
         VGaugePlaceModel vGaugePlaceModel,
         SpeedPlaceModel speedPlaceModel)
     {
+        ApplyParameterAsset();
+
         if (inputReader == null ||
             monitor == null ||
             motor == null ||
@@ -412,15 +398,12 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
         m_boostChargingParameterAsset =
             boostChargingParameterAsset;
 
-        m_vGaugeUI = vGaugeUI;
-        m_vSpeedUI = vSpeedUI;
         m_playerCamera = playerCamera;
         m_modelTransform = modelTransform;
         m_vGaugePlaceModel = vGaugePlaceModel;
         m_speedPlaceModel = speedPlaceModel;
         m_vGaugePlaceModel.ResetGauge();
         m_speedPlaceModel.ResetSpeed();
-        RefreshParameterDisplays();
 
         m_stateMachine =
             new StateMachine<PlayerStateMachineComponent>(
@@ -511,23 +494,6 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
         }
 
         m_speedPlaceModel.UpdateSpeed(m_motor.HorizontalSpeed);
-        RefreshParameterDisplays();
-    }
-
-    /// <summary>
-    /// モデルの値をUIへ渡します。将来の表示接続の変更箇所をここへまとめています。
-    /// </summary>
-    private void RefreshParameterDisplays()
-    {
-        if (m_vGaugeUI != null)
-        {
-            m_vGaugeUI.SetGaugeRate(m_vGaugePlaceModel.GetGaugeRate());
-        }
-
-        if (m_vSpeedUI != null)
-        {
-            m_vSpeedUI.SetSpeed(m_speedPlaceModel.Speed);
-        }
     }
 
     /// <summary>
@@ -553,11 +519,6 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
             m_isBoostSuspended)
         {
             m_isBoostSuspended = false;
-
-            if (m_vGaugeUI != null)
-            {
-                m_vGaugeUI.SetCharging(false);
-            }
         }
     }
 
@@ -730,4 +691,19 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
             return;
         }
     }
+    /// <summary>Applies the assigned parameter asset.</summary>
+    private void ApplyParameterAsset()
+    {
+        if (m_parameterAsset == null) return;
+        m_railJumpParameterAsset = m_parameterAsset.RailJumpParameterAsset;
+        m_knockbackSpeed = m_parameterAsset.KnockbackSpeed;
+        m_knockbackRate = m_parameterAsset.KnockbackRate;
+        m_defaultKnockbackProfile = m_parameterAsset.DefaultKnockbackProfile;
+        m_knockbackLiftSpeed = m_parameterAsset.KnockbackLiftSpeed;
+        m_knockbackDuration = m_parameterAsset.KnockbackDuration;
+        m_hitRecoveryDuration = m_parameterAsset.HitRecoveryDuration;
+        m_invincibilityParameterAsset = m_parameterAsset.InvincibilityParameterAsset;
+        m_hitEnvironmentLayerMask = m_parameterAsset.HitEnvironmentLayerMask;
+    }
+
 }

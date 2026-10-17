@@ -59,16 +59,16 @@ public class ButtonSelector : MonoBehaviour
             return;
         }
 
-        // —LŒø‚É‚·‚é
-        m_navigateActionRef?.action.Enable();
-        m_enterActionRef?.action.Enable();
+        //// —LŒø‚É‚·‚é
+        //m_navigateActionRef?.action.Enable();
+        //m_enterActionRef?.action.Enable();
     }
 
     private void OnDisable()
     {
         // –³Œø‚É‚·‚é
-        m_navigateActionRef?.action.Disable();
-        m_enterActionRef?.action.Disable();
+        //m_navigateActionRef?.action.Disable();
+        //m_enterActionRef?.action.Disable();
     }
 
     private void Start()
@@ -92,6 +92,7 @@ public class ButtonSelector : MonoBehaviour
 
     private void Update()
     {
+        Debug.Log("m_navigateActionRef:" + m_navigateActionRef.action.enabled);
         // “ü—Í•ûŒü
         Vector2 nav = m_navigateActionRef.action.ReadValue<Vector2>();
 

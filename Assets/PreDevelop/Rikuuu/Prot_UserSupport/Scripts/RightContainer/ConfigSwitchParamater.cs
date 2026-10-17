@@ -59,22 +59,20 @@ public class ConfigSwitchParamater : MonoBehaviour
     private void Start()
     {
         // 文字の置き換え
-        m_paramaterText.text = m_paramaterName;
-        // 値の初期化通知する
-        if (m_handleParameterChange.GetPersistentEventCount() > 0)
+        if (m_paramaterText != null)
         {
-            m_handleParameterChange.Invoke(m_defaultValue);
+            m_paramaterText.text = m_paramaterName;
         }
 
-        // 初期値に応じて画像を変更する
+        // 初期値に応じて画像を変更する（※Start時にイベント通知は行わない）
         SwitchTexture();
     }
 
     private void Update()
     {
-        if(!m_isLocked)
+        if (!m_isLocked)
         {
-            // スペースキーが押されたら
+            // 決定キーが押されたら
             if (m_enterActionRef != null && m_enterActionRef.action.WasPressedThisFrame())
             {
                 // 値を変更する
@@ -83,15 +81,28 @@ public class ConfigSwitchParamater : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// 外部（セーブデータ）から初期値をUIに反映させるメソッド
+    /// </summary>
+    /// <param name="value">反映させるbool値。</param>
+    public void SetDefaultValue(bool value)
+    {
+        m_defaultValue = value;
+
+        // UI表示（画像）のみ更新
+        SwitchTexture();
+    }
+
     public void SwitchValue()
     {
         // 値を入れ替える
         m_defaultValue = !m_defaultValue;
+
         // 画像を変更する
         SwitchTexture();
 
         // 値変更を通知する
-        if (m_handleParameterChange.GetPersistentEventCount() > 0)
+        if (m_handleParameterChange != null && m_handleParameterChange.GetPersistentEventCount() > 0)
         {
             m_handleParameterChange.Invoke(m_defaultValue);
         }
@@ -99,6 +110,8 @@ public class ConfigSwitchParamater : MonoBehaviour
 
     private void SwitchTexture()
     {
+        if (m_switchImage == null) return;
+
         // 値がONの場合
         if (m_defaultValue)
         {
@@ -109,7 +122,7 @@ public class ConfigSwitchParamater : MonoBehaviour
         else
         {
             // OFFの画像を表示する
-            m_switchImage.sprite= m_falseTexture;
+            m_switchImage.sprite = m_falseTexture;
         }
     }
 
