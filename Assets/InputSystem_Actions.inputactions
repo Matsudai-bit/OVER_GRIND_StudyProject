@@ -584,7 +584,7 @@
                     "name": "Submit",
                     "type": "Button",
                     "id": "7607c7b6-cd76-4816-beef-bd0341cfe950",
-                    "expectedControlType": "Button",
+                    "expectedControlType": "",
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": false
@@ -593,7 +593,7 @@
                     "name": "Cancel",
                     "type": "Button",
                     "id": "15cef263-9014-4fd5-94d9-4e4a6234a6ef",
-                    "expectedControlType": "Button",
+                    "expectedControlType": "",
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": false
@@ -948,7 +948,7 @@
                 {
                     "name": "",
                     "id": "9e92bb26-7e3b-4ec4-b06b-3c8f8e498ddc",
-                    "path": "*/{Submit}",
+                    "path": "<Keyboard>/enter",
                     "interactions": "",
                     "processors": "",
                     "groups": "Keyboard&Mouse;Gamepad;Touch;Joystick;XR",
@@ -958,11 +958,55 @@
                 },
                 {
                     "name": "",
+                    "id": "2d4dcef7-f8ac-478f-8af4-fdda216f4a9b",
+                    "path": "<Keyboard>/space",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Submit",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "f8e7725a-4621-4a1d-9ae0-7175101cdebf",
+                    "path": "<Gamepad>/buttonSouth",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Submit",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
                     "id": "82627dcc-3b13-4ba9-841d-e4b746d6553e",
-                    "path": "*/{Cancel}",
+                    "path": "<Keyboard>/c",
                     "interactions": "",
                     "processors": "",
                     "groups": "Keyboard&Mouse;Gamepad;Touch;Joystick;XR",
+                    "action": "Cancel",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "3c11d214-c596-462a-8da7-ce21ab2b388d",
+                    "path": "<Keyboard>/escape",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Cancel",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "29d3a351-402c-4d61-8559-d4133f0a684a",
+                    "path": "<Gamepad>/buttonEast",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
                     "action": "Cancel",
                     "isComposite": false,
                     "isPartOfComposite": false
@@ -1185,13 +1229,13 @@
             ]
         },
         {
-            "name": "InGame_System",
-            "id": "8f8e4707-56de-4420-a1dd-c15a34dcaf85",
+            "name": "TitleUI",
+            "id": "bce03e84-538e-4ae6-9ebb-8a76c53fd941",
             "actions": [
                 {
-                    "name": "New action",
+                    "name": "OpenMenu",
                     "type": "Button",
-                    "id": "fe38bb14-fdc4-46cf-a62b-14b545a0ceae",
+                    "id": "a9a15e80-d210-40b8-b842-9be6d8cbc9f5",
                     "expectedControlType": "",
                     "processors": "",
                     "interactions": "",
@@ -1201,12 +1245,23 @@
             "bindings": [
                 {
                     "name": "",
-                    "id": "119d3dad-5bf2-4ffa-bbd6-e329047505ba",
-                    "path": "",
+                    "id": "50f4b0aa-9fa2-4017-a92e-90845fa83722",
+                    "path": "<Keyboard>/escape",
                     "interactions": "",
                     "processors": "",
                     "groups": "",
-                    "action": "New action",
+                    "action": "OpenMenu",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "5badb9f0-20f3-4a26-85c0-4a18fae5dfa1",
+                    "path": "<Gamepad>/start",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "OpenMenu",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }

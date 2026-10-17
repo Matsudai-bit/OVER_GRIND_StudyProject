@@ -59,17 +59,10 @@ public class UserSupportManager : MonoBehaviour
             Debug.LogWarning($"{gameObject.name}: {m_changePageRightActionRef} ‚ªİ’è‚³‚ê‚Ä‚¢‚Ü‚¹‚ñBInspector‚ÅŠ„‚è“–‚Ä‚Ä‚­‚¾‚³‚¢B", this);
             return;
         }
-
-        // —LŒø‚É‚·‚é
-        m_changePageLeftActionRef?.action.Enable();
-        m_changePageRightActionRef?.action.Enable();
     }
 
     private void OnDisable()
     {
-        // –³Œø‚É‚·‚é
-        //m_changePageLeftActionRef?.action.Disable();
-        //m_changePageRightActionRef?.action.Disable();
     }
 
     private void Start()
