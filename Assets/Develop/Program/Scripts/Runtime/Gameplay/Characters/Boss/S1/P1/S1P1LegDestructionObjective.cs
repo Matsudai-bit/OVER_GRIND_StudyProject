@@ -40,6 +40,8 @@ public sealed class S1P1LegDestructionObjective :
         m_finalWeakPointGroup.StartMonitoring();
 
         CheckPhaseCompletion();
+
+       
     }
 
     /// <summary>
