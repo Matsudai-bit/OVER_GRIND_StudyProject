@@ -38,16 +38,20 @@ public class InGameUiPresenter : MonoBehaviour
         // Healthモデルの初期状態をViewに反映
         if (m_healthModel != null && m_hpView != null)
         {
-            // ※HpDisplayView側のメソッド名変更に合わせて InitializeHp に修正
             m_hpView.Initialize(m_healthModel.MaxHealth);
             m_hpView.UpdateHpDisplay(m_healthModel.CurrentHealth, m_healthModel.MaxHealth);
         }
 
-        // 車両モデルの初期状態をViewに反映
-        if (m_vehicleView != null)
+        // 速度・ゲージモデルの初期状態をViewに反映
+        if (m_speedModel != null)
         {
-            if (m_speedModel != null) m_vehicleView.UpdateSpeed(m_speedModel.Speed);
-            if (m_vGaugeModel != null) m_vehicleView.UpdateGauge(m_vGaugeModel.GaugeRate);
+            if (m_vehicleView != null) m_vehicleView.UpdateSpeed(m_speedModel.Speed);
+            if (m_hpView != null) m_hpView.UpdateSpeed(m_speedModel.Speed); // ★初期速度をHPゲージにも適用
+        }
+
+        if (m_vGaugeModel != null && m_vehicleView != null)
+        {
+            m_vehicleView.UpdateGauge(m_vGaugeModel.GaugeRate);
         }
     }
 
@@ -107,7 +111,11 @@ public class InGameUiPresenter : MonoBehaviour
     /// <param name="newSpeed">変更後の速度。</param>
     private void HandleSpeedChanged(float oldSpeed, float newSpeed)
     {
+        // スピードメーターの更新
         if (m_vehicleView != null) m_vehicleView.UpdateSpeed(newSpeed);
+
+        // ★追加: HPゲージの3D傾き（奥行き）にも速度を伝える
+        if (m_hpView != null) m_hpView.UpdateSpeed(newSpeed);
     }
 
     /// <summary>
