@@ -35,11 +35,8 @@ public sealed class PlayerHitState : StateBase<PlayerStateMachineComponent>
         Owner.CarriedBoostGaugeRate = 0.0f;
         Owner.SuspendedBoostGaugeRate = 0.0f;
         Owner.ClearSpeedDisplayOverride();
-        if (Owner.VGaugeUI != null)
-        {
-            Owner.VGaugeUI.SetGaugeRate(0.0f);
-            Owner.VGaugeUI.SetCharging(false);
-        }
+        Owner.VGaugePlaceModel.SetGaugeRate(0.0f);
+
         Owner.InputReader.DiscardInput();
         Owner.AnimationPresenter.PlayHitAnimation();
         Owner.Motor.ApplyKnockback(m_attackCenter, m_horizontalSpeed, m_liftSpeed);

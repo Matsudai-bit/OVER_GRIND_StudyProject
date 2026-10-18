@@ -2,35 +2,35 @@ using System;
 using System.Collections.Generic;
 
 /// <summary>
-/// 実行時に一つの攻撃で使用するAttackHitbox群を保持します。
+/// 螳溯｡梧凾縺ｫ荳縺､縺ｮ謾ｻ謦・〒菴ｿ逕ｨ縺吶ｋAttackHitbox鄒､繧剃ｿ晄戟縺励∪縺吶・
 /// </summary>
 public sealed class AttackHitboxRuntimeGroup
 {
-    // 攻撃ID
+    // 謾ｻ謦オD
     private readonly AttackIdentifier m_attackIdentifier;
 
-    // 攻撃で使用するHitbox一覧
+    // 謾ｻ謦・〒菴ｿ逕ｨ縺吶ｋHitbox荳隕ｧ
     private readonly IReadOnlyList<AttackHitbox> m_hitboxes;
 
     /// <summary>
-    /// 攻撃IDを取得します。
+    /// 謾ｻ謦オD繧貞叙蠕励＠縺ｾ縺吶・
     /// </summary>
     public AttackIdentifier AttackIdentifier =>
         m_attackIdentifier;
 
     /// <summary>
-    /// 攻撃で使用するHitbox一覧を取得します。
+    /// 謾ｻ謦・〒菴ｿ逕ｨ縺吶ｋHitbox荳隕ｧ繧貞叙蠕励＠縺ｾ縺吶・
     /// </summary>
     public IReadOnlyList<AttackHitbox> Hitboxes =>
         m_hitboxes;
 
     /// <summary>
-    /// 実行時Hitbox情報を生成します。
+    /// 螳溯｡梧凾Hitbox諠・ｱ繧堤函謌舌＠縺ｾ縺吶・
     /// </summary>
-    /// <param name="attackIdentifier">攻撃ID。</param>
-    /// <param name="hitboxes">攻撃で使用するHitbox一覧。</param>
+    /// <param name="attackIdentifier">謾ｻ謦オD縲・/param>
+    /// <param name="hitboxes">謾ｻ謦・〒菴ｿ逕ｨ縺吶ｋHitbox荳隕ｧ縲・/param>
     /// <exception cref="ArgumentNullException">
-    /// 必要な情報がnullの場合に発生します。
+    /// 蠢・ｦ√↑諠・ｱ縺系ull縺ｮ蝣ｴ蜷医↓逋ｺ逕溘＠縺ｾ縺吶・
     /// </exception>
     public AttackHitboxRuntimeGroup(
         AttackIdentifier attackIdentifier,
@@ -48,7 +48,7 @@ public sealed class AttackHitboxRuntimeGroup
     }
 
     /// <summary>
-    /// 登録されているHitboxをすべて有効にします。
+    /// 逋ｻ骭ｲ縺輔ｌ縺ｦ縺・ｋHitbox繧偵☆縺ｹ縺ｦ譛牙柑縺ｫ縺励∪縺吶・
     /// </summary>
     public void EnableHitboxes()
     {
@@ -59,12 +59,16 @@ public sealed class AttackHitboxRuntimeGroup
                 continue;
             }
 
-            hitbox.EnableHitbox();
+            // 繝繝｡繝ｼ繧ｸ險ｭ螳壹′譛ｪ逋ｻ骭ｲ縺ｧ繧ゅ√げ繝ｫ繝ｼ繝励・謾ｻ謦オD繧定｢ｫ蠑ｾ蜈医∈貂｡縺励∪縺吶・
+            hitbox.EnableHitbox(
+                new AttackDamageData(
+                    hitbox.CurrentDamage,
+                    m_attackIdentifier));
         }
     }
 
     /// <summary>
-    /// 登録されているHitboxをすべて無効にします。
+    /// 逋ｻ骭ｲ縺輔ｌ縺ｦ縺・ｋHitbox繧偵☆縺ｹ縺ｦ辟｡蜉ｹ縺ｫ縺励∪縺吶・
     /// </summary>
     public void DisableHitboxes()
     {

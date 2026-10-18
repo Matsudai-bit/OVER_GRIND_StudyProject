@@ -136,24 +136,24 @@ public sealed class S1P2BossHeatVentState :
     /// </summary>
     private void StartCoolTimeIfSucceeded()
     {
-        //if (Owner.GetStateExecutionStatus() !=
-        //    StateExecutionStatus.SUCCEEDED ||
-        //    m_references == null ||
-        //    m_references.DecisionParameterAsset == null)
-        //{
-        //    return;
-        //}
+        if (Owner.GetStateExecutionStatus() !=
+            StateExecutionStatus.SUCCEEDED ||
+            m_references == null ||
+            m_references.DecisionParameterAsset == null)
+        {
+            return;
+        }
 
-        //BossStateCoolTimeManager coolTimeManager =
-        //    Owner.GetComponent<BossStateCoolTimeManager>();
+        BossStateCoolTimeManager coolTimeManager =
+            Owner.GetComponent<BossStateCoolTimeManager>();
 
-        //if (coolTimeManager == null)
-        //{
-        //    return;
-        //}
+        if (coolTimeManager == null)
+        {
+            return;
+        }
 
-        //coolTimeManager.StartCoolTime<S1P2BossHeatVentState>(
-        //    m_references.DecisionParameterAsset.HeatExhaust.CoolTime);
+        coolTimeManager.StartCoolTime<S1P2BossHeatVentState>(
+            m_references.DecisionParameterAsset.HeatExhaust.CoolTime);
     }
 
     /// <summary>

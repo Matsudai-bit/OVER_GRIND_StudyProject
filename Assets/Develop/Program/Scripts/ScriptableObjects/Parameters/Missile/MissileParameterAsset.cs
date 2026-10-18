@@ -27,4 +27,6 @@ public sealed class MissileParameterAsset : ScriptableObject
     /// </summary>
     public MissileSteeringParameters SteeringParameters =>
         m_steeringParameters;
+
+
 }

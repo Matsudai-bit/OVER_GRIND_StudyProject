@@ -101,6 +101,8 @@ public sealed class BossMotor : MonoBehaviour
             newHorizontalVelocity.x,
             m_rigidbody.linearVelocity.y,
             newHorizontalVelocity.z);
+
+        
     }
 
     /// <summary>
@@ -176,6 +178,27 @@ public sealed class BossMotor : MonoBehaviour
         }
 
         m_rigidbody.MovePosition(targetPosition);
+    }
+
+    /// <summary>
+    /// 現在の水平移動速度を取得します。
+    /// </summary>
+    public float HorizontalSpeed
+    {
+        get
+        {
+            if (m_rigidbody == null)
+            {
+                return 0.0f;
+            }
+
+            Vector3 velocity =
+                m_rigidbody.linearVelocity;
+
+            return new Vector2(
+                velocity.x,
+                velocity.z).magnitude;
+        }
     }
 
 }

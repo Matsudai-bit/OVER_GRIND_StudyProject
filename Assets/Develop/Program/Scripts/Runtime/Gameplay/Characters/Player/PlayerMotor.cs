@@ -6,6 +6,9 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public sealed class PlayerMotor : MonoBehaviour
 {
+    [SerializeField, Header("Parameter Asset")]
+    private PlayerMotorComponentParameterAsset m_parameterAsset;
+
     // 時間パラメータの最小値
     private const float MIN_TIME = 0.01f;
 
@@ -16,19 +19,26 @@ public sealed class PlayerMotor : MonoBehaviour
     // これ未満の速度では障害物検知を行わない（静止判定のノイズ回避）
     private const float OBSTACLE_CHECK_SPEED_THRESHOLD = 0.01f;
 
+    // 停止状態と判定する水平速度の閾値
+    private const float STOP_SPEED_THRESHOLD = 0.01f;
+
+    // 停止後に再加速を許可する、体と入力方向の角度差（度）
+    private const float START_FACING_TOLERANCE = 1.0f;
+
     // カメラ基準移動に使用するTransform
     [SerializeField, Header("移動基準")]
     private Transform m_movementReference;
 
-    // 障害物への食い込みを防ぐための手前バッファ距離
-    // 大きいほど障害物の手前で早めに減速するが、
-    // 隙間の狭い通路で引っかかりやすくなる
+    // 障害物として扱うレイヤー
     [SerializeField, Header("障害物検知")]
+    private LayerMask m_obstacleLayerMask;
+
+    // 障害物への食い込みを防ぐための手前バッファ距離
+    [SerializeField]
     [Min(0.0f)]
     private float m_obstacleSkinWidth = 0.05f;
 
     // 障害物に接触している間、1秒あたり減速する速度
-    // 値が大きいほど、障害物へ接触した際に速く止まる
     [SerializeField]
     [Min(0.0f)]
     private float m_obstacleDecelerationPerSecond = 20.0f;
@@ -109,6 +119,42 @@ public sealed class PlayerMotor : MonoBehaviour
         m_playerRigidbody.linearVelocity = velocity;
     }
 
+    /// <summary>速度を変更せず、指定した水平進行方向へ体の向きを即座に合わせます。</summary>
+    /// <param name="worldDirection">ワールド空間の進行方向。垂直成分は使用しません。</param>
+    public void AlignFacingToDirection(Vector3 worldDirection)
+    {
+        if (!m_isInitialized) return;
+        worldDirection.y = 0.0f;
+        if (worldDirection.sqrMagnitude <= DIRECTION_SQR_THRESHOLD) return;
+
+        // 同じ物理更新内で攻撃へ移る場合も、新しい向きから移動を開始します。
+        m_playerRigidbody.rotation = Quaternion.LookRotation(worldDirection.normalized, Vector3.up);
+    }
+
+    /// <summary>水平速度と上昇を維持し、空中攻撃中の落下速度を制限します。</summary>
+    /// <param name="maxFallSpeed">許容する下向きの速度。</param>
+    public void LimitAttackFallSpeed(float maxFallSpeed)
+    {
+        if (!m_isInitialized || m_playerRigidbody.isKinematic) return;
+        Vector3 velocity = m_playerRigidbody.linearVelocity;
+        float gravityStep = m_playerRigidbody.useGravity ? Physics.gravity.y * Time.fixedDeltaTime : 0.0f;
+        // この後の物理計算で加わる重力も含めて制限します。
+        velocity.y = Mathf.Max(velocity.y, -Mathf.Max(0.0f, maxFallSpeed) - gravityStep);
+        m_playerRigidbody.linearVelocity = velocity;
+    }
+
+    /// <summary>物理衝突を維持しながら、空中攻撃の接触位置へ追従します。</summary>
+    /// <param name="position">対象の移動と下降量を反映した目標位置。</param>
+    /// <param name="deltaTime">物理更新の間隔。</param>
+    public void MoveToAirAttackContact(Vector3 position, float deltaTime)
+    {
+        if (!m_isInitialized || m_playerRigidbody.isKinematic || deltaTime <= 0.0f) return;
+        Vector3 velocity = (position - m_playerRigidbody.position) / deltaTime;
+        // 停止・緩やかな下降を重力に上書きされないよう、次の物理更新分を補償します。
+        if (m_playerRigidbody.useGravity) velocity -= Physics.gravity * deltaTime;
+        m_playerRigidbody.linearVelocity = velocity;
+    }
+
     /// <summary>固定更新によるレール誘導を開始し、物理演算との位置の取り合いを防ぎます。</summary>
     public void BeginRailMotion()
     {
@@ -140,48 +186,139 @@ public sealed class PlayerMotor : MonoBehaviour
         EndRailMotion(m_railVelocity);
     }
 
-    /// <summary>滑走と無入力ジャンプを、障害物を確認しながら同じ物理更新で移動させます。</summary>
-    /// <param name="targetPosition">次の物理ステップで到達する位置。</param>
+    /// <summary>
+    /// 滑走と無入力ジャンプを、障害物を確認しながら
+    /// 同じ物理更新で移動させます。
+    /// </summary>
+    /// <param name="targetPosition">
+    /// 次の物理ステップで到達する位置。
+    /// </param>
     /// <param name="forward">進行方向。</param>
     /// <param name="deltaTime">物理更新時間。</param>
-    /// <param name="obstacle">経路上で最も近い障害物。</param>
-    /// <returns>true：移動可能。false：障害物あり、または誘導未開始。</returns>
-    public bool TryMoveAlongRail(Vector3 targetPosition, Vector3 forward,
-        float deltaTime, out RaycastHit obstacle)
+    /// <param name="obstacle">
+    /// 経路上で最も近い障害物。
+    /// </param>
+    /// <returns>
+    /// true：移動可能です。
+    /// false：障害物があります、または誘導未開始です。
+    /// </returns>
+    public bool TryMoveAlongRail(
+        Vector3 targetPosition,
+        Vector3 forward,
+        float deltaTime,
+        out RaycastHit obstacle)
     {
         obstacle = default;
-        if (!m_isInitialized || !m_isRailMotionActive || deltaTime <= 0.0f) return false;
 
-        Vector3 displacement = targetPosition - m_playerRigidbody.position;
-        float distance = displacement.magnitude;
-        float nearestDistance = float.PositiveInfinity;
+        if (!m_isInitialized ||
+            !m_isRailMotionActive ||
+            deltaTime <= 0.0f)
+        {
+            return false;
+        }
+
+        Vector3 displacement =
+            targetPosition -
+            m_playerRigidbody.position;
+
+        float distance =
+            displacement.magnitude;
+
+        float nearestDistance =
+            float.PositiveInfinity;
+
         if (distance > Mathf.Epsilon)
         {
             Physics.SyncTransforms();
-            RaycastHit[] hits = m_playerRigidbody.SweepTestAll(
-                displacement / distance, distance, QueryTriggerInteraction.Ignore);
+
+            RaycastHit[] hits =
+                m_playerRigidbody.SweepTestAll(
+                    displacement / distance,
+                    distance,
+                    QueryTriggerInteraction.Ignore);
+
             foreach (RaycastHit hit in hits)
             {
-                if (hit.collider.attachedRigidbody == m_playerRigidbody ||
-                    IsRailCollider(hit.collider) || hit.distance >= nearestDistance) continue;
-                nearestDistance = hit.distance;
+                Collider hitCollider =
+                    hit.collider;
+
+                if (hitCollider == null)
+                {
+                    continue;
+                }
+
+                // 自分自身は無視
+                if (hitCollider.attachedRigidbody ==
+                    m_playerRigidbody)
+                {
+                    continue;
+                }
+
+                // レール自身は無視
+                if (IsRailCollider(hitCollider))
+                {
+                    continue;
+                }
+
+                // Obstacle Layer以外は無視
+                if (!IsObstacleLayer(
+                    hitCollider.gameObject.layer))
+                {
+                    continue;
+                }
+
+                // 最も近い障害物を採用
+                if (hit.distance >= nearestDistance)
+                {
+                    continue;
+                }
+
+                nearestDistance =
+                    hit.distance;
+
                 obstacle = hit;
             }
         }
 
-        if (nearestDistance < float.PositiveInfinity)
+        // 障害物が存在する
+        if (!float.IsPositiveInfinity(
+            nearestDistance))
         {
-            // 衝突時だけ安全な手前まで補正し、誘導解除後に壁へ押し込みません。
-            Vector3 movement = displacement.normalized * Mathf.Max(0.0f, nearestDistance - m_obstacleSkinWidth);
-            m_playerRigidbody.position += movement;
-            m_railVelocity = movement / deltaTime;
+            float safeDistance =
+                Mathf.Max(
+                    nearestDistance -
+                    m_obstacleSkinWidth,
+                    0.0f);
+
+            Vector3 movement =
+                displacement.normalized *
+                safeDistance;
+
+            m_playerRigidbody.position +=
+                movement;
+
+            m_railVelocity =
+                movement / deltaTime;
+
             return false;
         }
 
-        m_railVelocity = displacement / deltaTime;
-        m_playerRigidbody.MovePosition(targetPosition);
-        if (forward.sqrMagnitude > DIRECTION_SQR_THRESHOLD)
-            m_playerRigidbody.MoveRotation(Quaternion.LookRotation(forward, Vector3.up));
+        // 障害物がなければ目標位置へ移動
+        m_railVelocity =
+            displacement / deltaTime;
+
+        m_playerRigidbody.MovePosition(
+            targetPosition);
+
+        if (forward.sqrMagnitude >
+            DIRECTION_SQR_THRESHOLD)
+        {
+            m_playerRigidbody.MoveRotation(
+                Quaternion.LookRotation(
+                    forward,
+                    Vector3.up));
+        }
+
         return true;
     }
 
@@ -272,6 +409,8 @@ public sealed class PlayerMotor : MonoBehaviour
     /// <param name="playerRigidbody">プレイヤーのRigidbody。</param>
     public void Initialize(Rigidbody playerRigidbody)
     {
+        ApplyParameterAsset();
+
         if (playerRigidbody == null)
         {
             Debug.LogError(
@@ -283,6 +422,15 @@ public sealed class PlayerMotor : MonoBehaviour
         }
 
         m_playerRigidbody = playerRigidbody;
+
+        // 向きは移動・レール処理で制御するため、衝突による物理回転を全軸で固定します。
+        // 位置の制約は維持し、シーン側の設定に依存せず回転を防ぎます。
+        if (!m_playerRigidbody.isKinematic)
+        {
+            m_playerRigidbody.angularVelocity = Vector3.zero;
+        }
+        m_playerRigidbody.constraints |= RigidbodyConstraints.FreezeRotation;
+
         m_isInitialized = true;
 
         if (m_playerRigidbody.isKinematic)
@@ -343,6 +491,32 @@ public sealed class PlayerMotor : MonoBehaviour
         Vector3 currentHorizontalVelocity =
             GetHorizontalVelocity();
 
+        if (ShouldBrakeForReverseInput(currentHorizontalVelocity, moveDirection))
+        {
+            // 通常の減速度に倍率を掛け、向きを維持したまま急ブレーキをかけます。
+            float brakeAcceleration = CalculateAcceleration(maxMoveSpeed, parameters.TimeToStop)
+                * Mathf.Max(1.0f, parameters.ReverseBrakeMultiplier);
+            Vector3 brakingVelocity = Vector3.MoveTowards(
+                currentHorizontalVelocity, Vector3.zero, brakeAcceleration * deltaTime);
+            ApplyHorizontalVelocity(brakingVelocity, deltaTime, applyObstacleAvoidance);
+            return;
+        }
+
+        if (currentHorizontalVelocity.sqrMagnitude <=
+            STOP_SPEED_THRESHOLD * STOP_SPEED_THRESHOLD &&
+            moveDirection.sqrMagnitude > DIRECTION_SQR_THRESHOLD)
+        {
+            Vector3 facingDirection = m_playerRigidbody.rotation * Vector3.forward;
+            facingDirection.y = 0.0f;
+            if (Vector3.Angle(facingDirection, moveDirection) > START_FACING_TOLERANCE)
+            {
+                // 水平速度を0に保って方向転換し、向きが揃った次の更新から加速します。
+                ApplyHorizontalVelocity(Vector3.zero, deltaTime, applyObstacleAvoidance);
+                RotateTowardsMoveDirection(moveDirection, parameters.RotationSpeed, deltaTime);
+                return;
+            }
+        }
+
         float acceleration =
             CalculateAcceleration(
                 maxMoveSpeed,
@@ -364,6 +538,19 @@ public sealed class PlayerMotor : MonoBehaviour
             moveDirection,
             parameters.RotationSpeed,
             deltaTime);
+    }
+
+    /// <summary>
+    /// 現在の進行方向に対して入力が逆向きか判定します。
+    /// </summary>
+    /// <param name="horizontalVelocity">現在の水平速度。</param>
+    /// <param name="inputDirection">カメラ基準で変換した入力方向。</param>
+    /// <returns>true：移動中に90度を超える逆入力。false：停止中、無入力、または順方向。</returns>
+    private bool ShouldBrakeForReverseInput(Vector3 horizontalVelocity, Vector3 inputDirection)
+    {
+        return horizontalVelocity.sqrMagnitude > STOP_SPEED_THRESHOLD * STOP_SPEED_THRESHOLD &&
+            inputDirection.sqrMagnitude > DIRECTION_SQR_THRESHOLD &&
+            Vector3.Dot(horizontalVelocity, inputDirection) < 0.0f;
     }
 
     /// <summary>
@@ -684,20 +871,25 @@ public sealed class PlayerMotor : MonoBehaviour
     /// <summary>
     /// 進行方向に障害物がある場合、
     /// 実際の現在速度を基準に緩やかに減速させます。
-    /// 障害物の手前で瞬時に速度を切り詰めるのではなく、
-    /// <see cref="m_obstacleDecelerationPerSecond"/>の減速度で
-    /// 徐々に速度を落とすことで、不自然な急停止を避けます。
     /// </summary>
-    /// <param name="horizontalVelocity">要求されている目標水平速度。</param>
-    /// <param name="deltaTime">この速度が適用される時間幅。</param>
-    /// <returns>障害物を考慮して減速した水平速度。</returns>
+    /// <param name="horizontalVelocity">
+    /// 要求されている目標水平速度。
+    /// </param>
+    /// <param name="deltaTime">
+    /// この速度が適用される時間幅。
+    /// </param>
+    /// <returns>
+    /// 障害物を考慮した水平速度。
+    /// </returns>
     private Vector3 ClampVelocityForObstacles(
         Vector3 horizontalVelocity,
         float deltaTime)
     {
-        float requestedSpeed = horizontalVelocity.magnitude;
+        float requestedSpeed =
+            horizontalVelocity.magnitude;
 
-        if (requestedSpeed <= OBSTACLE_CHECK_SPEED_THRESHOLD ||
+        if (requestedSpeed <=
+                OBSTACLE_CHECK_SPEED_THRESHOLD ||
             deltaTime <= 0.0f)
         {
             return horizontalVelocity;
@@ -706,43 +898,81 @@ public sealed class PlayerMotor : MonoBehaviour
         Vector3 direction =
             horizontalVelocity / requestedSpeed;
 
-        // このステップで実際に進もうとしている距離
+        // この物理ステップで進もうとしている距離
         float travelDistance =
             requestedSpeed * deltaTime;
 
-        // Rigidbodyに付いている非Trigger Colliderを基準に、
-        // 進行方向へのスイープ判定を行う
-        // （AttackHitbox等のTrigger Colliderは自動的に除外される）
-        bool isBlocked =
-            m_playerRigidbody.SweepTest(
+        // 進行方向上に存在するColliderを取得
+        RaycastHit[] hits =
+            m_playerRigidbody.SweepTestAll(
                 direction,
-                out RaycastHit hitInfo,
                 travelDistance,
                 QueryTriggerInteraction.Ignore);
 
-        if (!isBlocked)
+        float nearestObstacleDistance =
+            float.PositiveInfinity;
+
+        foreach (RaycastHit hit in hits)
+        {
+            Collider hitCollider =
+                hit.collider;
+
+            if (hitCollider == null)
+            {
+                continue;
+            }
+
+            // 自分自身に属するColliderは無視
+            if (hitCollider.attachedRigidbody ==
+                m_playerRigidbody)
+            {
+                continue;
+            }
+
+            // Obstacle Layer以外は無視
+            if (!IsObstacleLayer(
+                hitCollider.gameObject.layer))
+            {
+                continue;
+            }
+
+            // 最も近い障害物だけを使用
+            if (hit.distance >=
+                nearestObstacleDistance)
+            {
+                continue;
+            }
+
+            nearestObstacleDistance =
+                hit.distance;
+        }
+
+        // 障害物が存在しない
+        if (float.IsPositiveInfinity(
+            nearestObstacleDistance))
         {
             return horizontalVelocity;
         }
 
-        // 障害物の手前、バッファ分だけ余裕を持たせた距離までなら
-        // 進んでよい速度（このステップの上限）
+        // 障害物の少し手前まで進行可能
         float allowedDistance =
             Mathf.Max(
-                hitInfo.distance - m_obstacleSkinWidth,
+                nearestObstacleDistance -
+                m_obstacleSkinWidth,
                 0.0f);
 
         float allowedSpeedThisStep =
             allowedDistance / deltaTime;
 
-        // 現在の実速度を基準に、上限速度へ向けて
-        // 緩やかに減速させる（瞬時の切り詰めを避ける）
+        // 現在の実際の水平速度
         float currentActualSpeed =
             GetHorizontalVelocity().magnitude;
 
         float decelerationThisStep =
-            m_obstacleDecelerationPerSecond * deltaTime;
+            m_obstacleDecelerationPerSecond *
+            deltaTime;
 
+        // 障害物へ接近した場合は徐々に減速
         float nextSpeed =
             Mathf.MoveTowards(
                 currentActualSpeed,
@@ -798,6 +1028,12 @@ public sealed class PlayerMotor : MonoBehaviour
             return velocity.magnitude;
         }
     }
+
+    /// <summary>
+    /// プレイヤーの水平移動が停止しているか取得します。
+    /// </summary>
+    public bool IsHorizontallyStopped =>
+        HorizontalSpeed <= STOP_SPEED_THRESHOLD;
 
     /// <summary>
     /// 指定した速度で移動します。
@@ -1062,4 +1298,28 @@ public sealed class PlayerMotor : MonoBehaviour
         if (!m_isInitialized) return;
         m_playerRigidbody.linearVelocity = Vector3.zero;
     }
+
+    /// <summary>
+    /// 指定したLayerが障害物として設定されているか確認します。
+    /// </summary>
+    /// <param name="layer">確認するLayer。</param>
+    /// <returns>
+    /// true：障害物Layerです。
+    /// false：障害物Layerではありません。
+    /// </returns>
+    private bool IsObstacleLayer(int layer)
+    {
+        int layerMask = 1 << layer;
+
+        return (m_obstacleLayerMask.value & layerMask) != 0;
+    }
+    /// <summary>Applies the assigned parameter asset.</summary>
+    private void ApplyParameterAsset()
+    {
+        if (m_parameterAsset == null) return;
+        m_obstacleLayerMask = m_parameterAsset.ObstacleLayerMask;
+        m_obstacleSkinWidth = m_parameterAsset.ObstacleSkinWidth;
+        m_obstacleDecelerationPerSecond = m_parameterAsset.ObstacleDecelerationPerSecond;
+    }
+
 }

@@ -120,6 +120,8 @@ public sealed class S1P3BossDreadAttackState :
     /// </summary>
     protected override void OnExitState()
     {
+        StartCoolTimeIfSucceeded();
+
         UnsubscribeAnimationEvent();
         UnsubscribeOilEvents();
 
@@ -318,7 +320,7 @@ public sealed class S1P3BossDreadAttackState :
                 "設定されていません。");
 
             return false;
-        }    
+        }
 
         if (!Owner.PhaseController
                 .TryGetCurrentPhaseComponent(
@@ -600,6 +602,34 @@ public sealed class S1P3BossDreadAttackState :
         {
             oilController?.Cancel();
         }
+    }
+
+    /// <summary>
+    /// 正常終了した行動のクールタイムを開始します。
+    /// </summary>
+    private void StartCoolTimeIfSucceeded()
+    {
+        if (Owner == null ||
+            Owner.GetStateExecutionStatus() !=
+            StateExecutionStatus.SUCCEEDED ||
+            m_references == null ||
+            m_references.DecisionParameterAsset == null)
+        {
+            return;
+        }
+
+        BossStateCoolTimeManager coolTimeManager =
+            Owner.GetComponent<BossStateCoolTimeManager>();
+
+        if (coolTimeManager == null)
+        {
+            return;
+        }
+
+        coolTimeManager.StartCoolTime<S1P3BossDreadAttackState>(
+            m_references.DecisionParameterAsset
+                .DreadAttack
+                .CoolTime);
     }
 
     /// <summary>
