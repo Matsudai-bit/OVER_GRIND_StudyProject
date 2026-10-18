@@ -1,5 +1,6 @@
 using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class GameDirector : MonoBehaviour
 {
@@ -18,6 +19,12 @@ public class GameDirector : MonoBehaviour
     GameplayModeController m_modeController;
     [SerializeField]
     GameplaySequenceChangedEvent m_gameplaySequenceChangedEvent;
+
+    [Header("遷移関連")]
+    [SerializeField, Header("次のステージボタンを押した時の遷移先")]
+    string nextStageSceneName;
+    [SerializeField, Header("ステージ選択画面シーン名")]
+    string stageSelectSceneName;
 
     bool start = false;
 
@@ -69,5 +76,12 @@ public class GameDirector : MonoBehaviour
         m_gameFlowController.ChangeState(GameFlowStateType.INTRO);
     }
 
-
+    public void LoadNextStage()
+    {
+        SceneManager.LoadScene(nextStageSceneName);
+    }
+    public void LoadStageSelect()
+    {
+        SceneManager.LoadScene(stageSelectSceneName);
+    }
 }
