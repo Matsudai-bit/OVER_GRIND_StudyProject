@@ -17,8 +17,8 @@ public class Blinker_UI : MonoBehaviour
     }
 
     [Header("★ スライド設定")]
-    [Tooltip("チェックを入れると自動で右からスライドインします")]
-    [SerializeField] private bool m_slideOnStart = true;
+    [Tooltip("チェックを入れると自動で右からスライドインします（手動呼び出し時は自動オフ推奨）")]
+    [SerializeField] private bool m_slideOnStart = false;
 
     [Tooltip("スライドが始まるまでの待ち時間（秒）")]
     [SerializeField] private float m_slideDelay = 0f;
@@ -37,7 +37,7 @@ public class Blinker_UI : MonoBehaviour
 
     [Header("★ 点滅設定")]
     [Tooltip("チェックを入れると自動で点滅を開始します")]
-    [SerializeField] private bool m_blinkOnStart = true;
+    [SerializeField] private bool m_blinkOnStart = false;
 
     [Tooltip("スライド完了後に点滅を開始する場合はチェック（オフで移動中も点滅）")]
     [SerializeField] private bool m_startBlinkAfterSlide = true;
@@ -112,6 +112,35 @@ public class Blinker_UI : MonoBehaviour
         {
             m_originalAnchoredPosition = m_slideTarget.anchoredPosition;
             m_isInitialized = true;
+        }
+    }
+
+    /// <summary>
+    /// ★ 新記録かどうかを設定して表示・アニメーションを制御します。
+    /// </summary>
+    /// <param name="isNewRecord">新記録の場合は true、更新しなかった場合は false</param>
+    /// <param name="delay">演出開始までの遅延時間（秒）</param>
+    public void SetNewRecord(bool isNewRecord, float delay = 0f)
+    {
+        InitializeComponents();
+
+        if (isNewRecord)
+        {
+            // 新記録：表示を有効化してスライドイン＋点滅演出を開始
+            gameObject.SetActive(true);
+            if (m_canvasGroup != null) m_canvasGroup.alpha = 1f;
+
+            ResetToOffscreen();
+            PlaySlideIn(delay);
+        }
+        else
+        {
+            // 記録更新なし：完全非表示にして動作を停止
+            StopSlide();
+            StopBlink();
+
+            if (m_canvasGroup != null) m_canvasGroup.alpha = 0f;
+            gameObject.SetActive(false);
         }
     }
 
@@ -200,10 +229,8 @@ public class Blinker_UI : MonoBehaviour
         m_slideTarget.anchoredPosition = targetPosition;
         m_slideCoroutine = null;
 
-        if (m_blinkOnStart && m_startBlinkAfterSlide)
-        {
-            StartBlink();
-        }
+        // スライド完了後に点滅開始
+        StartBlink();
     }
 
     /// <summary>

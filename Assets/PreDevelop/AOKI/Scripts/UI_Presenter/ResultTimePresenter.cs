@@ -1,138 +1,145 @@
-using System.Collections;
 using UnityEngine;
-using UnityEngine.UI;
-using TMPro;
 using DG.Tweening;
 
 /// <summary>
-/// クリアタイム（秒数）を受け取り、デジタル時計形式（00:00.00）で表示・演出制御する Presenter クラスです。
+/// 今回のタイムと過去の自己ベストタイムを見比べ、
+/// より良い（速い）方のタイムを自動選出して View（PERSONAL BEST表示欄等）へ送る Presenter です。
 /// </summary>
-public class ResultTimePresenter : MonoBehaviour
+public class ResultBestTimePresenter : MonoBehaviour
 {
-    [Header("★ UI テキストコンポーネント")]
-    [SerializeField] private TextMeshProUGUI m_tmpText;
-    [SerializeField] private Text m_uiText;
+    [Header("★ View と Model の参照")]
+    [SerializeField] private ResultTimeView m_view;
+    [SerializeField] private ResultTimeModel m_model;
 
-    [Header("★ 演出設定")]
-    [Tooltip("チェックを入れると開始時に自動でカウントアップ演出を再生します")]
-    [SerializeField] private bool m_playOnStart = false;
+    [Header("★ 表示演出設定")]
+    [Tooltip("チェックを入れると開始時に自動でベストタイムを表示します")]
+    [SerializeField] private bool m_playOnStart = true;
 
-    [Tooltip("自動再生時のテスト用クリアタイム（秒）")]
-    [SerializeField] private float m_debugClearTime = 91.46f; // 例: 01:31.46
+    [Tooltip("チェックを入れるとベストタイムも数字回転（カウントアップ）演出を行います（オフなら即時表示）")]
+    [SerializeField] private bool m_useCountUp = false;
 
-    [Tooltip("カウントアップ演出にかかる時間（秒）")]
+    [Tooltip("カウントアップ演出時間（秒）")]
     [SerializeField] private float m_countUpDuration = 1.0f;
 
-    [Tooltip("表示が始まるまでの待ち時間（秒）")]
-    [SerializeField] private float m_delay = 0.5f;
+    [Tooltip("演出が始まるまでの待ち時間（秒）")]
+    [SerializeField] private float m_delay = 0.3f;
+
+    [Tooltip("アニメーションの加減速カーブ")]
+    [SerializeField] private Ease m_countUpEase = Ease.OutCubic;
 
     private Tween m_countUpTween;
 
     private void Awake()
     {
-        InitializeComponents();
+        if (m_view == null) m_view = GetComponent<ResultTimeView>();
+        if (m_model == null) m_model = FindFirstObjectByType<ResultTimeModel>();
     }
 
-    private void Start()
+    private void OnEnable()
     {
-        if (m_playOnStart)
+        if (m_model != null)
         {
-            SetTimeWithAnimation(m_debugClearTime);
+            m_model.OnTimeChanged += OnModelTimeChanged;
         }
     }
 
     private void OnDisable()
     {
+        if (m_model != null)
+        {
+            m_model.OnTimeChanged -= OnModelTimeChanged;
+        }
         m_countUpTween?.Kill();
     }
 
-    private void InitializeComponents()
+    private void Start()
     {
-        if (m_tmpText == null) TryGetComponent<TextMeshProUGUI>(out m_tmpText);
-        if (m_uiText == null) TryGetComponent<Text>(out m_uiText);
+        if (m_playOnStart && m_model != null)
+        {
+            RefreshBestTime();
+        }
+    }
+
+    private void OnModelTimeChanged(float newTime)
+    {
+        if (m_countUpTween == null || !m_countUpTween.IsActive())
+        {
+            RefreshViewDirect();
+        }
     }
 
     /// <summary>
-    /// タイム（秒数）を直接セットして即座に「00:00.00」形式で表示します。
-    /// 例: 91.46f -> "01:31.46"
+    /// 今回のタイムと前の記録を見比べ、速い（小さな）方のタイムを算出します。
     /// </summary>
-    /// <param name="clearTimeInSeconds">クリアタイム（秒）</param>
-    public void SetTime(float clearTimeInSeconds)
+    public float GetBestTime()
     {
-        InitializeComponents();
-        m_countUpTween?.Kill();
+        if (m_model == null) return 0f;
 
-        string formattedTime = FormatTime(clearTimeInSeconds);
-        ApplyText(formattedTime);
+        float clear = m_model.ClearTime;
+        float pb = m_model.PersonalBestTime;
+
+        // クリアタイムが無効（0以下）の場合は自己ベストを返す
+        if (clear <= 0f) return Mathf.Max(0f, pb);
+
+        // 自己ベストが無効（0以下）の場合は今回のクリアタイムを返す
+        if (pb <= 0f) return clear;
+
+        // タイムアタックなので、値が小さい（速い）方をベストとして採用
+        return Mathf.Min(clear, pb);
     }
 
     /// <summary>
-    /// 0秒から指定タイムまでパラパラと高速カウントアップしながら表示する演出を行います。
+    /// 即座にベストタイムを View に表示します（アニメーションなし）
     /// </summary>
-    /// <param name="clearTimeInSeconds">最終目標のクリアタイム（秒）</param>
-    /// <param name="delay">開始までの待ち時間（秒）</param>
-    public void SetTimeWithAnimation(float clearTimeInSeconds, float delay = -1f)
+    public void RefreshViewDirect()
     {
-        InitializeComponents();
+        if (m_view == null || m_model == null) return;
         m_countUpTween?.Kill();
+        m_view.DisplayTime(GetBestTime());
+    }
 
-        float startDelay = (delay >= 0f) ? delay : m_delay;
+    /// <summary>
+    /// 設定に応じて、即時表示またはカウントアップ演出でベストタイムを表示します。
+    /// </summary>
+    public void RefreshBestTime()
+    {
+        if (m_view == null || m_model == null) return;
 
-        // 開始前は 00:00.00 表示
-        ApplyText(FormatTime(0f));
+        m_countUpTween?.Kill();
+        float bestTime = GetBestTime();
+
+        // アニメーションオフの場合は即時表示
+        if (!m_useCountUp)
+        {
+            m_view.DisplayTime(bestTime);
+            return;
+        }
+
+        // アニメーションオンの場合：0秒からベストタイムまでカウントアップ
+        m_view.DisplayTime(0f);
 
         Sequence seq = DOTween.Sequence();
 
-        if (startDelay > 0f)
+        if (m_delay > 0f)
         {
-            seq.AppendInterval(startDelay);
+            seq.AppendInterval(m_delay);
         }
 
-        float currentTime = 0f;
-
         seq.Append(
-            DOVirtual.Float(0f, clearTimeInSeconds, m_countUpDuration, value =>
+            DOVirtual.Float(0f, bestTime, m_countUpDuration, value =>
             {
-                currentTime = value;
-                ApplyText(FormatTime(currentTime));
+                m_view.DisplayTime(value);
             })
-            .SetEase(Ease.OutCubic)
+            .SetEase(m_countUpEase)
         );
 
-        // 最後にピタッと正確なタイムをセット
+        seq.SetUpdate(true);
+
         seq.OnComplete(() =>
         {
-            ApplyText(FormatTime(clearTimeInSeconds));
+            m_view.DisplayTime(bestTime);
         });
 
         m_countUpTween = seq;
-    }
-
-    /// <summary>
-    /// 秒数を 「00:00.00」 形式の文字列にフォーマット変換します。
-    /// </summary>
-    private string FormatTime(float timeInSeconds)
-    {
-        if (timeInSeconds < 0f) timeInSeconds = 0f;
-
-        int minutes = Mathf.FloorToInt(timeInSeconds / 60f);
-        int seconds = Mathf.FloorToInt(timeInSeconds % 60f);
-        int fraction = Mathf.FloorToInt((timeInSeconds * 100f) % 100f);
-
-        // 99分59秒99 を上限とするガード
-        if (minutes > 99)
-        {
-            minutes = 99;
-            seconds = 59;
-            fraction = 99;
-        }
-
-        return string.Format("{0:D2}:{1:D2}.{2:D2}", minutes, seconds, fraction);
-    }
-
-    private void ApplyText(string textValue)
-    {
-        if (m_tmpText != null) m_tmpText.text = textValue;
-        if (m_uiText != null) m_uiText.text = textValue;
     }
 }

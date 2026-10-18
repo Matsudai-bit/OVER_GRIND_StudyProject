@@ -1,285 +1,230 @@
 using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using DG.Tweening;
 
 /// <summary>
-/// 最初はランダムな文字を高速で切り替えまくり、
-/// 最後に指定されたタイトルテキストをバシッと確定表示する演出クラスです。
+/// テキスト（TMP_Text / UI.Text）および画像（UI.Image）のどちらにも対応した解読・グリッチ演出スクリプトです。
+/// Stage_Image や Result_Scene_UI_Tutorial などの GameObject をそのまま Inspector にセットできます。
 /// </summary>
 public class RandomTextEffect : MonoBehaviour
 {
-    public enum EffectMode
+    public enum DecodeMode
     {
-        [Tooltip("最初は全体の文字をランダム切り替えまくり、最後に一気にタイトルを表示")]
-        FullRandomThenTitle,
+        [Tooltip("左の文字から1文字ずつ順番に確定（動画風）")]
+        SequentialDecode,
 
-        [Tooltip("進行度に合わせて左から順番に文字が確定していく（デコード風）")]
-        SequentialDecode
+        [Tooltip("全体がランダムシャッフルされた後、一斉に確定")]
+        FullRandomThenTitle
     }
 
-    [Header("★ アニメーション対象の UI オブジェクト")]
-    [Tooltip("演出させたい親オブジェクト（Result_Scene_UI_Stage など）をドラッグ＆ドロップ（未指定時は自身）")]
-    [SerializeField] private GameObject[] m_targetObjects;
+    [Header("★ 対象オブジェクト（Stage_Image等をそのままドロップ可能）")]
+    [Tooltip("未指定時はこのスクリプトが付いている自身を対象にします")]
+    [SerializeField] private GameObject m_targetObject;
 
-    [Header("★ 演出モード設定")]
-    [SerializeField] private EffectMode m_effectMode = EffectMode.FullRandomThenTitle;
+    [Header("★ アニメーション設定")]
+    [SerializeField] private DecodeMode m_decodeMode = DecodeMode.SequentialDecode;
+    [SerializeField] private float m_delay = 0.1f;
+    [SerializeField] private float m_totalDuration = 0.8f;
+    [SerializeField] private float m_shuffleInterval = 0.03f;
+    [SerializeField] private bool m_usePunchScale = true;
 
-    [Tooltip("タイトル確定時に一瞬『ポンッ』とテキストを拡大・インパクトバウンドさせます")]
-    [SerializeField] private bool m_usePunchScaleOnComplete = true;
+    [Header("★ テキスト用シャッフル文字")]
+    [SerializeField] private string m_randomChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#$%&@*";
 
-    [Header("★ 表示テキスト設定")]
-    [Tooltip("チェックを入れると、Textコンポーネントに元々書いてある文字列をそのまま最終タイトルとして使用します")]
-    [SerializeField] private bool m_useCurrentTextAsTarget = true;
-
-    [Tooltip("UseCurrentTextAsTarget がオフの場合に使用する文字列リスト（複数ある場合はランダム選択）")]
-    [SerializeField] private string[] m_textCandidates = new string[] { "Stage00", "Tutorial", "STAGE CLEAR!" };
-
-    [Tooltip("シャッフル演出中に表示しまくるランダム文字のプール")]
-    [SerializeField] private string m_randomCharPool = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?#$@&%☆";
-
-    [Header("★ 演出パラメータ")]
-    [Tooltip("チェックを入れると自動で再生されます")]
+    [Header("★ 自動再生")]
     [SerializeField] private bool m_playOnStart = true;
 
-    [Tooltip("演出が始まるまでの待ち時間（秒）")]
-    [SerializeField] private float m_delay = 0.5f;
+    // 内部取得用
+    private TMP_Text m_tmpText;
+    private Text m_uiText;
+    private CanvasGroup m_canvasGroup;
+    private RectTransform m_rectTransform;
 
-    [Tooltip("ランダム文字を表示しまくる演出時間（秒）")]
-    [SerializeField] private float m_duration = 0.8f;
+    private string m_defaultText;
+    private string m_currentFinalText;
+    private Coroutine m_decodeCoroutine;
+    private Vector3 m_originalScale;
+    private Vector2 m_originalAnchoredPosition;
 
-    [Tooltip("ランダム文字の切り替えスピード（秒）。0.02?0.04 あたりが超高速でカッコいいです")]
-    [SerializeField] private float m_interval = 0.03f;
-
-    private Coroutine m_effectCoroutine;
-
-    private class TextTargetData
+    private void Awake()
     {
-        public TextMeshProUGUI tmpText;
-        public Text uiText;
-        public string originalText; // 初回に読み取った元のテキスト
-        public string currentTargetText; // 今回表示するターゲット文字列
-        public RectTransform rectTransform;
-        public Vector3 originalScale;
+        InitializeTarget();
     }
 
-    private readonly List<TextTargetData> m_targetDataList = new List<TextTargetData>();
-    private bool m_isInitialized = false;
+    private void InitializeTarget()
+    {
+        GameObject target = m_targetObject != null ? m_targetObject : gameObject;
+
+        // 子要素も含めてテキストコンポーネントを自動検索
+        m_tmpText = target.GetComponentInChildren<TMP_Text>();
+        m_uiText = target.GetComponentInChildren<Text>();
+        m_rectTransform = target.GetComponent<RectTransform>();
+
+        if (m_rectTransform != null)
+        {
+            m_originalScale = m_rectTransform.localScale;
+            m_originalAnchoredPosition = m_rectTransform.anchoredPosition;
+        }
+        else
+        {
+            m_originalScale = target.transform.localScale;
+        }
+
+        // 画像などのテキスト以外の場合、フェード/グリッチ用に CanvasGroup を準備
+        if (m_tmpText == null && m_uiText == null)
+        {
+            m_canvasGroup = target.GetComponent<CanvasGroup>();
+            if (m_canvasGroup == null)
+            {
+                m_canvasGroup = target.AddComponent<CanvasGroup>();
+            }
+        }
+
+        m_defaultText = GetTextValue();
+        m_currentFinalText = m_defaultText;
+    }
 
     private void OnEnable()
     {
         if (m_playOnStart)
         {
-            PlayEffect();
+            PlayAnimation();
         }
     }
 
     private void OnDisable()
     {
-        if (m_effectCoroutine != null)
-        {
-            StopCoroutine(m_effectCoroutine);
-            m_effectCoroutine = null;
-        }
+        StopAnimation();
     }
 
     /// <summary>
-    /// 設定に基づきランダム文字演出を開始します。
+    /// 解読アニメーションを再生します
     /// </summary>
-    public void PlayEffect()
+    public void PlayAnimation(string overrideText = null)
     {
-        PlayEffectInternal(null);
+        InitializeTarget();
+
+        m_currentFinalText = !string.IsNullOrEmpty(overrideText) ? overrideText : m_defaultText;
+
+        StopAnimation();
+        m_decodeCoroutine = StartCoroutine(DecodeRoutine());
     }
 
-    /// <summary>
-    /// 外部から特定のタイトル文字列を指定して演出を開始します。
-    /// </summary>
-    /// <param name="overrideTitle">表示したいタイトル文字列</param>
-    public void PlayEffect(string overrideTitle)
+    public void StopAnimation()
     {
-        PlayEffectInternal(overrideTitle);
+        if (m_decodeCoroutine != null)
+        {
+            StopCoroutine(m_decodeCoroutine);
+            m_decodeCoroutine = null;
+        }
     }
 
-    private void PlayEffectInternal(string overrideTitle)
+    private IEnumerator DecodeRoutine()
     {
-        CollectTextComponents();
-
-        if (m_targetDataList.Count == 0) return;
-
-        // ターゲット文字列の更新
-        foreach (var target in m_targetDataList)
-        {
-            if (!string.IsNullOrEmpty(overrideTitle))
-            {
-                target.currentTargetText = overrideTitle;
-            }
-            else if (m_useCurrentTextAsTarget)
-            {
-                target.currentTargetText = target.originalText;
-            }
-            else if (m_textCandidates != null && m_textCandidates.Length > 0)
-            {
-                target.currentTargetText = m_textCandidates[Random.Range(0, m_textCandidates.Length)];
-            }
-            else
-            {
-                target.currentTargetText = target.originalText;
-            }
-        }
-
-        if (m_effectCoroutine != null)
-        {
-            StopCoroutine(m_effectCoroutine);
-        }
-
-        m_effectCoroutine = StartCoroutine(RandomTextRoutine());
-    }
-
-    private void CollectTextComponents()
-    {
-        // 既に初期化済みでコンポーネント取得済みであれば再利用
-        if (m_isInitialized && m_targetDataList.Count > 0) return;
-
-        m_targetDataList.Clear();
-
-        List<GameObject> objectsToSearch = new List<GameObject>();
-
-        if (m_targetObjects != null && m_targetObjects.Length > 0)
-        {
-            foreach (var obj in m_targetObjects)
-            {
-                if (obj != null) objectsToSearch.Add(obj);
-            }
-        }
-        else
-        {
-            objectsToSearch.Add(gameObject);
-        }
-
-        foreach (var obj in objectsToSearch)
-        {
-            var tmps = obj.GetComponentsInChildren<TextMeshProUGUI>(true);
-            foreach (var tmp in tmps)
-            {
-                AddTarget(tmp, null, tmp.text, tmp.rectTransform);
-            }
-
-            var texts = obj.GetComponentsInChildren<Text>(true);
-            foreach (var txt in texts)
-            {
-                AddTarget(null, txt, txt.text, txt.rectTransform);
-            }
-        }
-
-        m_isInitialized = true;
-    }
-
-    private void AddTarget(TextMeshProUGUI tmp, Text txt, string initialText, RectTransform rect)
-    {
-        if (string.IsNullOrEmpty(initialText)) return;
-
-        m_targetDataList.Add(new TextTargetData
-        {
-            tmpText = tmp,
-            uiText = txt,
-            originalText = initialText,
-            currentTargetText = initialText,
-            rectTransform = rect,
-            originalScale = rect != null ? rect.localScale : Vector3.one
-        });
-    }
-
-    private IEnumerator RandomTextRoutine()
-    {
-        // 開始前は空文字にして消しておく
-        foreach (var target in m_targetDataList)
-        {
-            SetText(target, "");
-        }
-
         if (m_delay > 0f)
         {
-            yield return new WaitForSeconds(m_delay);
+            yield return new WaitForSecondsRealtime(m_delay);
         }
 
-        float elapsedTime = 0f;
-
-        // 指定した時間（m_duration）の間、ランダムな文字を高速表示しまくる
-        while (elapsedTime < m_duration)
+        // --- パターンA: テキスト（TMP_Text / UI.Text）の場合 ---
+        if (m_tmpText != null || m_uiText != null)
         {
-            elapsedTime += m_interval;
-            float progress = Mathf.Clamp01(elapsedTime / m_duration);
-
-            foreach (var target in m_targetDataList)
+            int textLength = m_currentFinalText.Length;
+            if (textLength > 0)
             {
-                string targetText = target.currentTargetText;
-                int targetLength = targetText.Length;
+                char[] displayChars = new char[textLength];
+                float elapsedTime = 0f;
+                float charDecodeTime = m_totalDuration / textLength;
 
-                char[] currentChars = new char[targetLength];
-
-                if (m_effectMode == EffectMode.FullRandomThenTitle)
+                while (elapsedTime < m_totalDuration)
                 {
-                    // 全体ランダムモード：すべての文字をランダムシャッフル表示
-                    for (int i = 0; i < targetLength; i++)
+                    elapsedTime += m_shuffleInterval;
+
+                    if (m_decodeMode == DecodeMode.SequentialDecode)
                     {
-                        if (char.IsWhiteSpace(targetText[i]))
+                        int confirmedCount = Mathf.FloorToInt(elapsedTime / charDecodeTime);
+                        confirmedCount = Mathf.Clamp(confirmedCount, 0, textLength);
+
+                        for (int i = 0; i < textLength; i++)
                         {
-                            currentChars[i] = targetText[i];
-                        }
-                        else
-                        {
-                            int randomIndex = Random.Range(0, m_randomCharPool.Length);
-                            currentChars[i] = m_randomCharPool[randomIndex];
+                            displayChars[i] = (i < confirmedCount) ? m_currentFinalText[i] : GetRandomChar();
                         }
                     }
-                }
-                else
-                {
-                    // 順次確定モード（左から決まっていく）
-                    int confirmedCount = Mathf.FloorToInt(progress * targetLength);
-
-                    for (int i = 0; i < targetLength; i++)
+                    else
                     {
-                        if (char.IsWhiteSpace(targetText[i]) || i < confirmedCount)
+                        for (int i = 0; i < textLength; i++)
                         {
-                            currentChars[i] = targetText[i];
-                        }
-                        else
-                        {
-                            int randomIndex = Random.Range(0, m_randomCharPool.Length);
-                            currentChars[i] = m_randomCharPool[randomIndex];
+                            displayChars[i] = GetRandomChar();
                         }
                     }
+
+                    SetTextValue(new string(displayChars));
+                    yield return new WaitForSecondsRealtime(m_shuffleInterval);
                 }
 
-                SetText(target, new string(currentChars));
+                SetTextValue(m_currentFinalText);
             }
-
-            yield return new WaitForSeconds(m_interval);
         }
-
-        // 最後にバシッと目標のタイトル（タイトル名）を確定表示！
-        foreach (var target in m_targetDataList)
+        // --- パターンB: 画像（Image 等）の場合 ---
+        else
         {
-            SetText(target, target.currentTargetText);
+            float elapsedTime = 0f;
 
-            // 確定時に「ポンッ」と小さく弾ける演出
-            if (m_usePunchScaleOnComplete && target.rectTransform != null)
+            while (elapsedTime < m_totalDuration)
             {
-                target.rectTransform.DOKill();
-                target.rectTransform.localScale = target.originalScale;
-                target.rectTransform.DOPunchScale(Vector3.one * 0.25f, 0.25f, 5, 0.5f);
+                elapsedTime += m_shuffleInterval;
+
+                // ランダム明滅（グリッチ）
+                if (m_canvasGroup != null)
+                {
+                    m_canvasGroup.alpha = Random.Range(0.2f, 1.0f);
+                }
+
+                // わずかな位置のズレ（解読中のノイズ振動）
+                if (m_rectTransform != null)
+                {
+                    Vector2 jitter = new Vector2(Random.Range(-4f, 4f), Random.Range(-2f, 2f));
+                    m_rectTransform.anchoredPosition = m_originalAnchoredPosition + jitter;
+                }
+
+                yield return new WaitForSecondsRealtime(m_shuffleInterval);
             }
+
+            // 元の位置・不透明度へ確定復元
+            if (m_canvasGroup != null) m_canvasGroup.alpha = 1f;
+            if (m_rectTransform != null) m_rectTransform.anchoredPosition = m_originalAnchoredPosition;
         }
 
-        m_effectCoroutine = null;
+        // 確定時のパンチスケール（ぽんと跳ねる演出）
+        if (m_usePunchScale)
+        {
+            Transform t = m_targetObject != null ? m_targetObject.transform : transform;
+            t.DOKill();
+            t.localScale = m_originalScale;
+            t.DOPunchScale(new Vector3(0.15f, 0.15f, 0f), 0.2f, 5, 0.5f).SetUpdate(true);
+        }
+
+        m_decodeCoroutine = null;
     }
 
-    private void SetText(TextTargetData target, string value)
+    private char GetRandomChar()
     {
-        if (target.tmpText != null) target.tmpText.text = value;
-        if (target.uiText != null) target.uiText.text = value;
+        if (string.IsNullOrEmpty(m_randomChars)) return '?';
+        return m_randomChars[Random.Range(0, m_randomChars.Length)];
+    }
+
+    private string GetTextValue()
+    {
+        if (m_tmpText != null) return m_tmpText.text;
+        if (m_uiText != null) return m_uiText.text;
+        return string.Empty;
+    }
+
+    private void SetTextValue(string value)
+    {
+        if (m_tmpText != null) m_tmpText.text = value;
+        if (m_uiText != null) m_uiText.text = value;
     }
 }
