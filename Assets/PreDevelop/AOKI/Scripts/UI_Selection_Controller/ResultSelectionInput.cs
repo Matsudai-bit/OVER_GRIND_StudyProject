@@ -11,7 +11,6 @@ using DG.Tweening;
 /// </summary>
 public class ResultSelectionInput : MonoBehaviour
 {
-    [Header("★ 登場（フェードイン）演出設定")]
     [Tooltip("チェックを入れると開始時にフェードイン（不透明度0→1）して出現します")]
     [SerializeField] private bool m_playEntranceOnStart = true;
 
@@ -142,7 +141,7 @@ public class ResultSelectionInput : MonoBehaviour
 
         m_isEntrancePlaying = true;
 
-        // ★ 1. 位置を動かさず、不透明度（alpha）のみ 0 に初期化
+        // 位置を動かさず、不透明度（alpha）のみ 0 に初期化
         for (int i = 0; i < m_targetPanels.Length; i++)
         {
             if (m_targetPanels[i] == null || m_targetCanvasGroups[i] == null) continue;
@@ -155,13 +154,13 @@ public class ResultSelectionInput : MonoBehaviour
 
         Sequence entranceSeq = DOTween.Sequence();
 
-        // ★ 2. 指定の遅延時間待機
+        // 指定の遅延時間待機
         if (m_entranceDelay > 0f)
         {
             entranceSeq.AppendInterval(m_entranceDelay);
         }
 
-        // ★ 3. DOFade のみでふわっとフェードイン
+        //  DOFade のみでふわっとフェードイン
         bool isFirstTween = true;
 
         for (int i = 0; i < m_targetPanels.Length; i++)

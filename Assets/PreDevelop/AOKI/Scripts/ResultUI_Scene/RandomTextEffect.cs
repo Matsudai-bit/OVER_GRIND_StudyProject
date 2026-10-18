@@ -19,21 +19,21 @@ public class RandomTextEffect : MonoBehaviour
         FullRandomThenTitle
     }
 
-    [Header("★ 対象オブジェクト（Stage_Image等をそのままドロップ可能）")]
+    [Header("対象オブジェクト（Stage_Image等をそのままドロップ可能）")]
     [Tooltip("未指定時はこのスクリプトが付いている自身を対象にします")]
     [SerializeField] private GameObject m_targetObject;
 
-    [Header("★ アニメーション設定")]
+    [Header("アニメーション設定")]
     [SerializeField] private DecodeMode m_decodeMode = DecodeMode.SequentialDecode;
     [SerializeField] private float m_delay = 0.1f;
     [SerializeField] private float m_totalDuration = 0.8f;
     [SerializeField] private float m_shuffleInterval = 0.03f;
     [SerializeField] private bool m_usePunchScale = true;
 
-    [Header("★ テキスト用シャッフル文字")]
+    [Header("テキスト用シャッフル文字")]
     [SerializeField] private string m_randomChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#$%&@*";
 
-    [Header("★ 自動再生")]
+    [Header("自動再生")]
     [SerializeField] private bool m_playOnStart = true;
 
     // 内部取得用
