@@ -1,9 +1,10 @@
 using UnityEngine;
+using UnityEngine.UI;
 using DG.Tweening;
 
 /// <summary>
-/// 今回のタイムと過去の自己ベストタイムを見比べ、
-/// より良い（速い）方のタイムを自動選出して View（PERSONAL BEST表示欄等）へ送る Presenter です。
+/// ResultTimeModel から「今回のクリアタイム（ClearTime）」を取得し、
+/// View への表示・カウントアップ演出、および新記録（IsNewRecord）時の赤点滅演出を制御する Presenter です。
 /// </summary>
 public class ResultBestTimePresenter : MonoBehaviour
 {
@@ -12,24 +13,46 @@ public class ResultBestTimePresenter : MonoBehaviour
     [SerializeField] private ResultTimeModel m_model;
 
     [Header("★ 表示演出設定")]
-    [Tooltip("チェックを入れると開始時に自動でベストタイムを表示します")]
+    [Tooltip("チェックを入れると開始時に自動でタイムを表示します")]
     [SerializeField] private bool m_playOnStart = true;
 
-    [Tooltip("チェックを入れるとベストタイムも数字回転（カウントアップ）演出を行います（オフなら即時表示）")]
-    [SerializeField] private bool m_useCountUp = false;
+    [Tooltip("チェックを入れると数字回転（カウントアップ）演出を行います（オフなら即時表示）")]
+    [SerializeField] private bool m_useCountUp = true;
 
     [Tooltip("カウントアップ演出時間（秒）")]
-    [SerializeField] private float m_countUpDuration = 1.0f;
+    [SerializeField] private float m_countUpDuration = 1.2f;
 
     [Tooltip("演出が始まるまでの待ち時間（秒）")]
     [SerializeField] private float m_delay = 0.3f;
 
     [Tooltip("アニメーションの加減速カーブ")]
-    [SerializeField] private Ease m_countUpEase = Ease.OutCubic;
+    [SerializeField] private Ease m_countUpEase = Ease.OutQuint;
+
+    [Header("★ 赤点滅（New Best 演出）設定")]
+    [Tooltip("新記録（IsNewRecord）時に赤点滅させる対象の Image")]
+    [SerializeField] private Image m_blinkTargetImage;
+
+    [Tooltip("点滅時の赤色の濃度・色合い")]
+    [SerializeField] private Color m_blinkRedColor = new Color(1f, 0.2f, 0.2f, 1f);
+
+    [Tooltip("点滅1周の速度（秒）")]
+    [SerializeField] private float m_blinkDuration = 0.4f;
 
     private Tween m_countUpTween;
+    private Tween m_blinkTween;
+    private Color m_originalColor = Color.white;
 
     private void Awake()
+    {
+        EnsureReferences();
+
+        if (m_blinkTargetImage != null)
+        {
+            m_originalColor = m_blinkTargetImage.color;
+        }
+    }
+
+    private void EnsureReferences()
     {
         if (m_view == null) m_view = GetComponent<ResultTimeView>();
         if (m_model == null) m_model = FindFirstObjectByType<ResultTimeModel>();
@@ -37,6 +60,7 @@ public class ResultBestTimePresenter : MonoBehaviour
 
     private void OnEnable()
     {
+        EnsureReferences();
         if (m_model != null)
         {
             m_model.OnTimeChanged += OnModelTimeChanged;
@@ -49,11 +73,13 @@ public class ResultBestTimePresenter : MonoBehaviour
         {
             m_model.OnTimeChanged -= OnModelTimeChanged;
         }
-        m_countUpTween?.Kill();
+        StopAllTweens();
     }
 
     private void Start()
     {
+        EnsureReferences();
+
         if (m_playOnStart && m_model != null)
         {
             RefreshBestTime();
@@ -69,53 +95,60 @@ public class ResultBestTimePresenter : MonoBehaviour
     }
 
     /// <summary>
-    /// 今回のタイムと前の記録を見比べ、速い（小さな）方のタイムを算出します。
+    /// ResultTimeModel から「今回のクリアタイム（新しい数字）」を直接取得します。
     /// </summary>
-    public float GetBestTime()
+    public float GetClearTime()
     {
         if (m_model == null) return 0f;
-
-        float clear = m_model.ClearTime;
-        float pb = m_model.PersonalBestTime;
-
-        // クリアタイムが無効（0以下）の場合は自己ベストを返す
-        if (clear <= 0f) return Mathf.Max(0f, pb);
-
-        // 自己ベストが無効（0以下）の場合は今回のクリアタイムを返す
-        if (pb <= 0f) return clear;
-
-        // タイムアタックなので、値が小さい（速い）方をベストとして採用
-        return Mathf.Min(clear, pb);
+        return m_model.ClearTime; // ★ 「今回のクリアタイム」をそのまま返す
     }
 
     /// <summary>
-    /// 即座にベストタイムを View に表示します（アニメーションなし）
+    /// 即座に今回のクリアタイムを表示します（アニメーションなし）
     /// </summary>
     public void RefreshViewDirect()
     {
-        if (m_view == null || m_model == null) return;
-        m_countUpTween?.Kill();
-        m_view.DisplayTime(GetBestTime());
+        StopAllTweens();
+        EnsureReferences();
+
+        float clearTime = GetClearTime();
+
+        if (m_view != null)
+        {
+            m_view.DisplayTime(clearTime);
+        }
+
+        // Model の IsNewRecord を見て新記録なら赤点滅
+        if (m_model != null && m_model.IsNewRecord)
+        {
+            StartBlinking();
+        }
+        else
+        {
+            StopBlinking();
+        }
     }
 
     /// <summary>
-    /// 設定に応じて、即時表示またはカウントアップ演出でベストタイムを表示します。
+    /// 今回のクリアタイムを表示（カウントアップ演出付き）し、新記録（m_model.IsNewRecord）なら赤点滅を開始します。
     /// </summary>
     public void RefreshBestTime()
     {
+        EnsureReferences();
         if (m_view == null || m_model == null) return;
 
-        m_countUpTween?.Kill();
-        float bestTime = GetBestTime();
+        StopAllTweens();
 
-        // アニメーションオフの場合は即時表示
+        float clearTime = GetClearTime();
+        bool isNewRecord = m_model.IsNewRecord; // Model から新記録判定を取得
+
         if (!m_useCountUp)
         {
-            m_view.DisplayTime(bestTime);
+            m_view.DisplayTime(clearTime);
+            if (isNewRecord) StartBlinking();
             return;
         }
 
-        // アニメーションオンの場合：0秒からベストタイムまでカウントアップ
         m_view.DisplayTime(0f);
 
         Sequence seq = DOTween.Sequence();
@@ -126,9 +159,9 @@ public class ResultBestTimePresenter : MonoBehaviour
         }
 
         seq.Append(
-            DOVirtual.Float(0f, bestTime, m_countUpDuration, value =>
+            DOVirtual.Float(0f, clearTime, m_countUpDuration, value =>
             {
-                m_view.DisplayTime(value);
+                if (m_view != null) m_view.DisplayTime(value);
             })
             .SetEase(m_countUpEase)
         );
@@ -137,9 +170,46 @@ public class ResultBestTimePresenter : MonoBehaviour
 
         seq.OnComplete(() =>
         {
-            m_view.DisplayTime(bestTime);
+            if (m_view != null) m_view.DisplayTime(clearTime);
+
+            // カウント完了後、IsNewRecord が true なら赤点滅開始
+            if (isNewRecord)
+            {
+                StartBlinking();
+            }
+            else
+            {
+                StopBlinking();
+            }
         });
 
         m_countUpTween = seq;
+    }
+
+    private void StartBlinking()
+    {
+        StopBlinking();
+
+        if (m_blinkTargetImage == null) return;
+
+        m_blinkTween = m_blinkTargetImage.DOColor(m_blinkRedColor, m_blinkDuration)
+            .SetEase(Ease.InOutSine)
+            .SetLoops(-1, LoopType.Yoyo)
+            .SetUpdate(true);
+    }
+
+    private void StopBlinking()
+    {
+        m_blinkTween?.Kill();
+        if (m_blinkTargetImage != null)
+        {
+            m_blinkTargetImage.color = m_originalColor;
+        }
+    }
+
+    private void StopAllTweens()
+    {
+        m_countUpTween?.Kill();
+        StopBlinking();
     }
 }

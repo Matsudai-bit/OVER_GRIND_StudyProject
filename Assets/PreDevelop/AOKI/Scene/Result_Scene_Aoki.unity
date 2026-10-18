@@ -148,9 +148,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 85b28e3505335d740b5e6c4069369b02, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ResultTimeModel
-  m_debugMinutes: 1
-  m_debugSeconds: 31
-  m_debugMilliseconds: 46
+  m_debugMinutes: 9
+  m_debugSeconds: 15
+  m_debugMilliseconds: 50
   m_bestMinutes: 1
   m_bestSeconds: 57
   m_bestMilliseconds: 0
@@ -226,7 +226,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 9a131d2234bf0a94db7b3749a2380bb3, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 597b4ff3fec92cf4598992a101a4578f, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -1267,7 +1267,6 @@ MonoBehaviour:
   m_playEntranceOnStart: 1
   m_entranceDelay: 2
   m_entranceDuration: 0.5
-  m_entranceOffsetY: -80
   m_targetPanels:
   - {fileID: 1506780023}
   - {fileID: 1238802714}
@@ -1310,7 +1309,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 183141140eaa5a346b279d98ed87a9d4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ResultTimeView
-  numberSprites:
+  m_numberSprites:
   - {fileID: 21300000, guid: 6060aca6487557c46a83191e256f2bc8, type: 3}
   - {fileID: 21300000, guid: c8bc683be4c51d94a9c1008c3cc388ed, type: 3}
   - {fileID: 21300000, guid: 7be7e50965bde1d47a1ae5e2594ab38b, type: 3}
@@ -1321,12 +1320,12 @@ MonoBehaviour:
   - {fileID: 21300000, guid: b1ec15f0e857fd64b985efb40c76076d, type: 3}
   - {fileID: 21300000, guid: 4e88751ee02e32a41911c8de7890be9d, type: 3}
   - {fileID: 21300000, guid: 24dfbaa04b0c8014d94de334c1b286eb, type: 3}
-  min10Image: {fileID: 2092656042}
-  min1Image: {fileID: 1467745102}
-  sec10Image: {fileID: 472254540}
-  sec1Image: {fileID: 434115749}
-  ms10Image: {fileID: 1831393421}
-  ms1Image: {fileID: 622707101}
+  m_min10Image: {fileID: 2092656042}
+  m_min1Image: {fileID: 1467745102}
+  m_sec10Image: {fileID: 472254540}
+  m_sec1Image: {fileID: 434115749}
+  m_ms10Image: {fileID: 1831393421}
+  m_ms1Image: {fileID: 622707101}
   m_autoPreserveAspect: 1
 --- !u!114 &963085469
 MonoBehaviour:
@@ -1441,9 +1440,13 @@ MonoBehaviour:
   m_view: {fileID: 963085468}
   m_model: {fileID: 41639626}
   m_playOnStart: 1
-  m_countUpDuration: 40
-  m_delay: 3
-  m_countUpEase: 9
+  m_useCountUp: 1
+  m_countUpDuration: 5
+  m_delay: 2.5
+  m_countUpEase: 18
+  m_blinkTargetImage: {fileID: 0}
+  m_blinkRedColor: {r: 1, g: 0.2, b: 0.2, a: 1}
+  m_blinkDuration: 0.4
 --- !u!1 &1090931972
 GameObject:
   m_ObjectHideFlags: 0
@@ -2580,7 +2583,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -6.000004, y: 35}
+  m_AnchoredPosition: {x: -6.000004, y: 79}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.4, y: 0.4}
 --- !u!114 &1701258130
@@ -2669,23 +2672,23 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 183141140eaa5a346b279d98ed87a9d4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ResultTimeView
-  numberSprites:
-  - {fileID: 21300000, guid: 3e1065092415a394689db9c207dd4067, type: 3}
-  - {fileID: 21300000, guid: 30b14968f1c8a8148a8fe63f28ec6aed, type: 3}
-  - {fileID: 21300000, guid: 1b2b6bc6e18f3e04cad2d9d82389dda1, type: 3}
-  - {fileID: 21300000, guid: 68d258c6d4c0b044789c747957e19e2b, type: 3}
-  - {fileID: 21300000, guid: c16ee5bf95d3cee4fbdc81ccab0c3e1a, type: 3}
-  - {fileID: 21300000, guid: cc7c45082f2345b44ba9fca772b75cdb, type: 3}
-  - {fileID: 21300000, guid: 9e8aec7698d09964fbfed1e96a68bd1a, type: 3}
-  - {fileID: 21300000, guid: 09aa836bb586dca4d873ea63bc7e12d6, type: 3}
-  - {fileID: 21300000, guid: cdb56cd30d1b67746b2457d2b55b8174, type: 3}
-  - {fileID: 21300000, guid: 23d72b270abaf5d4785418ecd241b282, type: 3}
-  min10Image: {fileID: 2084550721}
-  min1Image: {fileID: 1090931974}
-  sec10Image: {fileID: 306521424}
-  sec1Image: {fileID: 1793002227}
-  ms10Image: {fileID: 1187998052}
-  ms1Image: {fileID: 1321450106}
+  m_numberSprites:
+  - {fileID: 21300000, guid: 6060aca6487557c46a83191e256f2bc8, type: 3}
+  - {fileID: 21300000, guid: c8bc683be4c51d94a9c1008c3cc388ed, type: 3}
+  - {fileID: 21300000, guid: 7be7e50965bde1d47a1ae5e2594ab38b, type: 3}
+  - {fileID: 21300000, guid: 1850b9bd365aa14468f4faea657ba946, type: 3}
+  - {fileID: 21300000, guid: ee9638b3cbc65ae4d9f690502e6c9bfc, type: 3}
+  - {fileID: 21300000, guid: bdf7b86479d7104418664c0d8925ece0, type: 3}
+  - {fileID: 21300000, guid: 71957b8d0606616478241a80f688b648, type: 3}
+  - {fileID: 21300000, guid: b1ec15f0e857fd64b985efb40c76076d, type: 3}
+  - {fileID: 21300000, guid: 4e88751ee02e32a41911c8de7890be9d, type: 3}
+  - {fileID: 21300000, guid: 24dfbaa04b0c8014d94de334c1b286eb, type: 3}
+  m_min10Image: {fileID: 2084550721}
+  m_min1Image: {fileID: 1090931974}
+  m_sec10Image: {fileID: 306521424}
+  m_sec1Image: {fileID: 1793002227}
+  m_ms10Image: {fileID: 1187998052}
+  m_ms1Image: {fileID: 1321450106}
   m_autoPreserveAspect: 1
 --- !u!4 &1742987302
 Transform:
@@ -2711,15 +2714,19 @@ MonoBehaviour:
   m_GameObject: {fileID: 1742987300}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: cfd18e9cafa76604a8f5884d9b7f17c8, type: 3}
+  m_Script: {fileID: 11500000, guid: b3ae6d50008a1394b8121a6cd89c7e8f, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ResultTimePresenter
+  m_EditorClassIdentifier: Assembly-CSharp::ResultPersonalBestPresenter
   m_view: {fileID: 1742987301}
   m_model: {fileID: 41639626}
   m_playOnStart: 1
+  m_useCountUp: 0
   m_countUpDuration: 1.2
   m_delay: 0.3
-  m_countUpEase: 9
+  m_countUpEase: 15
+  m_blinkTargetImage: {fileID: 0}
+  m_blinkRedColor: {r: 1, g: 0.2, b: 0.2, a: 1}
+  m_blinkDuration: 0.4
 --- !u!1 &1752230259
 GameObject:
   m_ObjectHideFlags: 0
@@ -2918,7 +2925,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 96, y: -12}
+  m_AnchoredPosition: {x: 96, y: -14}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1817358637
