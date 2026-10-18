@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.InputSystem;
 using DG.Tweening;
+using UnityEngine.Events;
 
 /// <summary>
 /// リザルト画面における選択 UI の入力とアニメーションを制御するクラスです。
@@ -70,6 +71,11 @@ public class ResultSelectionInput : MonoBehaviour
     /// <summary>「Stage Select」選択中に拡大し続ける割合 (X, Y)。</summary>
     [Tooltip("白枠が選択中に拡大し続ける割合 (X, Y)")]
     [SerializeField] private Vector2 m_loopScaleAmount = new Vector2(1.05f, 1.2f);
+
+    [SerializeField, Header("次のステージボタンを押した")]
+    private UnityEvent m_onNextStageButton = new();
+    [SerializeField, Header("ステージ選択画面に戻るボタンを押した")]
+    private UnityEvent m_onReturnStageSelectButton = new();
 
     /// <summary>現在「Next Stage」が選択されているかどうか。</summary>
     private bool m_isNextStageSelected = true;
@@ -219,10 +225,12 @@ public class ResultSelectionInput : MonoBehaviour
             if (m_isNextStageSelected)
             {
                 Debug.Log("Next Stage 決定！");
+                m_onNextStageButton?.Invoke();
             }
             else
             {
                 Debug.Log("Stage Select 決定！");
+                m_onReturnStageSelectButton?.Invoke();
             }
         }
     }
