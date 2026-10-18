@@ -34,8 +34,7 @@ public class GameOverTimeline : MonoBehaviour
         m_afterIntroGroup = m_afterIntroObject.GetComponent<CanvasGroup>();
     }
 
-
-    private void Start()
+    private void OnEnable()
     {
         m_afterIntroGroup.interactable = false;
         m_afterIntroGroup.blocksRaycasts = false;
@@ -49,14 +48,18 @@ public class GameOverTimeline : MonoBehaviour
         m_director.playOnAwake = false;
         m_director.timeUpdateMode = DirectorUpdateMode.UnscaledGameTime;
         m_director.extrapolationMode = DirectorWrapMode.Hold;
+
+        Play();
+    }
+
+
+    private void Start()
+    {
+        
     }
 
     private void Update()
     {
-        if(Keyboard.current.enterKey.isPressed)
-        {
-            Play();
-        }
     }
 
     public void Play()
