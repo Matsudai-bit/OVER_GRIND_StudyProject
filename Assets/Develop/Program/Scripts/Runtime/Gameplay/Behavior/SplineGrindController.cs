@@ -9,6 +9,9 @@ using Unity.Mathematics;
 
 public class SplineGrindController : MonoBehaviour
 {
+    [SerializeField, Header("Parameter Asset")]
+    private SplineGrindControllerParameterAsset m_parameterAsset;
+
     [Header("Movement Settings")]
     [SerializeField] private float baseGrindSpeed = 15f; // äÓñ{ë¨ìx
     [SerializeField] private float maxGrindSpeed = 40f;  // ç≈çÇë¨ìx
@@ -101,6 +104,8 @@ public class SplineGrindController : MonoBehaviour
     /// </summary>
     private void Awake()
     {
+        ApplyParameterAsset();
+
         m_rb = GetComponent<Rigidbody>();
         m_motor = GetComponent<PlayerMotor>();
         m_monitor = GetComponent<PlayerMonitor>();
@@ -338,4 +343,20 @@ public class SplineGrindController : MonoBehaviour
         currentRail = null;
         if (m_motor != null) m_motor.EndRailMotion(exitVelocity);
     }
+    /// <summary>Applies the assigned parameter asset.</summary>
+    private void ApplyParameterAsset()
+    {
+        if (m_parameterAsset == null) return;
+        baseGrindSpeed = m_parameterAsset.BaseGrindSpeed;
+        maxGrindSpeed = m_parameterAsset.MaxGrindSpeed;
+        exitSpeedScale = m_parameterAsset.ExitSpeedScale;
+        collisionExitUpSpeed = m_parameterAsset.CollisionExitUpSpeed;
+        collisionExitSideSpeed = m_parameterAsset.CollisionExitSideSpeed;
+        collisionExitAwaySpeed = m_parameterAsset.CollisionExitAwaySpeed;
+        collisionExitLandingDelay = m_parameterAsset.CollisionExitLandingDelay;
+        collisionExitSideDistance = m_parameterAsset.CollisionExitSideDistance;
+        collisionExitAssistDuration = m_parameterAsset.CollisionExitAssistDuration;
+        rideHeight = m_parameterAsset.RideHeight;
+    }
+
 }

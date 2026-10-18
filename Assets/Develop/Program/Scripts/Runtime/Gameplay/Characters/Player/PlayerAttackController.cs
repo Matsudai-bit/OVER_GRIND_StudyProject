@@ -6,6 +6,9 @@ using UnityEngine;
 /// </summary>
 public class PlayerAttackController : MonoBehaviour
 {
+    [SerializeField, Header("Parameter Asset")]
+    private PlayerAttackControllerParameterAsset m_parameterAsset;
+
     [SerializeField, Header("ãÛíÜçUåÇÇÃãzíÖ"), Min(0.0f)]
     private float m_airAttachHoldDuration = 0.15f;
     [SerializeField, Min(0.01f)]
@@ -120,6 +123,8 @@ public class PlayerAttackController : MonoBehaviour
 
     private void OnEnable()
     {
+        ApplyParameterAsset();
+
         SubscribeAnimationEvents();
     }
 
@@ -455,4 +460,19 @@ public class PlayerAttackController : MonoBehaviour
 
         eventTypes.Add(eventType);
     }
+    /// <summary>Applies the assigned parameter asset.</summary>
+    private void ApplyParameterAsset()
+    {
+        if (m_parameterAsset == null) return;
+        m_airAttachHoldDuration = m_parameterAsset.AirAttachHoldDuration;
+        m_airAttachFallAcceleration = m_parameterAsset.AirAttachFallAcceleration;
+        m_airAttachContactGrace = m_parameterAsset.AirAttachContactGrace;
+        m_airAttachMaxDistance = m_parameterAsset.AirAttachMaxDistance;
+        m_airAttackFallSpeed = m_parameterAsset.AirAttackFallSpeed;
+        m_airHitStopDuration = m_parameterAsset.AirHitStopDuration;
+        m_airHitFallSpeed = m_parameterAsset.AirHitFallSpeed;
+        m_baseHitsPerSecond = m_parameterAsset.BaseHitsPerSecond;
+        m_chargedHitsPerSecond = m_parameterAsset.ChargedHitsPerSecond;
+    }
+
 }

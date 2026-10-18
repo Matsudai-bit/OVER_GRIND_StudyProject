@@ -6,6 +6,9 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public sealed class PlayerAnimationPresenter : MonoBehaviour
 {
+    [SerializeField, Header("Parameter Asset")]
+    private PlayerAnimationPresenterParameterAsset m_parameterAsset;
+
     // É[ÉçèúéZÇñhÇÆÇΩÇﬂÇÃç≈è¨ë¨ìx
     private const float MIN_MAX_MOVE_SPEED = 0.0001f;
 
@@ -95,6 +98,11 @@ public sealed class PlayerAnimationPresenter : MonoBehaviour
         PlayerMonitor monitor,
         PlayerMotor motor)
     {
+        if (m_parameterAsset != null)
+        {
+            m_moveSpeedDampTime = m_parameterAsset.MoveSpeedDampTime;
+        }
+
         ResolveAnimatorReference();
 
         if (!ValidateReferences(monitor, motor))

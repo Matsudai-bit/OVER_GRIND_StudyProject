@@ -63,7 +63,7 @@ public class ContainerController : MonoBehaviour
     private void OnDisable()
     {
         // 無効にする
-        m_backActionRef?.action.Disable();
+        //m_backActionRef?.action.Disable();
     }
 
     private void Start()
@@ -120,7 +120,7 @@ public class ContainerController : MonoBehaviour
         m_containerRImage.sprite = m_OnCursorContainerRTexture;
 
         // カーソルを固定・解除する
-        foreach (var selector in m_buttonSelectorL)
+         foreach (var selector in m_buttonSelectorL)
         {
             if(selector.isActiveAndEnabled)
             {
