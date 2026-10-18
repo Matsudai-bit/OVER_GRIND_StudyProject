@@ -19,6 +19,8 @@ public class GameDirector : MonoBehaviour
     GameplayModeController m_modeController;
     [SerializeField]
     GameplaySequenceChangedEvent m_gameplaySequenceChangedEvent;
+    [SerializeField]
+    Health m_playerHealth;
 
     [Header("遷移関連")]
     [SerializeField, Header("次のステージボタンを押した時の遷移先")]
@@ -53,6 +55,8 @@ public class GameDirector : MonoBehaviour
                 
             }
         });
+
+        m_playerHealth.HealthChanged += OnChangePlayerHealth;
     }
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
@@ -83,5 +87,18 @@ public class GameDirector : MonoBehaviour
     public void LoadStageSelect()
     {
         SceneManager.LoadScene(stageSelectSceneName);
+    }
+    public void LoadRestartScene()
+    {
+        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+    }
+
+
+    void OnChangePlayerHealth(int hp, int hp1)
+    {
+        if (0 >= hp)
+        {
+            m_gameFlowController.ChangeState(GameFlowStateType.GAME_OVER);
+        }
     }
 }

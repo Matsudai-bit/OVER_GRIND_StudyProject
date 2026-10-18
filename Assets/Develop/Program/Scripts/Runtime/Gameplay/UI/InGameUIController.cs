@@ -18,8 +18,13 @@ public sealed class InGameUIController : MonoBehaviour
     [SerializeField]
     private GameObject m_dialogueRoot;
 
+    // リザルト表示ルート
     [SerializeField]
     private GameObject m_resultRoot;
+
+    // ゲームオーバー表示ルート
+    [SerializeField]
+    private GameObject m_gameOverRoot;
 
     // ゲーム進行状態変更イベント
     [SerializeField, Header("ゲーム状態イベント")]
@@ -70,15 +75,10 @@ public sealed class InGameUIController : MonoBehaviour
             isVisible);
     }
 
-    public void SetResultVisible(bool isVisible)
-    {
-        SetRootActive(m_resultRoot, isVisible);
-    }
-
     /// <summary>
     /// チュートリアルUIの表示状態を設定します。
     /// </summary>
-    /// <param name="isVisible">表示可能にするか。</param>
+    /// <param name="isVisible">表示するか。</param>
     public void SetTutorialVisible(bool isVisible)
     {
         SetRootActive(
@@ -89,11 +89,33 @@ public sealed class InGameUIController : MonoBehaviour
     /// <summary>
     /// 独り言・セリフUIの表示状態を設定します。
     /// </summary>
-    /// <param name="isVisible">表示可能にするか。</param>
+    /// <param name="isVisible">表示するか。</param>
     public void SetDialogueVisible(bool isVisible)
     {
         SetRootActive(
             m_dialogueRoot,
+            isVisible);
+    }
+
+    /// <summary>
+    /// リザルトUIの表示状態を設定します。
+    /// </summary>
+    /// <param name="isVisible">表示するか。</param>
+    public void SetResultVisible(bool isVisible)
+    {
+        SetRootActive(
+            m_resultRoot,
+            isVisible);
+    }
+
+    /// <summary>
+    /// ゲームオーバーUIの表示状態を設定します。
+    /// </summary>
+    /// <param name="isVisible">表示するか。</param>
+    public void SetGameOverVisible(bool isVisible)
+    {
+        SetRootActive(
+            m_gameOverRoot,
             isVisible);
     }
 
@@ -106,6 +128,7 @@ public sealed class InGameUIController : MonoBehaviour
         SetTutorialVisible(false);
         SetDialogueVisible(false);
         SetResultVisible(false);
+        SetGameOverVisible(false);
     }
 
     /// <summary>
@@ -206,22 +229,34 @@ public sealed class InGameUIController : MonoBehaviour
             return;
         }
 
-        // RESULTではリザルトUIのみ表示
-        if (m_currentGameFlowState ==
-            GameFlowStateType.RESULT)
+        switch (m_currentGameFlowState)
         {
-            ApplyResultVisibility();
-            return;
-        }
+            case GameFlowStateType.PLAYING:
+                ApplyPlayingVisibility();
+                break;
 
-        // PLAYING以外ではインゲームUIを非表示
-        if (m_currentGameFlowState !=
-            GameFlowStateType.PLAYING)
-        {
-            HideAll();
-            return;
-        }
+            case GameFlowStateType.RESULT:
+                ApplyResultVisibility();
+                break;
 
+            case GameFlowStateType.GAME_OVER:
+                ApplyGameOverVisibility();
+                break;
+
+            case GameFlowStateType.INTRO:
+            case GameFlowStateType.ENDING:
+            case GameFlowStateType.NONE:
+            default:
+                HideAll();
+                break;
+        }
+    }
+
+    /// <summary>
+    /// ゲームプレイ中のUI表示状態を設定します。
+    /// </summary>
+    private void ApplyPlayingVisibility()
+    {
         switch (m_currentGameplayMode)
         {
             case GameplayModeType.NORMAL:
@@ -248,10 +283,11 @@ public sealed class InGameUIController : MonoBehaviour
     /// </summary>
     private void ApplyNormalVisibility()
     {
+        HideAll();
+
         SetHudVisible(true);
         SetTutorialVisible(true);
         SetDialogueVisible(true);
-        SetResultVisible(false);
     }
 
     /// <summary>
@@ -259,13 +295,10 @@ public sealed class InGameUIController : MonoBehaviour
     /// </summary>
     private void ApplyCinematicVisibility()
     {
-        SetHudVisible(false);
-        SetTutorialVisible(false);
+        HideAll();
 
         // カットシーン中の字幕・セリフ表示は許可
         SetDialogueVisible(true);
-        SetResultVisible(false);
-
     }
 
     /// <summary>
@@ -273,22 +306,30 @@ public sealed class InGameUIController : MonoBehaviour
     /// </summary>
     private void ApplyQteVisibility()
     {
-        SetHudVisible(false);
-        SetTutorialVisible(false);
+        HideAll();
 
         // QTE中もセリフ表示は許可
         SetDialogueVisible(true);
-        SetResultVisible(false);
-
     }
 
     /// <summary>
-    /// 通常ゲームプレイ中のUI表示状態を設定します。
+    /// リザルト中のUI表示状態を設定します。
     /// </summary>
     private void ApplyResultVisibility()
     {
         HideAll();
+
         SetResultVisible(true);
+    }
+
+    /// <summary>
+    /// ゲームオーバー中のUI表示状態を設定します。
+    /// </summary>
+    private void ApplyGameOverVisibility()
+    {
+        HideAll();
+
+        SetGameOverVisible(true);
     }
 
     /// <summary>
