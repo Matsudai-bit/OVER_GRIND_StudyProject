@@ -102,6 +102,7 @@ public sealed class S1BossPhaseTransitionHandler : MonoBehaviour
             .ChangeState<S1P1BossLegsCollapsingState>(
                 m_s1P1BossLegsController);
 
+        GameFlowController.ChangeState(GameFlowStateType.ENDING);
         GameFlowController.ChangeState(GameFlowStateType.RESULT);
     }
 
