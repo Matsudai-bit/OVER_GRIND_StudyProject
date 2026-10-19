@@ -13,6 +13,12 @@ public sealed class PlayerInputReader : MonoBehaviour
     // Vブーストの長押し判定時間
     private const float V_BOOST_HOLD_TIME = 0.2f;
 
+    [SerializeField, Header("Parameter Asset")]
+    private PlayerInputReaderParameterAsset m_parameterAsset;
+
+    private float m_moveInputSqrThreshold = MOVE_INPUT_SQR_THRESHOLD;
+    private float m_vBoostHoldThreshold = V_BOOST_HOLD_TIME;
+
     // 移動入力アクション
     [SerializeField, Header("移動入力アクション")]
     private InputActionReference m_moveActionReference;
@@ -44,6 +50,7 @@ public sealed class PlayerInputReader : MonoBehaviour
 
     // 攻撃入力が押され続けているか
     private bool m_isAttackHeld;
+    private bool m_suppressAttackUntilRelease;
 
     // ジャンプ入力中か
     private bool m_hasJumpInput;
@@ -87,7 +94,7 @@ public sealed class PlayerInputReader : MonoBehaviour
     /// </summary>
     public bool HasMoveInput =>
         m_moveInput.sqrMagnitude >
-        MOVE_INPUT_SQR_THRESHOLD;
+        m_moveInputSqrThreshold;
 
     /// <summary>
     /// 攻撃入力が押され続けているかどうかを取得します。
@@ -155,6 +162,13 @@ public sealed class PlayerInputReader : MonoBehaviour
 
         m_hasAttackInput = false;
         return true;
+    }
+
+    /// <summary>現在の攻撃押下を破棄し、ボタンを離すまで次の押下イベントを抑制します。</summary>
+    public void SuppressAttackUntilRelease()
+    {
+        m_hasAttackInput = false;
+        m_suppressAttackUntilRelease = m_isAttackHeld;
     }
 
     /// <summary>
@@ -270,6 +284,8 @@ public sealed class PlayerInputReader : MonoBehaviour
         {
             return;
         }
+
+        ApplyParameterAsset();
 
         if (TryGetAction(
             m_moveActionReference,
@@ -431,7 +447,7 @@ public sealed class PlayerInputReader : MonoBehaviour
 
         m_vBoostHoldTime += Time.deltaTime;
 
-        if (m_vBoostHoldTime < V_BOOST_HOLD_TIME)
+        if (m_vBoostHoldTime < m_vBoostHoldThreshold)
         {
             return;
         }
@@ -468,8 +484,11 @@ public sealed class PlayerInputReader : MonoBehaviour
     private void HandleAttackPerformed(
         InputAction.CallbackContext context)
     {
-        m_hasAttackInput = true;
         m_isAttackHeld = true;
+        if (!m_suppressAttackUntilRelease)
+        {
+            m_hasAttackInput = true;
+        }
     }
 
     /// <summary>
@@ -480,6 +499,7 @@ public sealed class PlayerInputReader : MonoBehaviour
         InputAction.CallbackContext context)
     {
         m_isAttackHeld = false;
+        m_suppressAttackUntilRelease = false;
     }
 
     /// <summary>
@@ -562,6 +582,7 @@ private void HandleVBoostCanceled(
         m_moveInput = Vector2.zero;
         m_hasAttackInput = false;
         m_isAttackHeld = false;
+        m_suppressAttackUntilRelease = false;
         m_hasJumpInput = false;
         m_hasJumpPress = false;
         m_suppressJumpUntilRelease = false;
@@ -611,6 +632,26 @@ private void HandleVBoostCanceled(
         }
 
         return true;
+    }
+
+    /// <summary>設定済みの場合にParameterAssetの値を適用します。</summary>
+    private void ApplyParameterAsset()
+    {
+        if (m_parameterAsset == null)
+        {
+            m_moveInputSqrThreshold = MOVE_INPUT_SQR_THRESHOLD;
+            m_vBoostHoldThreshold = V_BOOST_HOLD_TIME;
+            return;
+        }
+
+        m_moveActionReference = m_parameterAsset.MoveActionReference;
+        m_attackActionReference = m_parameterAsset.AttackActionReference;
+        m_jumpActionReference = m_parameterAsset.JumpActionReference;
+        m_vBoostActionReference = m_parameterAsset.VBoostActionReference;
+        m_inputActionsAsset = m_parameterAsset.InputActionsAsset;
+        m_vBoostActionName = m_parameterAsset.VBoostActionName;
+        m_moveInputSqrThreshold = m_parameterAsset.MoveInputSqrThreshold;
+        m_vBoostHoldThreshold = m_parameterAsset.VBoostHoldTime;
     }
 
     /// <summary>Input Actionsアセットからチャージアクションを取得します。</summary>

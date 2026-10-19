@@ -165,6 +165,10 @@ public sealed class PlayerMovementParameterAssetEditor : Editor
                 "停止時間",
                 "移動入力を離してから停止するまでの時間です。"));
 
+        EditorGUILayout.PropertyField(
+            serializedObject.FindProperty("m_reverseBrakeMultiplier"),
+            new GUIContent("逆入力ブレーキ倍率", "通常減速に対する減速度倍率。3なら同じ速度から約1/3の時間で停止します。"));
+
         EditorGUILayout.Space();
 
         EditorGUILayout.LabelField(

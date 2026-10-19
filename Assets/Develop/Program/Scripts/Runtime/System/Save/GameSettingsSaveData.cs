@@ -7,25 +7,32 @@ using UnityEngine;
 [Serializable]
 public sealed class GameSettingsSaveData
 {
-    // BGM音量
+    [Header("音量設定")]
+    /// <summary>BGM音量</summary>
     [SerializeField, Range(0.0f, 1.0f)]
     private float m_bgmVolume = 1.0f;
 
-    // SE音量
+    /// <summary>SE音量</summary>
     [SerializeField, Range(0.0f, 1.0f)]
     private float m_seVolume = 1.0f;
 
-    // マスター音量
+    /// <summary>マスター音量</summary>
     [SerializeField, Range(0.0f, 1.0f)]
     private float m_masterVolume = 1.0f;
 
-    // 画面サイズ設定
+    [Header("画面設定")]
+    /// <summary>画面サイズ設定</summary>
     [SerializeField]
     private int m_screenSize = 1;
 
-    // カメラ感度
+    [Header("カメラ設定")]
+    /// <summary>カメラ感度</summary>
     [SerializeField, Min(0.0f)]
     private float m_cameraSensitivity = 1.0f;
+
+    /// <summary>カメラを反転させるかどうか</summary>
+    [SerializeField]
+    private bool m_isCameraReverse = false;
 
     /// <summary>
     /// BGM音量を取得します。
@@ -53,8 +60,18 @@ public sealed class GameSettingsSaveData
     public float CameraSensitivity => m_cameraSensitivity;
 
     /// <summary>
+    /// カメラの反転設定を取得します。
+    /// </summary>
+    public bool IsCameraReverse => m_isCameraReverse;
+
+    /// <summary>
     /// BGM音量を設定します。
     /// </summary>
+    /// <param name="volume">設定するBGM音量。</param>
+    /// <returns>
+    /// true：値が変更されました。
+    /// false：値は変更されませんでした（既に同じ値です）。
+    /// </returns>
     public bool SetBgmVolume(float volume)
     {
         float newVolume = Mathf.Clamp01(volume);
@@ -65,13 +82,17 @@ public sealed class GameSettingsSaveData
         }
 
         m_bgmVolume = newVolume;
-
         return true;
     }
 
     /// <summary>
     /// SE音量を設定します。
     /// </summary>
+    /// <param name="volume">設定するSE音量。</param>
+    /// <returns>
+    /// true：値が変更されました。
+    /// false：値は変更されませんでした（既に同じ値です）。
+    /// </returns>
     public bool SetSeVolume(float volume)
     {
         float newVolume = Mathf.Clamp01(volume);
@@ -82,13 +103,17 @@ public sealed class GameSettingsSaveData
         }
 
         m_seVolume = newVolume;
-
         return true;
     }
 
     /// <summary>
     /// マスター音量を設定します。
     /// </summary>
+    /// <param name="volume">設定するマスター音量。</param>
+    /// <returns>
+    /// true：値が変更されました。
+    /// false：値は変更されませんでした（既に同じ値です）。
+    /// </returns>
     public bool SetMasterVolume(float volume)
     {
         float newVolume = Mathf.Clamp01(volume);
@@ -99,13 +124,17 @@ public sealed class GameSettingsSaveData
         }
 
         m_masterVolume = newVolume;
-
         return true;
     }
 
     /// <summary>
     /// 画面サイズ設定を設定します。
     /// </summary>
+    /// <param name="screenSize">設定する画面サイズのインデックス。</param>
+    /// <returns>
+    /// true：値が変更されました。
+    /// false：値は変更されませんでした（既に同じ値です）。
+    /// </returns>
     public bool SetScreenSize(int screenSize)
     {
         if (m_screenSize == screenSize)
@@ -114,26 +143,46 @@ public sealed class GameSettingsSaveData
         }
 
         m_screenSize = screenSize;
-
         return true;
     }
 
     /// <summary>
     /// カメラ感度を設定します。
     /// </summary>
+    /// <param name="sensitivity">設定するカメラ感度。</param>
+    /// <returns>
+    /// true：値が変更されました。
+    /// false：値は変更されませんでした（既に同じ値です）。
+    /// </returns>
     public bool SetCameraSensitivity(float sensitivity)
     {
         float newSensitivity = Mathf.Max(0.0f, sensitivity);
 
-        if (Mathf.Approximately(
-            m_cameraSensitivity,
-            newSensitivity))
+        if (Mathf.Approximately(m_cameraSensitivity, newSensitivity))
         {
             return false;
         }
 
         m_cameraSensitivity = newSensitivity;
+        return true;
+    }
 
+    /// <summary>
+    /// カメラの反転設定を設定します。
+    /// </summary>
+    /// <param name="isReverse">反転させるかどうか。</param>
+    /// <returns>
+    /// true：値が変更されました。
+    /// false：値は変更されませんでした（既に同じ値です）。
+    /// </returns>
+    public bool SetCameraReverse(bool isReverse)
+    {
+        if (m_isCameraReverse == isReverse)
+        {
+            return false;
+        }
+
+        m_isCameraReverse = isReverse;
         return true;
     }
 }
