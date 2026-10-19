@@ -4,6 +4,9 @@ using UnityEngine.InputSystem;
 
 public class ButtonSelector : MonoBehaviour
 {
+    // 上下判定のしきい値
+    private const float NAVIGATE_THRESHOLD = 0.75f;
+
     // ボタン
     [SerializeField]
     private SelectButton[] m_buttons;
@@ -18,40 +21,114 @@ public class ButtonSelector : MonoBehaviour
     [SerializeField]
     private UnityEngine.Events.UnityEvent<UnityEngine.UI.Image, Vector3> m_moveAction = null;
 
-    private void Start()
+    // カーソルが外れたときに自身を残したままにするかどうか
+    [SerializeField]
+    private bool m_keepSelectionWhenLocked = false;
+
+    // 開始時にロック状態にするかどうか
+    [SerializeField]
+    private bool m_lockOnStart = false;
+
+    // カーソルがロックされているかどうか
+    private bool m_isLockCursor = false;
+    // カーソルの固定・解除の予約
+    private bool m_cursorLockRequested;
+    private bool m_cursorUnlockRequested;
+
+    [Header("入力判定関連")]
+    // 上キーが押される判定
+    [SerializeField]
+    private InputActionReference m_navigateActionRef;
+    // 決定キーが押される判定
+    [SerializeField]
+    private InputActionReference m_enterActionRef;
+
+    // 前フレームからのスティック移動距離
+    private Vector2 m_previousNav = Vector2.zero;
+
+    // 初期化を行ったかどうか
+    private bool m_initialized = false;
+    // ロックが解除されたフレーム
+    private int m_unlockFrame = -1;
+
+    private void OnEnable()
     {
-        if (m_cursor != null)
+        // 初回の有効化時だけ初期ロック状態を反映（2回目以降は状態を保持）
+        if (!m_initialized)
         {
-            // カーソルの座標初期化
-            //m_cursor.transform.position = m_buttons[m_selectButtonNumber].transform.position;
+            m_isLockCursor = m_lockOnStart;
+            m_initialized = true;
         }
 
-        // 選択している状態にする
-        m_buttons[m_selectButtonNumber].OnCursor();
+        // 押されっぱなしの入力を新規入力と誤判定しないよう、現在値で初期化
+        m_previousNav = (m_navigateActionRef != null)
+            ? m_navigateActionRef.action.ReadValue<Vector2>()
+            : Vector2.zero;
+
+        if (m_navigateActionRef == null)
+        {
+            Debug.LogWarning($"{gameObject.name}: m_navigateActionRef が設定されていません。", this);
+            return;
+        }
+        if (m_enterActionRef == null)
+        {
+            Debug.LogWarning($"{gameObject.name}: m_enterActionRef が設定されていません。", this);
+            return;
+        }
+    }
+
+    private void OnDisable()
+    {
+        // 無効にする
+        //m_navigateActionRef?.action.Disable();
+        //m_enterActionRef?.action.Disable();
+    }
+
+    private void Start()
+    {
+        if (m_buttons != null)
+        {
+            for (int i = 0; i < m_buttons.Length; i++)
+            {
+                // 選択していない状態にする
+                m_buttons[i].OnCursorExit();
+
+                // もし選択されている番号と一致した場合
+                if (m_selectButtonNumber == i)
+                {
+                    // 選択している状態にする
+                    m_buttons[m_selectButtonNumber].OnCursor();
+                }
+            }
+        }
     }
 
     private void Update()
     {
-        // 上下キーどちらかが押されていたら
-        if (isPressedUpOrDown())
+        //Debug.Log("m_navigateActionRef:" + m_navigateActionRef.action.enabled);
+        // 入力方向
+        Vector2 nav = m_navigateActionRef.action.ReadValue<Vector2>();
+
+        // 上下キーどちらかが押されていたら || カーソルが固定されていなかったら
+        if (wasPressedUpOrDown() && !m_isLockCursor)
         {
             // カーソルを離れるときの関数を実行する
             m_buttons[m_selectButtonNumber].OnCursorExit();
 
             // 上キーが押されたら
-            if (Keyboard.current.upArrowKey.wasPressedThisFrame)
+            if (nav.y > NAVIGATE_THRESHOLD &&
+                m_previousNav.y <= NAVIGATE_THRESHOLD)
             {
                 // カーソルを一つ上に移動させる
                 m_selectButtonNumber--;
-
                 Debug.Log("MoveUP");
             }
             // 下キーが押されたら
-            if (Keyboard.current.downArrowKey.wasPressedThisFrame)
+            if (nav.y < -NAVIGATE_THRESHOLD &&
+                m_previousNav.y >= -NAVIGATE_THRESHOLD)
             {
                 // カーソルを一つ下に移動させる
                 m_selectButtonNumber++;
-
                 Debug.Log("MoveDOWN");
             }
 
@@ -60,44 +137,121 @@ public class ButtonSelector : MonoBehaviour
             // カーソルが乗ったときの処理を呼ぶ
             m_buttons[m_selectButtonNumber].OnCursor();
         }
+        else if (wasPressedUpOrDown() && !m_isLockCursor)
+        {
+            Debug.Log("Lock");
+        }
 
-        if (m_cursor != null)
+        if (m_enterActionRef != null && m_enterActionRef.action.WasPressedThisFrame())
+        {
+            Debug.Log($"[Enter] {name} idx={m_selectButtonNumber} lock={m_isLockCursor} justUnlocked={m_unlockFrame == Time.frameCount}", this);
+        }
+
+        // カーソルがロックされていない場合
+        if (!m_isLockCursor)
         {
             // カーソルの座標更新
-            if (m_moveAction.GetPersistentEventCount() > 0)
+            if (m_cursor != null)
             {
-                m_moveAction.Invoke(
-                    m_cursor,
-                    m_buttons[m_selectButtonNumber].transform.position
-                );
+                if (m_moveAction.GetPersistentEventCount() > 0)
+                {
+                    m_moveAction.Invoke(
+                        m_cursor,
+                        m_buttons[m_selectButtonNumber].transform.position
+                    );
+                }
+                else
+                {
+                    m_cursor.transform.position = m_buttons[m_selectButtonNumber].transform.position;
+                }
             }
-            else
+
+            bool justUnlocked = (m_unlockFrame == Time.frameCount);
+            // 決定ボタンが押されたら
+            if (!justUnlocked && m_enterActionRef != null && m_enterActionRef.action.WasPressedThisFrame())
             {
-                m_cursor.transform.position = m_buttons[m_selectButtonNumber].transform.position;
+                // キーが押されたときの処理を実行する
+                m_buttons[m_selectButtonNumber].OnClick();
+            }
+            // 決定ボタンが離されたら
+            if (!justUnlocked && m_enterActionRef != null && m_enterActionRef.action.WasReleasedThisFrame())
+            {
+                // キーが押されたときの処理を実行する
+                m_buttons[m_selectButtonNumber].OnClickExit();
             }
         }
 
-        // 決定ボタンが押されたら
-        if (Keyboard.current.spaceKey.wasPressedThisFrame)
+        // 今フレームの値を保存し、次フレームの比較に使う
+        m_previousNav = nav;
+    }
+
+    private void LateUpdate()
+    {
+        // 固定するように言われている場合
+        if (m_cursorLockRequested)
         {
-            // キーが押されたときの処理を実行する
-            m_buttons[m_selectButtonNumber].OnClick();
+            m_isLockCursor = true;
+
+            m_cursorLockRequested = false;
+
+            // 選択状態を維持しない設定の場合のみ、ロック時に非選択状態へ戻す
+            if (!m_keepSelectionWhenLocked && m_buttons != null && m_buttons.Length > 0)
+            {
+                m_buttons[m_selectButtonNumber].OnCursorExit();
+            }
         }
-        // 決定ボタンが離されたら
-        if (Keyboard.current.spaceKey.wasReleasedThisFrame)
+        // 解除するように言われている場合
+        if (m_cursorUnlockRequested)
         {
-            // キーが押されたときの処理を実行する
-            m_buttons[m_selectButtonNumber].OnClickExit();
+            m_isLockCursor = false;
+
+            m_cursorUnlockRequested = false;
+
+            // ロック解除時は選択中ボタンを即座に有効化（クリック不要）
+            if (m_buttons != null && m_buttons.Length > 0)
+            {
+                m_buttons[m_selectButtonNumber].OnCursor();
+            }
+        }
+    }
+
+    // ----------------------------------------------------------------------
+
+    // カーソルのロック
+    public void LockCursor()
+    {
+        m_isLockCursor = true;
+
+        // 見た目の更新は、有効なときだけ行う
+        if (isActiveAndEnabled && !m_keepSelectionWhenLocked &&
+            m_buttons != null && m_buttons.Length > 0)
+        {
+            m_buttons[m_selectButtonNumber].OnCursorExit();
+        }
+    }
+
+    // カーソルのロックを解除する
+    public void UnLockCursor()
+    {
+        m_isLockCursor = false;
+        m_unlockFrame = Time.frameCount;   // 解除したフレームを記録
+
+        if (isActiveAndEnabled && m_buttons != null && m_buttons.Length > 0)
+        {
+            m_buttons[m_selectButtonNumber].OnCursor();
         }
     }
 
     // ----------------------------------------------------------------------
 
     // 上キーまたは下キーが押されているか
-    private bool isPressedUpOrDown()
+    private bool wasPressedUpOrDown()
     {
-        return (Keyboard.current.upArrowKey.wasPressedThisFrame ||
-                Keyboard.current.downArrowKey.wasPressedThisFrame);
+        // 入力方向
+        Vector2 nav = m_navigateActionRef.action.ReadValue<Vector2>();
+
+        return (nav.y > NAVIGATE_THRESHOLD && m_previousNav.y <= NAVIGATE_THRESHOLD ||
+                nav.y < -NAVIGATE_THRESHOLD && m_previousNav.y >= -NAVIGATE_THRESHOLD);
     }
 
     // カーソル番号を範囲内に収める 
