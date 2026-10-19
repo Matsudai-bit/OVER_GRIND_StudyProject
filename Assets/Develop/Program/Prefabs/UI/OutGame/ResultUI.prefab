@@ -128,8 +128,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LeftSlideInScroller
   m_playOnStart: 1
   m_startDelay: 0.5
-  m_enableTestInput: 0
   m_slideTarget: {fileID: 6419285285362926829}
+  m_direction: 1
   m_slideDuration: 0.5
   m_slideOffsetDistance: 200
   m_easeCurve:
@@ -156,6 +156,8 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+  m_useDotweenEase: 0
+  m_dotweenEase: 9
 --- !u!1 &547351137492037557
 GameObject:
   m_ObjectHideFlags: 0
@@ -1351,8 +1353,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LeftSlideInScroller
   m_playOnStart: 1
   m_startDelay: 0.5
-  m_enableTestInput: 0
   m_slideTarget: {fileID: 5564887314932697954}
+  m_direction: 1
   m_slideDuration: 0.5
   m_slideOffsetDistance: 200
   m_easeCurve:
@@ -1379,6 +1381,8 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+  m_useDotweenEase: 0
+  m_dotweenEase: 9
 --- !u!1 &4591304759961065401
 GameObject:
   m_ObjectHideFlags: 0
@@ -1432,8 +1436,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::RightSlideInScroller
   m_playOnStart: 1
   m_startDelay: 0
-  m_enableTestInput: 0
   m_slideTarget: {fileID: 0}
+  m_direction: 1
   m_slideDuration: 0.5
   m_slideOffsetDistance: 600
   m_easeCurve:
@@ -1460,6 +1464,8 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+  m_useDotweenEase: 0
+  m_dotweenEase: 9
 --- !u!1 &4693819676888034437
 GameObject:
   m_ObjectHideFlags: 0
@@ -1591,8 +1597,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::RightSlideInScroller
   m_playOnStart: 1
   m_startDelay: 0
-  m_enableTestInput: 0
   m_slideTarget: {fileID: 0}
+  m_direction: 1
   m_slideDuration: 0.5
   m_slideOffsetDistance: 500
   m_easeCurve:
@@ -1619,6 +1625,8 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+  m_useDotweenEase: 0
+  m_dotweenEase: 9
 --- !u!1 &5174388985251941357
 GameObject:
   m_ObjectHideFlags: 0
@@ -2171,7 +2179,6 @@ GameObject:
   - component: {fileID: 8996782873137747052}
   - component: {fileID: 120164604852282773}
   - component: {fileID: 7010031702302808064}
-  - component: {fileID: 1281497932754334517}
   m_Layer: 0
   m_Name: Result_Scene_UI_Controller
   m_TagString: Untagged
@@ -2284,27 +2291,6 @@ MonoBehaviour:
   m_DefaultActionMap: UI
   m_SplitScreenIndex: -1
   m_Camera: {fileID: 0}
---- !u!114 &1281497932754334517
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7269559830895589620}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3e8280a0eab4ec846863d04abdb140a7, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::RandomTextEffect
-  m_targetObject: {fileID: 3698098668205206263}
-  m_decodeMode: 0
-  m_delay: 0.5
-  m_totalDuration: 0.8
-  m_shuffleInterval: 0.03
-  m_usePunchScale: 1
-  m_randomChars: ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#$%&@*
-  m_randomSprites: []
-  m_playOnStart: 1
 --- !u!1 &7653019784755202891
 GameObject:
   m_ObjectHideFlags: 0
