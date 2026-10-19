@@ -122,7 +122,7 @@ public sealed class S1MissileController : MonoBehaviour
         m_steering.ResetSteering();
 
         // ”­Ë‚Éˆê“x‚¾‚¯ã•ûŒü‚Ö‰‘¬“x‚ğ—^‚¦‚é
-        m_motor.Launch(transform.forward);
+        m_motor.Launch(Vector3.up);
 
         m_currentState =
             MissileState.LAUNCH_UPWARD;

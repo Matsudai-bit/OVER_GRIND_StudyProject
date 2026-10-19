@@ -172,16 +172,7 @@ public sealed class PlayerRailJumpingState : StateBase<PlayerStateMachineCompone
         {
             StopAirAttack();
             m_isTransitionPending = true;
-            // 攻撃押下を着地後へ持ち越さず、解放後の新しい入力から再び受け付けます。
-            Owner.InputReader.SuppressAttackUntilRelease();
-            if (Owner.Motor.IsHorizontallyStopped)
-            {
-                Owner.RequestRailStateChange<PlayerIdlingState>();
-            }
-            else
-            {
-                Owner.RequestRailStateChange<PlayerWalkingState>();
-            }
+            Owner.RequestRailStateChange<PlayerIdlingState>();
         }
     }
 

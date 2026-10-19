@@ -6,9 +6,6 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public sealed class Hurtbox : MonoBehaviour, IDirectionalDamageable
 {
-    [SerializeField, Header("Parameter Asset")]
-    private HurtboxParameterAsset m_parameterAsset;
-
     /// <summary>
     /// 実際にダメージを処理するコンポーネント。
     /// </summary>
@@ -48,12 +45,6 @@ public sealed class Hurtbox : MonoBehaviour, IDirectionalDamageable
     /// </summary>
     private void Awake()
     {
-        if (m_parameterAsset != null)
-        {
-            m_damageMultiplier = m_parameterAsset.DamageMultiplier;
-            m_canReceiveDamage = m_parameterAsset.CanReceiveDamage;
-        }
-
         CacheDamageReceiver();
     }
 

@@ -18,9 +18,6 @@ public sealed class InGameUIController : MonoBehaviour
     [SerializeField]
     private GameObject m_dialogueRoot;
 
-    [SerializeField]
-    private GameObject m_resultRoot;
-
     // ゲーム進行状態変更イベント
     [SerializeField, Header("ゲーム状態イベント")]
     private GameFlowStateChangedEvent m_gameFlowStateChangedEvent;
@@ -70,11 +67,6 @@ public sealed class InGameUIController : MonoBehaviour
             isVisible);
     }
 
-    public void SetResultVisible(bool isVisible)
-    {
-        SetRootActive(m_resultRoot, isVisible);
-    }
-
     /// <summary>
     /// チュートリアルUIの表示状態を設定します。
     /// </summary>
@@ -105,7 +97,6 @@ public sealed class InGameUIController : MonoBehaviour
         SetHudVisible(false);
         SetTutorialVisible(false);
         SetDialogueVisible(false);
-        SetResultVisible(false);
     }
 
     /// <summary>
@@ -206,14 +197,6 @@ public sealed class InGameUIController : MonoBehaviour
             return;
         }
 
-        // RESULTではリザルトUIのみ表示
-        if (m_currentGameFlowState ==
-            GameFlowStateType.RESULT)
-        {
-            ApplyResultVisibility();
-            return;
-        }
-
         // PLAYING以外ではインゲームUIを非表示
         if (m_currentGameFlowState !=
             GameFlowStateType.PLAYING)
@@ -251,7 +234,6 @@ public sealed class InGameUIController : MonoBehaviour
         SetHudVisible(true);
         SetTutorialVisible(true);
         SetDialogueVisible(true);
-        SetResultVisible(false);
     }
 
     /// <summary>
@@ -264,8 +246,6 @@ public sealed class InGameUIController : MonoBehaviour
 
         // カットシーン中の字幕・セリフ表示は許可
         SetDialogueVisible(true);
-        SetResultVisible(false);
-
     }
 
     /// <summary>
@@ -278,17 +258,6 @@ public sealed class InGameUIController : MonoBehaviour
 
         // QTE中もセリフ表示は許可
         SetDialogueVisible(true);
-        SetResultVisible(false);
-
-    }
-
-    /// <summary>
-    /// 通常ゲームプレイ中のUI表示状態を設定します。
-    /// </summary>
-    private void ApplyResultVisibility()
-    {
-        HideAll();
-        SetResultVisible(true);
     }
 
     /// <summary>

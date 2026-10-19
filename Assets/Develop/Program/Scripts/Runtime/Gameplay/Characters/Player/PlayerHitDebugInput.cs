@@ -6,9 +6,6 @@ using UnityEngine.InputSystem;
 [RequireComponent(typeof(PlayerHealth), typeof(PlayerStateMachineComponent), typeof(PlayerInputReader))]
 public sealed class PlayerHitDebugInput : MonoBehaviour
 {
-    [SerializeField, Header("Parameter Asset")]
-    private PlayerHitDebugInputParameterAsset m_parameterAsset;
-
     [SerializeField] private Key m_hitKey = Key.F8;
     [SerializeField, Tooltip("未設定の場合はプレイヤーの前方を攻撃中心にします。")]
     private Transform m_attackCenter;
@@ -24,22 +21,6 @@ public sealed class PlayerHitDebugInput : MonoBehaviour
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
     private PlayerHealth m_health;
     private PlayerStateMachineComponent m_stateMachine;
-
-    /// <summary>ParameterAssetを適用します。</summary>
-    private void Awake()
-    {
-        if (m_parameterAsset == null)
-        {
-            return;
-        }
-
-        m_hitKey = m_parameterAsset.HitKey;
-        m_localAttackCenterOffset = m_parameterAsset.LocalAttackCenterOffset;
-        m_applyDamage = m_parameterAsset.ApplyDamage;
-        m_damage = m_parameterAsset.Damage;
-        m_knockbackProfile = m_parameterAsset.KnockbackProfile;
-        m_attackIdentifier = m_parameterAsset.AttackIdentifier;
-    }
 
     /// <summary>同じGameObjectの被弾コンポーネントを取得します。</summary>
     private void ResolveReferences()

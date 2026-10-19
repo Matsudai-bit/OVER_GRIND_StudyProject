@@ -14,9 +14,6 @@ using UnityEngine;
 [RequireComponent(typeof(SplineGrindController))]
 public sealed class PlayerRootController : MonoBehaviour
 {
-    [SerializeField, Header("Parameter Asset")]
-    private PlayerRootControllerParameterAsset m_parameterAsset;
-
     // 通常移動パラメータ
     [SerializeField, Header("パラメータ")]
     private PlayerMovementParameterAsset
@@ -97,8 +94,6 @@ public sealed class PlayerRootController : MonoBehaviour
     /// </summary>
     private void Awake()
     {
-        ApplyParameterAsset();
-
         ResolveReferences();
 
         if (!ValidateReferences())
@@ -407,13 +402,4 @@ public sealed class PlayerRootController : MonoBehaviour
 
         return isValid;
     }
-    /// <summary>Applies the assigned parameter asset.</summary>
-    private void ApplyParameterAsset()
-    {
-        if (m_parameterAsset == null) return;
-        m_movementParameterAsset = m_parameterAsset.MovementParameterAsset;
-        m_vBoostMovementParameterAsset = m_parameterAsset.VBoostMovementParameterAsset;
-        m_boostChargingParameterAsset = m_parameterAsset.BoostChargingParameterAsset;
-    }
-
 }

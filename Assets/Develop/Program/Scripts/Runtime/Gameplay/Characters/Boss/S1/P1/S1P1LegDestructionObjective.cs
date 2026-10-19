@@ -1,117 +1,76 @@
-using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// ステージ1フェーズ1の破壊進行と
-/// フェーズ終了条件を管理します。
+/// ステージ1フェーズ1の弱点破壊条件を管理します。
 /// </summary>
-public sealed class S1P1LegDestructionObjective :
-    BossPhaseObjective
+public sealed class S1P1LegDestructionObjective : BossPhaseObjective
 {
-    // 最初に破壊する左右脚
-    [SerializeField, Header("脚破壊グループ")]
-    private BossBreakablePartGroup m_legGroup =
-        new();
-
-    // 脚破壊後に出現する最終弱点
-    [SerializeField, Header("最終弱点グループ")]
-    private BossBreakablePartGroup m_finalWeakPointGroup =
-        new();
+    // フェーズ1で破壊する弱点部位
+    [SerializeField, Header("フェーズ1破壊対象")]
+    private List<BossBreakablePart> m_weakPoints = new();
 
     /// <summary>
-    /// 両脚の破壊が完了したときに通知されます。
-    /// </summary>
-    public event Action<S1P1LegDestructionObjective>
-        LegsDestroyed;
-
-    /// <summary>
-    /// 破壊監視を開始します。
+    /// 破壊通知を購読します。
     /// </summary>
     private void OnEnable()
     {
-        m_legGroup.AllPartsBroken +=
-            HandleAllLegsBroken;
+        foreach (BossBreakablePart weakPoint in m_weakPoints)
+        {
+            if (weakPoint == null)
+            {
+                continue;
+            }
 
-        m_finalWeakPointGroup.AllPartsBroken +=
-            HandleFinalWeakPointBroken;
+            weakPoint.Broken += HandleWeakPointBroken;
+        }
 
-        m_legGroup.StartMonitoring();
-
-        m_finalWeakPointGroup.StartMonitoring();
-
-        CheckPhaseCompletion();
-
-       
+        CheckObjectiveCompletion();
     }
 
     /// <summary>
-    /// 破壊監視を終了します。
+    /// 破壊通知の購読を解除します。
     /// </summary>
     private void OnDisable()
     {
-        m_legGroup.AllPartsBroken -=
-            HandleAllLegsBroken;
+        foreach (BossBreakablePart weakPoint in m_weakPoints)
+        {
+            if (weakPoint == null)
+            {
+                continue;
+            }
 
-        m_finalWeakPointGroup.AllPartsBroken -=
-            HandleFinalWeakPointBroken;
-
-        m_legGroup.StopMonitoring();
-
-        m_finalWeakPointGroup.StopMonitoring();
+            weakPoint.Broken -= HandleWeakPointBroken;
+        }
     }
 
     /// <summary>
-    /// 両脚の全破壊通知を処理します。
+    /// 弱点破壊通知を処理します。
     /// </summary>
-    /// <param name="group">破壊完了したグループ。</param>
-    private void HandleAllLegsBroken(
-        BossBreakablePartGroup group)
+    /// <param name="weakPoint">破壊された弱点。</param>
+    private void HandleWeakPointBroken(BossBreakablePart weakPoint)
     {
-        /*
-         * Phase終了ではない。
-         * 次の弱点を出現させる側へ通知する。
-         */
-        LegsDestroyed?.Invoke(
-            this);
-
-        CheckPhaseCompletion();
+        CheckObjectiveCompletion();
     }
 
     /// <summary>
-    /// 最終弱点の破壊通知を処理します。
+    /// すべての弱点が破壊されたか確認します。
     /// </summary>
-    /// <param name="group">破壊完了したグループ。</param>
-    private void HandleFinalWeakPointBroken(
-        BossBreakablePartGroup group)
+    private void CheckObjectiveCompletion()
     {
-        CheckPhaseCompletion();
-    }
-
-    /// <summary>
-    /// Phase1の終了条件を確認します。
-    /// </summary>
-    private void CheckPhaseCompletion()
-    {
-        /*
-         * 最終弱点だけ先に破壊された場合でも
-         * フェーズ終了しないよう両条件を確認する。
-         */
-        if (!m_legGroup.AreAllPartsBroken ||
-            !m_finalWeakPointGroup.AreAllPartsBroken)
+        if (m_weakPoints.Count == 0)
         {
             return;
         }
 
+        foreach (BossBreakablePart weakPoint in m_weakPoints)
+        {
+            if (weakPoint == null || !weakPoint.IsBroken)
+            {
+                return;
+            }
+        }
+
         CompleteObjective();
-    }
-
-    /// <summary>
-    /// フェーズ終了条件をリセットします。
-    /// </summary>
-    protected override void OnResetObjective()
-    {
-        m_legGroup.Reset();
-
-        m_finalWeakPointGroup.Reset();
     }
 }

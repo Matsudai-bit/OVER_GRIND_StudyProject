@@ -1,29 +1,13 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.InputSystem;
 using DG.Tweening;
-using UnityEngine.Events;
 
 /// <summary>
 /// リザルト画面における選択 UI の入力とアニメーションを制御するクラスです。
-/// ボタンパネル群の初回フェードイン登場演出および選択状態ループ制御を行います。
 /// </summary>
 public class ResultSelectionInput : MonoBehaviour
 {
-    [Tooltip("チェックを入れると開始時にフェードイン（不透明度0→1）して出現します")]
-    [SerializeField] private bool m_playEntranceOnStart = true;
-
-    [Tooltip("登場アニメーションが始まるまでの待ち時間（秒）")]
-    [SerializeField] private float m_entranceDelay = 1.2f;
-
-    [Tooltip("登場アニメーション（フェードイン）にかかる時間（秒）")]
-    [SerializeField] private float m_entranceDuration = 0.5f;
-
-    [Tooltip("アニメーションさせる対象のボタンパネル群（[Next Stage][Stage Select] パネル等を登録）")]
-    [SerializeField] private RectTransform[] m_targetPanels;
-
     [Header("Next Stage (画像切り替え & スライド移動)")]
 
     /// <summary>「Next Stage」のアニメーションを適用する RectTransform。</summary>
@@ -50,9 +34,9 @@ public class ResultSelectionInput : MonoBehaviour
     /// <summary>「Stage Select」選択時に表示する枠の Image コンポーネント。</summary>
     [SerializeField] private Image m_stageSelectFrameImage;
 
-    /// <summary>非選択時に外側へ消えていく際の拡大サイズ割合 (X, Y)。</summary>
-    [Tooltip("非選択時に外側へ消えていく際の拡大サイズ割合 (X, Y)")]
-    [SerializeField] private Vector2 m_fadeOutScale = new Vector2(1.2f, 1.2f);
+    /// <summary>非選択時の縮小サイズ割合 (X, Y)。</summary>
+    [Tooltip("非選択時の縮小サイズ割合 (X, Y)")]
+    [SerializeField] private Vector2 m_unselectedScale = new Vector2(0.8f, 0.8f);
 
     [Header("アニメーション設定")]
 
@@ -72,11 +56,6 @@ public class ResultSelectionInput : MonoBehaviour
     [Tooltip("白枠が選択中に拡大し続ける割合 (X, Y)")]
     [SerializeField] private Vector2 m_loopScaleAmount = new Vector2(1.05f, 1.2f);
 
-    [SerializeField, Header("次のステージボタンを押した")]
-    private UnityEvent m_onNextStageButton = new();
-    [SerializeField, Header("ステージ選択画面に戻るボタンを押した")]
-    private UnityEvent m_onReturnStageSelectButton = new();
-
     /// <summary>現在「Next Stage」が選択されているかどうか。</summary>
     private bool m_isNextStageSelected = true;
 
@@ -86,121 +65,23 @@ public class ResultSelectionInput : MonoBehaviour
     /// <summary>「Stage Select」の初期スケール。</summary>
     private Vector3 m_ssOriginalScale;
 
-    private CanvasGroup[] m_targetCanvasGroups;
-    private Vector2[] m_targetOriginalAnchoredPoses;
-    private bool m_isEntrancePlaying = false;
-
-    private void Awake()
-    {
-        InitializeComponents();
-    }
-
+    /// <summary>
+    /// 初期座標・スケールを保存し、初期状態の UI を構築します。
+    /// </summary>
     private void Start()
     {
-        if (m_playEntranceOnStart)
-        {
-            PlayEntranceAnimation();
-        }
-        else
-        {
-            UpdateVisuals(true);
-        }
-    }
-
-    private void InitializeComponents()
-    {
-        if (m_targetPanels != null && m_targetPanels.Length > 0)
-        {
-            m_targetCanvasGroups = new CanvasGroup[m_targetPanels.Length];
-            m_targetOriginalAnchoredPoses = new Vector2[m_targetPanels.Length];
-
-            for (int i = 0; i < m_targetPanels.Length; i++)
-            {
-                if (m_targetPanels[i] == null) continue;
-
-                if (!m_targetPanels[i].TryGetComponent<CanvasGroup>(out m_targetCanvasGroups[i]))
-                {
-                    m_targetCanvasGroups[i] = m_targetPanels[i].gameObject.AddComponent<CanvasGroup>();
-                }
-
-                m_targetOriginalAnchoredPoses[i] = m_targetPanels[i].anchoredPosition;
-            }
-        }
-
         if (m_nextStageVisual != null) m_nsOriginalPosX = m_nextStageVisual.anchoredPosition.x;
         if (m_stageSelectVisual != null) m_ssOriginalScale = m_stageSelectVisual.localScale;
-    }
-
-    /// <summary>
-    /// 設定された複数枚のパネルの位置を固定したまま、純粋なフェードイン（alpha: 0 -> 1）のみで出現させます。
-    /// </summary>
-    public void PlayEntranceAnimation()
-    {
-        InitializeComponents();
-
-        if (m_targetPanels == null || m_targetPanels.Length == 0)
-        {
-            Debug.LogWarning("[ResultSelectionInput] アニメーション対象の UI パネル（Target Panels）が設定されていません。");
-            UpdateVisuals(true);
-            return;
-        }
-
-        m_isEntrancePlaying = true;
-
-        // 位置を動かさず、不透明度（alpha）のみ 0 に初期化
-        for (int i = 0; i < m_targetPanels.Length; i++)
-        {
-            if (m_targetPanels[i] == null || m_targetCanvasGroups[i] == null) continue;
-
-            m_targetCanvasGroups[i].alpha = 0f;
-            m_targetPanels[i].anchoredPosition = m_targetOriginalAnchoredPoses[i]; // 元の位置を維持
-        }
 
         UpdateVisuals(true);
-
-        Sequence entranceSeq = DOTween.Sequence();
-
-        // 指定の遅延時間待機
-        if (m_entranceDelay > 0f)
-        {
-            entranceSeq.AppendInterval(m_entranceDelay);
-        }
-
-        //  DOFade のみでふわっとフェードイン
-        bool isFirstTween = true;
-
-        for (int i = 0; i < m_targetPanels.Length; i++)
-        {
-            if (m_targetPanels[i] == null || m_targetCanvasGroups[i] == null) continue;
-
-            Tween fadeTween = m_targetCanvasGroups[i].DOFade(1f, m_entranceDuration).SetEase(Ease.OutCubic);
-
-            if (isFirstTween)
-            {
-                entranceSeq.Append(fadeTween);
-                isFirstTween = false;
-            }
-            else
-            {
-                entranceSeq.Join(fadeTween);
-            }
-        }
-
-        // フェード完了後に通常選択ループを開始
-        entranceSeq.OnComplete(() =>
-        {
-            m_isEntrancePlaying = false;
-            UpdateVisuals(false);
-        });
     }
 
     /// <summary>
     /// Input System からの方向入力（Navigate）を受け取ります。
     /// </summary>
+    /// <param name="value">入力値情報。</param>
     public void OnNavigate(InputValue value)
     {
-        if (m_isEntrancePlaying) return;
-
         Vector2 input = value.Get<Vector2>();
 
         if (input.y > 0.5f && !m_isNextStageSelected)
@@ -216,21 +97,18 @@ public class ResultSelectionInput : MonoBehaviour
     /// <summary>
     /// Input System からの決定入力（Submit）を受け取ります。
     /// </summary>
+    /// <param name="value">入力値情報。</param>
     public void OnSubmit(InputValue value)
     {
-        if (m_isEntrancePlaying) return;
-
         if (value.isPressed)
         {
             if (m_isNextStageSelected)
             {
                 Debug.Log("Next Stage 決定！");
-                m_onNextStageButton?.Invoke();
             }
             else
             {
                 Debug.Log("Stage Select 決定！");
-                m_onReturnStageSelectButton?.Invoke();
             }
         }
     }
@@ -258,6 +136,7 @@ public class ResultSelectionInput : MonoBehaviour
     /// <summary>
     /// 選択状態に応じて UI のアニメーションと画像を更新します。
     /// </summary>
+    /// <param name="isInstant">即座に表示を反映させる場合は true。</param>
     private void UpdateVisuals(bool isInstant = false)
     {
         float t = isInstant ? 0f : m_duration;
@@ -277,7 +156,7 @@ public class ResultSelectionInput : MonoBehaviour
                 m_nextStageVisual.DOAnchorPosX(m_nsOriginalPosX, t).SetEase(Ease.OutCubic)
                     .OnComplete(() =>
                     {
-                        if (isInstant || m_isEntrancePlaying) return;
+                        if (isInstant) return;
                         m_nextStageVisual.DOAnchorPosX(m_nsOriginalPosX + m_loopSlideAmount, m_loopDuration)
                             .SetEase(Ease.InOutSine)
                             .SetLoops(-1, LoopType.Yoyo);
@@ -305,8 +184,9 @@ public class ResultSelectionInput : MonoBehaviour
                 m_stageSelectVisual.DOScale(m_ssOriginalScale, t).SetEase(Ease.OutBack)
                     .OnComplete(() =>
                     {
-                        if (isInstant || m_isEntrancePlaying) return;
+                        if (isInstant) return;
 
+                        // X（横）と Y（高さ）を個別に計算したループ倍率を適用
                         Vector3 loopTargetScale = new Vector3(
                             m_ssOriginalScale.x * m_loopScaleAmount.x,
                             m_ssOriginalScale.y * m_loopScaleAmount.y,
@@ -320,13 +200,14 @@ public class ResultSelectionInput : MonoBehaviour
             }
             else
             {
-                Vector3 fadeOutTargetScale = new Vector3(
-                    m_ssOriginalScale.x * m_fadeOutScale.x,
-                    m_ssOriginalScale.y * m_fadeOutScale.y,
+                // X（横）と Y（高さ）を個別に計算した非選択倍率を適用
+                Vector3 unselectedTargetScale = new Vector3(
+                    m_ssOriginalScale.x * m_unselectedScale.x,
+                    m_ssOriginalScale.y * m_unselectedScale.y,
                     m_ssOriginalScale.z
                 );
 
-                m_stageSelectVisual.DOScale(fadeOutTargetScale, t).SetEase(Ease.OutCubic);
+                m_stageSelectVisual.DOScale(unselectedTargetScale, t).SetEase(Ease.OutCubic);
             }
         }
     }

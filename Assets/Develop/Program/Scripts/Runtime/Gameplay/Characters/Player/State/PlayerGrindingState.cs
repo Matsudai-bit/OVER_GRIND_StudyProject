@@ -109,13 +109,8 @@ public sealed class PlayerGrindingState
             return;
         }
 
-        if (Owner.InputReader.IsAttackHeld)
-        {
-            Owner.RequestRailStateChange<PlayerRailExitingState>(true);
-            return;
-        }
-
-        Owner.RequestRailStateChange<PlayerIdlingState>();
+        Owner.RequestRailStateChange<
+            PlayerIdlingState>();
     }
 
     /// <summary>

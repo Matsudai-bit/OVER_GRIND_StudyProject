@@ -5,15 +5,10 @@ using UnityEngine;
 public class PlayerCamera : MonoBehaviour
 {
     private const float MIN_TARGET_DISTANCE = 0.0001f;
-    private const float DEFAULT_CAMERA_SENSITIVITY = 1.0f;
-    private const float DEFAULT_CHARGE_DIRECTION_INFLUENCE = 1.0f;
-    private const float DEFAULT_CHARGE_VERTICAL_ANGLE = 8.0f;
-    private const float DEFAULT_CHARGE_VERTICAL_TURN_SPEED = 120.0f;
 
 
     // Y軸の入力変換比をX軸に揃えるための補正倍率
     private const float AXIS_Y_GAIN_SCALE = 0.25f;
-    private const float AXIS_Y_DIRECTION = -1.0f;
 
 
     [SerializeField] private CinemachineCamera m_cinemachineCamera;
@@ -22,10 +17,6 @@ public class PlayerCamera : MonoBehaviour
 
 
     [Header("Parameter")]
-
-    [SerializeField]
-    [Tooltip("カメラ制御設定。未設定時は従来Asset、さらに未設定ならスクリプト既定値を使用します。")]
-    private PlayerCameraControllerParameterAsset m_controllerParameterAsset;
 
     [SerializeField]
     [Tooltip("カメラ挙動のパラメータを設定したアセット。")]
@@ -66,13 +57,34 @@ public class PlayerCamera : MonoBehaviour
     /// <summary>既存カメラと専用ロックオン制御を接続します。</summary>
     private void Awake()
     {
+
+
+        // パラメータの生成を行う
+        if(m_parameterAsset == null)
+        {
+            Debug.LogError("PlayerCameraのPlayerCameraParameterAsset参照が未設定です。", this);
+            return;
+        }
+        m_parameter = m_parameterAsset.CreateCameraParameter();
+
+        // パラメータの設定を行う
+        ApplyCameraParameter();
+        
+        m_chargeCameraDirectionInfluence = m_parameter.m_chargeCameraDirectionInfluence;
+        m_chargeCameraVerticalAngle = m_parameter.m_chargeCameraVerticalAngle;
+        m_chargeCameraVerticalTurnSpeed = m_parameter.m_chargeCameraVerticalTurnSpeed;
+
+        // 検証用: ビルドでDecolliderが有効かを確認(PlayerCameraのStartなどに一時追加)
+        var decollider = m_cinemachineCamera.GetComponent<CinemachineDecollider>();
+        Debug.Log($"Decollider: {(decollider != null ? "あり enabled=" + decollider.enabled : "なし")}");
+
+
+
         if (m_cinemachineCamera == null)
         {
             Debug.LogError("PlayerCameraのCinemachineCamera参照が未設定です。", this);
             return;
         }
-
-        ApplyCameraParameter();
 
         m_orbitalFollow = m_cinemachineCamera.GetComponent<CinemachineOrbitalFollow>();
         m_lockOnCamera = m_cinemachineCamera.GetComponent<PlayerLockOnCamera>();
@@ -335,46 +347,20 @@ public class PlayerCamera : MonoBehaviour
             return;
         }
 
-        float sensitivityX = DEFAULT_CAMERA_SENSITIVITY;
-        float sensitivityY = DEFAULT_CAMERA_SENSITIVITY;
-        bool reverseY = false;
-        m_chargeCameraDirectionInfluence = DEFAULT_CHARGE_DIRECTION_INFLUENCE;
-        m_chargeCameraVerticalAngle = DEFAULT_CHARGE_VERTICAL_ANGLE;
-        m_chargeCameraVerticalTurnSpeed = DEFAULT_CHARGE_VERTICAL_TURN_SPEED;
-
-        if (m_controllerParameterAsset != null)
-        {
-            sensitivityX = m_controllerParameterAsset.CameraSensitivityX;
-            sensitivityY = m_controllerParameterAsset.CameraSensitivityY;
-            reverseY = m_controllerParameterAsset.IsCameraReverseY;
-            m_chargeCameraDirectionInfluence = m_controllerParameterAsset.ChargeCameraDirectionInfluence;
-            m_chargeCameraVerticalAngle = m_controllerParameterAsset.ChargeCameraVerticalAngle;
-            m_chargeCameraVerticalTurnSpeed = m_controllerParameterAsset.ChargeCameraVerticalTurnSpeed;
-        }
-        else if (m_parameterAsset != null)
-        {
-            m_parameter = m_parameterAsset.CreateCameraParameter();
-            sensitivityX = m_parameter.m_cameraSensitivityX;
-            sensitivityY = m_parameter.m_cameraSensitivityY;
-            reverseY = m_parameter.m_isCameraReverseY;
-            m_chargeCameraDirectionInfluence = m_parameter.m_chargeCameraDirectionInfluence;
-            m_chargeCameraVerticalAngle = m_parameter.m_chargeCameraVerticalAngle;
-            m_chargeCameraVerticalTurnSpeed = m_parameter.m_chargeCameraVerticalTurnSpeed;
-        }
-
         foreach(var controller in m_inputAxisController.Controllers)
         {
             // X軸カメラ感度の設定
             if(controller.Name == "Look Orbit X")
             {
-                controller.Input.Gain = sensitivityX * 100.0f;
+                controller.Input.Gain = m_parameter.m_cameraSensitivityX * 100.0f;
             }
             // Y軸カメラ感度の設定
             if(controller.Name == "Look Orbit Y")
             {
                 // カメラ反転にチェックがついているかを調べる
-                float sign = reverseY ? -1.0f : 1.0f;
-                controller.Input.Gain = AXIS_Y_DIRECTION * sign * sensitivityY * 100.0f * AXIS_Y_GAIN_SCALE;
+                float sign = m_parameter.m_isCameraReverseY ? -1.0f : 1.0f;
+
+                controller.Input.Gain *= sign * m_parameter.m_cameraSensitivityY * 100.0f * AXIS_Y_GAIN_SCALE;
             }
         }
     }

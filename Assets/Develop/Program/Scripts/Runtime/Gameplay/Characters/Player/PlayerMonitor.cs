@@ -7,9 +7,6 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public sealed class PlayerMonitor : MonoBehaviour
 {
-    [SerializeField, Header("Parameter Asset")]
-    private PlayerMonitorParameterAsset m_parameterAsset;
-
     // 接地判定を行う位置
     [SerializeField]
     private Transform m_groundCheckOrigin;
@@ -107,8 +104,6 @@ public sealed class PlayerMonitor : MonoBehaviour
     /// <param name="playerRigidbody">プレイヤーの物理ボディ。</param>
     public void Initialize(Rigidbody playerRigidbody)
     {
-        ApplyParameterAsset();
-
         if (playerRigidbody == null)
         {
             Debug.LogError(
@@ -259,14 +254,4 @@ public sealed class PlayerMonitor : MonoBehaviour
         Gizmos.DrawWireSphere(checkPosition, GetRailDetectionRadius(false));
         Gizmos.color = previousColor;
     }
-    /// <summary>Applies the assigned parameter asset.</summary>
-    private void ApplyParameterAsset()
-    {
-        if (m_parameterAsset == null) return;
-        m_groundCheckRadius = m_parameterAsset.GroundCheckRadius;
-        m_groundLayerMask = m_parameterAsset.GroundLayerMask;
-        m_railLayerMask = m_parameterAsset.RailLayerMask;
-        m_railDetectionParameter = m_parameterAsset.RailDetectionParameter;
-    }
-
 }

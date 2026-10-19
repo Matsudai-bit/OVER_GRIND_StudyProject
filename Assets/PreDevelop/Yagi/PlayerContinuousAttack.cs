@@ -14,9 +14,6 @@ public sealed class PlayerContinuousAttack
     private Vector3 m_direction;
     private PlayerAirAttackAttachment m_airAttachment;
 
-    /// <summary>Gets whether an air attack hit stop is still active.</summary>
-    public bool IsAirHitStopping => m_isAirAttack && m_airHitStopTimer > 0.0f;
-
     /// <summary>攻撃の所有者と空中攻撃かどうかを保持します。</summary>
     public PlayerContinuousAttack(PlayerStateMachineComponent owner, bool isAirAttack)
     {

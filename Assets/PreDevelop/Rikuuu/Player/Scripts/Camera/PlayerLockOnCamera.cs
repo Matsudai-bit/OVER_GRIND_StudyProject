@@ -10,9 +10,6 @@ public sealed class PlayerLockOnCamera : CinemachineExtension
 {
     private const float MIN_DISTANCE = 0.01f;
 
-    [SerializeField, Header("Parameter Asset")]
-    private PlayerLockOnCameraParameterAsset m_parameterAsset;
-
     [SerializeField, Range(0.05f, 0.3f)] private float m_screenMargin = 0.12f;
     [SerializeField, Range(0.0f, 20.0f)] private float m_pitch = 8.0f;
     [SerializeField, Min(0.0f)] private float m_bodyPadding = 0.2f;
@@ -44,8 +41,6 @@ public sealed class PlayerLockOnCamera : CinemachineExtension
     /// <summary>現在のカメラ状態を維持してロックオンを開始します。</summary>
     public void BeginFocus(Transform target, float duration)
     {
-        ApplyParameterAsset();
-
         if (target == null)
             return;
         // 呼び出し側の設定値を、そのままロックオン開始から到達までの時間として使用します。
@@ -54,20 +49,6 @@ public sealed class PlayerLockOnCamera : CinemachineExtension
         m_target = target;
         m_active = true;
         m_releasing = false;
-    }
-
-    /// <summary>設定済みの場合にParameterAssetの値を適用します。</summary>
-    private void ApplyParameterAsset()
-    {
-        if (m_parameterAsset == null)
-        {
-            return;
-        }
-
-        m_screenMargin = m_parameterAsset.ScreenMargin;
-        m_pitch = m_parameterAsset.Pitch;
-        m_bodyPadding = m_parameterAsset.BodyPadding;
-        m_minimumDistance = m_parameterAsset.MinimumDistance;
     }
 
     /// <summary>対象変更時は現在の出力位置を次の直線遷移の始点にします。</summary>
