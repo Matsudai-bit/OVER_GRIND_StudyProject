@@ -6,6 +6,7 @@ using UnityEngine.UI;
 
 /// <summary>
 /// テキストの文字シャッフル解読演出および画像のランダムスプライト切り替え・グリッチ演出を行うスクリプトです。
+/// ディレイ中のチラつき防止処理および漢字対応シャッフルを搭載しています。
 /// </summary>
 public class RandomTextEffect : MonoBehaviour
 {
@@ -22,6 +23,8 @@ public class RandomTextEffect : MonoBehaviour
     private const float DEFAULT_DELAY = 0.1f;
     private const float DEFAULT_TOTAL_DURATION = 0.8f;
     private const float DEFAULT_SHUFFLE_INTERVAL = 0.03f;
+    private const float FADE_OUT_ALPHA = 0f;
+    private const float FADE_IN_ALPHA = 1f; // 追加：不透明度1.0の定数
     private const float MIN_ALPHA_RANGE = 0.2f;
     private const float MAX_ALPHA_RANGE = 1.0f;
     private const float JITTER_POS_X = 4f;
@@ -31,11 +34,11 @@ public class RandomTextEffect : MonoBehaviour
     private const int PUNCH_SCALE_VIBRATO = 5;
     private const float PUNCH_SCALE_ELASTICITY = 0.5f;
 
-    [Header("★ 対象オブジェクト")]
+    [Header("対象オブジェクト")]
     [Tooltip("未指定時はこのスクリプトが付いている自身を対象にします")]
     [SerializeField] private GameObject m_targetObject; // 演出対象オブジェクト
 
-    [Header("★ アニメーション設定")]
+    [Header("アニメーション設定")]
     [Tooltip("解読モード（Sequential: 順番に確定, FullRandom: 一斉に確定）")]
     [SerializeField] private DecodeMode m_decodeMode = DecodeMode.SEQUENTIAL_DECODE; // 解読モード
 
@@ -51,15 +54,15 @@ public class RandomTextEffect : MonoBehaviour
     [Tooltip("確定時にぽんと跳ねるパンチスケール演出を行うかどうか")]
     [SerializeField] private bool m_usePunchScale = true; // パンチスケール使用フラグ
 
-    [Header("★ テキスト用シャッフル設定")]
-    [Tooltip("テキスト解読時に使用するランダム文字群")]
-    [SerializeField] private string m_randomChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#$%&@*"; // シャッフル用文字群
+    [Header("テキスト用シャッフル設定")]
+    [Tooltip("テキスト解読時に使用するランダム文字群（漢字も含めると自然な解読感になります）")]
+    [SerializeField] private string m_randomChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#$%&@*口日目月木火水土金"; // シャッフル用文字群
 
-    [Header("★ 画像用シャッフル設定（画像の場合にパラパラ切り替え）")]
+    [Header("画像用シャッフル設定（画像の場合にパラパラ切り替え）")]
     [Tooltip("画像解読時にランダムで切り替えるダミー画像群（未設定の場合は揺れ・明滅のみ）")]
     [SerializeField] private Sprite[] m_randomSprites; // シャッフル用スプライト配列
 
-    [Header("★ 自動再生設定")]
+    [Header("自動再生設定")]
     [Tooltip("チェックを入れると有効化時に自動で再生します")]
     [SerializeField] private bool m_playOnStart = true; // 自動再生フラグ
 
@@ -128,10 +131,11 @@ public class RandomTextEffect : MonoBehaviour
             m_originalScale = target.transform.localScale;
         }
 
+        m_canvasGroup = target.GetComponent<CanvasGroup>();
+
         // テキスト以外の画像オブジェクトの場合
         if (m_tmpText == null && m_uiText == null)
         {
-            m_canvasGroup = target.GetComponent<CanvasGroup>();
             if (m_canvasGroup == null)
             {
                 m_canvasGroup = target.AddComponent<CanvasGroup>();
@@ -143,8 +147,12 @@ public class RandomTextEffect : MonoBehaviour
             }
         }
 
-        m_defaultText = GetTextValue();
-        m_currentFinalText = m_defaultText;
+        // 初期テキストを未保持の場合のみ保存
+        if (string.IsNullOrEmpty(m_defaultText))
+        {
+            m_defaultText = GetTextValue();
+            m_currentFinalText = m_defaultText;
+        }
     }
 
     /// <summary>
@@ -155,7 +163,10 @@ public class RandomTextEffect : MonoBehaviour
     {
         InitializeTarget();
 
-        m_currentFinalText = !string.IsNullOrEmpty(overrideText) ? overrideText : m_defaultText;
+        if (!string.IsNullOrEmpty(overrideText))
+        {
+            m_currentFinalText = overrideText;
+        }
 
         StopAnimation();
         m_decodeCoroutine = StartCoroutine(DecodeRoutine());
@@ -178,6 +189,15 @@ public class RandomTextEffect : MonoBehaviour
     /// </summary>
     private IEnumerator DecodeRoutine()
     {
+        // ディレイ中のチラつき防止：処理開始直前にテキストを空にする
+        SetTextValue(string.Empty);
+
+        if (m_canvasGroup != null)
+        {
+            m_canvasGroup.alpha = FADE_OUT_ALPHA;
+        }
+
+        // 指定ディレイ待機
         if (m_delay > 0f)
         {
             yield return new WaitForSecondsRealtime(m_delay);
@@ -192,6 +212,11 @@ public class RandomTextEffect : MonoBehaviour
                 char[] displayChars = new char[textLength];
                 float elapsedTime = 0f;
                 float charDecodeTime = m_totalDuration / textLength;
+
+                if (m_canvasGroup != null)
+                {
+                    m_canvasGroup.DOFade(FADE_IN_ALPHA, m_totalDuration * 0.3f).SetUpdate(true);
+                }
 
                 while (elapsedTime < m_totalDuration)
                 {
@@ -257,21 +282,22 @@ public class RandomTextEffect : MonoBehaviour
                 yield return new WaitForSecondsRealtime(m_shuffleInterval);
             }
 
-            // 本来のスプライト・位置・不透明度へ確定復元
+            // 本来のスプライト・位置へ復元
             if (m_targetImage != null && m_defaultSprite != null)
             {
                 m_targetImage.sprite = m_defaultSprite;
-            }
-
-            if (m_canvasGroup != null)
-            {
-                m_canvasGroup.alpha = MAX_ALPHA_RANGE;
             }
 
             if (m_rectTransform != null)
             {
                 m_rectTransform.anchoredPosition = m_originalAnchoredPosition;
             }
+        }
+
+        // 不透明度を完全に復元
+        if (m_canvasGroup != null)
+        {
+            m_canvasGroup.alpha = FADE_IN_ALPHA;
         }
 
         // 確定時のパンチスケール（ポンと跳ねる演出）
