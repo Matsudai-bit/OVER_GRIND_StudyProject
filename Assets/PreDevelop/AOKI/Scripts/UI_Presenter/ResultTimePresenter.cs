@@ -8,11 +8,11 @@ using DG.Tweening;
 /// </summary>
 public class ResultBestTimePresenter : MonoBehaviour
 {
-    [Header("★ View と Model の参照")]
+    [Header("View と Model の参照")]
     [SerializeField] private ResultTimeView m_view;
     [SerializeField] private ResultTimeModel m_model;
 
-    [Header("★ 表示演出設定")]
+    [Header("表示演出設定")]
     [Tooltip("チェックを入れると開始時に自動でタイムを表示します")]
     [SerializeField] private bool m_playOnStart = true;
 
@@ -28,7 +28,7 @@ public class ResultBestTimePresenter : MonoBehaviour
     [Tooltip("アニメーションの加減速カーブ")]
     [SerializeField] private Ease m_countUpEase = Ease.OutQuint;
 
-    [Header("★ 赤点滅（New Best 演出）設定")]
+    [Header("赤点滅（New Best 演出）設定")]
     [Tooltip("新記録（IsNewRecord）時に赤点滅させる対象の Image")]
     [SerializeField] private Image m_blinkTargetImage;
 
@@ -100,7 +100,7 @@ public class ResultBestTimePresenter : MonoBehaviour
     public float GetClearTime()
     {
         if (m_model == null) return 0f;
-        return m_model.ClearTime; // ★ 「今回のクリアタイム」をそのまま返す
+        return m_model.ClearTime; // 「今回のクリアタイム」をそのまま返す
     }
 
     /// <summary>

@@ -49,7 +49,7 @@ public class ResultTimeModel : MonoBehaviour, IResultTimeModel
     private const float MILLISECONDS_PER_SECOND = 100f;
     private const float DEFAULT_CLEAR_TIME = 0f;
 
-    [Header("★ 今回のクリアタイム（新しい数字）")]
+    [Header("今回のクリアタイム（新しい数字）")]
     [Tooltip("分 (0～99分)")]
     [Range(MIN_MINUTES, MAX_MINUTES)]
     [SerializeField] private int m_debugMinutes = 1; // 今回のクリアタイム（分）
@@ -62,7 +62,7 @@ public class ResultTimeModel : MonoBehaviour, IResultTimeModel
     [Range(MIN_MILLISECONDS, MAX_MILLISECONDS)]
     [SerializeField] private int m_debugMilliseconds = 46; // 今回のクリアタイム（ミリ秒）
 
-    [Header("★ 前の記録 / 自己ベスト（前の数字）")]
+    [Header("前の記録 / 自己ベスト（前の数字）")]
     [Tooltip("分 (0～99分)")]
     [Range(MIN_MINUTES, MAX_MINUTES)]
     [SerializeField] private int m_bestMinutes = 1; // 前回の自己ベストタイム（分）
