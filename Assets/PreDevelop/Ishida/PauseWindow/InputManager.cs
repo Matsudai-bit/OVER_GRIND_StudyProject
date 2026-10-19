@@ -18,11 +18,15 @@ public class InputManager : MonoBehaviour
     [SerializeField] private GameObject m_selectButton;
     [SerializeField] private GameObject m_mechPanel;
 
+    [Header("ButtonSelector")]
+    [SerializeField] private ButtonSelector m_buttonSelector;
+
     [Header("Cursor Control")]
     [SerializeField] private GameObject m_cursor;
     [SerializeField] private Vector2 m_cursorInitialPosition; // インスペクターで指定するカーソルの初期設定位置
 
     private bool m_isFadeInPlaying = false;
+    private bool m_isFadeOutPlaying = false;
 
     void Start()
     {
@@ -41,13 +45,14 @@ public class InputManager : MonoBehaviour
         m_directorFadeOut.extrapolationMode = DirectorWrapMode.Hold;
 
         SetUIActive(false);
+        m_buttonSelector.LockCursor();
     }
 
     void Update()
     {
         m_timer += Time.unscaledDeltaTime;
 
-        // Timeline の完了監視
+        // FadeIn の完了監視
         if (m_isFadeInPlaying)
         {
             if (m_directorFadeIn.time >= m_directorFadeIn.duration)
@@ -56,7 +61,18 @@ public class InputManager : MonoBehaviour
                 OnFadeInFinished();
             }
         }
+        // FadeOut の完了監視(追加)
+        if (m_isFadeOutPlaying)
+        {
+            if (m_directorFadeOut.time >= m_directorFadeOut.duration)
+            {
+                m_isFadeOutPlaying = false;
+                OnFadeOutFinished();
+            }
+        }
 
+
+        // デバッグ用（スペースキーで表示・非表示）
         if (Keyboard.current != null && Keyboard.current.spaceKey.wasPressedThisFrame && m_isPauseActive)
         {
             if (m_isOnWindow == 0)
@@ -87,7 +103,12 @@ public class InputManager : MonoBehaviour
         m_directorFadeOut.Stop();
         m_directorFadeOut.time = 0;
 
+        m_isFadeOutPlaying = false;
+
         SetUIActive(true);
+        m_buttonSelector.UnLockCursor();
+
+        m_buttonSelector.ResetCursor();
 
         if (m_cursor != null)
         {
@@ -115,12 +136,14 @@ public class InputManager : MonoBehaviour
         m_timer = 0;
 
         m_isFadeInPlaying = false;
+
         m_directorFadeIn.Stop();
 
         m_directorFadeOut.time = 0;
         m_directorFadeOut.Evaluate();
         m_directorFadeOut.Play();
 
+        m_isFadeOutPlaying = true;
         m_isPauseActive = false;
     }
 
@@ -140,6 +163,12 @@ public class InputManager : MonoBehaviour
         }
 
         StartScriptCursorControl();
+    }
+
+    private void OnFadeOutFinished()
+    {
+        SetUIActive(false);
+        m_buttonSelector.LockCursor();
     }
 
     private void StartScriptCursorControl()
