@@ -1,10 +1,9 @@
 using UnityEngine;
-using UnityEngine.UI;
 using DG.Tweening;
 
 /// <summary>
 /// ResultTimeModel から「今回のクリアタイム（ClearTime）」を取得し、
-/// View への表示・カウントアップ演出、および新記録（IsNewRecord）時の赤点滅演出を制御する Presenter です。
+/// View への表示・カウントアップ演出を制御する Presenter です。
 /// </summary>
 public class ResultBestTimePresenter : MonoBehaviour
 {
@@ -28,28 +27,11 @@ public class ResultBestTimePresenter : MonoBehaviour
     [Tooltip("アニメーションの加減速カーブ")]
     [SerializeField] private Ease m_countUpEase = Ease.OutQuint;
 
-    [Header("赤点滅（New Best 演出）設定")]
-    [Tooltip("新記録（IsNewRecord）時に赤点滅させる対象の Image")]
-    [SerializeField] private Image m_blinkTargetImage;
-
-    [Tooltip("点滅時の赤色の濃度・色合い")]
-    [SerializeField] private Color m_blinkRedColor = new Color(1f, 0.2f, 0.2f, 1f);
-
-    [Tooltip("点滅1周の速度（秒）")]
-    [SerializeField] private float m_blinkDuration = 0.4f;
-
     private Tween m_countUpTween;
-    private Tween m_blinkTween;
-    private Color m_originalColor = Color.white;
 
     private void Awake()
     {
         EnsureReferences();
-
-        if (m_blinkTargetImage != null)
-        {
-            m_originalColor = m_blinkTargetImage.color;
-        }
     }
 
     private void EnsureReferences()
@@ -117,20 +99,10 @@ public class ResultBestTimePresenter : MonoBehaviour
         {
             m_view.DisplayTime(clearTime);
         }
-
-        // Model の IsNewRecord を見て新記録なら赤点滅
-        if (m_model != null && m_model.IsNewRecord)
-        {
-            StartBlinking();
-        }
-        else
-        {
-            StopBlinking();
-        }
     }
 
     /// <summary>
-    /// 今回のクリアタイムを表示（カウントアップ演出付き）し、新記録（m_model.IsNewRecord）なら赤点滅を開始します。
+    /// 今回のクリアタイムを表示（カウントアップ演出付き）します。
     /// </summary>
     public void RefreshBestTime()
     {
@@ -140,12 +112,10 @@ public class ResultBestTimePresenter : MonoBehaviour
         StopAllTweens();
 
         float clearTime = GetClearTime();
-        bool isNewRecord = m_model.IsNewRecord; // Model から新記録判定を取得
 
         if (!m_useCountUp)
         {
             m_view.DisplayTime(clearTime);
-            if (isNewRecord) StartBlinking();
             return;
         }
 
@@ -171,45 +141,13 @@ public class ResultBestTimePresenter : MonoBehaviour
         seq.OnComplete(() =>
         {
             if (m_view != null) m_view.DisplayTime(clearTime);
-
-            // カウント完了後、IsNewRecord が true なら赤点滅開始
-            if (isNewRecord)
-            {
-                StartBlinking();
-            }
-            else
-            {
-                StopBlinking();
-            }
         });
 
         m_countUpTween = seq;
     }
 
-    private void StartBlinking()
-    {
-        StopBlinking();
-
-        if (m_blinkTargetImage == null) return;
-
-        m_blinkTween = m_blinkTargetImage.DOColor(m_blinkRedColor, m_blinkDuration)
-            .SetEase(Ease.InOutSine)
-            .SetLoops(-1, LoopType.Yoyo)
-            .SetUpdate(true);
-    }
-
-    private void StopBlinking()
-    {
-        m_blinkTween?.Kill();
-        if (m_blinkTargetImage != null)
-        {
-            m_blinkTargetImage.color = m_originalColor;
-        }
-    }
-
     private void StopAllTweens()
     {
         m_countUpTween?.Kill();
-        StopBlinking();
     }
 }
