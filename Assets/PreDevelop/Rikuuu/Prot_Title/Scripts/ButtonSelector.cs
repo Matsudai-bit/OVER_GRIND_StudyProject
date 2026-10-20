@@ -29,11 +29,12 @@ public class ButtonSelector : MonoBehaviour
     [SerializeField]
     private bool m_lockOnStart = false;
 
+    // 上下移動するかどうか
+    [SerializeField]
+    private bool m_isVerticalNavigation = true;
+
     // カーソルがロックされているかどうか
     private bool m_isLockCursor = false;
-    // カーソルの固定・解除の予約
-    private bool m_cursorLockRequested;
-    private bool m_cursorUnlockRequested;
 
     [Header("入力判定関連")]
     // 上キーが押される判定
@@ -79,9 +80,7 @@ public class ButtonSelector : MonoBehaviour
 
     private void OnDisable()
     {
-        // 無効にする
-        //m_navigateActionRef?.action.Disable();
-        //m_enterActionRef?.action.Disable();
+
     }
 
     private void Start()
@@ -105,46 +104,40 @@ public class ButtonSelector : MonoBehaviour
 
     private void Update()
     {
-        //Debug.Log("m_navigateActionRef:" + m_navigateActionRef.action.enabled);
         // 入力方向
         Vector2 nav = m_navigateActionRef.action.ReadValue<Vector2>();
 
-        // 上下キーどちらかが押されていたら || カーソルが固定されていなかったら
-        if (wasPressedUpOrDown() && !m_isLockCursor)
+        // 現在・前フレームの「進行方向の軸」の値を取得
+        float current = GetAxisValue(nav);
+        float previous = GetAxisValue(m_previousNav);
+
+        // 移動キーが押された瞬間 && カーソルが固定されていなかったら
+        if (wasPressedNavigate() && !m_isLockCursor)
         {
             // カーソルを離れるときの関数を実行する
             m_buttons[m_selectButtonNumber].OnCursorExit();
 
-            // 上キーが押されたら
-            if (nav.y > NAVIGATE_THRESHOLD &&
-                m_previousNav.y <= NAVIGATE_THRESHOLD)
+            // 上(縦) / 左(横) 方向に押されたら → 前のボタンへ
+            // 縦: 上キーが +、横: 左キーが -  なので符号を揃える
+            float forward = m_isVerticalNavigation ? current : -current;
+            float forwardPrev = m_isVerticalNavigation ? previous : -previous;
+
+            if (forward > NAVIGATE_THRESHOLD && forwardPrev <= NAVIGATE_THRESHOLD)
             {
-                // カーソルを一つ上に移動させる
                 m_selectButtonNumber--;
-                Debug.Log("MoveUP");
+                Debug.Log(m_isVerticalNavigation ? "MoveUP" : "MoveLEFT");
             }
-            // 下キーが押されたら
-            if (nav.y < -NAVIGATE_THRESHOLD &&
-                m_previousNav.y >= -NAVIGATE_THRESHOLD)
+            // 下(縦) / 右(横) 方向に押されたら → 次のボタンへ
+            if (forward < -NAVIGATE_THRESHOLD && forwardPrev >= -NAVIGATE_THRESHOLD)
             {
-                // カーソルを一つ下に移動させる
                 m_selectButtonNumber++;
-                Debug.Log("MoveDOWN");
+                Debug.Log(m_isVerticalNavigation ? "MoveDOWN" : "MoveRIGHT");
             }
 
             // 範囲内に収める
             Clamp();
             // カーソルが乗ったときの処理を呼ぶ
             m_buttons[m_selectButtonNumber].OnCursor();
-        }
-        else if (wasPressedUpOrDown() && !m_isLockCursor)
-        {
-            Debug.Log("Lock");
-        }
-
-        if (m_enterActionRef != null && m_enterActionRef.action.WasPressedThisFrame())
-        {
-            Debug.Log($"[Enter] {name} idx={m_selectButtonNumber} lock={m_isLockCursor} justUnlocked={m_unlockFrame == Time.frameCount}", this);
         }
 
         // カーソルがロックされていない場合
@@ -185,37 +178,19 @@ public class ButtonSelector : MonoBehaviour
         m_previousNav = nav;
     }
 
-    private void LateUpdate()
-    {
-        // 固定するように言われている場合
-        if (m_cursorLockRequested)
-        {
-            m_isLockCursor = true;
-
-            m_cursorLockRequested = false;
-
-            // 選択状態を維持しない設定の場合のみ、ロック時に非選択状態へ戻す
-            if (!m_keepSelectionWhenLocked && m_buttons != null && m_buttons.Length > 0)
-            {
-                m_buttons[m_selectButtonNumber].OnCursorExit();
-            }
-        }
-        // 解除するように言われている場合
-        if (m_cursorUnlockRequested)
-        {
-            m_isLockCursor = false;
-
-            m_cursorUnlockRequested = false;
-
-            // ロック解除時は選択中ボタンを即座に有効化（クリック不要）
-            if (m_buttons != null && m_buttons.Length > 0)
-            {
-                m_buttons[m_selectButtonNumber].OnCursor();
-            }
-        }
-    }
-
     // ----------------------------------------------------------------------
+
+    // カーソルのリセット
+    public void ResetCursor()
+    {
+        // 選択していない状態にする
+        m_buttons[m_selectButtonNumber].OnCursorExit();
+
+        // 選択されているカーソル番号をリセット
+        m_selectButtonNumber = 0;
+        // 選択している状態にする
+        m_buttons[m_selectButtonNumber].OnCursor();
+    }
 
     // カーソルのロック
     public void LockCursor()
@@ -244,14 +219,16 @@ public class ButtonSelector : MonoBehaviour
 
     // ----------------------------------------------------------------------
 
-    // 上キーまたは下キーが押されているか
-    private bool wasPressedUpOrDown()
+    // ナビゲーションキー(縦なら上下、横なら左右)が押された瞬間か
+    private bool wasPressedNavigate()
     {
-        // 入力方向
         Vector2 nav = m_navigateActionRef.action.ReadValue<Vector2>();
 
-        return (nav.y > NAVIGATE_THRESHOLD && m_previousNav.y <= NAVIGATE_THRESHOLD ||
-                nav.y < -NAVIGATE_THRESHOLD && m_previousNav.y >= -NAVIGATE_THRESHOLD);
+        float current = GetAxisValue(nav);
+        float previous = GetAxisValue(m_previousNav);
+
+        return (current > NAVIGATE_THRESHOLD && previous <= NAVIGATE_THRESHOLD) ||
+               (current < -NAVIGATE_THRESHOLD && previous >= -NAVIGATE_THRESHOLD);
     }
 
     // カーソル番号を範囲内に収める 
@@ -265,5 +242,11 @@ public class ButtonSelector : MonoBehaviour
 
         // 0～ボタン配列の最大値の間の値にする
         m_selectButtonNumber %= m_buttons.Length;
+    }
+
+    // 現在の方向設定に応じた軸の値を返す(縦: y / 横: x)
+    private float GetAxisValue(Vector2 v)
+    {
+        return m_isVerticalNavigation ? v.y : v.x;
     }
 }
