@@ -7,5 +7,6 @@ public enum GameFlowStateType
     INTRO,
     PLAYING,
     ENDING,
-    RESULT
+    RESULT,
+    GAME_OVER
 }

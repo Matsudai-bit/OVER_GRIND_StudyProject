@@ -35,9 +35,6 @@ public class ButtonSelector : MonoBehaviour
 
     // カーソルがロックされているかどうか
     private bool m_isLockCursor = false;
-    // カーソルの固定・解除の予約
-    private bool m_cursorLockRequested;
-    private bool m_cursorUnlockRequested;
 
     [Header("入力判定関連")]
     // 上キーが押される判定
@@ -83,9 +80,7 @@ public class ButtonSelector : MonoBehaviour
 
     private void OnDisable()
     {
-        // 無効にする
-        //m_navigateActionRef?.action.Disable();
-        //m_enterActionRef?.action.Disable();
+
     }
 
     private void Start()
@@ -183,37 +178,19 @@ public class ButtonSelector : MonoBehaviour
         m_previousNav = nav;
     }
 
-    private void LateUpdate()
-    {
-        // 固定するように言われている場合
-        if (m_cursorLockRequested)
-        {
-            m_isLockCursor = true;
-
-            m_cursorLockRequested = false;
-
-            // 選択状態を維持しない設定の場合のみ、ロック時に非選択状態へ戻す
-            if (!m_keepSelectionWhenLocked && m_buttons != null && m_buttons.Length > 0)
-            {
-                m_buttons[m_selectButtonNumber].OnCursorExit();
-            }
-        }
-        // 解除するように言われている場合
-        if (m_cursorUnlockRequested)
-        {
-            m_isLockCursor = false;
-
-            m_cursorUnlockRequested = false;
-
-            // ロック解除時は選択中ボタンを即座に有効化（クリック不要）
-            if (m_buttons != null && m_buttons.Length > 0)
-            {
-                m_buttons[m_selectButtonNumber].OnCursor();
-            }
-        }
-    }
-
     // ----------------------------------------------------------------------
+
+    // カーソルのリセット
+    public void ResetCursor()
+    {
+        // 選択していない状態にする
+        m_buttons[m_selectButtonNumber].OnCursorExit();
+
+        // 選択されているカーソル番号をリセット
+        m_selectButtonNumber = 0;
+        // 選択している状態にする
+        m_buttons[m_selectButtonNumber].OnCursor();
+    }
 
     // カーソルのロック
     public void LockCursor()
@@ -241,16 +218,6 @@ public class ButtonSelector : MonoBehaviour
     }
 
     // ----------------------------------------------------------------------
-
-    // 上キーまたは下キーが押されているか
-    private bool wasPressedUpOrDown()
-    {
-        // 入力方向
-        Vector2 nav = m_navigateActionRef.action.ReadValue<Vector2>();
-
-        return (nav.y > NAVIGATE_THRESHOLD && m_previousNav.y <= NAVIGATE_THRESHOLD ||
-                nav.y < -NAVIGATE_THRESHOLD && m_previousNav.y >= -NAVIGATE_THRESHOLD);
-    }
 
     // ナビゲーションキー(縦なら上下、横なら左右)が押された瞬間か
     private bool wasPressedNavigate()
