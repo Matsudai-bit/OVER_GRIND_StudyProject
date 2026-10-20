@@ -21,9 +21,13 @@ public class ButtonSelector : MonoBehaviour
     [SerializeField]
     private UnityEngine.Events.UnityEvent<UnityEngine.UI.Image, Vector3> m_moveAction = null;
 
-    // カーソルが外れたときに自信を残したままにするかどうか
+    // カーソルが外れたときに自身を残したままにするかどうか
     [SerializeField]
     private bool m_keepSelectionWhenLocked = false;
+
+    // 開始時にロック状態にするかどうか
+    [SerializeField]
+    private bool m_lockOnStart = false;
 
     // カーソルがロックされているかどうか
     private bool m_isLockCursor = false;
@@ -33,7 +37,7 @@ public class ButtonSelector : MonoBehaviour
 
     [Header("入力判定関連")]
     // 上キーが押される判定
-    [SerializeField] 
+    [SerializeField]
     private InputActionReference m_navigateActionRef;
     // 決定キーが押される判定
     [SerializeField]
@@ -42,26 +46,35 @@ public class ButtonSelector : MonoBehaviour
     // 前フレームからのスティック移動距離
     private Vector2 m_previousNav = Vector2.zero;
 
+    // 初期化を行ったかどうか
+    private bool m_initialized = false;
+    // ロックが解除されたフレーム
+    private int m_unlockFrame = -1;
+
     private void OnEnable()
     {
-        m_cursorLockRequested = false;
-        m_cursorUnlockRequested = false;
-        m_previousNav = Vector2.zero;
+        // 初回の有効化時だけ初期ロック状態を反映（2回目以降は状態を保持）
+        if (!m_initialized)
+        {
+            m_isLockCursor = m_lockOnStart;
+            m_initialized = true;
+        }
+
+        // 押されっぱなしの入力を新規入力と誤判定しないよう、現在値で初期化
+        m_previousNav = (m_navigateActionRef != null)
+            ? m_navigateActionRef.action.ReadValue<Vector2>()
+            : Vector2.zero;
 
         if (m_navigateActionRef == null)
         {
-            Debug.LogWarning($"{gameObject.name}: {m_navigateActionRef} が設定されていません。Inspectorで割り当ててください。", this);
+            Debug.LogWarning($"{gameObject.name}: m_navigateActionRef が設定されていません。", this);
             return;
         }
-        if(m_enterActionRef == null)
+        if (m_enterActionRef == null)
         {
-            Debug.LogWarning($"{gameObject.name}: {m_enterActionRef} が設定されていません。Inspectorで割り当ててください。", this);
+            Debug.LogWarning($"{gameObject.name}: m_enterActionRef が設定されていません。", this);
             return;
         }
-
-        //// 有効にする
-        //m_navigateActionRef?.action.Enable();
-        //m_enterActionRef?.action.Enable();
     }
 
     private void OnDisable()
@@ -73,7 +86,7 @@ public class ButtonSelector : MonoBehaviour
 
     private void Start()
     {
-        if(m_buttons != null)
+        if (m_buttons != null)
         {
             for (int i = 0; i < m_buttons.Length; i++)
             {
@@ -92,7 +105,7 @@ public class ButtonSelector : MonoBehaviour
 
     private void Update()
     {
-        Debug.Log("m_navigateActionRef:" + m_navigateActionRef.action.enabled);
+        //Debug.Log("m_navigateActionRef:" + m_navigateActionRef.action.enabled);
         // 入力方向
         Vector2 nav = m_navigateActionRef.action.ReadValue<Vector2>();
 
@@ -101,9 +114,9 @@ public class ButtonSelector : MonoBehaviour
         {
             // カーソルを離れるときの関数を実行する
             m_buttons[m_selectButtonNumber].OnCursorExit();
-            
+
             // 上キーが押されたら
-            if (nav.y > NAVIGATE_THRESHOLD && 
+            if (nav.y > NAVIGATE_THRESHOLD &&
                 m_previousNav.y <= NAVIGATE_THRESHOLD)
             {
                 // カーソルを一つ上に移動させる
@@ -111,7 +124,7 @@ public class ButtonSelector : MonoBehaviour
                 Debug.Log("MoveUP");
             }
             // 下キーが押されたら
-            if (nav.y < -NAVIGATE_THRESHOLD && 
+            if (nav.y < -NAVIGATE_THRESHOLD &&
                 m_previousNav.y >= -NAVIGATE_THRESHOLD)
             {
                 // カーソルを一つ下に移動させる
@@ -124,9 +137,14 @@ public class ButtonSelector : MonoBehaviour
             // カーソルが乗ったときの処理を呼ぶ
             m_buttons[m_selectButtonNumber].OnCursor();
         }
-        else if(wasPressedUpOrDown() && !m_isLockCursor)
+        else if (wasPressedUpOrDown() && !m_isLockCursor)
         {
             Debug.Log("Lock");
+        }
+
+        if (m_enterActionRef != null && m_enterActionRef.action.WasPressedThisFrame())
+        {
+            Debug.Log($"[Enter] {name} idx={m_selectButtonNumber} lock={m_isLockCursor} justUnlocked={m_unlockFrame == Time.frameCount}", this);
         }
 
         // カーソルがロックされていない場合
@@ -148,14 +166,15 @@ public class ButtonSelector : MonoBehaviour
                 }
             }
 
+            bool justUnlocked = (m_unlockFrame == Time.frameCount);
             // 決定ボタンが押されたら
-            if (m_enterActionRef != null && m_enterActionRef.action.WasPressedThisFrame())
+            if (!justUnlocked && m_enterActionRef != null && m_enterActionRef.action.WasPressedThisFrame())
             {
                 // キーが押されたときの処理を実行する
                 m_buttons[m_selectButtonNumber].OnClick();
             }
             // 決定ボタンが離されたら
-            if (m_enterActionRef != null && m_enterActionRef.action.WasReleasedThisFrame())
+            if (!justUnlocked && m_enterActionRef != null && m_enterActionRef.action.WasReleasedThisFrame())
             {
                 // キーが押されたときの処理を実行する
                 m_buttons[m_selectButtonNumber].OnClickExit();
@@ -169,7 +188,7 @@ public class ButtonSelector : MonoBehaviour
     private void LateUpdate()
     {
         // 固定するように言われている場合
-        if(m_cursorLockRequested)
+        if (m_cursorLockRequested)
         {
             m_isLockCursor = true;
 
@@ -182,7 +201,7 @@ public class ButtonSelector : MonoBehaviour
             }
         }
         // 解除するように言われている場合
-        if(m_cursorUnlockRequested)
+        if (m_cursorUnlockRequested)
         {
             m_isLockCursor = false;
 
@@ -201,13 +220,26 @@ public class ButtonSelector : MonoBehaviour
     // カーソルのロック
     public void LockCursor()
     {
-        m_cursorLockRequested = true;
+        m_isLockCursor = true;
+
+        // 見た目の更新は、有効なときだけ行う
+        if (isActiveAndEnabled && !m_keepSelectionWhenLocked &&
+            m_buttons != null && m_buttons.Length > 0)
+        {
+            m_buttons[m_selectButtonNumber].OnCursorExit();
+        }
     }
 
     // カーソルのロックを解除する
     public void UnLockCursor()
     {
-        m_cursorUnlockRequested = true;
+        m_isLockCursor = false;
+        m_unlockFrame = Time.frameCount;   // 解除したフレームを記録
+
+        if (isActiveAndEnabled && m_buttons != null && m_buttons.Length > 0)
+        {
+            m_buttons[m_selectButtonNumber].OnCursor();
+        }
     }
 
     // ----------------------------------------------------------------------

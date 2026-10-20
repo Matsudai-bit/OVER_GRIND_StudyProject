@@ -46,6 +46,25 @@ public sealed class S1P1BossLegsCollapsingState :
             StateExecutionStatus.RUNNING);
 
         //m_legsController.CollapseLegs();
+
+        S1P1BossReferences s1P1BossReferences;
+        if (Owner.PhaseController.TryGetCurrentPhaseComponent(out s1P1BossReferences))
+        {
+            s1P1BossReferences.SequenceRequestEvent.Raise(s1P1BossReferences.DestructionSequenceAsset);
+            s1P1BossReferences.SequenceChangedEvent.RegisterListener((data) =>
+                {
+                    if (data.Sequence == s1P1BossReferences.DestructionSequenceAsset && data.EventType == GameplaySequenceEventType.FINISHED)
+                    {
+                        if (!Owner.PhaseController.AdvancePhase())
+                        {
+                            Owner.SetStateExecutionStatus(
+                                StateExecutionStatus.FAILED);
+                        }
+                        Owner.SetStateExecutionStatus(
+                            StateExecutionStatus.SUCCEEDED);
+                    }
+                });
+        }
     }
 
     /// <summary>
@@ -69,13 +88,7 @@ public sealed class S1P1BossLegsCollapsingState :
         }
 
 
-        if (!Owner.PhaseController.AdvancePhase())
-        {
-            Owner.SetStateExecutionStatus(
-                StateExecutionStatus.FAILED);
-        }
-        Owner.SetStateExecutionStatus(
-            StateExecutionStatus.SUCCEEDED);
+        
     }
 
     /// <summary>
