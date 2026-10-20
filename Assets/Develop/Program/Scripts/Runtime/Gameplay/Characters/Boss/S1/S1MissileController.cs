@@ -181,13 +181,11 @@ public sealed class S1MissileController : MonoBehaviour
 
     private void OnCollisionEnter(Collision collision)
     {
-        Explode();
+        Explode(collision.GetContact(0).point);
     }
 
-    private void Explode()
+    private void Explode(Vector3 position)
     {
-        m_explosion.Explode(
-            transform.parent,
-            m_attackIdentifier);
+        m_explosion.Explode(transform.parent, position);
     }
 }
