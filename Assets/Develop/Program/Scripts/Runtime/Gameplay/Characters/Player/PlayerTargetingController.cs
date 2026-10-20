@@ -228,7 +228,7 @@ public sealed class PlayerTargetingController : MonoBehaviour
         }
 
         TargetableEnemy nearestEnemy =
-            FindNearestEnemy();
+            FindNearestEnemy(out int nearestTargetPointIndex);
 
         if (nearestEnemy == null)
         {
@@ -236,11 +236,7 @@ public sealed class PlayerTargetingController : MonoBehaviour
         }
 
         m_currentEnemy = nearestEnemy;
-        m_currentTargetPointIndex =
-            FindNextActiveTargetPointIndex(
-                nearestEnemy,
-                -1,
-                1);
+        m_currentTargetPointIndex = nearestTargetPointIndex;
 
         if (m_currentTargetPointIndex < 0)
         {
@@ -452,11 +448,13 @@ public sealed class PlayerTargetingController : MonoBehaviour
     }
 
     /// <summary>
-    /// 最も近いTargetableEnemyを取得します。
+    /// 既存の検索範囲で検出した敵の有効部位を比較し、最も近い部位を持つ敵を取得します。
     /// </summary>
-    /// <returns>最も近い敵。</returns>
-    private TargetableEnemy FindNearestEnemy()
+    /// <param name="nearestTargetPointIndex">最寄り部位のインデックス。候補がない場合は-1。</param>
+    /// <returns>最寄りの有効部位を持つ敵。候補がない場合はnull。</returns>
+    private TargetableEnemy FindNearestEnemy(out int nearestTargetPointIndex)
     {
+        nearestTargetPointIndex = -1;
         Collider[] colliders =
             Physics.OverlapSphere(
                 transform.position,
@@ -478,14 +476,24 @@ public sealed class PlayerTargetingController : MonoBehaviour
                 continue;
             }
 
-            float distance =
-                (enemy.transform.position -
-                 transform.position).sqrMagnitude;
-
-            if (distance < nearestDistance)
+            // 敵の中心や登録順ではなく、ロックオン部位までの距離で初回選択します。
+            for (int index = 0; index < enemy.TargetPoints.Count; index++)
             {
-                nearestDistance = distance;
-                nearestEnemy = enemy;
+                TargetPoint targetPoint = enemy.TargetPoints[index];
+                if (!IsTargetPointAvailable(targetPoint))
+                {
+                    continue;
+                }
+
+                float distance =
+                    (targetPoint.Position - transform.position).sqrMagnitude;
+
+                if (distance < nearestDistance)
+                {
+                    nearestDistance = distance;
+                    nearestEnemy = enemy;
+                    nearestTargetPointIndex = index;
+                }
             }
         }
 
