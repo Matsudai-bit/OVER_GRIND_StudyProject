@@ -8,11 +8,13 @@ public class PauseButtonManager : MonoBehaviour
     [SerializeField] private float m_hoverDuration = 0.5f; // 往復のスピード
 
     private bool m_isAnimationInitialized = false;
+    private Tween m_cursorTween;
 
     public void MoveCursor(
         UnityEngine.UI.Image  cursor,             // カーソル
         Vector3     targetPosition)     // 目標座標
     {
+        if(cursor == null) return;
 
         RectTransform cursorRect = cursor.rectTransform;
         
@@ -37,7 +39,12 @@ public class PauseButtonManager : MonoBehaviour
     /// </summary>
     private void StartHoverAnimation(RectTransform cursorRect)
     {
-        // 既存のTweenがあればKill
+        // 既存のTweenがあれば止めて破棄
+        if (m_cursorTween != null)
+        {
+            m_cursorTween.Kill();
+            m_cursorTween = null;
+        }
         cursorRect.DOKill();
 
         // 左右に小さく往復（ゆらゆら）する無限ループ
@@ -46,5 +53,25 @@ public class PauseButtonManager : MonoBehaviour
                   .SetEase(Ease.InOutSine)     // 滑らかな往復
                   .SetLoops(-1, LoopType.Yoyo) // 無限ループ
                   .SetLink(cursorRect.gameObject);
+    }
+
+    public void Stop(UnityEngine.UI.Image cursor)
+    {
+        // Tweenを止めて参照を null にする（重要）
+        if (m_cursorTween != null)
+        {
+            m_cursorTween.Kill();
+            m_cursorTween = null;
+        }
+
+        if (cursor != null)
+        {
+            cursor.DOKill();
+            cursor.rectTransform.DOKill();
+            cursor.transform.DOKill();
+        }
+
+        // 2. フラグを false に戻す（これで次回 MoveCursor 呼び出し時に再始動できる）
+        m_isAnimationInitialized = false;
     }
 }

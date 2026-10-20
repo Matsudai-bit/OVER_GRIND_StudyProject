@@ -20,6 +20,9 @@ public class ButtonSelector : MonoBehaviour
     // カーソル移動させる場合に呼び出す関数
     [SerializeField]
     private UnityEngine.Events.UnityEvent<UnityEngine.UI.Image, Vector3> m_moveAction = null;
+    // ↓ 停止用のイベントを追加
+    [SerializeField]
+    private UnityEngine.Events.UnityEvent<UnityEngine.UI.Image> m_stopMoveAction = null;
 
     // カーソルが外れたときに自身を残したままにするかどうか
     [SerializeField]
@@ -35,6 +38,13 @@ public class ButtonSelector : MonoBehaviour
 
     // カーソルがロックされているかどうか
     private bool m_isLockCursor = false;
+
+    // カーソルのアニメーションのロック
+    [SerializeField]
+    private bool m_isLockedCursorAnimation = false;
+
+    private UnityEngine.Events.UnityEvent<UnityEngine.UI.Image, Vector3> m_moveActionLocked = null;
+
 
     [Header("入力判定関連")]
     // 上キーが押される判定
@@ -144,7 +154,7 @@ public class ButtonSelector : MonoBehaviour
         if (!m_isLockCursor)
         {
             // カーソルの座標更新
-            if (m_cursor != null)
+            if (m_cursor != null && !m_isLockedCursorAnimation)
             {
                 if (m_moveAction.GetPersistentEventCount() > 0)
                 {
@@ -215,6 +225,21 @@ public class ButtonSelector : MonoBehaviour
         {
             m_buttons[m_selectButtonNumber].OnCursor();
         }
+    }
+
+    public void LockCursorAnimation()
+    {
+        m_isLockedCursorAnimation = true;
+        // 進行中の移動アニメーションを停止するイベントを発火
+        if (m_cursor != null && m_stopMoveAction != null && m_stopMoveAction.GetPersistentEventCount() > 0)
+        {
+            m_stopMoveAction.Invoke(m_cursor);
+        }
+    }
+
+    public void UnLockCursorAnimation()
+    {
+        m_isLockedCursorAnimation = false;
     }
 
     // ----------------------------------------------------------------------
