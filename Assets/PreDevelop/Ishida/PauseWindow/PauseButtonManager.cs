@@ -13,6 +13,7 @@ public class PauseButtonManager : MonoBehaviour
         UnityEngine.UI.Image  cursor,             // カーソル
         Vector3     targetPosition)     // 目標座標
     {
+
         RectTransform cursorRect = cursor.rectTransform;
         
         // 1. 初回のみ「左右のゆらゆらループ」を開始する
