@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Playables;
 
 /// <summary>
 /// ステージ1フェーズ1固有の参照を保持します。
@@ -29,6 +30,13 @@ public sealed class S1P1BossReferences : BossPhaseParameterProvider
     // Playerの足元滞在時間計測
     [SerializeField, Header("足元滞在時間計測")]
     private BossPlayerRangeStayTimer m_playerRangeStayTimer;
+
+    [SerializeField, Header("破壊時のシーン")]
+    private GameplaySequenceAsset m_destructionSequence;
+    [SerializeField, Header("シーケンス変更イベント")]
+    private GameplaySequenceChangedEvent m_gameplaySequenceChangedEvent;
+    [SerializeField, Header("シーケンスリクエストイベント")]
+    private GameplaySequenceRequestEvent m_gameplaySequenceRequestEvent;
 
     /// <summary>
     /// 左足の座標を取得します。
@@ -74,4 +82,9 @@ public sealed class S1P1BossReferences : BossPhaseParameterProvider
     {
         return BossPhaseParameters.Empty;
     }
+
+    public GameplaySequenceAsset DestructionSequenceAsset => m_destructionSequence;
+
+    public GameplaySequenceRequestEvent SequenceRequestEvent => m_gameplaySequenceRequestEvent;
+    public GameplaySequenceChangedEvent SequenceChangedEvent => m_gameplaySequenceChangedEvent;
 }
