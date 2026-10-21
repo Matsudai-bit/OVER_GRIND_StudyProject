@@ -15,6 +15,9 @@ public enum FadeMode
 
 public class VerticalSplitTransitionEffect : SceneTransitionEffect
 {
+    // 1フレームで進める時間の上限(重いフレームでアニメが飛ばないようにする)
+    private const float MAX_FRAME_DELTA = 1.0f / 30.0f;
+
     // アニメーションクリップ
     [SerializeField]
     private AnimationClip m_animationClip;
@@ -30,7 +33,7 @@ public class VerticalSplitTransitionEffect : SceneTransitionEffect
     private FadeMode m_fadeMode;
 
     // アニメーションが書き込む値
-    [HideInInspector]
+    //[HideInInspector]
     public float m_closeRate = 0.0f;
 
     // パネルオブジェクト
@@ -85,6 +88,7 @@ public class VerticalSplitTransitionEffect : SceneTransitionEffect
                 break;
         }
         SetCloseRate(m_initialRate);
+        m_closeRate = m_initialRate;
     }
 
     private void OnDestroy()
@@ -124,26 +128,40 @@ public class VerticalSplitTransitionEffect : SceneTransitionEffect
         if (m_animationClip == null)
         {
             Debug.LogWarning($"{gameObject.name}: m_animationClip が設定されていません。", this);
-            
+
             SetCloseRate(m_finalRate);
             onComplete?.Invoke();
-            
+
             yield break;
         }
 
         m_isTransitioning = true;
 
-        // クリップを再生
-        AnimationPlayableUtilities.PlayClip(
-            m_animator, 
-            m_animationClip, 
+        // クリップを再生(時間は自前で進めるため、手動更新にする)
+        AnimationClipPlayable playable = AnimationPlayableUtilities.PlayClip(
+            m_animator,
+            m_animationClip,
             out m_graph
         );
-        // グラフの時間もUnscaledにする(ポーズ中でも進めるため)
-        m_graph.SetTimeUpdateMode(DirectorUpdateMode.UnscaledGameTime);
+        m_graph.SetTimeUpdateMode(DirectorUpdateMode.Manual);
 
-        yield return new WaitForSecondsRealtime(m_animationClip.length);
+        float length = m_animationClip.length;
+        float time = 0.0f;
 
+        while (time < length)
+        {
+            // 現在時刻のポーズを評価して、パネルに反映する
+            playable.SetTime(time);
+            m_graph.Evaluate();
+            SetCloseRate(m_closeRate);
+
+            yield return null;
+
+            // 重いフレームでも、1フレームで進める量に上限をかける
+            time += Mathf.Min(Time.unscaledDeltaTime, MAX_FRAME_DELTA);
+        }
+
+        // 最終状態を確実に反映
         SetCloseRate(m_finalRate);
         m_graph.Destroy();
 

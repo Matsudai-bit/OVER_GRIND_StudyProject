@@ -1,5 +1,6 @@
-﻿using System;
+﻿using System.Collections;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 /// <summary>
 /// シーン遷移の演出インターフェース
@@ -36,6 +37,10 @@ public class SceneTransitionManager : MonoBehaviour
             return m_instance;
         }
     }
+
+    // 遷移中かどうか(多重遷移の防止)
+    public bool IsTransitioning { get; private set; }
+
     private void Awake()
     {
         if (m_instance == null)
@@ -50,25 +55,83 @@ public class SceneTransitionManager : MonoBehaviour
     }
 
     /// <summary>
-    /// シーン遷移を実行する
+    /// シーン遷移を実行する(Out再生 → シーン遷移 → In再生)
     /// </summary>
-    /// <param name="sceneName"></param>
-    /// <param name="sceneTransitionEffect"></param>
-    public void TransitionToScene(string sceneName, ISceneTransitionEffect sceneTransitionEffect, bool inLoadingScene = false)
+    /// <param name="sceneName">遷移先のシーン名</param>
+    /// <param name="outEffectPrefab">画面を覆うエフェクトのPrefab</param>
+    /// <param name="inEffectPrefab">画面を開くエフェクトのPrefab</param>
+    /// <param name="inLoadingScene">ロードシーンを使うかどうか</param>
+    public void TransitionToScene(
+        string sceneName, 
+        SceneTransitionEffect sceneTransitionInEffect,
+        SceneTransitionEffect sceneTransitionOutEffect,
+        bool inLoadingScene = false)
     {
-        // シーン遷移エフェクトを開始し、完了時にシーンをロードする
-        sceneTransitionEffect.StartTransition(() =>
-        {
-            if (inLoadingScene)
-            {
-                LoadingSceneRequest.GetInstance.RequestLoadingScene(sceneName);
-            }
-            else
-            {
-                // シーンのロード
-                UnityEngine.SceneManagement.SceneManager.LoadScene(sceneName);
-            }
-        });
+        // 遷移中は受け付けない
+        if (IsTransitioning) return;
 
+        if (sceneTransitionInEffect == null || sceneTransitionOutEffect == null)
+        {
+            Debug.LogWarning("Out/Inエフェクトが設定されていません。");
+            return;
+        }
+
+        IsTransitioning = true;
+        StartCoroutine(
+            Run(
+                sceneName,
+                sceneTransitionOutEffect,
+                sceneTransitionInEffect, 
+                inLoadingScene
+            )
+        );
+    }
+
+    private IEnumerator Run(
+    string sceneName,
+    SceneTransitionEffect outPrefab,
+    SceneTransitionEffect inPrefab,
+    bool inLoadingScene)
+    {
+        // Outの実体を生成して永続化する
+        SceneTransitionEffect outEffect = Instantiate(outPrefab);
+        DontDestroyOnLoad(outEffect.gameObject);
+
+        // 画面を覆う
+        Debug.Log("[Run] Out開始");
+        yield return WaitEffect(outEffect);
+        Debug.Log("[Run] Out完了 → ロード開始");
+
+        // シーン遷移を行う
+        if (inLoadingScene)
+        {
+            LoadingSceneRequest.GetInstance.RequestLoadingScene(sceneName);
+        }
+        else
+        {
+            yield return SceneManager.LoadSceneAsync(sceneName);
+        }
+        yield return null;
+
+        // Inを生成し、同じフレームでOutを破棄する
+        Debug.Log("[Run] In生成");
+        SceneTransitionEffect inEffect = Instantiate(inPrefab);
+        DontDestroyOnLoad(inEffect.gameObject);
+        Destroy(outEffect.gameObject);
+
+        // 画面を開く
+        yield return WaitEffect(inEffect);
+        Debug.Log("[Run] In完了");
+
+        Destroy(inEffect.gameObject);
+        IsTransitioning = false;
+    }
+
+    // エフェクトの再生が終わるまで待つ
+    private IEnumerator WaitEffect(SceneTransitionEffect effect)
+    {
+        bool done = false;
+        effect.StartTransition(() => done = true);
+        yield return new WaitUntil(() => done);
     }
 }

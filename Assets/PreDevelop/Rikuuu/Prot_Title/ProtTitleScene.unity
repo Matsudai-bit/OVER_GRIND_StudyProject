@@ -563,7 +563,6 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 972793092}
-  - {fileID: 1756025391}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1412164010
@@ -645,83 +644,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1001 &1756025390
-PrefabInstance:
-  m_ObjectHideFlags: 0
-  serializedVersion: 2
-  m_Modification:
-    serializedVersion: 3
-    m_TransformParent: {fileID: 1366492305}
-    m_Modifications:
-    - target: {fileID: 1693598453171396716, guid: 033b5b16a0fec3a449a086f62725c7e1, type: 3}
-      propertyPath: m_fadeMode
-      value: 2
-      objectReference: {fileID: 0}
-    - target: {fileID: 5969458736880099784, guid: 033b5b16a0fec3a449a086f62725c7e1, type: 3}
-      propertyPath: m_LocalPosition.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 5969458736880099784, guid: 033b5b16a0fec3a449a086f62725c7e1, type: 3}
-      propertyPath: m_LocalPosition.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 5969458736880099784, guid: 033b5b16a0fec3a449a086f62725c7e1, type: 3}
-      propertyPath: m_LocalPosition.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 5969458736880099784, guid: 033b5b16a0fec3a449a086f62725c7e1, type: 3}
-      propertyPath: m_LocalRotation.w
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 5969458736880099784, guid: 033b5b16a0fec3a449a086f62725c7e1, type: 3}
-      propertyPath: m_LocalRotation.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 5969458736880099784, guid: 033b5b16a0fec3a449a086f62725c7e1, type: 3}
-      propertyPath: m_LocalRotation.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 5969458736880099784, guid: 033b5b16a0fec3a449a086f62725c7e1, type: 3}
-      propertyPath: m_LocalRotation.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 5969458736880099784, guid: 033b5b16a0fec3a449a086f62725c7e1, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 5969458736880099784, guid: 033b5b16a0fec3a449a086f62725c7e1, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 5969458736880099784, guid: 033b5b16a0fec3a449a086f62725c7e1, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7975884981906812073, guid: 033b5b16a0fec3a449a086f62725c7e1, type: 3}
-      propertyPath: m_Name
-      value: VerticalSplitOutTransitionEffect
-      objectReference: {fileID: 0}
-    m_RemovedComponents: []
-    m_RemovedGameObjects: []
-    m_AddedGameObjects: []
-    m_AddedComponents: []
-  m_SourcePrefab: {fileID: 100100000, guid: 033b5b16a0fec3a449a086f62725c7e1, type: 3}
---- !u!4 &1756025391 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: 5969458736880099784, guid: 033b5b16a0fec3a449a086f62725c7e1, type: 3}
-  m_PrefabInstance: {fileID: 1756025390}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &1756025393 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 1693598453171396716, guid: 033b5b16a0fec3a449a086f62725c7e1, type: 3}
-  m_PrefabInstance: {fileID: 1756025390}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6a53f917913ba194bb00f3d8e389bb85, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::VerticalSplitOutTransitionEffect
 --- !u!224 &295838924675577706
 RectTransform:
   m_ObjectHideFlags: 0
@@ -1361,10 +1283,22 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 972793093}
         m_TargetAssemblyTypeName: SceneNavigator, Assembly-CSharp
-        m_MethodName: ChangeTransitionEffect
+        m_MethodName: ChangeTransitionInEffect
         m_Mode: 2
         m_Arguments:
-          m_ObjectArgument: {fileID: 1756025393}
+          m_ObjectArgument: {fileID: 2789103863317319705, guid: 81d4041b12a5c154c9a68ce1803bd324, type: 3}
+          m_ObjectArgumentAssemblyTypeName: SceneTransitionEffect, Assembly-CSharp
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: ProtStageSelectScene
+          m_BoolArgument: 0
+        m_CallState: 2
+      - m_Target: {fileID: 972793093}
+        m_TargetAssemblyTypeName: SceneNavigator, Assembly-CSharp
+        m_MethodName: ChangeTransitionOutEffect
+        m_Mode: 2
+        m_Arguments:
+          m_ObjectArgument: {fileID: 1693598453171396716, guid: 033b5b16a0fec3a449a086f62725c7e1, type: 3}
           m_ObjectArgumentAssemblyTypeName: SceneTransitionEffect, Assembly-CSharp
           m_IntArgument: 0
           m_FloatArgument: 0

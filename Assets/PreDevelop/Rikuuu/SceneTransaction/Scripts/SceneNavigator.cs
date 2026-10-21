@@ -3,17 +3,24 @@ using UnityEngine;
 public class SceneNavigator : MonoBehaviour
 {
     // 遷移時に使用するエフェクト
-    SceneTransitionEffect m_sceneTransitionEffect;
+    SceneTransitionEffect m_sceneTransitionInEffect;
+    // 遷移時に使用するエフェクト
+    SceneTransitionEffect m_sceneTransitionOutEffect;
 
-    public void ChangeTransitionEffect(SceneTransitionEffect sceneTransitionEffect)
+    public void ChangeTransitionInEffect(SceneTransitionEffect sceneTransitionInEffect)
     {
-        m_sceneTransitionEffect = sceneTransitionEffect;
+        m_sceneTransitionInEffect = sceneTransitionInEffect;
+    }
+
+    public void ChangeTransitionOutEffect(SceneTransitionEffect sceneTransitionOutEffect)
+    {
+        m_sceneTransitionOutEffect = sceneTransitionOutEffect;
     }
 
     public void ChangeScene(string sceneName)
     {
         // TransitionEffectのnullチェックを行う
-        if (m_sceneTransitionEffect == null)
+        if (m_sceneTransitionOutEffect == null)
         {
             Debug.LogWarning("TransitionEffectが設定されていません。");
             return;
@@ -22,8 +29,8 @@ public class SceneNavigator : MonoBehaviour
         // シーン遷移を行う
         SceneTransitionManager.GetInstance.TransitionToScene(
             sceneName,
-            m_sceneTransitionEffect,
-            m_sceneTransitionEffect.IsTransitioning()
+            m_sceneTransitionInEffect,
+            m_sceneTransitionOutEffect
         );
     }
 }
