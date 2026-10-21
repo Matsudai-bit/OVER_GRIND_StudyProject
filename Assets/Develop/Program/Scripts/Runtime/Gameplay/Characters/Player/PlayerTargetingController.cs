@@ -65,6 +65,26 @@ public sealed class PlayerTargetingController : MonoBehaviour
     private bool m_isTargeting;
 
     /// <summary>
+    /// 現在ターゲット中の対象Transformを取得します。
+    /// </summary>
+    /// <returns>
+    /// ターゲット中かつ対象が有効な場合は対象Transform、
+    /// それ以外の場合はnull。
+    /// </returns>
+    public Transform GetCurrentTargetTransform()
+    {
+        if (!m_isTargeting)
+        {
+            return null;
+        }
+
+        TargetPoint targetPoint = GetCurrentTargetPoint();
+        return targetPoint != null
+            ? targetPoint.TargetTransform
+            : null;
+    }
+
+    /// <summary>
     /// 初期化を行います。
     /// </summary>
     private void Awake()
