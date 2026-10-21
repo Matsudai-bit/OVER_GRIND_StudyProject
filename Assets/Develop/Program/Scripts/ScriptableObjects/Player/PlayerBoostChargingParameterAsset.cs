@@ -109,7 +109,7 @@ public sealed class PlayerBoostChargingParameterAsset : ScriptableObject
 
     [Header("ターゲット中の旋回設定")]
 
-    [Tooltip("ターゲット中に周回方向へ入力したときの旋回倍率。1で基準の旋回速度になります。")]
+    [Tooltip("ターゲット中にスティックを前へ倒したときの旋回倍率。1で基準の旋回速度になります。")]
     [SerializeField, Range(0.0f, 2.0f)]
     private float m_targetDriftForwardTurnRate = 1.0f;
 
@@ -117,17 +117,21 @@ public sealed class PlayerBoostChargingParameterAsset : ScriptableObject
     [SerializeField, Range(0.0f, 2.0f)]
     private float m_targetDriftNeutralTurnRate = 0.15f;
 
-    [Tooltip("ターゲット中に周回方向と逆へ入力したときの旋回倍率。0でターゲット方向への旋回補正を行いません。")]
+    [Tooltip("ターゲット中にスティックを後ろへ倒したときの旋回倍率。0でターゲット方向への旋回補正を行いません。")]
     [SerializeField, Range(0.0f, 2.0f)]
     private float m_targetDriftCounterTurnRate = 0.10f;
 
-    [Tooltip("ターゲット旋回で維持する対象との水平距離。この距離より外側では、内側へ入りながら旋回します。")]
+    [Tooltip("ターゲット旋回で維持する対象との水平距離。この距離より外側では、前後入力に応じて内側へ入りながら旋回します。")]
     [SerializeField, Min(0.1f)]
     private float m_targetOrbitRadius = 5.0f;
 
     [Tooltip("ターゲットから遠い場合に、旋回方向を対象側へ傾ける最大角度（度）。大きいほど素早く接近します。")]
     [SerializeField, Range(0.0f, 89.0f)]
     private float m_targetOrbitMaxInwardAngle = 45.0f;
+
+    [Tooltip("ターゲット旋回中の無入力時に適用する内向き角度の割合。0で接近せず、1で前入力時と同じ強さで接近します。")]
+    [SerializeField, Range(0.0f, 1.0f)]
+    private float m_targetOrbitNeutralInwardRate = 0.5f;
 
     [Tooltip("逆入力中に実際の移動方向を旋回外側へ傾ける角度。0で進行方向、値を大きくするほど外側へ大きく移動します。")]
     [SerializeField, Range(0.0f, 89.0f)]
@@ -259,7 +263,7 @@ public sealed class PlayerBoostChargingParameterAsset : ScriptableObject
     /// <summary>進行方向と逆へ入力したときの旋回倍率を取得します。</summary>
     public float DriftCounterTurnRate => Mathf.Clamp(m_driftCounterTurnRate, 0.0f, 2.0f);
 
-    /// <summary>ターゲット中の進行方向入力時に使用する旋回倍率を取得します。</summary>
+    /// <summary>ターゲット中の前入力時に使用する旋回倍率を取得します。</summary>
     public float TargetDriftForwardTurnRate =>
         Mathf.Clamp(m_targetDriftForwardTurnRate, 0.0f, 2.0f);
 
@@ -267,7 +271,7 @@ public sealed class PlayerBoostChargingParameterAsset : ScriptableObject
     public float TargetDriftNeutralTurnRate =>
         Mathf.Clamp(m_targetDriftNeutralTurnRate, 0.0f, 2.0f);
 
-    /// <summary>ターゲット中の逆入力時に使用する旋回倍率を取得します。</summary>
+    /// <summary>ターゲット中の後ろ入力時に使用する旋回倍率を取得します。</summary>
     public float TargetDriftCounterTurnRate =>
         Mathf.Clamp(m_targetDriftCounterTurnRate, 0.0f, 2.0f);
 
@@ -278,6 +282,10 @@ public sealed class PlayerBoostChargingParameterAsset : ScriptableObject
     /// <summary>ターゲットから遠い場合に使用する最大内向き角度を取得します。</summary>
     public float TargetOrbitMaxInwardAngle =>
         Mathf.Clamp(m_targetOrbitMaxInwardAngle, 0.0f, 89.0f);
+
+    /// <summary>ターゲット旋回中の無入力時に適用する内向き角度の割合を取得します。</summary>
+    public float TargetOrbitNeutralInwardRate =>
+        Mathf.Clamp01(m_targetOrbitNeutralInwardRate);
 
     /// <summary>逆入力中に実移動方向を旋回外側へ傾ける角度を取得します。</summary>
     public float CounterInputMovementAngle => Mathf.Clamp(m_counterInputMovementAngle, 0.0f, 89.0f);

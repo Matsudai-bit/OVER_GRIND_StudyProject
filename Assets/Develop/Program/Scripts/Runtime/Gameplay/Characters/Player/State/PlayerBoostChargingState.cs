@@ -365,7 +365,7 @@ public sealed class PlayerBoostChargingState
         {
             Vector3 movementDirection =
                 targetTransform != null
-                    ? GetTargetOrbitMovementDirection(normalizedInput)
+                    ? m_currentVelocityDirection
                     : GetChargeMovementDirection(normalizedInput);
 
             // 移動方向と体の方向を分け、旋回中の横滑り姿勢を表示します。
@@ -489,7 +489,7 @@ public sealed class PlayerBoostChargingState
 
     /// <summary>
     /// ターゲットを中心とする接線方向へ進行方向を旋回させます。
-    /// 進行方向入力・無入力・逆入力の旋回倍率は通常チャージと同じ値を使用します。
+    /// 前入力・無入力・後ろ入力に応じたターゲット専用の旋回倍率を使用します。
     /// </summary>
     /// <param name="targetTransform">旋回中心となるターゲット。</param>
     /// <param name="input">正規化された移動入力。</param>
@@ -529,11 +529,13 @@ public sealed class PlayerBoostChargingState
                     : -1;
         }
 
-        Vector3 orbitDirection =
+        Vector3 tangentOrbitDirection =
             Quaternion.AngleAxis(
                 90.0f * m_targetOrbitSide,
                 Vector3.up) *
             outwardDirection;
+
+        Vector3 orbitDirection = tangentOrbitDirection;
 
         // 設定半径より外側では接線方向を内側へ傾ける。
         // 半径へ近づくほど角度を小さくし、到達後は接線方向だけで距離を維持する。
@@ -543,9 +545,13 @@ public sealed class PlayerBoostChargingState
                 m_parameterAsset.TargetOrbitRadius * 2.0f,
                 targetDistance);
 
+        float inwardInputRate =
+            GetTargetOrbitInwardInputRate(input);
+
         float inwardAngle =
             m_parameterAsset.TargetOrbitMaxInwardAngle *
-            approachRate;
+            approachRate *
+            inwardInputRate;
 
         orbitDirection =
             Quaternion.AngleAxis(
@@ -578,57 +584,112 @@ public sealed class PlayerBoostChargingState
 
         m_currentVelocityDirection.y = 0.0f;
         m_currentVelocityDirection.Normalize();
+
+        bool hasReachedOrbitRadius =
+            targetDistance <= m_parameterAsset.TargetOrbitRadius;
+        bool shouldMaintainDistance =
+            hasReachedOrbitRadius ||
+            Mathf.Approximately(inwardInputRate, 0.0f);
+
+        float outwardVelocityRate =
+            Vector3.Dot(
+                m_currentVelocityDirection,
+                outwardDirection);
+
+        // 旋回開始前の進行方向に外向き成分が残っていても、
+        // ターゲット旋回中に対象から意図せず離れないよう除去する。
+        // 接近入力がない場合と設定半径到達後は、内外両方の半径成分を除去する。
+        if (shouldMaintainDistance ||
+            outwardVelocityRate > 0.0f)
+        {
+            Vector3 tangentVelocityDirection =
+                m_currentVelocityDirection -
+                outwardDirection * outwardVelocityRate;
+
+            Vector3 fallbackDirection =
+                shouldMaintainDistance
+                    ? tangentOrbitDirection
+                    : orbitDirection;
+
+            m_currentVelocityDirection =
+                tangentVelocityDirection.sqrMagnitude > 0.0001f
+                    ? tangentVelocityDirection.normalized
+                    : fallbackDirection.normalized;
+        }
     }
 
     /// <summary>
-    /// ターゲット旋回で使用する入力別の旋回倍率を取得します。
+    /// 前後入力からターゲット方向へ接近する強さを取得します。
+    /// 前入力で最大、後ろ入力で0となり、前後方向への直接移動には使用しません。
     /// </summary>
     /// <param name="input">正規化された移動入力。</param>
-    /// <returns>進行方向・無入力・逆入力に対応する旋回倍率。</returns>
-    private float GetTargetOrbitTurnRate(Vector2 input)
+    /// <returns>内向き角度へ適用する0～1の割合。</returns>
+    private float GetTargetOrbitInwardInputRate(Vector2 input)
     {
-        int inputSide = ClassifyChargeInput(input);
+        float verticalInput = input.y;
+        float deadZone = m_parameterAsset.SteeringDeadZone;
+        float neutralRate =
+            m_parameterAsset.TargetOrbitNeutralInwardRate;
 
-        if (inputSide == m_targetOrbitSide)
+        if (verticalInput > deadZone)
         {
-            return
-                input.magnitude *
-                m_parameterAsset.TargetDriftForwardTurnRate;
+            float inputRate = Mathf.InverseLerp(
+                deadZone,
+                1.0f,
+                verticalInput);
+
+            return Mathf.Lerp(
+                neutralRate,
+                1.0f,
+                inputRate);
         }
 
-        if (inputSide == -m_targetOrbitSide)
+        if (verticalInput < -deadZone)
         {
-            return
-                input.magnitude *
-                m_parameterAsset.TargetDriftCounterTurnRate;
+            return 0.0f;
+        }
+
+        return neutralRate;
+    }
+
+    /// <summary>
+    /// ターゲット旋回で使用する前後入力別の旋回倍率を取得します。
+    /// 前後入力は移動方向へ反映せず、旋回倍率の補間だけに使用します。
+    /// </summary>
+    /// <param name="input">正規化された移動入力。</param>
+    /// <returns>前入力・無入力・後ろ入力に対応する旋回倍率。</returns>
+    private float GetTargetOrbitTurnRate(Vector2 input)
+    {
+        float verticalInput = input.y;
+        float deadZone = m_parameterAsset.SteeringDeadZone;
+
+        if (verticalInput > deadZone)
+        {
+            float inputRate = Mathf.InverseLerp(
+                deadZone,
+                1.0f,
+                verticalInput);
+
+            return Mathf.Lerp(
+                m_parameterAsset.TargetDriftNeutralTurnRate,
+                m_parameterAsset.TargetDriftForwardTurnRate,
+                inputRate);
+        }
+
+        if (verticalInput < -deadZone)
+        {
+            float inputRate = Mathf.InverseLerp(
+                deadZone,
+                1.0f,
+                Mathf.Abs(verticalInput));
+
+            return Mathf.Lerp(
+                m_parameterAsset.TargetDriftNeutralTurnRate,
+                m_parameterAsset.TargetDriftCounterTurnRate,
+                inputRate);
         }
 
         return m_parameterAsset.TargetDriftNeutralTurnRate;
-    }
-
-    /// <summary>
-    /// ターゲット旋回中の実移動方向を取得します。
-    /// 逆入力時は既存仕様と同じ角度だけ旋回外側へ移動方向を傾けます。
-    /// </summary>
-    /// <param name="input">正規化された移動入力。</param>
-    /// <returns>ターゲット旋回中の移動方向。</returns>
-    private Vector3 GetTargetOrbitMovementDirection(Vector2 input)
-    {
-        int inputSide = ClassifyChargeInput(input);
-
-        if (m_targetOrbitSide == 0 ||
-            inputSide != -m_targetOrbitSide)
-        {
-            return m_currentVelocityDirection;
-        }
-
-        float outwardAngle =
-            -m_targetOrbitSide *
-            m_parameterAsset.CounterInputMovementAngle;
-
-        return
-            (Quaternion.AngleAxis(outwardAngle, Vector3.up) *
-             m_currentVelocityDirection).normalized;
     }
 
     /// <summary>ターゲット旋回専用の状態を初期化します。</summary>
@@ -906,9 +967,21 @@ public sealed class PlayerBoostChargingState
         // モデルを元の姿勢へ戻す
         if (Owner.ModelTransform != null)
         {
-            m_chargeFacingPresenter?.EndFacingOverride();
-            Owner.ModelTransform.localRotation =
-                m_defaultModelLocalRotation;
+            if (m_isDashRequested)
+            {
+                // ダッシュ成立時は従来どおり即座に基準姿勢へ戻す。
+                m_chargeFacingPresenter?.EndFacingOverride();
+                Owner.ModelTransform.localRotation =
+                    m_defaultModelLocalRotation;
+            }
+            else
+            {
+                // チャージ不成立などで通常状態へ戻る場合は、
+                // 現在表示中の角度からチャージ開始前の通常姿勢へ滑らかに戻す。
+                m_chargeFacingPresenter?.EndFacingOverrideSmoothly(
+                    m_defaultModelLocalRotation,
+                    m_parameterAsset.FacingRotationSpeed);
+            }
         }
 
         // 開始状態に対応したアニメーションを停止
