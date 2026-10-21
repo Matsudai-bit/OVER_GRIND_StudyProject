@@ -5,9 +5,8 @@ using UnityEngine.InputSystem;
 
 /// <summary>
 /// プレイヤーのターゲット注視機能を管理します。
-/// Xボタンを押している間だけターゲット画像を表示し、
-/// 対象部位へ一度だけカメラを向けます。
-/// ターゲット中もカメラは自由に操作できます。
+/// 右スティック押し込みでターゲット機能を切り替え、
+/// ターゲット中は右スティック左右入力で対象を切り替えます。
 /// </summary>
 public sealed class PlayerTargetingController : MonoBehaviour
 {
@@ -184,8 +183,7 @@ public sealed class PlayerTargetingController : MonoBehaviour
     /// </summary>
     private void OnEnable()
     {
-        m_targetAction.started += OnTargetStarted;
-        m_targetAction.canceled += OnTargetCanceled;
+        m_targetAction.performed += OnTargetPerformed;
 
         m_targetLeftAction.performed += OnTargetLeftPerformed;
         m_targetRightAction.performed += OnTargetRightPerformed;
@@ -197,35 +195,30 @@ public sealed class PlayerTargetingController : MonoBehaviour
     private void OnDisable()
     {
         StopTargeting();
-        m_targetAction.started -= OnTargetStarted;
-        m_targetAction.canceled -= OnTargetCanceled;
+        m_targetAction.performed -= OnTargetPerformed;
 
         m_targetLeftAction.performed -= OnTargetLeftPerformed;
         m_targetRightAction.performed -= OnTargetRightPerformed;
     }
 
     /// <summary>
-    /// Xボタンを押したときの処理を行います。
+    /// 右スティックを押し込んだときにターゲット機能を切り替えます。
     /// </summary>
     /// <param name="context">入力コンテキスト。</param>
-    private void OnTargetStarted(
+    private void OnTargetPerformed(
         InputAction.CallbackContext context)
     {
+        if (m_isTargeting)
+        {
+            StopTargeting();
+            return;
+        }
+
         StartTargeting();
     }
 
     /// <summary>
-    /// Xボタンを離したときの処理を行います。
-    /// </summary>
-    /// <param name="context">入力コンテキスト。</param>
-    private void OnTargetCanceled(
-        InputAction.CallbackContext context)
-    {
-        StopTargeting();
-    }
-
-    /// <summary>
-    /// Xボタンを押したときにターゲットを開始します。
+    /// 右スティック押し込みでターゲットを開始します。
     /// </summary>
     private void StartTargeting()
     {
@@ -235,16 +228,23 @@ public sealed class PlayerTargetingController : MonoBehaviour
         }
 
         TargetableEnemy nearestEnemy =
-            FindNearestEnemy();
+            FindNearestEnemy(out int nearestTargetPointIndex);
 
-        if (nearestEnemy == null ||
-            nearestEnemy.TargetPoints.Count == 0)
+        if (nearestEnemy == null)
         {
             return;
         }
 
         m_currentEnemy = nearestEnemy;
-        m_currentTargetPointIndex = 0;
+        m_currentTargetPointIndex = nearestTargetPointIndex;
+
+        if (m_currentTargetPointIndex < 0)
+        {
+            m_currentEnemy = null;
+            StopTargeting();
+            return;
+        }
+
         m_isTargeting = true;
 
         TargetPoint targetPoint =
@@ -271,7 +271,7 @@ public sealed class PlayerTargetingController : MonoBehaviour
     }
 
     /// <summary>
-    /// Xボタンを離したときにターゲットを終了します。
+    /// 右スティック押し込みでターゲットを終了します。
     /// </summary>
     private void StopTargeting()
     {
@@ -294,7 +294,7 @@ public sealed class PlayerTargetingController : MonoBehaviour
     }
 
     /// <summary>
-    /// D-Pad左でTargetPointを切り替えます。
+    /// 右スティックを左へ倒してTargetPointを切り替えます。
     /// </summary>
     /// <param name="context">入力コンテキスト。</param>
     private void OnTargetLeftPerformed(
@@ -309,7 +309,7 @@ public sealed class PlayerTargetingController : MonoBehaviour
     }
 
     /// <summary>
-    /// D-Pad右でTargetPointを切り替えます。
+    /// 右スティックを右へ倒してTargetPointを切り替えます。
     /// </summary>
     /// <param name="context">入力コンテキスト。</param>
     private void OnTargetRightPerformed(
@@ -337,14 +337,18 @@ public sealed class PlayerTargetingController : MonoBehaviour
             return;
         }
 
-        int count =
-            m_currentEnemy.TargetPoints.Count;
+        int nextTargetPointIndex =
+            FindNextActiveTargetPointIndex(
+                m_currentEnemy,
+                m_currentTargetPointIndex,
+                direction);
 
-        m_currentTargetPointIndex =
-            (m_currentTargetPointIndex +
-             direction +
-             count) %
-            count;
+        if (nextTargetPointIndex < 0)
+        {
+            return;
+        }
+
+        m_currentTargetPointIndex = nextTargetPointIndex;
 
         TargetPoint targetPoint =
             GetCurrentTargetPoint();
@@ -382,17 +386,75 @@ public sealed class PlayerTargetingController : MonoBehaviour
             return null;
         }
 
-        return
+        TargetPoint targetPoint =
             m_currentEnemy.TargetPoints[
                 m_currentTargetPointIndex];
+
+        if (!IsTargetPointAvailable(targetPoint))
+        {
+            return null;
+        }
+
+        return targetPoint;
     }
 
     /// <summary>
-    /// 最も近いTargetableEnemyを取得します。
+    /// 指定方向にある有効なTargetPointのインデックスを取得します。
+    /// 非Activeの部位は見つかるまで順番にスキップします。
     /// </summary>
-    /// <returns>最も近い敵。</returns>
-    private TargetableEnemy FindNearestEnemy()
+    /// <param name="enemy">検索対象の敵。</param>
+    /// <param name="currentIndex">現在の部位インデックス。</param>
+    /// <param name="direction">左方向は-1、右方向は1。</param>
+    /// <returns>有効な部位のインデックス。存在しない場合は-1。</returns>
+    private int FindNextActiveTargetPointIndex(
+        TargetableEnemy enemy,
+        int currentIndex,
+        int direction)
     {
+        if (enemy == null ||
+            enemy.TargetPoints.Count == 0 ||
+            direction == 0)
+        {
+            return -1;
+        }
+
+        int count = enemy.TargetPoints.Count;
+        int index = currentIndex;
+
+        for (int i = 0; i < count; i++)
+        {
+            index = (index + direction + count) % count;
+
+            if (IsTargetPointAvailable(enemy.TargetPoints[index]))
+            {
+                return index;
+            }
+        }
+
+        return -1;
+    }
+
+    /// <summary>
+    /// TargetPointがロックオン可能な状態か確認します。
+    /// </summary>
+    /// <param name="targetPoint">確認対象の部位。</param>
+    /// <returns>ロックオン可能な場合はtrue。</returns>
+    private bool IsTargetPointAvailable(TargetPoint targetPoint)
+    {
+        return targetPoint != null &&
+               targetPoint.IsActive &&
+               targetPoint.TargetTransform != null &&
+               targetPoint.gameObject.activeInHierarchy;
+    }
+
+    /// <summary>
+    /// 既存の検索範囲で検出した敵の有効部位を比較し、最も近い部位を持つ敵を取得します。
+    /// </summary>
+    /// <param name="nearestTargetPointIndex">最寄り部位のインデックス。候補がない場合は-1。</param>
+    /// <returns>最寄りの有効部位を持つ敵。候補がない場合はnull。</returns>
+    private TargetableEnemy FindNearestEnemy(out int nearestTargetPointIndex)
+    {
+        nearestTargetPointIndex = -1;
         Collider[] colliders =
             Physics.OverlapSphere(
                 transform.position,
@@ -408,19 +470,30 @@ public sealed class PlayerTargetingController : MonoBehaviour
                 collider.GetComponentInParent<TargetableEnemy>();
 
             if (enemy == null ||
-                enemy.TargetPoints.Count == 0)
+                !enemy.HasTargetPoint ||
+                !enemy.gameObject.activeInHierarchy)
             {
                 continue;
             }
 
-            float distance =
-                (enemy.transform.position -
-                 transform.position).sqrMagnitude;
-
-            if (distance < nearestDistance)
+            // 敵の中心や登録順ではなく、ロックオン部位までの距離で初回選択します。
+            for (int index = 0; index < enemy.TargetPoints.Count; index++)
             {
-                nearestDistance = distance;
-                nearestEnemy = enemy;
+                TargetPoint targetPoint = enemy.TargetPoints[index];
+                if (!IsTargetPointAvailable(targetPoint))
+                {
+                    continue;
+                }
+
+                float distance =
+                    (targetPoint.Position - transform.position).sqrMagnitude;
+
+                if (distance < nearestDistance)
+                {
+                    nearestDistance = distance;
+                    nearestEnemy = enemy;
+                    nearestTargetPointIndex = index;
+                }
             }
         }
 
