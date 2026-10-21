@@ -62,13 +62,11 @@ public class SceneTransitionManager : MonoBehaviour
             if (inLoadingScene)
             {
                 LoadingSceneRequest.GetInstance.RequestLoadingScene(sceneName);
-
             }
             else
             {
                 // シーンのロード
                 UnityEngine.SceneManagement.SceneManager.LoadScene(sceneName);
-
             }
         });
 
