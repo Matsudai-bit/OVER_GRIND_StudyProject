@@ -63,15 +63,19 @@ Varyings vert(Attributes input)
     return output;
 }
 
-// NOVA-style Progress / Sharpness / Inverse. Avoid undefined smoothstep at width=0.
+// NOVA Unlit's transparency curve. Define the sharpness=1 limit explicitly
+// because smoothstep(start, start, value) is undefined at that boundary.
 half DistortionVer2Mask(half value, half progress, half sharpness, half inverse)
 {
-    value = saturate(value);
     if (inverse >= 0.5h) value = 1.0h - value;
-    progress = saturate(progress);
-    if (progress <= 0.0h) return 1.0h;
-    if (progress >= 1.0h) return 0.0h;
-    half width = max(1.0h - saturate(sharpness), 0.0001h);
+    progress = min(1.0h, progress);
+    half width = 1.0h - min(1.0h, sharpness);
+    if (width <= 0.0h)
+    {
+        if (progress <= 0.0h) return 1.0h;
+        if (progress >= 1.0h) return 0.0h;
+        return step(progress, value);
+    }
     return smoothstep(lerp(-width, 1.0h, progress), lerp(0.0h, 1.0h + width, progress), value);
 }
 
@@ -155,6 +159,7 @@ half4 frag(Varyings input) : SV_Target
     #ifdef _TRANSPARENCY_BY_RIM
     half3 normalWS = SafeNormalize(input.normalWS);
     half3 viewWS = GetWorldSpaceNormalizeViewDir(input.positionWS);
+    // Unlit passes 1 - rim to ApplyRimTransparency: abs(N dot V).
     half facing = abs(dot(normalWS, viewWS));
     distortion *= DistortionVer2Mask(facing,
         _RimTransparencyProgress + GET_CUSTOM_COORD(_RimTransparencyProgressCoord),

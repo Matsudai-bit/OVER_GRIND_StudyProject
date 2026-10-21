@@ -53,21 +53,19 @@ Shader "Nova/Particles/Distortion ver2"
         _AlphaTransitionMapRotationCoord("Alpha Transition Map Rotation Coord", Float) = 0.0
         _AlphaTransitionMapRotationOffsets("Alpha Transition Map Rotation Offsets", Vector) = (0.0, 0.0, 0.0, 0.0)
 
-        // Additional masks in Alpha Transition. Disabled by default for original behavior.
-        _RimTransparencyEnabled("Rim Enabled", Float) = 0
-        _RimTransparencyProgress("Rim Progress", Range(0, 1)) = 0.5
-        _RimTransparencyProgressCoord("Rim Progress Coord", Float) = 0
-        _RimTransparencySharpness("Rim Sharpness", Range(0, 1)) = 0
-        _RimTransparencySharpnessCoord("Rim Sharpness Coord", Float) = 0
-        _InverseRimTransparency("Inverse Rim", Float) = 0
-        _LuminanceTransparencyEnabled("Luminance Enabled", Float) = 0
-        _LuminanceTransparencyProgress("Luminance Progress", Range(0, 1)) = 0.5
-        _LuminanceTransparencyProgressCoord("Luminance Progress Coord", Float) = 0
-        _LuminanceTransparencySharpness("Luminance Sharpness", Range(0, 1)) = 0
-        _LuminanceTransparencySharpnessCoord("Luminance Sharpness Coord", Float) = 0
-        _InverseLuminanceTransparency("Inverse Luminance", Float) = 0
-
         // Transparency
+        _RimTransparencyEnabled("Rim Transparency Enabled", Float) = 0.0
+        _RimTransparencyProgress("Rim Transparency Progress", Range(0.0, 1.0)) = 0.5
+        _RimTransparencyProgressCoord("Rim Transparency Progress Coord", Float) = 0.0
+        _RimTransparencySharpness("Rim Transparency Sharpness", Range(0.0, 1.0)) = 0.5
+        _RimTransparencySharpnessCoord("Rim Transparency Sharpness Coord", Float) = 0.0
+        _InverseRimTransparency("Inverse Rim Transparency", Float) = 0.0
+        _LuminanceTransparencyEnabled("Luminance Transparency Enabled", Float) = 0.0
+        _LuminanceTransparencyProgress("Luminance Transparency Progress", Range(0.0, 1.0)) = 0.5
+        _LuminanceTransparencyProgressCoord("Luminance Transparency Progress Coord", Float) = 0.0
+        _LuminanceTransparencySharpness("Luminance Transparency Sharpness", Range(0.0, 1.0)) = 0.5
+        _LuminanceTransparencySharpnessCoord("Luminance Transparency Sharpness Coord", Float) = 0.0
+        _InverseLuminanceTransparency("Inverse Luminance Transparency", Float) = 0.0
         _SoftParticlesEnabled("Soft Particles Enabled", Float) = 0.0
         _SoftParticlesIntensity("Soft Particles Intensity", Float) = 1.0
         _DepthFadeEnabled("Depth Fade Enabled", Float) = 0.0
