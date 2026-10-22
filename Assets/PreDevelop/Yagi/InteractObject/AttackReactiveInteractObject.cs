@@ -45,6 +45,14 @@ public sealed class AttackReactiveInteractObject : MonoBehaviour,
     [Tooltip("底面4点の接地を確定するまでの時間です。")]
     private float m_settleDuration = 0.1f;
 
+    [SerializeField, Min(0.0f)]
+    [Tooltip("攻撃待機へ戻る際に許容する最大移動速度です。")]
+    private float m_maxSettleLinearSpeed = 0.15f;
+
+    [SerializeField, Min(0.0f)]
+    [Tooltip("攻撃待機へ戻る際に許容する最大回転速度（rad/s）です。")]
+    private float m_maxSettleAngularSpeed = 0.35f;
+
     [SerializeField, Header("Ground Check")]
     [Tooltip("底面判定に使用する地面レイヤーです。")]
     private LayerMask m_groundLayerMask = ~0;
@@ -199,7 +207,9 @@ public sealed class AttackReactiveInteractObject : MonoBehaviour,
 
         float deltaTime = Time.fixedDeltaTime;
 
-        bool hasSettled = HasSupportedGroundContact();
+        bool hasSettled =
+            HasSupportedGroundContact() &&
+            HasSlowedDownForNextAttack();
 
         m_settleTimer = hasSettled
             ? m_settleTimer + deltaTime
@@ -222,6 +232,29 @@ public sealed class AttackReactiveInteractObject : MonoBehaviour,
             (Time.fixedTime - m_lastGroundContactTime <= Time.fixedDeltaTime * 1.5f ||
              m_rigidbody.IsSleeping());
         return hasGroundContact && IsBottomFullyGrounded();
+    }
+
+    /// <summary>攻撃待機へ戻しても不自然でない程度まで物理速度が低下したか確認します。</summary>
+    /// <returns>true：移動・回転速度が許容値以下。false：まだ移動中。</returns>
+    private bool HasSlowedDownForNextAttack()
+    {
+        if (m_rigidbody == null)
+        {
+            return false;
+        }
+
+        if (m_rigidbody.IsSleeping())
+        {
+            return true;
+        }
+
+        float maxLinearSpeedSqr =
+            m_maxSettleLinearSpeed * m_maxSettleLinearSpeed;
+        float maxAngularSpeedSqr =
+            m_maxSettleAngularSpeed * m_maxSettleAngularSpeed;
+
+        return m_rigidbody.linearVelocity.sqrMagnitude <= maxLinearSpeedSqr &&
+               m_rigidbody.angularVelocity.sqrMagnitude <= maxAngularSpeedSqr;
     }
 
     /// <summary>現在下向きのBoxCollider面の4点が地面に接しているか確認します。</summary>
@@ -526,6 +559,8 @@ public sealed class AttackReactiveInteractObject : MonoBehaviour,
         m_launchImpulse = Mathf.Max(0.0f, m_launchImpulse);
         m_upwardDirectionRate = Mathf.Clamp01(m_upwardDirectionRate);
         m_settleDuration = Mathf.Max(0.0f, m_settleDuration);
+        m_maxSettleLinearSpeed = Mathf.Max(0.0f, m_maxSettleLinearSpeed);
+        m_maxSettleAngularSpeed = Mathf.Max(0.0f, m_maxSettleAngularSpeed);
         m_groundCheckDistance = Mathf.Max(0.01f, m_groundCheckDistance);
         m_groundCheckRadius = Mathf.Max(0.001f, m_groundCheckRadius);
         m_groundCheckInsetRate = Mathf.Clamp(m_groundCheckInsetRate, 0.0f, 0.45f);
