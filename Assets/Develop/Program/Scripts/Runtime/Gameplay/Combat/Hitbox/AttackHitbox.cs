@@ -38,12 +38,21 @@ public sealed class AttackHitbox : MonoBehaviour
     /// <summary>攻撃中心を対応する受け手へ渡し、無敵中の命中通知を抑制します。</summary>
     private bool TryApplyDamage(IDamageable damageReceiver)
     {
-        if (damageReceiver is IDirectionalDamageable directionalReceiver)
+        AttackDamageData damageData = m_currentDamageData;
+
+        if (AttackPowerContext.TryGetCurrent(
+                out AttackPowerType attackPowerType))
         {
-            return directionalReceiver.TryTakeDamage(m_currentDamageData, AttackCenter);
+            damageData =
+                damageData.WithAttackPowerType(attackPowerType);
         }
 
-        damageReceiver.TakeDamage(m_currentDamageData);
+        if (damageReceiver is IDirectionalDamageable directionalReceiver)
+        {
+            return directionalReceiver.TryTakeDamage(damageData, AttackCenter);
+        }
+
+        damageReceiver.TakeDamage(damageData);
         return true;
     }
 
@@ -70,6 +79,12 @@ public sealed class AttackHitbox : MonoBehaviour
     // 現在Triggerに重なっている対象と、その対象側のCollider（多段ヒットモード用）
     // 貫通量計算（Physics.ComputePenetration）にも使用する
     private readonly Dictionary<IDamageable, Collider> m_overlappingTargets = new();
+
+    // 接触開始・終了通知を対象単位で管理します。
+    private readonly HashSet<IAttackContactReceiver> m_contactReceivers = new();
+
+    // プレイヤーの前進を止める対象との接触数を管理します。
+    private readonly Dictionary<IAttackMovementBlocker, int> m_movementBlockerCounts = new();
 
     // 多段ヒットモードで判定中かどうか
     private bool m_isContinuousHitMode;
@@ -135,7 +150,8 @@ public sealed class AttackHitbox : MonoBehaviour
             m_currentDamageData = new AttackDamageData(m_defaultDamage);
         }
 
-        // 新しい攻撃判定として命中履歴を初期化します。
+        // 新しい攻撃判定として命中履歴と以前の接触状態を初期化します。
+        ClearAttackContacts();
         m_hitTargetIds.Clear();
         m_isContinuousHitMode = false;
         m_hitboxCollider.enabled = true;
@@ -183,6 +199,7 @@ public sealed class AttackHitbox : MonoBehaviour
             m_currentDamageData = new AttackDamageData(m_defaultDamage);
         }
 
+        ClearAttackContacts();
         m_hitTargetIds.Clear();
         m_overlappingTargets.Clear();
         m_isContinuousHitMode = true;
@@ -229,10 +246,10 @@ public sealed class AttackHitbox : MonoBehaviour
         }
 
         m_hitboxCollider.enabled = false;
-        gameObject.SetActive(false);
-
+        ClearAttackContacts();
         m_isContinuousHitMode = false;
         m_overlappingTargets.Clear();
+        gameObject.SetActive(false);
     }
 
     /// <summary>
@@ -370,6 +387,8 @@ public sealed class AttackHitbox : MonoBehaviour
             return;
         }
 
+        RegisterAttackContact(other);
+
         if (m_isContinuousHitMode)
         {
             // 多段ヒットモードでは即時ダメージを与えず、
@@ -405,7 +424,14 @@ public sealed class AttackHitbox : MonoBehaviour
     /// <param name="other">離脱したCollider。</param>
     private void OnTriggerExit(Collider other)
     {
-        if (!m_isContinuousHitMode || other == null)
+        if (other == null)
+        {
+            return;
+        }
+
+        UnregisterAttackContact(other);
+
+        if (!m_isContinuousHitMode)
         {
             return;
         }
@@ -419,6 +445,100 @@ public sealed class AttackHitbox : MonoBehaviour
         }
 
         m_overlappingTargets.Remove(damageReceiver);
+    }
+
+    /// <summary>
+    /// 接触対象へ開始を通知し、移動遮断対象を登録します。
+    /// </summary>
+    /// <param name="other">接触した対象側Collider。</param>
+    private void RegisterAttackContact(Collider other)
+    {
+        IAttackContactReceiver contactReceiver =
+            other.GetComponentInParent<IAttackContactReceiver>();
+
+        if (contactReceiver != null &&
+            m_contactReceivers.Add(contactReceiver))
+        {
+            // 一度接触した対象は攻撃判定が無効になるまで保持し、
+            // Triggerから一時的に抜けても「攻撃終了」とは扱いません。
+            contactReceiver.BeginAttackContact(GetInstanceID());
+        }
+
+        IAttackMovementBlocker movementBlocker =
+            other.GetComponentInParent<IAttackMovementBlocker>();
+
+        if (movementBlocker == null)
+        {
+            return;
+        }
+
+        m_movementBlockerCounts.TryGetValue(
+            movementBlocker,
+            out int blockerContactCount);
+        m_movementBlockerCounts[movementBlocker] = blockerContactCount + 1;
+
+        if (blockerContactCount == 0 && m_movementBlockerCounts.Count == 1)
+        {
+            AttackMovementBlockRegistry.Register(this);
+        }
+    }
+
+    /// <summary>
+    /// 接触対象へ終了を通知し、移動遮断状態を解除します。
+    /// </summary>
+    /// <param name="other">離れた対象側Collider。</param>
+    private void UnregisterAttackContact(Collider other)
+    {
+        IAttackMovementBlocker movementBlocker =
+            other.GetComponentInParent<IAttackMovementBlocker>();
+
+        if (movementBlocker == null ||
+            !m_movementBlockerCounts.TryGetValue(movementBlocker, out int blockerContactCount))
+        {
+            return;
+        }
+
+        if (blockerContactCount <= 1)
+        {
+            m_movementBlockerCounts.Remove(movementBlocker);
+
+            if (m_movementBlockerCounts.Count == 0)
+            {
+                AttackMovementBlockRegistry.Unregister(this);
+            }
+        }
+        else
+        {
+            m_movementBlockerCounts[movementBlocker] = blockerContactCount - 1;
+        }
+    }
+
+    /// <summary>
+    /// 追跡中の全対象へ接触終了を通知します。
+    /// </summary>
+    private void ClearAttackContacts()
+    {
+        int attackSourceId = GetInstanceID();
+
+        foreach (IAttackContactReceiver contactReceiver in m_contactReceivers)
+        {
+            Component receiverComponent = contactReceiver as Component;
+
+            if (receiverComponent != null)
+            {
+                contactReceiver.EndAttackContact(attackSourceId);
+            }
+        }
+
+        m_contactReceivers.Clear();
+        m_movementBlockerCounts.Clear();
+        AttackMovementBlockRegistry.Unregister(this);
+    }
+
+    /// <summary>非アクティブ化時に残っている接触状態を解除します。</summary>
+    private void OnDisable()
+    {
+        ClearAttackContacts();
     }
 
     /// <summary>

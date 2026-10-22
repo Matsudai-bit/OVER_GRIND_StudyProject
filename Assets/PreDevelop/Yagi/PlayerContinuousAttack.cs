@@ -68,7 +68,18 @@ public sealed class PlayerContinuousAttack
         while (m_hitTimer >= interval)
         {
             m_hitTimer -= interval;
-            if (m_owner.AttackController.ApplyContinuousHitTick() && m_isAirAttack)
+            AttackPowerType attackPowerType =
+                !m_isAirAttack && m_owner.SuspendedBoostGaugeRate > 0.0f
+                    ? AttackPowerType.CHARGED
+                    : AttackPowerType.NORMAL;
+
+            bool hasHit;
+            using (AttackPowerContext.Begin(attackPowerType))
+            {
+                hasHit = m_owner.AttackController.ApplyContinuousHitTick();
+            }
+
+            if (hasHit && m_isAirAttack)
                 m_airHitStopTimer = m_owner.AttackController.AirHitStopDuration;
         }
 
@@ -96,6 +107,18 @@ public sealed class PlayerContinuousAttack
     /// <summary>地上攻撃と同じ入力減速・命中減速を適用します。</summary>
     private void UpdateMovement(float deltaTime)
     {
+        // インタラクト対象への命中中は前進を止め、脚のTriggerが内部へ進入することを防ぎます。
+        if (AttackMovementBlockRegistry.IsBlocked(m_owner.transform))
+        {
+            m_owner.Motor.MoveAtFixedWorldDirection(
+                m_direction,
+                0.0f,
+                0.0f,
+                deltaTime,
+                applyObstacleAvoidance: false);
+            return;
+        }
+
         if (!m_owner.InputReader.HasMoveInput)
         {
             PlayerMoveParameters normal = m_owner.MovementParameterAsset.CreateMoveParameters();
