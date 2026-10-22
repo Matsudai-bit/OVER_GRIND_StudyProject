@@ -103,6 +103,7 @@ GameObject:
   - component: {fileID: 7305826935748985924}
   - component: {fileID: 3451273381893090760}
   - component: {fileID: 1689516706217002608}
+  - component: {fileID: 3767873222303334840}
   m_Layer: 12
   m_Name: AttackReactiveINteractObject
   m_TagString: Untagged
@@ -134,7 +135,7 @@ Rigidbody:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 9034336418951874571}
   serializedVersion: 5
-  m_Mass: 0.5
+  m_Mass: 1.5
   m_LinearDamping: 0
   m_AngularDamping: 0.05
   m_CenterOfMass: {x: 0, y: 0, z: 0}
@@ -165,15 +166,27 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3050d0b4cc974107b8ae3ca7560d96b8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AttackReactiveInteractObject
-  m_requiredDamage: 5
+  m_requiredDamage: 15
   m_canBeLaunchedByNormalAttack: 1
   m_launchImpulse: 12
   m_upwardDirectionRate: 0.35
+  m_startAsKinematic: 1
+  m_settleDuration: 0.1
+  m_maxSettleLinearSpeed: 0.15
+  m_maxSettleAngularSpeed: 0.35
+  m_groundLayerMask:
+    serializedVersion: 2
+    m_Bits: 24
+  m_groundCheckDistance: 0.12
+  m_groundCheckRadius: 0.06
+  m_groundCheckInsetRate: 0.1
+  m_minGroundNormalDot: 0.7
   m_visualRoot: {fileID: 4491939345922917941}
   m_shakePositionAmplitude: 0.04
   m_shakeRotationAngle: 3
   m_shakeFrequency: 28
-  m_startAsKinematic: 1
+  m_showHitDebugColor: 1
+  m_hitDebugColor: {r: 1, g: 0, b: 0, a: 1}
 --- !u!114 &3451273381893090760
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -211,3 +224,17 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 2, y: 2, z: 2}
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &3767873222303334840
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9034336418951874571}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c8bd802d219ef604eaf73e266e667b7b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TargetPoint
+  m_isActive: 1
+  m_targetTransform: {fileID: 6390607226321354516}
