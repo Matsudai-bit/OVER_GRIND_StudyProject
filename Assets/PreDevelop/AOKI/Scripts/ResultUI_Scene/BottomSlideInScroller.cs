@@ -5,51 +5,80 @@ using UnityEngine.InputSystem;
 
 /// <summary>
 /// UI要素（RectTransform）を画面下側から上方向へスライドイン・スライドアウトさせる制御クラスです。
-/// LeftSlideInScroller と開始タイミングが一致するように遅延制御を統一しています。
+/// Alpha（不透明度）の開始値および目標値を個別に調整可能です。
 /// </summary>
 public class BottomSlideInScroller : MonoBehaviour
 {
-    private const float ALPHA_TRANSPARENT = 0f;
-    private const float ALPHA_OPAQUE = 1f;
+    private const float DEFAULT_DELAY = 0.5f;
+    private const float DEFAULT_DURATION = 0.5f;
+    private const float DEFAULT_OFFSET_DISTANCE = 150f;
 
     [Header("自動再生設定")]
+    /// <summary>有効化時に自動で再生するかどうか。</summary>
     [Tooltip("チェックを入れるとシーン開始時に自動で下からスライドインします")]
     [SerializeField] private bool m_playOnStart = true;
 
     [Header("アニメーション設定")]
+    /// <summary>再生開始までのディレイ時間（秒）。</summary>
     [Tooltip("自動再生（Start）時にスライドアニメーションが始まるまでの待ち時間（秒）")]
-    [SerializeField] private float m_delay = 0.5f;
+    [SerializeField] private float m_delay = DEFAULT_DELAY;
 
+    /// <summary>スライドにかかる時間（秒）。</summary>
     [Tooltip("スライドにかかる時間（秒）")]
-    [SerializeField] private float m_slideDuration = 0.5f;
+    [SerializeField] private float m_slideDuration = DEFAULT_DURATION;
 
-    [Tooltip("下側に移動させるオフセット距離（ピクセル）※150 などの正の数で指定")]
-    [SerializeField] private float m_slideOffsetDistance = 150f;
+    /// <summary>下側に移動させるオフセット距離（ピクセル）。</summary>
+    [Tooltip("下側に移動させるオフセット距離（ピクセル）※正の数で指定")]
+    [SerializeField] private float m_slideOffsetDistance = DEFAULT_OFFSET_DISTANCE;
+
+    [Header("不透明度（Alpha）設定")]
+    /// <summary>スライドイン開始時の Alpha 値。</summary>
+    [Tooltip("スライドイン開始時の Alpha 値（0: 完全透明 ～ 1: 完全不透明）")]
+    [Range(0f, 1f)]
+    [SerializeField] private float m_startAlpha = 0f;
+
+    /// <summary>スライドイン終了時の Alpha 値。</summary>
+    [Tooltip("スライドイン終了時の Alpha 値（0: 完全透明 ～ 1: 完全不透明）")]
+    [Range(0f, 1f)]
+    [SerializeField] private float m_targetAlpha = 1f;
 
     [Header("イージング設定（速さ＆不透明度カーブ）")]
+    /// <summary>手動補間用の AnimationCurve。</summary>
     [Tooltip("アニメーションの緩急および不透明度カーブ")]
     [SerializeField] private AnimationCurve m_easeCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
 
+    /// <summary>DOTween の Ease を使用するかどうか。</summary>
     [Tooltip("DOTween の Ease を使用するかどうか")]
     [SerializeField] private bool m_useDotweenEase = true;
 
+    /// <summary>DOTween 使用時のイージングタイプ。</summary>
     [Tooltip("DOTween 使用時のイージングタイプ")]
     [SerializeField] private Ease m_dotweenEase = Ease.OutCubic;
 
     [Header("デバッグテスト設定")]
+    /// <summary>キー入力によるテスト再生を有効にするかどうか。</summary>
     [Tooltip("Spaceキーでイン、Shiftキーでアウト再生テストをするか")]
     [SerializeField] private bool m_enableTestInput = false;
 
     [Header("対象")]
+    /// <summary>アニメーション対象の RectTransform。</summary>
     [Tooltip("アニメーション対象の RectTransform（未指定時は自身）")]
     [SerializeField] private RectTransform m_slideTarget;
 
+    /// <summary>フェード制御用の CanvasGroup。</summary>
     [Tooltip("フェード制御用の CanvasGroup（未指定時は自動取得/追加）")]
     [SerializeField] private CanvasGroup m_canvasGroup;
 
+    /// <summary>初期位置記憶用変数。</summary>
     private Vector2 m_originalAnchoredPosition;
+
+    /// <summary>初期化完了フラグ。</summary>
     private bool m_isInitialized = false;
+
+    /// <summary>アニメーション用コルーチン参照。</summary>
     private Coroutine m_slideCoroutine;
+
+    /// <summary>DOTween シーケンス参照。</summary>
     private Sequence m_dotweenSequence;
 
     private void Awake()
@@ -62,7 +91,6 @@ public class BottomSlideInScroller : MonoBehaviour
         if (m_playOnStart)
         {
             ResetToOffscreen();
-            // 自動再生時のみインスペクターの m_delay を待機して再生
             PlaySlideInWithDelay(m_delay);
         }
     }
@@ -82,6 +110,19 @@ public class BottomSlideInScroller : MonoBehaviour
         }
     }
 
+    private void OnDisable()
+    {
+        StopActiveAnimations();
+    }
+
+    private void OnDestroy()
+    {
+        StopActiveAnimations();
+    }
+
+    /// <summary>
+    /// 各コンポーネントの初期位置および参照の初期化を行います。
+    /// </summary>
     private void InitializePositions()
     {
         if (m_isInitialized) return;
@@ -108,6 +149,9 @@ public class BottomSlideInScroller : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// 対象オブジェクトを画面外（初期 Alpha 位置）へリセットします。
+    /// </summary>
     public void ResetToOffscreen()
     {
         InitializePositions();
@@ -122,13 +166,12 @@ public class BottomSlideInScroller : MonoBehaviour
 
         if (m_canvasGroup != null)
         {
-            m_canvasGroup.alpha = ALPHA_TRANSPARENT;
+            m_canvasGroup.alpha = m_startAlpha;
         }
     }
 
     /// <summary>
-    /// 【外部スクリプトからの呼び出し用】
-    /// 呼び出された瞬間（遅延なし）で即座にスライドインします。
+    /// 即座にスライドイン再生を開始します（遅延なし）。
     /// </summary>
     public void PlaySlideIn()
     {
@@ -136,9 +179,9 @@ public class BottomSlideInScroller : MonoBehaviour
     }
 
     /// <summary>
-    /// 指定された遅延時間（秒）を待ってからスライドインします。
+    /// 指定された遅延時間（秒）を待ってからスライドイン再生を開始します。
     /// </summary>
-    /// <param name="customDelay">待ち時間（秒）</param>
+    /// <param name="customDelay">開始までの待ち時間（秒）。</param>
     public void PlaySlideInWithDelay(float customDelay)
     {
         InitializePositions();
@@ -150,17 +193,18 @@ public class BottomSlideInScroller : MonoBehaviour
 
         if (m_useDotweenEase)
         {
-            PlayDotweenAnimation(startPos, targetPos, ALPHA_TRANSPARENT, ALPHA_OPAQUE, customDelay);
+            PlayDotweenAnimation(startPos, targetPos, m_startAlpha, m_targetAlpha, customDelay);
         }
         else
         {
-            m_slideCoroutine = StartCoroutine(AnimateSlideCoroutine(startPos, targetPos, ALPHA_TRANSPARENT, ALPHA_OPAQUE, customDelay));
+            m_slideCoroutine = StartCoroutine(AnimateSlideCoroutine(startPos, targetPos, m_startAlpha, m_targetAlpha, customDelay));
         }
     }
 
     /// <summary>
-    /// 本来の位置から下画面外へスライドアウトします。
+    /// 現在位置から下画面外へスライドアウト再生を開始します。
     /// </summary>
+    /// <param name="customDelay">開始までの待ち時間（秒）。</param>
     public void PlaySlideOut(float customDelay = 0f)
     {
         InitializePositions();
@@ -170,18 +214,21 @@ public class BottomSlideInScroller : MonoBehaviour
         Vector2 startPos = m_slideTarget.anchoredPosition;
         Vector2 targetPos = m_originalAnchoredPosition - new Vector2(0f, absOffset);
 
-        float currentAlpha = m_canvasGroup != null ? m_canvasGroup.alpha : ALPHA_OPAQUE;
+        float currentAlpha = (m_canvasGroup != null) ? m_canvasGroup.alpha : m_targetAlpha;
 
         if (m_useDotweenEase)
         {
-            PlayDotweenAnimation(startPos, targetPos, currentAlpha, ALPHA_TRANSPARENT, customDelay);
+            PlayDotweenAnimation(startPos, targetPos, currentAlpha, m_startAlpha, customDelay);
         }
         else
         {
-            m_slideCoroutine = StartCoroutine(AnimateSlideCoroutine(startPos, targetPos, currentAlpha, ALPHA_TRANSPARENT, customDelay));
+            m_slideCoroutine = StartCoroutine(AnimateSlideCoroutine(startPos, targetPos, currentAlpha, m_startAlpha, customDelay));
         }
     }
 
+    /// <summary>
+    /// 実行中の全アニメーション（DOTween / コルーチン）を停止します。
+    /// </summary>
     private void StopActiveAnimations()
     {
         if (m_slideCoroutine != null)
@@ -197,6 +244,14 @@ public class BottomSlideInScroller : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// DOTween を用いてスライドおよびフェードアニメーションを実行します。
+    /// </summary>
+    /// <param name="startPos">開始位置。</param>
+    /// <param name="targetPos">目標位置。</param>
+    /// <param name="startAlpha">開始不透明度。</param>
+    /// <param name="targetAlpha">目標不透明度。</param>
+    /// <param name="delay">遅延時間（秒）。</param>
     private void PlayDotweenAnimation(Vector2 startPos, Vector2 targetPos, float startAlpha, float targetAlpha, float delay)
     {
         m_slideTarget.anchoredPosition = startPos;
@@ -221,6 +276,14 @@ public class BottomSlideInScroller : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// コルーチンを用いてスライドおよびフェードアニメーションを実行します。
+    /// </summary>
+    /// <param name="startPosition">開始位置。</param>
+    /// <param name="targetPosition">目標位置。</param>
+    /// <param name="startAlpha">開始不透明度。</param>
+    /// <param name="targetAlpha">目標不透明度。</param>
+    /// <param name="delay">遅延時間（秒）。</param>
     private IEnumerator AnimateSlideCoroutine(Vector2 startPosition, Vector2 targetPosition, float startAlpha, float targetAlpha, float delay)
     {
         m_slideTarget.anchoredPosition = startPosition;
@@ -240,7 +303,7 @@ public class BottomSlideInScroller : MonoBehaviour
         {
             elapsedTime += Time.unscaledDeltaTime;
             float timeRatio = Mathf.Clamp01(elapsedTime / m_slideDuration);
-            float evaluatedRatio = m_easeCurve != null ? m_easeCurve.Evaluate(timeRatio) : timeRatio;
+            float evaluatedRatio = (m_easeCurve != null) ? m_easeCurve.Evaluate(timeRatio) : timeRatio;
 
             m_slideTarget.anchoredPosition = Vector2.Lerp(startPosition, targetPosition, evaluatedRatio);
 
@@ -259,10 +322,5 @@ public class BottomSlideInScroller : MonoBehaviour
         }
 
         m_slideCoroutine = null;
-    }
-
-    private void OnDestroy()
-    {
-        StopActiveAnimations();
     }
 }

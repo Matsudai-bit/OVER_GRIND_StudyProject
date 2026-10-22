@@ -4,15 +4,13 @@ using UnityEngine;
 
 /// <summary>
 /// 初速の速い減速カーブ（Ease Out）を用いて、位置のスライドと不透明度（Alpha）の
-/// フェードインを連動して再生するスクリプトです。
+/// フェードイン/アウトを連動して再生するスクリプトです。
 /// </summary>
 public class LeftSlideInScroller : MonoBehaviour
 {
     private const float DEFAULT_DELAY = 0.5f;
     private const float DEFAULT_DURATION = 0.5f;
     private const float DEFAULT_OFFSET_DISTANCE = 200f;
-    private const float ALPHA_MIN = 0f;
-    private const float ALPHA_MAX = 1f;
 
     /// <summary>
     /// スライドの侵入方向です。
@@ -42,6 +40,15 @@ public class LeftSlideInScroller : MonoBehaviour
 
     [Tooltip("スライドの開始オフセット距離（ピクセル）")]
     [SerializeField] private float m_slideOffsetDistance = DEFAULT_OFFSET_DISTANCE;
+
+    [Header("不透明度（Alpha）設定")]
+    [Tooltip("アニメーション開始時の Alpha 値（0: 完全透明 ～ 1: 完全不透明）")]
+    [Range(0f, 1f)]
+    [SerializeField] private float m_startAlpha = 0f;
+
+    [Tooltip("アニメーション終了時の Alpha 値（0: 完全透明 ～ 1: 完全不透明）")]
+    [Range(0f, 1f)]
+    [SerializeField] private float m_targetAlpha = 1f;
 
     [Header("イージング設定（速さ＆不透明度カーブ）")]
     [Tooltip("インスペクターのグラフでカスタムカーブを指定する場合に使用します")]
@@ -129,6 +136,11 @@ public class LeftSlideInScroller : MonoBehaviour
         {
             m_slideTarget.DOKill();
         }
+
+        if (m_canvasGroup != null)
+        {
+            m_canvasGroup.DOKill();
+        }
     }
 
     /// <summary>
@@ -136,20 +148,20 @@ public class LeftSlideInScroller : MonoBehaviour
     /// </summary>
     private IEnumerator SlideInRoutine()
     {
-        // 1. 初期状態のセット（Alpha 0、オフセット位置へ配置）
-        m_canvasGroup.alpha = ALPHA_MIN;
+        // 初期状態のセット（Start Alpha、オフセット位置へ配置）
+        m_canvasGroup.alpha = m_startAlpha;
 
         float directionSign = (m_direction == SlideDirection.RIGHT_TO_LEFT) ? 1f : -1f;
         Vector2 startPosition = m_targetAnchoredPosition + new Vector2(m_slideOffsetDistance * directionSign, 0f);
         m_slideTarget.anchoredPosition = startPosition;
 
-        // 2. ディレイ待機
+        //  ディレイ待機
         if (m_startDelay > 0f)
         {
             yield return new WaitForSecondsRealtime(m_startDelay);
         }
 
-        // 3. アニメーション再生（移動＆不透明度）
+        // アニメーション再生（移動＆不透明度）
         if (m_useDotweenEase)
         {
             // DOTween での連動再生
@@ -157,7 +169,7 @@ public class LeftSlideInScroller : MonoBehaviour
                 .SetEase(m_dotweenEase)
                 .SetUpdate(true);
 
-            m_canvasGroup.DOFade(ALPHA_MAX, m_slideDuration)
+            m_canvasGroup.DOFade(m_targetAlpha, m_slideDuration)
                 .SetEase(m_dotweenEase)
                 .SetUpdate(true);
         }
@@ -171,18 +183,18 @@ public class LeftSlideInScroller : MonoBehaviour
                 elapsedTime += Time.unscaledDeltaTime;
                 float t = Mathf.Clamp01(elapsedTime / m_slideDuration);
 
-                // カーブから評価値を取得（初速が急で後半減速）
+                // カーブから評価値を取得
                 float curveValue = m_easeCurve.Evaluate(t);
 
                 // 位置と不透明度を同じカーブ値で補間
                 m_slideTarget.anchoredPosition = Vector2.LerpUnclamped(startPosition, m_targetAnchoredPosition, curveValue);
-                m_canvasGroup.alpha = Mathf.LerpUnclamped(ALPHA_MIN, ALPHA_MAX, curveValue);
+                m_canvasGroup.alpha = Mathf.LerpUnclamped(m_startAlpha, m_targetAlpha, curveValue);
 
                 yield return null;
             }
 
             m_slideTarget.anchoredPosition = m_targetAnchoredPosition;
-            m_canvasGroup.alpha = ALPHA_MAX;
+            m_canvasGroup.alpha = m_targetAlpha;
         }
 
         m_slideCoroutine = null;

@@ -1,15 +1,12 @@
+using System;
+using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
 
 /// <summary>
-/// リザルト画面におけるリトライ回数の UI 表示（画像スプライト描画）を制御する View クラスです。
-/// 不要な桁の GameObject 自体を非表示（SetActive(false)）にして表示崩れを防ぎます。
+/// リザルト画面におけるリトライ回数の UI 表示（TextMeshPro）を制御する View クラスです。
 /// </summary>
 public class ResultRetryView : MonoBehaviour
 {
-    private const int REQUIRED_SPRITE_COUNT = 10;
-    private const int DIGIT_BASE = 10;
-
     /// <summary>
     /// 表示モードの定義です。
     /// </summary>
@@ -19,85 +16,63 @@ public class ResultRetryView : MonoBehaviour
         FIXED_DIGITS    // 指定した桁数で固定表示（例: 2桁固定なら 0 -> "00", 1 -> "01"）
     }
 
-    [Header("★ 0～9の数字スプライト")]
-    [Tooltip("0?9に対応するスプライト画像配列（要素数 10）")]
-    [SerializeField] private Sprite[] m_numberSprites = new Sprite[REQUIRED_SPRITE_COUNT];
+    [Header("TextMeshPro UI 参照")]
+    [Tooltip("リトライ回数を表示する UI テキスト (TextMeshProUGUI) コンポーネント")]
+    [SerializeField] private TextMeshProUGUI m_retryText;
 
-    [Header("★ 各桁の Image オブジェクト（※ 右端の「1の位」から順に登録）")]
-    [Tooltip("数字を表示する各桁の Image コンポーネント（[0]: 1の位(右), [1]: 10の位, [2]: 100の位...）")]
-    [SerializeField] private Image[] m_digitImages;
-
-    [Header("★ 表示モード設定")]
+    [Header("表示モード設定")]
     [Tooltip("Dynamic: 必要な桁数のみ表示 / Fixed: 常に指定桁数で表示")]
     [SerializeField] private DisplayMode m_displayMode = DisplayMode.DYNAMIC_DIGITS;
 
     [Tooltip("固定桁数表示（FIXED_DIGITS）時の表示桁数（例: 2 で \"01\" 表示）")]
     [SerializeField] private int m_fixedDigits = 2;
 
+    private void Awake()
+    {
+        EnsureReferences();
+    }
+
     /// <summary>
-    /// Presenter から受け取ったリトライ回数を元に、各桁のスプライト画像を更新します。
-    /// 不要な桁の GameObject 自体を SetActive(false) で完全に消去・詰めます。
+    /// 未設定の場合、自身の GameObject や子要素から TextMeshProUGUI を自動取得します。
+    /// </summary>
+    private void EnsureReferences()
+    {
+        if (m_retryText == null)
+        {
+            m_retryText = GetComponent<TextMeshProUGUI>();
+            if (m_retryText == null)
+            {
+                m_retryText = GetComponentInChildren<TextMeshProUGUI>();
+            }
+        }
+    }
+
+    /// <summary>
+    /// Presenter から受け取ったリトライ回数を元に、TextMeshPro のテキスト表示を更新します。
     /// </summary>
     /// <param name="retryCount">表示するリトライ回数。</param>
     public void UpdateRetryCountDisplay(int retryCount)
     {
-        if (m_digitImages == null || m_digitImages.Length == 0)
-        {
-            Debug.LogWarning($"{gameObject.name}: 各桁の Image オブジェクト (m_digitImages) が設定されていません。", this);
-            return;
-        }
+        EnsureReferences();
 
-        if (m_numberSprites == null || m_numberSprites.Length < REQUIRED_SPRITE_COUNT)
+        if (m_retryText == null)
         {
-            Debug.LogWarning($"{gameObject.name}: 0?9 の数字スプライト (m_numberSprites) が 10 個設定されていません。", this);
+            Debug.LogWarning($"{gameObject.name}: TextMeshProUGUI コンポーネント (m_retryText) が設定されていません。", this);
             return;
         }
 
         int clampedCount = Mathf.Max(0, retryCount);
-        int currentNumber = clampedCount;
-        int maxSupportedDigits = m_digitImages.Length;
 
-        for (int i = 0; i < maxSupportedDigits; i++)
+        if (m_displayMode == DisplayMode.FIXED_DIGITS)
         {
-            if (m_digitImages[i] == null)
-            {
-                continue;
-            }
-
-            int digitValue = currentNumber % DIGIT_BASE;
-            bool shouldShow = false;
-
-            if (m_displayMode == DisplayMode.FIXED_DIGITS)
-            {
-                // 固定桁モード: 指定桁数以内なら常に表示（0 埋め）
-                shouldShow = (i < m_fixedDigits);
-            }
-            else
-            {
-                // 可変桁モード: 1の位は常に表示、上位桁は数値が存在する場合のみ表示
-                shouldShow = (i == 0) || (currentNumber > 0);
-            }
-
-            if (shouldShow)
-            {
-                //オブジェクトごとアクティブ化してスプライトを設定
-                m_digitImages[i].gameObject.SetActive(true);
-                m_digitImages[i].sprite = m_numberSprites[digitValue];
-            }
-            else
-            {
-                //使わない桁は GameObject ごと完全に消す
-                m_digitImages[i].gameObject.SetActive(false);
-            }
-
-            currentNumber /= DIGIT_BASE;
+            // 指定桁数で 0 埋めして表示（例: m_fixedDigits = 2 の場合 "01"）
+            string format = "D" + Mathf.Max(1, m_fixedDigits);
+            m_retryText.text = clampedCount.ToString(format);
         }
-
-        // Horizontal Layout Group などを使用している場合の位置を自動更新
-        RectTransform rectTransform = transform as RectTransform;
-        if (rectTransform != null)
+        else
         {
-            LayoutRebuilder.ForceRebuildLayoutImmediate(rectTransform);
+            // 可変桁数でそのまま表示（例: "0", "12"）
+            m_retryText.text = clampedCount.ToString();
         }
     }
 }

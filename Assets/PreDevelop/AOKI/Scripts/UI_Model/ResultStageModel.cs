@@ -6,10 +6,10 @@ using UnityEngine;
 /// </summary>
 public interface IResultStageModel
 {
-    /// <summary>ステージ情報（ステージ番号, ステージ名）が変更された際に発生するイベントです。</summary>
+    /// <summary>ステージ情報が変更された際に発生するイベントです。</summary>
     event Action<int, string> OnStageChanged;
 
-    /// <summary>現在のステージ番号（0始まり）を取得します。</summary>
+    /// <summary>現在のステージ番号を取得します。</summary>
     int StageIndex { get; }
 
     /// <summary>現在のステージ名を取得します。</summary>
@@ -31,7 +31,7 @@ public class ResultStageModel : MonoBehaviour, IResultStageModel
     /// </summary>
     public event Action<int, string> OnStageChanged;
 
-    [Header("★ 仮データ設定（インスペクターテスト用）")]
+    [Header("仮データ設定（インスペクターテスト用）")]
     [Tooltip("テスト用の初期ステージ番号（例: 0）")]
     [SerializeField] private int m_initialStageIndex = DEFAULT_STAGE_INDEX;
 

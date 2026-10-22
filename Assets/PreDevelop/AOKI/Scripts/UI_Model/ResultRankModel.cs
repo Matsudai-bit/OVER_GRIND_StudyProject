@@ -20,7 +20,7 @@ public class ResultRankModel : MonoBehaviour
     public event Action<RankType> OnRankChanged;
 
     /// <summary>決定されたランク</summary>
-    public RankType CurrentRank { get; private set; } = RankType.A;
+    public RankType CurrentRank { get; private set; } = RankType.B;
 
     /// <summary>
     /// クリアタイムとリトライ数をもとにランクを仮計算・決定します。
@@ -29,7 +29,7 @@ public class ResultRankModel : MonoBehaviour
     /// <param name="retryCount">リトライ回数</param>
     public RankType CalculateRank(float clearTime, int retryCount = 0)
     {
-        // 仮のランク判定ロジック（※プロジェクトの基準に合わせて調整してください）
+        // 仮のランク判定ロジック
         if (clearTime <= 10f && retryCount == 0)
         {
             CurrentRank = RankType.S;
@@ -52,7 +52,7 @@ public class ResultRankModel : MonoBehaviour
     }
 
     /// <summary>
-    /// 外部から直接ランクを設定したい場合（デバッグや演出テスト用）
+    /// 外部から直接ランクを設定したい場合
     /// </summary>
     public void SetRankDirect(RankType rank)
     {
