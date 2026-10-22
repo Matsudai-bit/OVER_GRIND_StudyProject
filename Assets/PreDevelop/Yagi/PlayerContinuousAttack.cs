@@ -41,6 +41,10 @@ public sealed class PlayerContinuousAttack
             m_airAttachment = new PlayerAirAttackAttachment(m_owner);
             m_owner.AttackController.ContinuousAttackHit += m_airAttachment.AttachToTarget;
         }
+
+        AttackPowerSourceRegistry.Register(
+            m_owner.transform,
+            GetAttackPowerType());
         m_owner.AttackController.EnableContinuousAttackHitboxes();
         m_owner.AnimationPresenter.PlayAttackAnimation();
         m_owner.SetSpeedDisplayOverride(m_remainingSpeed);
@@ -55,6 +59,10 @@ public sealed class PlayerContinuousAttack
         m_remainingSpeed = Mathf.Max(0.0f, m_remainingSpeed - SPEED_DECAY_PER_SECOND * deltaTime);
         if (m_remainingSpeed <= SPEED_EPSILON) return false;
 
+        AttackPowerSourceRegistry.Register(
+            m_owner.transform,
+            GetAttackPowerType());
+
         if (!m_isAirAttack) UpdateMovement(deltaTime);
         m_owner.SetSpeedDisplayOverride(m_remainingSpeed);
         // 地上攻撃はブースト残量に応じた頻度を引き継ぎ、空中攻撃は従来の頻度を使用します。
@@ -68,10 +76,7 @@ public sealed class PlayerContinuousAttack
         while (m_hitTimer >= interval)
         {
             m_hitTimer -= interval;
-            AttackPowerType attackPowerType =
-                !m_isAirAttack && m_owner.SuspendedBoostGaugeRate > 0.0f
-                    ? AttackPowerType.CHARGED
-                    : AttackPowerType.NORMAL;
+            AttackPowerType attackPowerType = GetAttackPowerType();
 
             bool hasHit;
             using (AttackPowerContext.Begin(attackPowerType))
@@ -147,7 +152,17 @@ public sealed class PlayerContinuousAttack
         }
         m_owner.AnimationPresenter.StopAttackAnimation();
         m_owner.AttackController.DisableAttackHitboxes();
+        AttackPowerSourceRegistry.Unregister(m_owner.transform);
         m_owner.ClearSpeedDisplayOverride();
         m_airHitStopTimer = 0.0f;
+    }
+
+    /// <summary>現在の攻撃条件から威力種別を取得します。</summary>
+    /// <returns>地上でブースト残量がある場合はCHARGED、それ以外はNORMAL。</returns>
+    private AttackPowerType GetAttackPowerType()
+    {
+        return !m_isAirAttack && m_owner.SuspendedBoostGaugeRate > 0.0f
+            ? AttackPowerType.CHARGED
+            : AttackPowerType.NORMAL;
     }
 }
