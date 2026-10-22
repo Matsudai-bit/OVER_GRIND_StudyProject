@@ -7,6 +7,7 @@ using UnityEngine.UI;
 /// マップの移動・拡大縮小を管理する
 /// カーソルは画像内を自由に移動し、フレームはカーソルに追従する
 /// 画像が端に到達した場合は、それ以上フレームを追従させない
+/// ステージ位置の円(マーカー)に吸着すると、カーソルは常に円の位置に表示される
 /// </summary>
 public class MapController : MonoBehaviour
 {
@@ -23,6 +24,12 @@ public class MapController : MonoBehaviour
     // 最大拡大倍率
     [SerializeField]
     private float MAX_ZOOM = 3.0f;
+
+    [Header("カーソルの移動範囲")]
+    // 枠の端からどれだけ内側までカーソルを寄せるか
+    // (0なら枠の縁ぎりぎりまで、大きいほど内側で止まる、負の値で縁をはみ出す)
+    [SerializeField]
+    private float CURSOR_EDGE_MARGIN = 0.0f;
 
     [Header("カーソルの傾き挙動")]
     // スティックを倒したときにカーソルが寄る最大距離
@@ -47,6 +54,11 @@ public class MapController : MonoBehaviour
     [Header("カーソル")]
     [SerializeField]
     private RectTransform m_cursorRect;
+
+    [Header("カーソルに追従する円")]
+    // カーソルと同じ位置に表示する円（SelectCursorImage）
+    [SerializeField]
+    private RectTransform m_selectCircleRect;
 
     [Header("入力判定関連")]
     // 移動キーが押される判定
@@ -73,6 +85,13 @@ public class MapController : MonoBehaviour
     private Vector2 m_cursorTiltOffset = Vector2.zero;
     // 外部(吸着処理)から参照するための公開プロパティ
     public Vector2 CursorTilt => m_cursorTiltOffset;
+
+    // 吸着先のマーカー（nullなら吸着していない）
+    private RectTransform m_snapTarget;
+    // 吸着中かどうか
+    public bool IsSnapped => m_snapTarget != null;
+    // 吸着先のマーカー（線の描画などで使う）
+    public RectTransform SnapTarget => m_snapTarget;
 
     private void OnEnable()
     {
@@ -113,6 +132,9 @@ public class MapController : MonoBehaviour
 
         if (move != Vector2.zero)
         {
+            // スティックが倒されたら吸着を解除する
+            ReleaseSnap();
+
             // 内部で ApplyCursorAndImagePosition() が呼ばれる
             MoveCursorOnMap(move);
         }
@@ -220,6 +242,7 @@ public class MapController : MonoBehaviour
     /// カーソルの地図上の座標から、画像位置とカーソルの表示位置を計算して反映する
     /// 画像は、カーソルが枠の中心に来るように追従する
     /// 画像が端に到達した場合は追従できないため、その分カーソルが中心からずれて表示される
+    /// 吸着中は、カーソルを吸着先マーカーの位置に直接合わせる
     /// </summary>
     private void ApplyCursorAndImagePosition()
     {
@@ -233,20 +256,56 @@ public class MapController : MonoBehaviour
         // カーソルを枠の中心に表示するために必要な画像位置
         Vector2 desiredImagePos = -Vector2.Scale(m_cursorMapPosition, effectiveScale);
 
-        // 画像がフレームをはみ出せる範囲でクランプする（端に到達したらそれ以上動かさない）
+        // 画像位置を反映する
+        // （画像が枠より大きい軸だけクランプし、小さい軸はカーソルを中央に保つ）
         RectTransform imgRect = m_mapImage.rectTransform;
         imgRect.anchoredPosition = ClampToImageBounds(desiredImagePos);
 
         // 画像が追従しきれなかった分だけ、カーソルが枠の中心からずれる
-        m_cursorRect.anchoredPosition =
-            m_cursorHomePosition + 
-            Vector2.Scale(m_cursorMapPosition, effectiveScale) + 
-            imgRect.anchoredPosition + 
+        Vector2 cursorOffset =
+            Vector2.Scale(m_cursorMapPosition, effectiveScale) +
+            imgRect.anchoredPosition +
             m_cursorTiltOffset;
+
+        // カーソルが枠の外にはみ出さないようにする
+        cursorOffset = ClampCursorToFrame(cursorOffset);
+
+        m_cursorRect.anchoredPosition = m_cursorHomePosition + cursorOffset;
+
+        // 吸着中は、マーカーのワールド座標にカーソルを直接合わせる
+        if (m_snapTarget != null)
+        {
+            m_cursorRect.position = m_snapTarget.position;
+        }
+
+        // 円を、カーソルの位置に合わせる
+        if (m_selectCircleRect != null)
+        {
+            m_selectCircleRect.position = m_cursorRect.position;
+        }
+    }
+
+    /// <summary>
+    /// カーソルのオフセット（基準位置からのずれ）を枠の内側に収める
+    /// </summary>
+    private Vector2 ClampCursorToFrame(Vector2 offset)
+    {
+        Vector2 frameHalf = m_frameRect.rect.size * 0.5f;
+        Vector2 cursorHalf = m_cursorRect.rect.size * 0.5f;
+
+        // 枠の半分 - カーソルの半分 - 余白 が、カーソルの動ける範囲
+        Vector2 limit = Vector2.Max(
+            frameHalf - cursorHalf - Vector2.one * CURSOR_EDGE_MARGIN,
+            Vector2.zero);
+
+        return new Vector2(
+            Mathf.Clamp(offset.x, -limit.x, limit.x),
+            Mathf.Clamp(offset.y, -limit.y, limit.y));
     }
 
     /// <summary>
     /// 画像の位置を、枠がフチからはみ出ない範囲に収める
+    /// 画像が枠より小さい軸はクランプせず、カーソルを中央に保てるようにする
     /// </summary>
     private Vector2 ClampToImageBounds(Vector2 position)
     {
@@ -264,16 +323,23 @@ public class MapController : MonoBehaviour
         Vector2 bottomLeft = m_frameRect.InverseTransformPoint(corners[0]);
         Vector2 topRight = m_frameRect.InverseTransformPoint(corners[2]);
         Vector2 imageSize = topRight - bottomLeft;
-
         Vector2 frameSize = m_frameRect.rect.size;
 
-        // 画像がフレームよりはみ出せる範囲の半分（はみ出し量の上限）
-        Vector2 maxOffset = Vector2.Max((imageSize - frameSize) * 0.5f, Vector2.zero);
+        Vector2 result = position;
 
-        float clampedX = Mathf.Clamp(position.x, -maxOffset.x, maxOffset.x);
-        float clampedY = Mathf.Clamp(position.y, -maxOffset.y, maxOffset.y);
+        // 画像が枠より大きい軸だけクランプする
+        if (imageSize.x > frameSize.x)
+        {
+            float maxX = (imageSize.x - frameSize.x) * 0.5f;
+            result.x = Mathf.Clamp(position.x, -maxX, maxX);
+        }
+        if (imageSize.y > frameSize.y)
+        {
+            float maxY = (imageSize.y - frameSize.y) * 0.5f;
+            result.y = Mathf.Clamp(position.y, -maxY, maxY);
+        }
 
-        return new Vector2(clampedX, clampedY);
+        return result;
     }
 
     /// <summary>
@@ -285,7 +351,35 @@ public class MapController : MonoBehaviour
     }
 
     /// <summary>
-    /// 外部（吸着処理など）からカーソルを直接移動させる
+    /// カーソルを円（ステージ位置マーカー）に吸着させる
+    /// 画像が端で動けなくても、カーソルは常に円の位置に表示される
+    /// ※画像のPivotが中央(0.5, 0.5)であることを前提にしている
+    /// </summary>
+    /// <param name="target">吸着先のマーカー</param>
+    public void SnapTo(RectTransform target)
+    {
+        if (m_mapImage == null || target == null)
+        {
+            return;
+        }
+
+        m_snapTarget = target;
+
+        // 地図上座標は再計算しない
+        // （引き寄せ(PanMapBy)で収束した値をそのまま使い、枠の中心から動かないようにする）
+        ApplyCursorAndImagePosition();
+    }
+
+    /// <summary>
+    /// 吸着を解除する
+    /// </summary>
+    public void ReleaseSnap()
+    {
+        m_snapTarget = null;
+    }
+
+    /// <summary>
+    /// 外部からカーソルを直接移動させる（従来の吸着処理との互換用）
     /// 移動後は、画像の範囲内に収める
     /// </summary>
     /// <param name="delta">移動量（フレーム座標系）</param>

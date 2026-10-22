@@ -600,9 +600,9 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 1578151423}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 972.5, y: -195}
+  m_AnchorMin: {x: 1, y: 1}
+  m_AnchorMax: {x: 1, y: 1}
+  m_AnchoredPosition: {x: -279.5, y: -195}
   m_SizeDelta: {x: 638, y: 299}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &244527407
@@ -692,7 +692,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::StageSelectManager
   HIT_RADIUS: 40
-  SNAP_RADIUS: 100
+  SNAP_RADIUS: 80
   RELEASE_RADIUS: 90
   SNAP_COMPLETE_THRESHOLD: 2
   SNAP_SPEED: 10
@@ -2262,6 +2262,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1715396137}
   - component: {fileID: 1715396138}
+  - component: {fileID: 1715396139}
   m_Layer: 5
   m_Name: MapFlame
   m_TagString: Untagged
@@ -2303,6 +2304,29 @@ MonoBehaviour:
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.RectMask2D
   m_Padding: {x: 0, y: 0, z: 0, w: 0}
   m_Softness: {x: 0, y: 0}
+--- !u!114 &1715396139
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1715396136}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a056545cad861744b8c2e48cc11b44c6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BorderChaseUI
+  m_segmentCount: 4
+  m_lengthRatio: 1
+  m_thickness: 8
+  m_tailColor: {r: 0.23921569, g: 0.21568628, b: 0.15686275, a: 0}
+  m_headColor: {r: 0.78431374, g: 0.5176471, b: 0.101960786, a: 1}
+  m_gradientPower: 1
+  m_edgeSoftness: 0.5
+  m_speed: 0.05
+  m_startPhase: 0.25
+  m_useUnscaledTime: 1
+  m_reverseDirection: 1
 --- !u!1 &1737479365
 GameObject:
   m_ObjectHideFlags: 0
@@ -2868,12 +2892,14 @@ MonoBehaviour:
   ZOOM_SPEED: 1
   MIN_ZOOM: 0.5
   MAX_ZOOM: 3
+  CURSOR_EDGE_MARGIN: 10
   CURSOR_TILT_DISTANCE: 20
   CURSOR_TILT_SPEED: 12
   m_mapImage: {fileID: 1985024541}
   m_magnificationText: {fileID: 1779788510}
   m_frameRect: {fileID: 1715396137}
   m_cursorRect: {fileID: 772912825}
+  m_selectCircleRect: {fileID: 404243005}
   m_navigateActionRef: {fileID: -8784545083839296357, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_zoomInRef: {fileID: 5876077813198355539, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_zoomOutRef: {fileID: -427132046596296841, guid: 052faaac586de48259a63d0c4782560b, type: 3}
@@ -2929,7 +2955,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 0.23921569, g: 0.21960784, b: 0.15686275, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
