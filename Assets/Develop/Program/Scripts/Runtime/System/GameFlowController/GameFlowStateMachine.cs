@@ -106,7 +106,7 @@ public sealed class GameFlowStateMachine
                 return nextState == GameFlowStateType.PLAYING;
 
             case GameFlowStateType.PLAYING:
-                return nextState == GameFlowStateType.ENDING;
+                return nextState == GameFlowStateType.ENDING || nextState == GameFlowStateType.GAME_OVER;
 
             case GameFlowStateType.ENDING:
                 return nextState == GameFlowStateType.RESULT;

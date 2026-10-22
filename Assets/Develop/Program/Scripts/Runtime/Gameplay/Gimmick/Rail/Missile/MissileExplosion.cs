@@ -16,6 +16,7 @@ public sealed class MissileExplosion : MonoBehaviour
     /// <param name="attackIdentifier">”š”­‚Éˆø‚«Œp‚®UŒ‚IDB</param>
     public void Explode(
         Transform parent,
+        Vector3 position,
         AttackIdentifier attackIdentifier = null)
     {
         if (m_explosionPrefab == null)
@@ -31,7 +32,7 @@ public sealed class MissileExplosion : MonoBehaviour
 
         var explosion = Instantiate(
             m_explosionPrefab,
-            transform.position,
+            position,
             Quaternion.identity,
             parent);
 
