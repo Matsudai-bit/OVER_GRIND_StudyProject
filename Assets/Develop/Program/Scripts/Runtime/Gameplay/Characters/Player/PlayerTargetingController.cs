@@ -19,6 +19,10 @@ public sealed class PlayerTargetingController : MonoBehaviour
     [Tooltip("シーン内のTargetPointと個別の選択可能距離を管理するManagerです。")]
     private TargetPointManager m_targetPointManager;
 
+    [SerializeField, Min(0.0f)]
+    [Tooltip("初回ロックオン時に画面中央を優先する円形範囲の半径（px）です。")]
+    private float m_initialPriorityScreenRadius = 360.0f;
+
     [Header("Target Reticle")]
 
     [SerializeField]
@@ -257,7 +261,7 @@ public sealed class PlayerTargetingController : MonoBehaviour
         }
 
         m_currentTargetPoint =
-            FindClosestTargetToScreenCenter(Camera.main);
+            FindBestInitialTarget(Camera.main);
 
         if (m_currentTargetPoint == null)
         {
@@ -400,52 +404,75 @@ public sealed class PlayerTargetingController : MonoBehaviour
     }
 
     /// <summary>
-    /// 画面中央との2D距離が最も近いTargetPointを取得します。
-    /// カメラ後方にある対象は選択しません。
+    /// 画面中央の優先ゾーン内では中央に最も近いTargetPointを取得します。
+    /// ゾーン内に候補がない場合は、カメラ方向に関係なくPlayerに最も近い対象を取得します。
     /// </summary>
     /// <param name="targetCamera">スクリーン座標への変換に使用するカメラ。</param>
-    /// <returns>画面中央に最も近いTargetPoint。選択可能な対象がない場合はnull。</returns>
-    private TargetPoint FindClosestTargetToScreenCenter(
+    /// <returns>初回ロックオンに最適なTargetPoint。選択可能な対象がない場合はnull。</returns>
+    private TargetPoint FindBestInitialTarget(
         Camera targetCamera)
     {
-        if (targetCamera == null)
-        {
-            return null;
-        }
-
-        Vector2 screenCenter =
-            targetCamera.pixelRect.center;
-        TargetPoint closestTargetPoint = null;
-        float closestSqrDistance = float.PositiveInfinity;
+        Vector2 screenCenter = targetCamera != null
+            ? targetCamera.pixelRect.center
+            : default;
+        float priorityRadiusSqr =
+            m_initialPriorityScreenRadius *
+            m_initialPriorityScreenRadius;
+        TargetPoint priorityTargetPoint = null;
+        float priorityScreenSqrDistance = float.PositiveInfinity;
+        TargetPoint closestWorldTargetPoint = null;
+        float closestWorldSqrDistance = float.PositiveInfinity;
+        float closestScreenSqrDistance = float.PositiveInfinity;
 
         foreach (TargetPoint candidate in m_targetCandidates)
         {
-            if (!TryGetScreenPosition(
+            float worldSqrDistance =
+                (candidate.Position - transform.position).sqrMagnitude;
+            bool hasScreenPosition =
+                TryGetScreenPosition(
                     targetCamera,
                     candidate,
-                    out Vector2 candidateScreenPosition))
+                    out Vector2 candidateScreenPosition);
+            float screenSqrDistance = hasScreenPosition
+                ? (candidateScreenPosition - screenCenter).sqrMagnitude
+                : float.PositiveInfinity;
+
+            if (hasScreenPosition &&
+                screenSqrDistance <= priorityRadiusSqr &&
+                screenSqrDistance < priorityScreenSqrDistance)
+            {
+                priorityScreenSqrDistance = screenSqrDistance;
+                priorityTargetPoint = candidate;
+            }
+
+            bool isCloserInWorld =
+                worldSqrDistance < closestWorldSqrDistance;
+            bool isSameWorldDistanceAndCloserToCenter =
+                Mathf.Approximately(
+                    worldSqrDistance,
+                    closestWorldSqrDistance) &&
+                screenSqrDistance < closestScreenSqrDistance;
+
+            if (!isCloserInWorld &&
+                !isSameWorldDistanceAndCloserToCenter)
             {
                 continue;
             }
 
-            float sqrDistance =
-                (candidateScreenPosition - screenCenter).sqrMagnitude;
-
-            if (sqrDistance >= closestSqrDistance)
-            {
-                continue;
-            }
-
-            closestSqrDistance = sqrDistance;
-            closestTargetPoint = candidate;
+            closestWorldSqrDistance = worldSqrDistance;
+            closestScreenSqrDistance = screenSqrDistance;
+            closestWorldTargetPoint = candidate;
         }
 
-        return closestTargetPoint;
+        return priorityTargetPoint != null
+            ? priorityTargetPoint
+            : closestWorldTargetPoint;
     }
 
     /// <summary>
-    /// 現在対象より指定した画面左右方向にあり、
-    /// 現在対象との2D距離が最も近いTargetPointを取得します。
+    /// 現在対象より指定した画面左右方向にある候補を2D判定で抽出し、
+    /// Playerとの3D距離が最も近いTargetPointを取得します。
+    /// 同距離の場合は現在対象との2D距離が近い対象を優先します。
     /// 指定方向に候補がない場合は反対側の端へ循環します。
     /// </summary>
     /// <param name="targetCamera">スクリーン座標への変換に使用するカメラ。</param>
@@ -466,11 +493,13 @@ public sealed class PlayerTargetingController : MonoBehaviour
         }
 
         TargetPoint closestTargetPoint = null;
-        float closestSqrDistance = float.PositiveInfinity;
+        float closestWorldSqrDistance = float.PositiveInfinity;
+        float closestScreenSqrDistance = float.PositiveInfinity;
         TargetPoint wrapTargetPoint = null;
         float wrapTargetScreenX = direction < 0
             ? float.NegativeInfinity
             : float.PositiveInfinity;
+        float wrapTargetWorldSqrDistance = float.PositiveInfinity;
 
         foreach (TargetPoint candidate in m_targetCandidates)
         {
@@ -486,10 +515,19 @@ public sealed class PlayerTargetingController : MonoBehaviour
             bool isCloserToWrapEdge = direction < 0
                 ? candidateScreenPosition.x > wrapTargetScreenX
                 : candidateScreenPosition.x < wrapTargetScreenX;
+            float worldSqrDistance =
+                (candidate.Position - transform.position).sqrMagnitude;
+            bool isSameWrapEdgeAndCloserInWorld =
+                Mathf.Approximately(
+                    candidateScreenPosition.x,
+                    wrapTargetScreenX) &&
+                worldSqrDistance < wrapTargetWorldSqrDistance;
 
-            if (isCloserToWrapEdge)
+            if (isCloserToWrapEdge ||
+                isSameWrapEdgeAndCloserInWorld)
             {
                 wrapTargetScreenX = candidateScreenPosition.x;
+                wrapTargetWorldSqrDistance = worldSqrDistance;
                 wrapTargetPoint = candidate;
             }
 
@@ -501,13 +539,23 @@ public sealed class PlayerTargetingController : MonoBehaviour
                 continue;
             }
 
-            float sqrDistance = screenOffset.sqrMagnitude;
-            if (sqrDistance >= closestSqrDistance)
+            float screenSqrDistance = screenOffset.sqrMagnitude;
+            bool isCloserInWorld =
+                worldSqrDistance < closestWorldSqrDistance;
+            bool isSameWorldDistanceAndCloserOnScreen =
+                Mathf.Approximately(
+                    worldSqrDistance,
+                    closestWorldSqrDistance) &&
+                screenSqrDistance < closestScreenSqrDistance;
+
+            if (!isCloserInWorld &&
+                !isSameWorldDistanceAndCloserOnScreen)
             {
                 continue;
             }
 
-            closestSqrDistance = sqrDistance;
+            closestWorldSqrDistance = worldSqrDistance;
+            closestScreenSqrDistance = screenSqrDistance;
             closestTargetPoint = candidate;
         }
 
