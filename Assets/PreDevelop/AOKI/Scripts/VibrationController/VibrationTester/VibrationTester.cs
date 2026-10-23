@@ -36,6 +36,7 @@ public class VibrationTester : MonoBehaviour
                 {
                     Debug.Log($"[VibrationTest] çƒê∂: {entry.label} (Key: {entry.triggerKey})");
                     VibrationManager.Instance.Play(entry.vibrationData);
+
                 }
                 else
                 {

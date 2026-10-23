@@ -2,112 +2,171 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-
-/// コントローラーの振動を流す、揺らす
+/// <summary>
+/// コントローラーの振動（単発・ループ・オプション適用）を一括管理するマネージャー
+/// </summary>
 public class VibrationManager : MonoBehaviour
 {
-    /// <summary>
-    /// 振動の受け渡しをインスタンス化させる
-    /// </summary>
     public static VibrationManager Instance { get; private set; }
 
-
     /// <summary>
-    /// もし振動を出す動きが２つ起きた時に重複しないようにする
+    /// 単発振動のコルーチン参照
     /// </summary>
     private Coroutine activeVibrationCoroutine;
 
-    /// インスタンス化させる時Nullの時入れるもしNullじゃなければオブジェクトを消去する
+    /// <summary>
+    /// ループ振動のコルーチン参照
+    /// </summary>
+    private Coroutine activeLoopCoroutine;
+
     private void Awake()
     {
         if (Instance == null)
         {
-            //オブジェクトを入れる
             Instance = this;
             DontDestroyOnLoad(gameObject);
         }
         else
         {
-            //オブジェクトを消す
             Destroy(gameObject);
         }
     }
 
     /// <summary>
-    /// 指定された振動データに基づいてゲームパッドを振動させる
+    /// 指定された振動データに基づいてゲームパッドを1回だけ振動（減衰再生）させます
     /// </summary>
     public void Play(VibrationData data)
     {
         if (data == null) return;
 
-        // 新しい振動がリクエストされたら現在の振動を打ち消して新しく開始
-        if (activeVibrationCoroutine != null)
-        {
-            //古いオブジェクトが入ってきた場合削除する
-            StopCoroutine(activeVibrationCoroutine);
-        }
+        // 進行中のすべての振動（単発・ループ）をリセットして上書き
+        StopAllVibrations();
 
-        //　新しいデータを挿入し開始させる
         activeVibrationCoroutine = StartCoroutine(PlayVibrationRoutine(data));
     }
 
     /// <summary>
-    /// 振動を即座に停止します
+    /// 停止命令（StopLoop）が呼ばれるまで振動し続けます（グラインド・壁走り用）
+    /// </summary>
+    public void PlayLoop(VibrationData data)
+    {
+        if (data == null) return;
+
+        // 進行中のすべての振動（単発・ループ）をリセットして上書き
+        StopAllVibrations();
+
+        activeLoopCoroutine = StartCoroutine(PlayLoopRoutine(data));
+    }
+
+    /// <summary>
+    /// 単発振動のみを即座に停止します
     /// </summary>
     public void StopVibration()
     {
-        //　コルーチンの強制終了と初期化
         if (activeVibrationCoroutine != null)
         {
             StopCoroutine(activeVibrationCoroutine);
             activeVibrationCoroutine = null;
         }
 
-        //　物理モーターの完全振動リセット
         ResetGamepadMotors();
     }
 
     /// <summary>
-    /// 時間経過で変化する振動を毎フレーム計算しながらゲームパッドを震わせ、指定時間が過ぎたら自動的に止める実質的なメイン処理
+    /// ループ振動のみを停止します
     /// </summary>
-    /// <param name="data"></param>
-    /// <returns></returns>
+    public void StopLoop()
+    {
+        if (activeLoopCoroutine != null)
+        {
+            StopCoroutine(activeLoopCoroutine);
+            activeLoopCoroutine = null;
+        }
+
+        ResetGamepadMotors();
+    }
+
+    /// <summary>
+    /// すべての振動処理を強制停止し、物理モーターをゼロリセットします
+    /// </summary>
+    public void StopAllVibrations()
+    {
+        if (activeVibrationCoroutine != null)
+        {
+            StopCoroutine(activeVibrationCoroutine);
+            activeVibrationCoroutine = null;
+        }
+
+        if (activeLoopCoroutine != null)
+        {
+            StopCoroutine(activeLoopCoroutine);
+            activeLoopCoroutine = null;
+        }
+
+        ResetGamepadMotors();
+    }
+
     private IEnumerator PlayVibrationRoutine(VibrationData data)
     {
-        //　ゲームパッドの接続チェック
         var gamepad = Gamepad.current;
         if (gamepad == null) yield break;
-
 
         float elapsedTime = 0f;
 
         while (elapsedTime < data.m_duration)
         {
-            elapsedTime += Time.deltaTime;
+            // オプションで振動がOFFに設定されている場合は即座に停止して抜ける
+            if (!VibrationSettings.IsEnabled)
+            {
+                ResetGamepadMotors();
+                yield break;
+            }
 
-            //　進行度の計算と減衰カーブの適用
+            // ポーズ時（Time.timeScale = 0）でもタイマーが止まらないよう unscaledDeltaTime を使用
+            elapsedTime += Time.unscaledDeltaTime;
+
             float progress = Mathf.Clamp01(elapsedTime / data.m_duration);
-
-            // アニメーションカーブから現在の減衰倍率（0.0 ~ 1.0）を取得
             float dampingMultiplier = data.dampingCurve.Evaluate(progress);
 
-            //　モーター強度の計算と出力
-            float currentLow = data.m_lowFrequency * dampingMultiplier;
-            float currentHigh = data.m_highFrequency * dampingMultiplier;
+            // オプションの全体強度（MasterVolume）を掛け合わせる
+            float masterVol = VibrationSettings.MasterVolume;
+            float currentLow = data.m_lowFrequency * dampingMultiplier * masterVol;
+            float currentHigh = data.m_highFrequency * dampingMultiplier * masterVol;
 
             gamepad.SetMotorSpeeds(currentLow, currentHigh);
 
-            yield return null; // 1フレーム待機
+            yield return null;
         }
 
-        //　自動停止と参照解除を行い処理を止める
         ResetGamepadMotors();
         activeVibrationCoroutine = null;
     }
 
-    /// <summary>
-    /// 接続されているゲームパッドの物理的な振動をピタッと止める用
-    /// </summary>
+    private IEnumerator PlayLoopRoutine(VibrationData data)
+    {
+        var gamepad = Gamepad.current;
+        if (gamepad == null) yield break;
+
+        while (true)
+        {
+            // オプションで振動がOFFに設定されている場合は即座に停止して抜ける
+            if (!VibrationSettings.IsEnabled)
+            {
+                ResetGamepadMotors();
+                yield break;
+            }
+
+            // オプションの全体強度（MasterVolume）を掛け合わせる
+            float masterVol = VibrationSettings.MasterVolume;
+            float currentLow = data.m_lowFrequency * masterVol;
+            float currentHigh = data.m_highFrequency * masterVol;
+
+            gamepad.SetMotorSpeeds(currentLow, currentHigh);
+
+            yield return null;
+        }
+    }
+
     private void ResetGamepadMotors()
     {
         if (Gamepad.current != null)
@@ -116,17 +175,13 @@ public class VibrationManager : MonoBehaviour
         }
     }
 
-    //　設定された GameObject が非アクティブ
     private void OnDisable()
     {
-        ResetGamepadMotors();
+        StopAllVibrations();
     }
 
-
-    //プレイヤーがゲームを終了した時
     private void OnApplicationQuit()
     {
-        ResetGamepadMotors();
+        StopAllVibrations();
     }
- 
 }
