@@ -256,7 +256,14 @@ public sealed class PlayerTargetingController : MonoBehaviour
             return;
         }
 
-        m_currentTargetPoint = m_targetCandidates[0];
+        m_currentTargetPoint =
+            FindClosestTargetToScreenCenter(Camera.main);
+
+        if (m_currentTargetPoint == null)
+        {
+            return;
+        }
+
         m_isTargeting = true;
 
         TargetPoint targetPoint =
@@ -360,14 +367,17 @@ public sealed class PlayerTargetingController : MonoBehaviour
             return;
         }
 
-        int currentIndex =
-            m_targetCandidates.IndexOf(m_currentTargetPoint);
-        int nextIndex = currentIndex < 0
-            ? 0
-            : (currentIndex + direction + m_targetCandidates.Count) %
-              m_targetCandidates.Count;
+        TargetPoint nextTargetPoint =
+            FindClosestTargetInScreenDirection(
+                Camera.main,
+                direction);
 
-        m_currentTargetPoint = m_targetCandidates[nextIndex];
+        if (nextTargetPoint == null)
+        {
+            return;
+        }
+
+        m_currentTargetPoint = nextTargetPoint;
         TargetPoint targetPoint = m_currentTargetPoint;
 
         if (targetPoint == null)
@@ -387,6 +397,155 @@ public sealed class PlayerTargetingController : MonoBehaviour
                 m_cameraFocusDuration,
                 GetPlayerMoveDirection());
         }
+    }
+
+    /// <summary>
+    /// 画面中央との2D距離が最も近いTargetPointを取得します。
+    /// カメラ後方にある対象は選択しません。
+    /// </summary>
+    /// <param name="targetCamera">スクリーン座標への変換に使用するカメラ。</param>
+    /// <returns>画面中央に最も近いTargetPoint。選択可能な対象がない場合はnull。</returns>
+    private TargetPoint FindClosestTargetToScreenCenter(
+        Camera targetCamera)
+    {
+        if (targetCamera == null)
+        {
+            return null;
+        }
+
+        Vector2 screenCenter =
+            targetCamera.pixelRect.center;
+        TargetPoint closestTargetPoint = null;
+        float closestSqrDistance = float.PositiveInfinity;
+
+        foreach (TargetPoint candidate in m_targetCandidates)
+        {
+            if (!TryGetScreenPosition(
+                    targetCamera,
+                    candidate,
+                    out Vector2 candidateScreenPosition))
+            {
+                continue;
+            }
+
+            float sqrDistance =
+                (candidateScreenPosition - screenCenter).sqrMagnitude;
+
+            if (sqrDistance >= closestSqrDistance)
+            {
+                continue;
+            }
+
+            closestSqrDistance = sqrDistance;
+            closestTargetPoint = candidate;
+        }
+
+        return closestTargetPoint;
+    }
+
+    /// <summary>
+    /// 現在対象より指定した画面左右方向にあり、
+    /// 現在対象との2D距離が最も近いTargetPointを取得します。
+    /// 指定方向に候補がない場合は反対側の端へ循環します。
+    /// </summary>
+    /// <param name="targetCamera">スクリーン座標への変換に使用するカメラ。</param>
+    /// <param name="direction">左は-1、右は1。</param>
+    /// <returns>指定方向で最も近いTargetPoint。候補がない場合はnull。</returns>
+    private TargetPoint FindClosestTargetInScreenDirection(
+        Camera targetCamera,
+        int direction)
+    {
+        if (targetCamera == null ||
+            direction == 0 ||
+            !TryGetScreenPosition(
+                targetCamera,
+                m_currentTargetPoint,
+                out Vector2 currentScreenPosition))
+        {
+            return null;
+        }
+
+        TargetPoint closestTargetPoint = null;
+        float closestSqrDistance = float.PositiveInfinity;
+        TargetPoint wrapTargetPoint = null;
+        float wrapTargetScreenX = direction < 0
+            ? float.NegativeInfinity
+            : float.PositiveInfinity;
+
+        foreach (TargetPoint candidate in m_targetCandidates)
+        {
+            if (candidate == m_currentTargetPoint ||
+                !TryGetScreenPosition(
+                    targetCamera,
+                    candidate,
+                    out Vector2 candidateScreenPosition))
+            {
+                continue;
+            }
+
+            bool isCloserToWrapEdge = direction < 0
+                ? candidateScreenPosition.x > wrapTargetScreenX
+                : candidateScreenPosition.x < wrapTargetScreenX;
+
+            if (isCloserToWrapEdge)
+            {
+                wrapTargetScreenX = candidateScreenPosition.x;
+                wrapTargetPoint = candidate;
+            }
+
+            Vector2 screenOffset =
+                candidateScreenPosition - currentScreenPosition;
+
+            if (screenOffset.x * direction <= 0.0f)
+            {
+                continue;
+            }
+
+            float sqrDistance = screenOffset.sqrMagnitude;
+            if (sqrDistance >= closestSqrDistance)
+            {
+                continue;
+            }
+
+            closestSqrDistance = sqrDistance;
+            closestTargetPoint = candidate;
+        }
+
+        return closestTargetPoint != null
+            ? closestTargetPoint
+            : wrapTargetPoint;
+    }
+
+    /// <summary>
+    /// TargetPointをスクリーン座標へ変換し、カメラ前方にあるか確認します。
+    /// </summary>
+    /// <param name="targetCamera">スクリーン座標への変換に使用するカメラ。</param>
+    /// <param name="targetPoint">変換対象のTargetPoint。</param>
+    /// <param name="screenPosition">変換後のスクリーン座標。</param>
+    /// <returns>対象が有効かつカメラ前方にある場合はtrue。</returns>
+    private bool TryGetScreenPosition(
+        Camera targetCamera,
+        TargetPoint targetPoint,
+        out Vector2 screenPosition)
+    {
+        screenPosition = default;
+
+        if (targetCamera == null ||
+            !IsTargetPointAvailable(targetPoint))
+        {
+            return false;
+        }
+
+        Vector3 projectedPosition =
+            targetCamera.WorldToScreenPoint(targetPoint.Position);
+
+        if (projectedPosition.z <= 0.0f)
+        {
+            return false;
+        }
+
+        screenPosition = projectedPosition;
+        return true;
     }
 
     /// <summary>
