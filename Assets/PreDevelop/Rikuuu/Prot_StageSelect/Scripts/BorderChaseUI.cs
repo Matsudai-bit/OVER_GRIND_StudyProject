@@ -1,3 +1,4 @@
+using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -15,10 +16,10 @@ public class BorderChaseUI : MonoBehaviour
 
     [Header("Gradient (線の進行方向)")]
     // 後ろ側(アルファ0で消える)
-    [SerializeField] 
+    [SerializeField, ColorUsage(true, true)] 
     Color m_tailColor = new Color32(0x3D, 0x37, 0x28, 0);
     // 先頭側
-    [SerializeField] 
+    [SerializeField, ColorUsage(true, true)] 
     Color m_headColor = new Color32(0xC8, 0x84, 0x1A, 255);
     // 1=直線、大きいほど先頭に色が寄る
     [SerializeField, Range(0.1f, 4f)] 
@@ -90,10 +91,10 @@ public class BorderChaseUI : MonoBehaviour
     void BuildTextures()
     {
         // 横向き: x=進行方向, y=太さ方向
-        m_texH = new Texture2D(ALONG_RES, ACROSS_RES, TextureFormat.RGBA32, false)
+        m_texH = new Texture2D(ALONG_RES, ACROSS_RES, TextureFormat.RGBAHalf, false, true)
         { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear };
         // 縦向き: x=太さ方向, y=進行方向
-        m_texV = new Texture2D(ACROSS_RES, ALONG_RES, TextureFormat.RGBA32, false)
+        m_texV = new Texture2D(ACROSS_RES, ALONG_RES, TextureFormat.RGBAHalf, false, true)
         { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear };
 
         for (int i = 0; i < ALONG_RES; i++)
@@ -106,10 +107,18 @@ public class BorderChaseUI : MonoBehaviour
                 float c = j / (float)(ACROSS_RES - 1);
                 float edge = 1f - Mathf.Abs(2f * c - 1f);
                 float a = m_edgeSoftness <= 0f ? 1f : Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(edge / m_edgeSoftness));
-                
+
                 Color col = along;
                 col.a *= a;
-                
+
+                // Linear カラースペースのプロジェクトでは見た目を合わせるために変換
+                if (QualitySettings.activeColorSpace == ColorSpace.Linear)
+                {
+                    float alpha = col.a;
+                    col = col.linear;
+                    col.a = alpha;
+                }
+
                 m_texH.SetPixel(i, j, col);
                 m_texV.SetPixel(j, i, col);
             }
@@ -157,33 +166,35 @@ public class BorderChaseUI : MonoBehaviour
                     float gA = m_reverseDirection ? 1f - g0 : g0;
                     float gB = m_reverseDirection ? 1f - g1 : g1;
 
+                    float half = m_thickness * 0.5f;
+
                     var rt = (RectTransform)img.transform;
                     switch (e)
                     {
                         // 上: 左→右
                         case 0:
-                            rt.anchoredPosition = new Vector2(u0, 0);
+                            rt.anchoredPosition = new Vector2(u0, half);
                             rt.sizeDelta = new Vector2(len, m_thickness);
                             img.uvRect = new Rect(gA, 0, gB - gA, 1);
                             break;
 
                         // 右: 上→下(上が後ろ側)
                         case 1:
-                            rt.anchoredPosition = new Vector2(W - m_thickness, -u0);
+                            rt.anchoredPosition = new Vector2(W - half, -u0);
                             rt.sizeDelta = new Vector2(m_thickness, len);
                             img.uvRect = new Rect(0, gB, 1, gA - gB);
                             break;
 
                         // 下: 右→左(右が後ろ側)
                         case 2:
-                            rt.anchoredPosition = new Vector2(W - u1, -(H - m_thickness));
+                            rt.anchoredPosition = new Vector2(W - u1, -(H - half));
                             rt.sizeDelta = new Vector2(len, m_thickness);
                             img.uvRect = new Rect(gB, 0, gA - gB, 1);
                             break;
 
                         // 左: 下→上(下が後ろ側)
                         case 3:
-                            rt.anchoredPosition = new Vector2(0, -(H - u1));
+                            rt.anchoredPosition = new Vector2(-half, -(H - u1));
                             rt.sizeDelta = new Vector2(m_thickness, len);
                             img.uvRect = new Rect(0, gA, 1, gB - gA);
                             break;
