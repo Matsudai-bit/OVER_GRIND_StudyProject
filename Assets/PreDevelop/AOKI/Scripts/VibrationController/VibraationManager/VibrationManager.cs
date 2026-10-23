@@ -1,22 +1,16 @@
 using System.Collections;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.SceneManagement;
 
 /// <summary>
-/// コントローラーの振動（単発・ループ・オプション適用）を一括管理するマネージャー
+/// コントローラーの振動（単発・ループ・オプション適用・安全制御）を一括管理するマネージャー
 /// </summary>
 public class VibrationManager : MonoBehaviour
 {
     public static VibrationManager Instance { get; private set; }
 
-    /// <summary>
-    /// 単発振動のコルーチン参照
-    /// </summary>
     private Coroutine activeVibrationCoroutine;
-
-    /// <summary>
-    /// ループ振動のコルーチン参照
-    /// </summary>
     private Coroutine activeLoopCoroutine;
 
     private void Awake()
@@ -25,11 +19,27 @@ public class VibrationManager : MonoBehaviour
         {
             Instance = this;
             DontDestroyOnLoad(gameObject);
+
+            // シーン切り替え時に自動で振動を全停止させるイベント登録
+            SceneManager.activeSceneChanged += OnSceneChanged;
         }
         else
         {
             Destroy(gameObject);
         }
+    }
+
+    private void OnDestroy()
+    {
+        if (Instance == this)
+        {
+            SceneManager.activeSceneChanged -= OnSceneChanged;
+        }
+    }
+
+    private void OnSceneChanged(Scene current, Scene next)
+    {
+        StopAllVibrations();
     }
 
     /// <summary>
@@ -39,22 +49,18 @@ public class VibrationManager : MonoBehaviour
     {
         if (data == null) return;
 
-        // 進行中のすべての振動（単発・ループ）をリセットして上書き
         StopAllVibrations();
-
         activeVibrationCoroutine = StartCoroutine(PlayVibrationRoutine(data));
     }
 
     /// <summary>
-    /// 停止命令（StopLoop）が呼ばれるまで振動し続けます（グラインド・壁走り用）
+    /// 停止命令が呼ばれるまで振動し続けます（グラインド・壁走り用）
     /// </summary>
     public void PlayLoop(VibrationData data)
     {
         if (data == null) return;
 
-        // 進行中のすべての振動（単発・ループ）をリセットして上書き
         StopAllVibrations();
-
         activeLoopCoroutine = StartCoroutine(PlayLoopRoutine(data));
     }
 
@@ -87,7 +93,7 @@ public class VibrationManager : MonoBehaviour
     }
 
     /// <summary>
-    /// すべての振動処理を強制停止し、物理モーターをゼロリセットします
+    /// すべての振動処理（単発・ループ）を強制停止し、物理モーターをゼロリセットします
     /// </summary>
     public void StopAllVibrations()
     {
@@ -115,20 +121,20 @@ public class VibrationManager : MonoBehaviour
 
         while (elapsedTime < data.m_duration)
         {
-            // オプションで振動がOFFに設定されている場合は即座に停止して抜ける
+            // オプションでOFF設定なら即時停止
             if (!VibrationSettings.IsEnabled)
             {
                 ResetGamepadMotors();
                 yield break;
             }
 
-            // ポーズ時（Time.timeScale = 0）でもタイマーが止まらないよう unscaledDeltaTime を使用
+            // ポーズ時（Time.timeScale = 0）でも正しく時間を計測
             elapsedTime += Time.unscaledDeltaTime;
 
             float progress = Mathf.Clamp01(elapsedTime / data.m_duration);
             float dampingMultiplier = data.dampingCurve.Evaluate(progress);
 
-            // オプションの全体強度（MasterVolume）を掛け合わせる
+            // オプションのマスターボリューム適用
             float masterVol = VibrationSettings.MasterVolume;
             float currentLow = data.m_lowFrequency * dampingMultiplier * masterVol;
             float currentHigh = data.m_highFrequency * dampingMultiplier * masterVol;
@@ -149,14 +155,14 @@ public class VibrationManager : MonoBehaviour
 
         while (true)
         {
-            // オプションで振動がOFFに設定されている場合は即座に停止して抜ける
+            // オプションでOFF設定なら即時停止
             if (!VibrationSettings.IsEnabled)
             {
                 ResetGamepadMotors();
                 yield break;
             }
 
-            // オプションの全体強度（MasterVolume）を掛け合わせる
+            // オプションのマスターボリューム適用
             float masterVol = VibrationSettings.MasterVolume;
             float currentLow = data.m_lowFrequency * masterVol;
             float currentHigh = data.m_highFrequency * masterVol;
