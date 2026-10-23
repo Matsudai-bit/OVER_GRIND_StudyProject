@@ -178,8 +178,17 @@ public sealed class PlayerMonitor : MonoBehaviour
             SplineRailInfo rail = hitCollider.GetComponentInParent<SplineRailInfo>();
             if (rail == null) continue;
 
-            float distance = (hitCollider.ClosestPoint(checkPosition) - checkPosition).sqrMagnitude;
-            if (distance >= nearestDistance) continue;
+            bool supportsClosestPoint =
+                hitCollider is BoxCollider ||
+                hitCollider is SphereCollider ||
+                hitCollider is CapsuleCollider ||
+                (hitCollider is MeshCollider meshCollider && meshCollider.convex);
+
+            Vector3 closestPoint = supportsClosestPoint
+                ? hitCollider.ClosestPoint(checkPosition)
+                : hitCollider.bounds.ClosestPoint(checkPosition);
+
+            float distance = (closestPoint - checkPosition).sqrMagnitude; if (distance >= nearestDistance) continue;
 
             nearestDistance = distance;
             m_hitRailInfo = rail;
