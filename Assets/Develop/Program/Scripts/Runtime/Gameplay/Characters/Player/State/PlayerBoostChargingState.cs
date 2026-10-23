@@ -209,14 +209,6 @@ public sealed class PlayerBoostChargingState
             Owner);
 
         Owner.VGaugePlaceModel.SetGaugeRate(ChargeRate);
-        if (Owner.PlayerCamera != null)
-        {
-            Owner.PlayerCamera.BeginDriftLookOverride(
-                m_chargeStartDirection,
-                m_startedFromStationary
-                    ? m_parameterAsset.CameraDriftLookBlendRate
-                    : 1.0f);
-        }
 
         // チャージ開始時の状態に応じてアニメーションを切り替える
         if (m_startedFromStationary)
@@ -388,12 +380,6 @@ public sealed class PlayerBoostChargingState
         }
 
         // --------------------------------------------------------
-        // カメラをチャージ中の入力側へ追従
-        // --------------------------------------------------------
-
-        UpdateChargeCamera();
-
-        // --------------------------------------------------------
         // ゲージ更新
         // --------------------------------------------------------
 
@@ -421,26 +407,6 @@ public sealed class PlayerBoostChargingState
                 $"曲がりやすさ={currentDriftTurnSpeed:F1}deg/s",
                 Owner);
         }
-    }
-
-    /// <summary>現在の体の向きと開始時のカメラ方向を補間した角度へカメラを向けます。</summary>
-    private void UpdateChargeCamera()
-    {
-        if (Owner.PlayerCamera == null) return;
-
-        Owner.PlayerCamera.UpdateDriftLookTarget(
-            m_currentModelFacingDirection,
-            m_startedFromStationary ? m_parameterAsset.CameraDriftLookBlendRate : 1.0f);
-
-        if (!m_startedFromStationary)
-        {
-            Owner.PlayerCamera.UpdateDriftLookDirectionOverTime(
-                m_parameterAsset.MovingChargeCameraLookDuration, Time.fixedDeltaTime);
-            return;
-        }
-
-        Owner.PlayerCamera.UpdateDriftLookDirection(
-            m_parameterAsset.CameraDriftLookTurnSpeed, Time.fixedDeltaTime);
     }
 
     /// <summary>
@@ -948,11 +914,6 @@ public sealed class PlayerBoostChargingState
         Debug.Log(
             "[PlayerBoostChargingState] チャージ状態終了",
             Owner);
-
-        if (Owner.PlayerCamera != null)
-        {
-            Owner.PlayerCamera.EndDriftLookOverride();
-        }
 
         // 移動開始チャージの場合のみ、
         // 終了時の進行方向へ本体を合わせる
