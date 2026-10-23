@@ -16,6 +16,9 @@ public struct AttackDamageData
     [SerializeField]
     private AttackPowerType m_attackPowerType;
 
+    private Vector3 m_sourceFacingDirection;
+    private bool m_hasSourceFacingDirection;
+
     /// <summary>
     /// 攻撃情報を生成します。
     /// </summary>
@@ -30,6 +33,8 @@ public struct AttackDamageData
         m_damage = Mathf.Max(0, damage);
         m_attackIdentifier = attackIdentifier;
         m_attackPowerType = attackPowerType;
+        m_sourceFacingDirection = Vector3.zero;
+        m_hasSourceFacingDirection = false;
     }
 
     /// <summary>与えるダメージ量を取得します。</summary>
@@ -48,10 +53,14 @@ public struct AttackDamageData
     /// <returns>ダメージ量を変更した攻撃情報。</returns>
     public AttackDamageData WithDamage(int damage)
     {
-        return new AttackDamageData(
+        AttackDamageData result = new AttackDamageData(
             damage,
             AttackIdentifier,
             PowerType);
+
+        result.m_sourceFacingDirection = m_sourceFacingDirection;
+        result.m_hasSourceFacingDirection = m_hasSourceFacingDirection;
+        return result;
     }
 
     /// <summary>
@@ -62,9 +71,44 @@ public struct AttackDamageData
     public AttackDamageData WithAttackPowerType(
         AttackPowerType attackPowerType)
     {
-        return new AttackDamageData(
+        AttackDamageData result = new AttackDamageData(
             Damage,
             AttackIdentifier,
             attackPowerType);
+
+        result.m_sourceFacingDirection = m_sourceFacingDirection;
+        result.m_hasSourceFacingDirection = m_hasSourceFacingDirection;
+        return result;
+    }
+
+    /// <summary>攻撃元キャラクターの正面方向を追加した攻撃情報を生成します。</summary>
+    /// <param name="sourceFacingDirection">攻撃元のワールド正面方向。</param>
+    /// <returns>有効な水平正面方向を保持した攻撃情報。</returns>
+    public AttackDamageData WithSourceFacingDirection(
+        Vector3 sourceFacingDirection)
+    {
+        AttackDamageData result = this;
+        sourceFacingDirection.y = 0.0f;
+
+        if (sourceFacingDirection.sqrMagnitude <= 0.0001f)
+        {
+            result.m_sourceFacingDirection = Vector3.zero;
+            result.m_hasSourceFacingDirection = false;
+            return result;
+        }
+
+        result.m_sourceFacingDirection = sourceFacingDirection.normalized;
+        result.m_hasSourceFacingDirection = true;
+        return result;
+    }
+
+    /// <summary>攻撃元キャラクターの水平正面方向を取得します。</summary>
+    /// <param name="sourceFacingDirection">正規化済みのワールド正面方向。</param>
+    /// <returns>true：方向情報がある。false：方向情報がない。</returns>
+    public bool TryGetSourceFacingDirection(
+        out Vector3 sourceFacingDirection)
+    {
+        sourceFacingDirection = m_sourceFacingDirection;
+        return m_hasSourceFacingDirection;
     }
 }

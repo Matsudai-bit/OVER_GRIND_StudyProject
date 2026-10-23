@@ -37,6 +37,14 @@ public sealed class AttackReactiveInteractObject : MonoBehaviour,
     [Tooltip("吹き飛び方向へ加える上向き成分です。")]
     private float m_upwardDirectionRate = 0.35f;
 
+    [SerializeField, Min(0.0f)]
+    [Tooltip("RigidbodyのMassによる影響を維持したまま、吹き飛びの強さに掛ける倍率です。")]
+    private float m_launchImpulseMultiplier = 1.0f;
+
+    [SerializeField, Range(0.0f, 1.0f)]
+    [Tooltip("Playerの体の向きへ吹き飛び方向を補正する割合です。0は従来方向、1はPlayerの正面方向です。")]
+    private float m_playerFacingCorrectionRate = 0.35f;
+
     [SerializeField, Header("Physics")]
     [Tooltip("最初に吹き飛ぶまでは物理的に動かない状態にします。")]
     private bool m_startAsKinematic = true;
@@ -112,6 +120,7 @@ public sealed class AttackReactiveInteractObject : MonoBehaviour,
     private readonly HashSet<int> m_attackContactSourceIds = new();
     private readonly RaycastHit[] m_groundHits =
         new RaycastHit[GROUND_HIT_BUFFER_SIZE];
+    private AttackReactiveInteractObjectGroup m_group;
 
     /// <summary>現在蓄積しているダメージを取得します。</summary>
     public int AccumulatedDamage => m_accumulatedDamage;
@@ -176,6 +185,19 @@ public sealed class AttackReactiveInteractObject : MonoBehaviour,
     /// <param name="attackSourceId">接触した攻撃判定のInstance ID。</param>
     public void BeginAttackContact(int attackSourceId)
     {
+        if (m_group != null)
+        {
+            m_group.BeginAttackContact(this, attackSourceId);
+            return;
+        }
+
+        BeginAttackContactLocally(attackSourceId);
+    }
+
+    /// <summary>このドラム缶に攻撃接触開始を適用します。</summary>
+    /// <param name="attackSourceId">接触した攻撃判定のInstance ID。</param>
+    internal void BeginAttackContactLocally(int attackSourceId)
+    {
         if (m_attackContactSourceIds.Add(attackSourceId) &&
             m_attackContactSourceIds.Count == 1)
         {
@@ -186,6 +208,19 @@ public sealed class AttackReactiveInteractObject : MonoBehaviour,
     /// <summary>攻撃判定との接触終了を記録します。</summary>
     /// <param name="attackSourceId">離れた攻撃判定のInstance ID。</param>
     public void EndAttackContact(int attackSourceId)
+    {
+        if (m_group != null)
+        {
+            m_group.EndAttackContact(this, attackSourceId);
+            return;
+        }
+
+        EndAttackContactLocally(attackSourceId);
+    }
+
+    /// <summary>このドラム缶に攻撃接触終了を適用します。</summary>
+    /// <param name="attackSourceId">離れた攻撃判定のInstance ID。</param>
+    internal void EndAttackContactLocally(int attackSourceId)
     {
         m_attackContactSourceIds.Remove(attackSourceId);
 
@@ -301,6 +336,7 @@ public sealed class AttackReactiveInteractObject : MonoBehaviour,
     /// <param name="collision">物理衝突情報。</param>
     private void RecordGroundContact(Collision collision)
     {
+        if (IsColliderFromSameGroup(collision.collider)) return;
         if ((m_groundLayerMask.value & (1 << collision.gameObject.layer)) == 0) return;
         for (int i = 0; i < collision.contactCount; i++)
         {
@@ -339,7 +375,8 @@ public sealed class AttackReactiveInteractObject : MonoBehaviour,
             RaycastHit hit = m_groundHits[i];
 
             if (hit.collider == null ||
-                hit.collider.attachedRigidbody == m_rigidbody)
+                hit.collider.attachedRigidbody == m_rigidbody ||
+                IsColliderFromSameGroup(hit.collider))
             {
                 continue;
             }
@@ -359,9 +396,16 @@ public sealed class AttackReactiveInteractObject : MonoBehaviour,
     /// <param name="damageData">受けるダメージと攻撃情報。</param>
     public void TakeDamage(AttackDamageData damageData)
     {
-        ApplyDamage(
-            damageData,
-            transform.position - transform.forward);
+        Vector3 attackCenter =
+            transform.position - transform.forward;
+
+        if (m_group != null)
+        {
+            m_group.TryApplyDamage(this, damageData, attackCenter);
+            return;
+        }
+
+        ApplyDamage(damageData, attackCenter);
     }
 
     /// <summary>
@@ -374,7 +418,67 @@ public sealed class AttackReactiveInteractObject : MonoBehaviour,
         AttackDamageData damageData,
         Vector3 attackCenter)
     {
+        return m_group != null
+            ? m_group.TryApplyDamage(this, damageData, attackCenter)
+            : ApplyDamage(damageData, attackCenter);
+    }
+
+    /// <summary>グループからこのドラム缶だけへダメージを適用します。</summary>
+    /// <param name="damageData">受けるダメージと攻撃情報。</param>
+    /// <param name="attackCenter">攻撃中心のワールド座標。</param>
+    /// <returns>true：ダメージを蓄積した。false：対象外または吹き飛び中だった。</returns>
+    internal bool TryApplyGroupDamage(
+        AttackDamageData damageData,
+        Vector3 attackCenter)
+    {
         return ApplyDamage(damageData, attackCenter);
+    }
+
+    /// <summary>壁グループへ登録します。</summary>
+    /// <param name="group">登録先のグループ。</param>
+    /// <returns>true：登録した。false：別のグループに登録済み。</returns>
+    internal bool TryRegisterGroup(AttackReactiveInteractObjectGroup group)
+    {
+        if (group == null)
+        {
+            return false;
+        }
+
+        if (m_group != null && m_group != group)
+        {
+            return false;
+        }
+
+        m_group = group;
+        return true;
+    }
+
+    /// <summary>指定グループから登録解除します。</summary>
+    /// <param name="group">解除するグループ。</param>
+    internal void UnregisterGroup(AttackReactiveInteractObjectGroup group)
+    {
+        if (m_group == group)
+        {
+            m_group = null;
+        }
+    }
+
+    /// <summary>指定Colliderが同一壁グループのドラム缶か確認します。</summary>
+    /// <param name="targetCollider">確認するCollider。</param>
+    /// <returns>true：同一グループの別ドラム缶。false：それ以外。</returns>
+    private bool IsColliderFromSameGroup(Collider targetCollider)
+    {
+        if (m_group == null || targetCollider == null)
+        {
+            return false;
+        }
+
+        AttackReactiveInteractObject target =
+            targetCollider.GetComponentInParent<AttackReactiveInteractObject>();
+
+        return target != null &&
+               target != this &&
+               target.m_group == m_group;
     }
 
     /// <summary>
@@ -410,7 +514,7 @@ public sealed class AttackReactiveInteractObject : MonoBehaviour,
         {
             // 超過分は持ち越さず、次回分の体力を全回復した状態にします。
             m_accumulatedDamage = 0;
-            Launch(attackCenter);
+            Launch(attackCenter, damageData);
         }
 
         return true;
@@ -420,7 +524,10 @@ public sealed class AttackReactiveInteractObject : MonoBehaviour,
     /// 攻撃中心から離れる方向へRigidbodyを吹き飛ばします。
     /// </summary>
     /// <param name="attackCenter">攻撃中心のワールド座標。</param>
-    private void Launch(Vector3 attackCenter)
+    /// <param name="damageData">攻撃元の方向情報を含むダメージ。</param>
+    private void Launch(
+        Vector3 attackCenter,
+        AttackDamageData damageData)
     {
         if (m_rigidbody == null)
         {
@@ -440,13 +547,32 @@ public sealed class AttackReactiveInteractObject : MonoBehaviour,
             launchDirection = transform.forward;
         }
 
+        launchDirection.Normalize();
+
+        if (damageData.TryGetSourceFacingDirection(
+                out Vector3 sourceFacingDirection))
+        {
+            // 従来の放射方向を残しつつ、Playerの体の正面へ緩やかに寄せる。
+            Vector3 correctedDirection = Vector3.Slerp(
+                launchDirection,
+                sourceFacingDirection,
+                m_playerFacingCorrectionRate);
+
+            if (correctedDirection.sqrMagnitude > DIRECTION_EPSILON)
+            {
+                launchDirection = correctedDirection.normalized;
+            }
+        }
+
         launchDirection =
-            (launchDirection.normalized +
+            (launchDirection +
              Vector3.up * m_upwardDirectionRate).normalized;
 
         m_rigidbody.isKinematic = false;
         m_rigidbody.AddForce(
-            launchDirection * m_launchImpulse,
+            launchDirection *
+            m_launchImpulse *
+            m_launchImpulseMultiplier,
             ForceMode.Impulse);
 
         m_settleTimer = 0.0f;
@@ -557,6 +683,10 @@ public sealed class AttackReactiveInteractObject : MonoBehaviour,
     {
         m_requiredDamage = Mathf.Max(1, m_requiredDamage);
         m_launchImpulse = Mathf.Max(0.0f, m_launchImpulse);
+        m_launchImpulseMultiplier =
+            Mathf.Max(0.0f, m_launchImpulseMultiplier);
+        m_playerFacingCorrectionRate =
+            Mathf.Clamp01(m_playerFacingCorrectionRate);
         m_upwardDirectionRate = Mathf.Clamp01(m_upwardDirectionRate);
         m_settleDuration = Mathf.Max(0.0f, m_settleDuration);
         m_maxSettleLinearSpeed = Mathf.Max(0.0f, m_maxSettleLinearSpeed);

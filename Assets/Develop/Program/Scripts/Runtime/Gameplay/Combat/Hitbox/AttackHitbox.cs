@@ -22,6 +22,8 @@ public sealed class AttackHitbox : MonoBehaviour
     [SerializeField, Tooltip("攻撃部の中心。未設定の場合は攻撃Colliderの中心を使用します。")]
     private Transform m_attackCenter;
 
+    private PlayerMotor m_playerMotor;
+
     /// <summary>攻撃部の中心位置をワールド座標で取得します。</summary>
     public Vector3 AttackCenter => m_attackCenter != null
         ? m_attackCenter.position
@@ -52,6 +54,12 @@ public sealed class AttackHitbox : MonoBehaviour
         {
             damageData =
                 damageData.WithAttackPowerType(attackPowerType);
+        }
+
+        if (m_playerMotor != null)
+        {
+            damageData = damageData.WithSourceFacingDirection(
+                m_playerMotor.FacingDirection);
         }
 
         if (damageReceiver is IDirectionalDamageable directionalReceiver)
@@ -125,6 +133,7 @@ public sealed class AttackHitbox : MonoBehaviour
     private void Awake()
     {
         ResolveCollider();
+        m_playerMotor = GetComponentInParent<PlayerMotor>();
 
         if (m_hitboxCollider == null)
         {

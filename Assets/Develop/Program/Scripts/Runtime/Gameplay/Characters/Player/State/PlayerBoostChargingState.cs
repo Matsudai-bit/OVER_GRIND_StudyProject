@@ -1000,7 +1000,7 @@ public sealed class PlayerBoostChargingState
     /// チャージを解除したときの遷移を行います。
     ///
     /// ダッシュ可能なチャージ量の場合は、
-    /// チャージ終了時点の実際の進行方向を
+    /// チャージ終了時点のプレイヤーの正面方向を
     /// ダッシュ方向として使用します。
     /// </summary>
     private void ReleaseCharge()
@@ -1008,9 +1008,11 @@ public sealed class PlayerBoostChargingState
         if (ChargeRate >=
             m_parameterAsset.MinBoostChargeRate)
         {
-            // 解除直前に表示されている体の正面をダッシュ方向として確定します。
+            // PresenterがLateUpdateで表示する向きと同じ論理値を使用する。
+            // ModelTransform.forwardはAnimatorの更新順やPrefabの初期回転に左右されるため、
+            // 統合先のモデル階層でも見た目とダッシュ方向がずれないようにする。
             Vector3 dashDirection =
-                Owner.ModelTransform != null ? Owner.ModelTransform.forward : m_currentModelFacingDirection;
+                m_currentModelFacingDirection;
 
             dashDirection.y = 0.0f;
 
