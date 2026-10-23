@@ -1,6 +1,5 @@
 using System;
 using UnityEngine;
-using static UnityEngine.UI.GridLayoutGroup;
 
 /// <summary>
 /// 1回分の直線突進を実行します。
@@ -8,7 +7,7 @@ using static UnityEngine.UI.GridLayoutGroup;
 public sealed class StraightChargeExecutor
 {
     /// <summary>
-    /// 直線突進の実行状態です。
+    /// 直線突進の内部実行状態です。
     /// </summary>
     private enum ExecutionPhase
     {
@@ -20,11 +19,13 @@ public sealed class StraightChargeExecutor
         FAILED
     }
 
-    // 方向ベクトルの有効判定に使用する閾値
-    private const float DIRECTION_SQR_THRESHOLD = 0.0001f;
+    // 方向ベクトルの有効判定閾値
+    private const float DIRECTION_SQR_THRESHOLD =
+        0.0001f;
 
-    // 到達判定に使用する距離
-    private const float REACH_DISTANCE = 0.05f;
+    // 到達判定距離
+    private const float REACH_DISTANCE =
+        0.05f;
 
     // 所有するボス
     private readonly BossController m_owner;
@@ -32,7 +33,7 @@ public sealed class StraightChargeExecutor
     // 突進攻撃パラメータ
     private S1BossChargeAttackParameters m_parameters;
 
-    // 目標位置を取得する処理
+    // 目標位置取得処理
     private Func<Vector3> m_targetPositionProvider;
 
     // 現在の実行状態
@@ -44,42 +45,54 @@ public sealed class StraightChargeExecutor
     // 突進方向
     private Vector3 m_chargeDirection;
 
+    // 突進開始位置
+    private Vector3 m_chargeStartPosition;
+
     // 突進終了位置
     private Vector3 m_chargeEndPosition;
+
+    // 実際の突進距離
+    private float m_chargeDistance;
+
+    /// <summary>
+    /// 行動フェーズが変更されたときに通知されます。
+    /// </summary>
+    public event Action<BossActionPhase>
+        PhaseChanged;
 
     /// <summary>
     /// 突進が完了したか取得します。
     /// </summary>
     public bool IsCompleted =>
-        m_executionPhase == ExecutionPhase.COMPLETED;
+        m_executionPhase ==
+        ExecutionPhase.COMPLETED;
 
     /// <summary>
     /// 突進が失敗したか取得します。
     /// </summary>
     public bool HasFailed =>
-        m_executionPhase == ExecutionPhase.FAILED;
+        m_executionPhase ==
+        ExecutionPhase.FAILED;
 
     /// <summary>
     /// 直線突進実行機構を生成します。
     /// </summary>
-    /// <param name="owner">実行対象のボス。</param>
-    public StraightChargeExecutor(BossController owner)
+    /// <param name="owner">
+    /// 実行対象のボス。
+    /// </param>
+    public StraightChargeExecutor(
+        BossController owner)
     {
-        m_owner = owner;
-        m_executionPhase = ExecutionPhase.IDLE;
+        m_owner =
+            owner;
+
+        m_executionPhase =
+            ExecutionPhase.IDLE;
     }
 
     /// <summary>
     /// 直線突進を開始します。
     /// </summary>
-    /// <param name="parameters">突進攻撃パラメータ。</param>
-    /// <param name="targetPositionProvider">
-    /// 目標位置を取得する処理。
-    /// </param>
-    /// <returns>
-    /// true：開始できました。
-    /// false：開始できませんでした。
-    /// </returns>
     public bool Start(
         S1BossChargeAttackParameters parameters,
         Func<Vector3> targetPositionProvider)
@@ -89,40 +102,40 @@ public sealed class StraightChargeExecutor
         if (m_owner == null ||
             m_owner.Motor == null ||
             m_owner.Navigation == null ||
-            m_owner.AnimationController == null ||
             parameters == null ||
             targetPositionProvider == null)
         {
-            m_executionPhase = ExecutionPhase.FAILED;
+            m_executionPhase =
+                ExecutionPhase.FAILED;
+
             return false;
         }
 
-        if (parameters.ChargeSpeed <= 0.0f ||
-            parameters.MaxChargeDistance <= 0.0f ||
-            parameters.PreparationDuration < 0.0f ||
-            parameters.RotationSpeed < 0.0f ||
-            parameters.StopMargin < 0.0f ||
-            parameters.EndDuration < 0.0f)
+        if (!ValidateParameters(
+                parameters))
         {
-            m_executionPhase = ExecutionPhase.FAILED;
+            m_executionPhase =
+                ExecutionPhase.FAILED;
+
             return false;
         }
 
-        m_parameters = parameters;
-        m_targetPositionProvider = targetPositionProvider;
+        m_parameters =
+            parameters;
 
-        m_elapsedTime = 0.0f;
-        m_chargeDirection = Vector3.zero;
-        m_chargeEndPosition = Vector3.zero;
+        m_targetPositionProvider =
+            targetPositionProvider;
 
-        m_owner.Motor.StopHorizontalMovement();
+        ResetRuntimeValues();
 
-        SetAnimationBool(
-            m_parameters.PreparationAnimationBoolName,
-            true);
+        m_owner.Motor
+            .StopHorizontalMovement();
 
         m_executionPhase =
             ExecutionPhase.PREPARING;
+
+        NotifyPhaseChanged(
+            BossActionPhase.PREPARATION);
 
         return true;
     }
@@ -130,21 +143,24 @@ public sealed class StraightChargeExecutor
     /// <summary>
     /// 直線突進を物理更新します。
     /// </summary>
-    /// <param name="deltaTime">物理フレームの経過時間。</param>
-    public void FixedUpdate(float deltaTime)
+    public void FixedUpdate(
+        float deltaTime)
     {
         switch (m_executionPhase)
         {
             case ExecutionPhase.PREPARING:
-                UpdatePreparation(deltaTime);
+                UpdatePreparation(
+                    deltaTime);
                 break;
 
             case ExecutionPhase.CHARGING:
-                UpdateCharge(deltaTime);
+                UpdateCharge(
+                    deltaTime);
                 break;
 
             case ExecutionPhase.ENDING:
-                UpdateEnding(deltaTime);
+                UpdateEnding(
+                    deltaTime);
                 break;
         }
     }
@@ -156,32 +172,35 @@ public sealed class StraightChargeExecutor
     {
         if (m_owner != null)
         {
-            m_owner.Motor?.StopHorizontalMovement();
+            m_owner.Motor?
+                .StopHorizontalMovement();
 
             DisableHitbox();
-            ResetAnimationBools();
         }
 
-        m_parameters = null;
-        m_targetPositionProvider = null;
+        m_parameters =
+            null;
 
-        m_elapsedTime = 0.0f;
-        m_chargeDirection = Vector3.zero;
-        m_chargeEndPosition = Vector3.zero;
+        m_targetPositionProvider =
+            null;
 
-        m_executionPhase = ExecutionPhase.IDLE;
+        ResetRuntimeValues();
+
+        m_executionPhase =
+            ExecutionPhase.IDLE;
     }
 
     /// <summary>
     /// 予備動作を更新します。
     /// </summary>
-    /// <param name="deltaTime">物理フレームの経過時間。</param>
-    private void UpdatePreparation(float deltaTime)
+    private void UpdatePreparation(
+        float deltaTime)
     {
         if (!TryGetTargetDirection(
                 out Vector3 direction))
         {
             SetFailed();
+
             return;
         }
 
@@ -195,7 +214,8 @@ public sealed class StraightChargeExecutor
             m_parameters.RotationSpeed,
             deltaTime);
 
-        m_elapsedTime += deltaTime;
+        m_elapsedTime +=
+            deltaTime;
 
         if (m_elapsedTime <
             m_parameters.PreparationDuration)
@@ -211,80 +231,253 @@ public sealed class StraightChargeExecutor
     /// </summary>
     private void StartCharge()
     {
+        Vector3 startPosition =
+            m_owner.transform.position;
+
+        Vector3 targetPosition =
+            m_targetPositionProvider.Invoke();
+
+        /*
+         * 実際の突進方向は予備動作終了時に
+         * ボスが向いている方向で固定します。
+         */
         m_chargeDirection =
             m_owner.transform.forward;
 
-        m_chargeDirection.y = 0.0f;
+        m_chargeDirection.y =
+            0.0f;
 
         if (m_chargeDirection.sqrMagnitude <=
             DIRECTION_SQR_THRESHOLD)
         {
             SetFailed();
+
             return;
         }
 
         m_chargeDirection.Normalize();
 
-        float chargeDistance =
-            m_owner.Navigation.GetMaxStraightMoveDistance(
-                m_chargeDirection,
-                m_parameters.MaxChargeDistance,
-                m_parameters.StopMargin);
+        Vector3 targetDifference =
+            targetPosition -
+            startPosition;
 
-        SetAnimationBool(
-            m_parameters.PreparationAnimationBoolName,
-            false);
+        targetDifference.y =
+            0.0f;
 
-        if (chargeDistance <= 0.0f)
+        /*
+         * Player位置を突進方向へ投影し、
+         * その位置よりさらに指定距離先を理想停止地点とします。
+         */
+        float targetDistance =
+            Vector3.Dot(
+                targetDifference,
+                m_chargeDirection);
+
+        targetDistance =
+            Mathf.Max(
+                0.0f,
+                targetDistance);
+
+        float desiredChargeDistance =
+            targetDistance +
+            m_parameters.TargetOverrunDistance;
+
+        // 攻撃そのものの最大距離で制限
+        desiredChargeDistance =
+            Mathf.Min(
+                desiredChargeDistance,
+                m_parameters.MaxChargeDistance);
+
+        /*
+         * NavMesh境界・移動可能範囲を考慮し、
+         * 実際に進める距離まで短縮します。
+         */
+        float availableChargeDistance =
+            m_owner.Navigation
+                .GetMaxStraightMoveDistance(
+                    m_chargeDirection,
+                    desiredChargeDistance,
+                    m_parameters.StopMargin);
+
+        if (availableChargeDistance <=
+            REACH_DISTANCE)
         {
             StartEnding();
+
             return;
         }
 
+        m_chargeStartPosition =
+            startPosition;
+
+        m_chargeDistance =
+            availableChargeDistance;
+
         m_chargeEndPosition =
-            m_owner.transform.position +
-            m_chargeDirection * chargeDistance;
+            startPosition +
+            m_chargeDirection *
+            availableChargeDistance;
 
-        m_elapsedTime = 0.0f;
-
-        SetAnimationBool(
-            m_parameters.ChargeAnimationBoolName,
-            true);
+        m_elapsedTime =
+            0.0f;
 
         EnableHitbox();
 
         m_executionPhase =
             ExecutionPhase.CHARGING;
+
+        NotifyPhaseChanged(
+            BossActionPhase.EXECUTION);
     }
 
     /// <summary>
     /// 突進移動を更新します。
     /// </summary>
-    /// <param name="deltaTime">物理フレームの経過時間。</param>
-    private void UpdateCharge(float deltaTime)
+    private void UpdateCharge(
+        float deltaTime)
     {
         Vector3 currentPosition =
             m_owner.transform.position;
 
-        Vector3 nextPosition =
-            Vector3.MoveTowards(
+        float remainingDistance =
+            GetHorizontalDistance(
                 currentPosition,
-                m_chargeEndPosition,
-                m_parameters.ChargeSpeed * deltaTime);
+                m_chargeEndPosition);
 
-        m_owner.Motor.MovePosition(nextPosition);
-
-        Vector3 difference =
-            m_chargeEndPosition - nextPosition;
-
-        difference.y = 0.0f;
-
-        if (difference.sqrMagnitude >
-            REACH_DISTANCE * REACH_DISTANCE)
+        if (remainingDistance <=
+            REACH_DISTANCE)
         {
+            CompleteChargeMovement();
+
             return;
         }
 
+        m_elapsedTime +=
+            deltaTime;
+
+        float currentSpeed =
+            CalculateChargeSpeed(
+                remainingDistance);
+
+        float moveDistance =
+            currentSpeed *
+            deltaTime;
+
+        /*
+         * 終点を超えないよう、
+         * 1フレームの移動量を残距離までに制限します。
+         */
+        moveDistance =
+            Mathf.Min(
+                moveDistance,
+                remainingDistance);
+
+        Vector3 nextPosition =
+            currentPosition +
+            m_chargeDirection *
+            moveDistance;
+
+        m_owner.Motor.MovePosition(
+            nextPosition);
+
+        if (moveDistance >=
+            remainingDistance)
+        {
+            CompleteChargeMovement();
+        }
+    }
+
+    /// <summary>
+    /// 現在の突進速度を計算します。
+    /// </summary>
+    private float CalculateChargeSpeed(
+        float remainingDistance)
+    {
+        /*
+         * 終点付近では加速状態よりも
+         * 減速を優先します。
+         */
+        if (m_parameters.DecelerationDistance >
+                0.0f &&
+            remainingDistance <=
+                m_parameters.DecelerationDistance)
+        {
+            return CalculateDecelerationSpeed(
+                remainingDistance);
+        }
+
+        if (m_parameters.AccelerationDuration >
+                0.0f &&
+            m_elapsedTime <
+                m_parameters.AccelerationDuration)
+        {
+            return CalculateAccelerationSpeed();
+        }
+
+        return m_parameters.ChargeSpeed;
+    }
+
+    /// <summary>
+    /// 加速区間の速度を計算します。
+    /// </summary>
+    private float CalculateAccelerationSpeed()
+    {
+        if (m_parameters.AccelerationDuration <=
+            0.0f)
+        {
+            return m_parameters.ChargeSpeed;
+        }
+
+        float normalizedTime =
+            Mathf.Clamp01(
+                m_elapsedTime /
+                m_parameters.AccelerationDuration);
+
+        float speedRate =
+            EvaluateCurve(
+                m_parameters.AccelerationCurve,
+                normalizedTime);
+
+        return m_parameters.ChargeSpeed *
+               speedRate;
+    }
+
+    /// <summary>
+    /// 減速区間の速度を計算します。
+    /// </summary>
+    private float CalculateDecelerationSpeed(
+        float remainingDistance)
+    {
+        if (m_parameters.DecelerationDistance <=
+            0.0f)
+        {
+            return m_parameters.ChargeSpeed;
+        }
+
+        /*
+         * 減速開始地点で0、
+         * 停止地点で1となる進捗率。
+         */
+        float normalizedProgress =
+            1.0f -
+            Mathf.Clamp01(
+                remainingDistance /
+                m_parameters.DecelerationDistance);
+
+        float decelerationRate =
+            EvaluateCurve(
+                m_parameters.DecelerationCurve,
+                normalizedProgress);
+
+        return m_parameters.ChargeSpeed *
+               (1.0f - decelerationRate);
+    }
+
+    /// <summary>
+    /// 突進移動を終了します。
+    /// </summary>
+    private void CompleteChargeMovement()
+    {
         m_owner.Motor.MovePosition(
             m_chargeEndPosition);
 
@@ -296,24 +489,22 @@ public sealed class StraightChargeExecutor
     /// </summary>
     private void StartEnding()
     {
-        m_owner.Motor.StopHorizontalMovement();
+        m_owner.Motor
+            .StopHorizontalMovement();
 
         DisableHitbox();
 
-        SetAnimationBool(
-            m_parameters.ChargeAnimationBoolName,
-            false);
-
-        SetAnimationBool(
-            m_parameters.EndAnimationBoolName,
-            true);
-
-        m_elapsedTime = 0.0f;
+        m_elapsedTime =
+            0.0f;
 
         m_executionPhase =
             ExecutionPhase.ENDING;
 
-        if (m_parameters.EndDuration <= 0.0f)
+        NotifyPhaseChanged(
+            BossActionPhase.RECOVERY);
+
+        if (m_parameters.EndDuration <=
+            0.0f)
         {
             SetCompleted();
         }
@@ -322,10 +513,11 @@ public sealed class StraightChargeExecutor
     /// <summary>
     /// 終了状態を更新します。
     /// </summary>
-    /// <param name="deltaTime">物理フレームの経過時間。</param>
-    private void UpdateEnding(float deltaTime)
+    private void UpdateEnding(
+        float deltaTime)
     {
-        m_elapsedTime += deltaTime;
+        m_elapsedTime +=
+            deltaTime;
 
         if (m_elapsedTime <
             m_parameters.EndDuration)
@@ -339,11 +531,6 @@ public sealed class StraightChargeExecutor
     /// <summary>
     /// 現在の目標方向を取得します。
     /// </summary>
-    /// <param name="direction">目標方向。</param>
-    /// <returns>
-    /// true：有効な方向を取得しました。
-    /// false：方向を取得できませんでした。
-    /// </returns>
     private bool TryGetTargetDirection(
         out Vector3 direction)
     {
@@ -351,63 +538,94 @@ public sealed class StraightChargeExecutor
             m_targetPositionProvider.Invoke() -
             m_owner.transform.position;
 
-        direction.y = 0.0f;
+        direction.y =
+            0.0f;
 
         if (direction.sqrMagnitude <=
             DIRECTION_SQR_THRESHOLD)
         {
-            direction = Vector3.zero;
+            direction =
+                Vector3.zero;
+
             return false;
         }
 
         direction.Normalize();
+
         return true;
     }
 
     /// <summary>
-    /// AnimatorのBool値を設定します。
+    /// AnimationCurveを評価します。
     /// </summary>
-    /// <param name="parameterName">Boolパラメータ名。</param>
-    /// <param name="value">設定する値。</param>
-    private void SetAnimationBool(
-        string parameterName,
-        bool value)
+    private float EvaluateCurve(
+        AnimationCurve curve,
+        float normalizedTime)
     {
-        if (string.IsNullOrEmpty(parameterName) ||
-            m_owner?.AnimationController == null)
+        if (curve == null)
         {
-            return;
+            return normalizedTime;
         }
 
-        int parameterID =
-            Animator.StringToHash(parameterName);
-
-        m_owner.AnimationController.SetBool(
-            parameterID,
-            value);
+        return Mathf.Clamp01(
+            curve.Evaluate(
+                Mathf.Clamp01(
+                    normalizedTime)));
     }
 
     /// <summary>
-    /// 突進用のAnimator Boolを解除します。
+    /// 水平方向の距離を取得します。
     /// </summary>
-    private void ResetAnimationBools()
+    private float GetHorizontalDistance(
+        Vector3 from,
+        Vector3 to)
     {
-        if (m_parameters == null)
-        {
-            return;
-        }
+        Vector3 difference =
+            to - from;
 
-        SetAnimationBool(
-            m_parameters.PreparationAnimationBoolName,
-            false);
+        difference.y =
+            0.0f;
 
-        SetAnimationBool(
-            m_parameters.ChargeAnimationBoolName,
-            false);
+        return difference.magnitude;
+    }
 
-        SetAnimationBool(
-            m_parameters.EndAnimationBoolName,
-            false);
+    /// <summary>
+    /// パラメータが有効か確認します。
+    /// </summary>
+    private bool ValidateParameters(
+        S1BossChargeAttackParameters parameters)
+    {
+        return
+            parameters.ChargeSpeed > 0.0f &&
+            parameters.MaxChargeDistance > 0.0f &&
+            parameters.PreparationDuration >= 0.0f &&
+            parameters.RotationSpeed >= 0.0f &&
+            parameters.StopMargin >= 0.0f &&
+            parameters.EndDuration >= 0.0f &&
+            parameters.AccelerationDuration >= 0.0f &&
+            parameters.DecelerationDistance >= 0.0f &&
+            parameters.TargetOverrunDistance >= 0.0f;
+    }
+
+    /// <summary>
+    /// Runtime値を初期化します。
+    /// </summary>
+    private void ResetRuntimeValues()
+    {
+        m_elapsedTime =
+            0.0f;
+
+        m_chargeDirection =
+            Vector3.zero;
+
+        m_chargeStartPosition =
+            Vector3.zero;
+
+        m_chargeEndPosition =
+            Vector3.zero;
+
+        m_chargeDistance =
+            0.0f;
     }
 
     /// <summary>
@@ -415,12 +633,14 @@ public sealed class StraightChargeExecutor
     /// </summary>
     private void EnableHitbox()
     {
-        if (m_parameters?.AttackIdentifier == null)
+        if (m_parameters?.AttackIdentifier ==
+            null)
         {
             return;
         }
-        m_owner.EnableAttackHitboxes(m_parameters.AttackIdentifier);
 
+        m_owner.EnableAttackHitboxes(
+            m_parameters.AttackIdentifier);
     }
 
     /// <summary>
@@ -428,14 +648,25 @@ public sealed class StraightChargeExecutor
     /// </summary>
     private void DisableHitbox()
     {
-        if (m_parameters?.AttackIdentifier == null)
+        if (m_parameters?.AttackIdentifier ==
+            null)
         {
             return;
         }
 
-        m_owner.AttackHitboxRegistry?.DisableHitboxes(
-            m_parameters.AttackIdentifier);
+        m_owner.AttackHitboxRegistry?
+            .DisableHitboxes(
+                m_parameters.AttackIdentifier);
+    }
 
+    /// <summary>
+    /// 行動フェーズ変更を通知します。
+    /// </summary>
+    private void NotifyPhaseChanged(
+        BossActionPhase phase)
+    {
+        PhaseChanged?.Invoke(
+            phase);
     }
 
     /// <summary>
@@ -443,10 +674,6 @@ public sealed class StraightChargeExecutor
     /// </summary>
     private void SetCompleted()
     {
-        SetAnimationBool(
-            m_parameters.EndAnimationBoolName,
-            false);
-
         m_executionPhase =
             ExecutionPhase.COMPLETED;
     }
@@ -456,10 +683,10 @@ public sealed class StraightChargeExecutor
     /// </summary>
     private void SetFailed()
     {
-        m_owner?.Motor?.StopHorizontalMovement();
+        m_owner?.Motor?
+            .StopHorizontalMovement();
 
         DisableHitbox();
-        ResetAnimationBools();
 
         m_executionPhase =
             ExecutionPhase.FAILED;

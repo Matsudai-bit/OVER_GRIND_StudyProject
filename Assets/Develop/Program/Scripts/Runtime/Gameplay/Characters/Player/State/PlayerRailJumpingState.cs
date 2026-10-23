@@ -262,7 +262,7 @@ public sealed class PlayerRailJumpingState : StateBase<PlayerStateMachineCompone
             return;
         }
 
-        if (!Owner.Motor.TryMoveAlongRail(targetPosition, forward, deltaTime, out _))
+        if (!Owner.Motor.TryMoveAlongRail(targetPosition, forward, deltaTime, m_sourceRail.ForcesEscape, out _))
         {
             Owner.GrindController.BlockRailUntilSeparated(m_sourceRail);
             Owner.Motor.EndRailMotion(Owner.Motor.RailVelocity);

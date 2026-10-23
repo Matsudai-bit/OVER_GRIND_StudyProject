@@ -97,8 +97,16 @@ public class ContainerController : MonoBehaviour
         m_containerRImage.sprite = m_defaultContainerRTexture;
 
         // カーソルを固定・解除する
-        foreach (var selector in m_buttonSelectorL) selector.UnLockCursor();
-        foreach (var selector in m_buttonSelectorR) selector.LockCursor();
+        foreach (var selector in m_buttonSelectorL)
+        {
+            selector.enabled = true;
+            selector.UnLockCursor();
+        }
+        foreach (var selector in m_buttonSelectorR)
+        {
+            selector.LockCursor();
+            selector.enabled = false;
+        }
     }
 
     public void ChangeToRight()
@@ -112,7 +120,15 @@ public class ContainerController : MonoBehaviour
         m_containerRImage.sprite = m_OnCursorContainerRTexture;
 
         // カーソルを固定・解除する
-        foreach (var selector in m_buttonSelectorL) selector.LockCursor();
-        foreach (var selector in m_buttonSelectorR) selector.UnLockCursor();
+        foreach (var selector in m_buttonSelectorL)
+        {
+            selector.LockCursor();
+            selector.enabled = false;
+        }
+        foreach (var selector in m_buttonSelectorR)
+        {
+            selector.enabled = true;
+            selector.UnLockCursor();
+        }
     }
 }

@@ -9,10 +9,10 @@ public class SplineRailInfo : MonoBehaviour
     // ソニック風にするための拡張プロパティ例
     [Header("Rail Settings")]
     [SerializeField] private float railSpeedMultiplier = 1.0f; // レール固有の速度倍率
-    [SerializeField] private bool isBoostRail = false;         // 加速パネル付きレールか
+    [SerializeField] private bool forcedEscape = true;         // 加速パネル付きレールか
 
     public float SpeedMultiplier => railSpeedMultiplier;
-    public bool IsBoostRail => isBoostRail;
+    public bool ForcesEscape => forcedEscape;
 
 
     public float Length { get { return Container.CalculateLength(); } }

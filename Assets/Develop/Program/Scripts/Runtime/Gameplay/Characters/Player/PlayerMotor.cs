@@ -206,6 +206,7 @@ public sealed class PlayerMotor : MonoBehaviour
         Vector3 targetPosition,
         Vector3 forward,
         float deltaTime,
+        bool isForcedExit,
         out RaycastHit obstacle)
     {
         obstacle = default;
@@ -226,82 +227,87 @@ public sealed class PlayerMotor : MonoBehaviour
 
         float nearestDistance =
             float.PositiveInfinity;
-
-        if (distance > Mathf.Epsilon)
-        {
-            Physics.SyncTransforms();
-
-            RaycastHit[] hits =
-                m_playerRigidbody.SweepTestAll(
-                    displacement / distance,
-                    distance,
-                    QueryTriggerInteraction.Ignore);
-
-            foreach (RaycastHit hit in hits)
+  
+            if (distance > Mathf.Epsilon)
             {
-                Collider hitCollider =
-                    hit.collider;
+                Physics.SyncTransforms();
 
-                if (hitCollider == null)
+                RaycastHit[] hits =
+                    m_playerRigidbody.SweepTestAll(
+                        displacement / distance,
+                        distance,
+                        QueryTriggerInteraction.Ignore);
+
+                foreach (RaycastHit hit in hits)
                 {
-                    continue;
+                    Collider hitCollider =
+                        hit.collider;
+
+                    if (hitCollider == null)
+                    {
+                        continue;
+                    }
+
+                    // 自分自身は無視
+                    if (hitCollider.attachedRigidbody ==
+                        m_playerRigidbody)
+                    {
+                        continue;
+                    }
+
+                    // レール自身は無視
+                    if (IsRailCollider(hitCollider))
+                    {
+                        continue;
+                    }
+                    if (!isForcedExit)
+                    {
+                        continue;
+                    }
+
+                    // Obstacle Layer以外は無視
+                    if (!IsObstacleLayer(
+                        hitCollider.gameObject.layer))
+                    {
+                        continue;
+                    }
+
+                    // 最も近い障害物を採用
+                    if (hit.distance >= nearestDistance)
+                    {
+                        continue;
+                    }
+
+                    nearestDistance =
+                        hit.distance;
+
+                    obstacle = hit;
                 }
-
-                // 自分自身は無視
-                if (hitCollider.attachedRigidbody ==
-                    m_playerRigidbody)
-                {
-                    continue;
-                }
-
-                // レール自身は無視
-                if (IsRailCollider(hitCollider))
-                {
-                    continue;
-                }
-
-                // Obstacle Layer以外は無視
-                if (!IsObstacleLayer(
-                    hitCollider.gameObject.layer))
-                {
-                    continue;
-                }
-
-                // 最も近い障害物を採用
-                if (hit.distance >= nearestDistance)
-                {
-                    continue;
-                }
-
-                nearestDistance =
-                    hit.distance;
-
-                obstacle = hit;
             }
-        }
 
-        // 障害物が存在する
-        if (!float.IsPositiveInfinity(
-            nearestDistance))
-        {
-            float safeDistance =
-                Mathf.Max(
-                    nearestDistance -
-                    m_obstacleSkinWidth,
-                    0.0f);
+            // 障害物が存在する
+            if (!float.IsPositiveInfinity(
+                nearestDistance))
+            {
+                float safeDistance =
+                    Mathf.Max(
+                        nearestDistance -
+                        m_obstacleSkinWidth,
+                        0.0f);
 
-            Vector3 movement =
-                displacement.normalized *
-                safeDistance;
+                Vector3 movement =
+                    displacement.normalized *
+                    safeDistance;
 
-            m_playerRigidbody.position +=
-                movement;
+                m_playerRigidbody.position +=
+                    movement;
 
-            m_railVelocity =
-                movement / deltaTime;
+                m_railVelocity =
+                    movement / deltaTime;
 
-            return false;
-        }
+                return false;
+            }
+        
 
         // 障害物がなければ目標位置へ移動
         m_railVelocity =

@@ -13,17 +13,23 @@ public struct AttackDamageData
     [SerializeField]
     private AttackIdentifier m_attackIdentifier;
 
+    [SerializeField]
+    private AttackPowerType m_attackPowerType;
+
     /// <summary>
     /// 攻撃情報を生成します。
     /// </summary>
     /// <param name="damage">与えるダメージ量。</param>
     /// <param name="attackIdentifier">攻撃を識別するアセット。</param>
+    /// <param name="attackPowerType">攻撃の威力種別。</param>
     public AttackDamageData(
         int damage,
-        AttackIdentifier attackIdentifier = null)
+        AttackIdentifier attackIdentifier = null,
+        AttackPowerType attackPowerType = AttackPowerType.NORMAL)
     {
         m_damage = Mathf.Max(0, damage);
         m_attackIdentifier = attackIdentifier;
+        m_attackPowerType = attackPowerType;
     }
 
     /// <summary>与えるダメージ量を取得します。</summary>
@@ -32,6 +38,9 @@ public struct AttackDamageData
     /// <summary>攻撃を識別するアセットを取得します。</summary>
     public AttackIdentifier AttackIdentifier => m_attackIdentifier;
 
+    /// <summary>攻撃の威力種別を取得します。</summary>
+    public AttackPowerType PowerType => m_attackPowerType;
+
     /// <summary>
     /// 攻撃IDを維持したままダメージ量を変更した情報を生成します。
     /// </summary>
@@ -39,6 +48,23 @@ public struct AttackDamageData
     /// <returns>ダメージ量を変更した攻撃情報。</returns>
     public AttackDamageData WithDamage(int damage)
     {
-        return new AttackDamageData(damage, AttackIdentifier);
+        return new AttackDamageData(
+            damage,
+            AttackIdentifier,
+            PowerType);
+    }
+
+    /// <summary>
+    /// ダメージ量と攻撃IDを維持したまま威力種別を変更した情報を生成します。
+    /// </summary>
+    /// <param name="attackPowerType">変更後の威力種別。</param>
+    /// <returns>威力種別を変更した攻撃情報。</returns>
+    public AttackDamageData WithAttackPowerType(
+        AttackPowerType attackPowerType)
+    {
+        return new AttackDamageData(
+            Damage,
+            AttackIdentifier,
+            attackPowerType);
     }
 }

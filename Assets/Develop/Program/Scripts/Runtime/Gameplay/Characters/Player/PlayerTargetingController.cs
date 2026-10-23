@@ -5,9 +5,8 @@ using UnityEngine.InputSystem;
 
 /// <summary>
 /// プレイヤーのターゲット注視機能を管理します。
-/// Xボタンを押している間だけターゲット画像を表示し、
-/// 対象部位へ一度だけカメラを向けます。
-/// ターゲット中もカメラは自由に操作できます。
+/// 右スティック押し込みでターゲット機能を切り替え、
+/// ターゲット中は右スティック左右入力で対象を切り替えます。
 /// </summary>
 public sealed class PlayerTargetingController : MonoBehaviour
 {
@@ -16,13 +15,9 @@ public sealed class PlayerTargetingController : MonoBehaviour
     [SerializeField, Header("Parameter Asset")]
     private PlayerTargetingControllerParameterAsset m_parameterAsset;
 
-    [Header("Target Search")]
-
-    [SerializeField, Min(0.1f)]
-    private float m_targetSearchRadius = 20.0f;
-
-    [SerializeField]
-    private LayerMask m_targetLayer;
+    [SerializeField, Header("Target Search")]
+    [Tooltip("シーン内のTargetPointと個別の選択可能距離を管理するManagerです。")]
+    private TargetPointManager m_targetPointManager;
 
     [Header("Target Reticle")]
 
@@ -50,20 +45,38 @@ public sealed class PlayerTargetingController : MonoBehaviour
              "位置を決定できるようにするために使用します。未設定の場合は移動方向を渡しません。")]
     private PlayerMotor m_playerMotor;
 
-    private readonly List<TargetableEnemy> m_candidates =
-        new List<TargetableEnemy>();
+    private readonly List<TargetPoint> m_targetCandidates = new();
 
     private InputAction m_targetAction;
     private InputAction m_targetLeftAction;
     private InputAction m_targetRightAction;
 
-    private TargetableEnemy m_currentEnemy;
-    private int m_currentTargetPointIndex = -1;
+    private TargetPoint m_currentTargetPoint;
 
     private TargetReticleBillboard m_targetReticle;
     private Tween m_reticleTween;
 
     private bool m_isTargeting;
+
+    /// <summary>
+    /// 現在ターゲット中の対象Transformを取得します。
+    /// </summary>
+    /// <returns>
+    /// ターゲット中かつ対象が有効な場合は対象Transform、
+    /// それ以外の場合はnull。
+    /// </returns>
+    public Transform GetCurrentTargetTransform()
+    {
+        if (!m_isTargeting)
+        {
+            return null;
+        }
+
+        TargetPoint targetPoint = GetCurrentTargetPoint();
+        return targetPoint != null
+            ? targetPoint.TargetTransform
+            : null;
+    }
 
     /// <summary>
     /// 初期化を行います。
@@ -90,8 +103,6 @@ public sealed class PlayerTargetingController : MonoBehaviour
             return;
         }
 
-        m_targetSearchRadius = m_parameterAsset.TargetSearchRadius;
-        m_targetLayer = m_parameterAsset.TargetLayer;
         m_targetReticlePrefab = m_parameterAsset.TargetReticlePrefab;
         m_reticleDistanceFromTarget = m_parameterAsset.ReticleDistanceFromTarget;
         m_reticleMoveDuration = m_parameterAsset.ReticleMoveDuration;
@@ -134,7 +145,7 @@ public sealed class PlayerTargetingController : MonoBehaviour
         {
             Vector3 targetPosition =
                 GetReticlePosition(
-                    targetPoint.transform);
+                    targetPoint.TargetTransform);
 
             m_targetReticle.transform.position =
                 Vector3.Lerp(
@@ -148,7 +159,7 @@ public sealed class PlayerTargetingController : MonoBehaviour
             // ★修正点: Playerの移動方向を渡すことで、
             // 後退・斜め後退移動時にもカメラがPlayerの背後寄りへ回り込みやすくする
             m_playerCamera.UpdateTargetFocus(
-                targetPoint.transform,
+                targetPoint.TargetTransform,
                 GetPlayerMoveDirection());
         }
     }
@@ -184,8 +195,7 @@ public sealed class PlayerTargetingController : MonoBehaviour
     /// </summary>
     private void OnEnable()
     {
-        m_targetAction.started += OnTargetStarted;
-        m_targetAction.canceled += OnTargetCanceled;
+        m_targetAction.performed += OnTargetPerformed;
 
         m_targetLeftAction.performed += OnTargetLeftPerformed;
         m_targetRightAction.performed += OnTargetRightPerformed;
@@ -197,35 +207,30 @@ public sealed class PlayerTargetingController : MonoBehaviour
     private void OnDisable()
     {
         StopTargeting();
-        m_targetAction.started -= OnTargetStarted;
-        m_targetAction.canceled -= OnTargetCanceled;
+        m_targetAction.performed -= OnTargetPerformed;
 
         m_targetLeftAction.performed -= OnTargetLeftPerformed;
         m_targetRightAction.performed -= OnTargetRightPerformed;
     }
 
     /// <summary>
-    /// Xボタンを押したときの処理を行います。
+    /// 右スティックを押し込んだときにターゲット機能を切り替えます。
     /// </summary>
     /// <param name="context">入力コンテキスト。</param>
-    private void OnTargetStarted(
+    private void OnTargetPerformed(
         InputAction.CallbackContext context)
     {
+        if (m_isTargeting)
+        {
+            StopTargeting();
+            return;
+        }
+
         StartTargeting();
     }
 
     /// <summary>
-    /// Xボタンを離したときの処理を行います。
-    /// </summary>
-    /// <param name="context">入力コンテキスト。</param>
-    private void OnTargetCanceled(
-        InputAction.CallbackContext context)
-    {
-        StopTargeting();
-    }
-
-    /// <summary>
-    /// Xボタンを押したときにターゲットを開始します。
+    /// 右スティック押し込みでターゲットを開始します。
     /// </summary>
     private void StartTargeting()
     {
@@ -234,17 +239,24 @@ public sealed class PlayerTargetingController : MonoBehaviour
             return;
         }
 
-        TargetableEnemy nearestEnemy =
-            FindNearestEnemy();
+        if (m_targetPointManager == null)
+        {
+            Debug.LogWarning(
+                $"{nameof(TargetPointManager)}が設定されていません。",
+                this);
+            return;
+        }
 
-        if (nearestEnemy == null ||
-            nearestEnemy.TargetPoints.Count == 0)
+        m_targetPointManager.GetTargetablePoints(
+            transform.position,
+            m_targetCandidates);
+
+        if (m_targetCandidates.Count == 0)
         {
             return;
         }
 
-        m_currentEnemy = nearestEnemy;
-        m_currentTargetPointIndex = 0;
+        m_currentTargetPoint = m_targetCandidates[0];
         m_isTargeting = true;
 
         TargetPoint targetPoint =
@@ -257,21 +269,21 @@ public sealed class PlayerTargetingController : MonoBehaviour
         }
 
         ShowTargetReticle(
-            targetPoint.transform,
+            targetPoint.TargetTransform,
             false);
 
         if (m_playerCamera != null)
         {
             // ★修正点: 開始時点の移動方向も渡し、カメラ軌道の初期スナップに反映する
             m_playerCamera.BeginTargetFocus(
-                targetPoint.transform,
+                targetPoint.TargetTransform,
                 m_cameraFocusDuration,
                 GetPlayerMoveDirection());
         }
     }
 
     /// <summary>
-    /// Xボタンを離したときにターゲットを終了します。
+    /// 右スティック押し込みでターゲットを終了します。
     /// </summary>
     private void StopTargeting()
     {
@@ -282,8 +294,8 @@ public sealed class PlayerTargetingController : MonoBehaviour
 
         m_isTargeting = false;
 
-        m_currentEnemy = null;
-        m_currentTargetPointIndex = -1;
+        m_currentTargetPoint = null;
+        m_targetCandidates.Clear();
 
         HideTargetReticle();
 
@@ -294,7 +306,7 @@ public sealed class PlayerTargetingController : MonoBehaviour
     }
 
     /// <summary>
-    /// D-Pad左でTargetPointを切り替えます。
+    /// 右スティックを左へ倒してTargetPointを切り替えます。
     /// </summary>
     /// <param name="context">入力コンテキスト。</param>
     private void OnTargetLeftPerformed(
@@ -309,7 +321,7 @@ public sealed class PlayerTargetingController : MonoBehaviour
     }
 
     /// <summary>
-    /// D-Pad右でTargetPointを切り替えます。
+    /// 右スティックを右へ倒してTargetPointを切り替えます。
     /// </summary>
     /// <param name="context">入力コンテキスト。</param>
     private void OnTargetRightPerformed(
@@ -331,23 +343,32 @@ public sealed class PlayerTargetingController : MonoBehaviour
     /// </param>
     private void ChangeTargetPoint(int direction)
     {
-        if (m_currentEnemy == null ||
-            m_currentEnemy.TargetPoints.Count == 0)
+        if (m_targetPointManager == null ||
+            m_currentTargetPoint == null ||
+            direction == 0)
         {
             return;
         }
 
-        int count =
-            m_currentEnemy.TargetPoints.Count;
+        m_targetPointManager.GetTargetablePoints(
+            transform.position,
+            m_targetCandidates);
 
-        m_currentTargetPointIndex =
-            (m_currentTargetPointIndex +
-             direction +
-             count) %
-            count;
+        if (m_targetCandidates.Count == 0)
+        {
+            StopTargeting();
+            return;
+        }
 
-        TargetPoint targetPoint =
-            GetCurrentTargetPoint();
+        int currentIndex =
+            m_targetCandidates.IndexOf(m_currentTargetPoint);
+        int nextIndex = currentIndex < 0
+            ? 0
+            : (currentIndex + direction + m_targetCandidates.Count) %
+              m_targetCandidates.Count;
+
+        m_currentTargetPoint = m_targetCandidates[nextIndex];
+        TargetPoint targetPoint = m_currentTargetPoint;
 
         if (targetPoint == null)
         {
@@ -355,14 +376,14 @@ public sealed class PlayerTargetingController : MonoBehaviour
         }
 
         ShowTargetReticle(
-            targetPoint.transform,
+            targetPoint.TargetTransform,
             true);
 
         if (m_playerCamera != null)
         {
             // ★修正点: TargetPoint切り替え時も移動方向を渡す
             m_playerCamera.BeginTargetFocus(
-                targetPoint.transform,
+                targetPoint.TargetTransform,
                 m_cameraFocusDuration,
                 GetPlayerMoveDirection());
         }
@@ -374,57 +395,29 @@ public sealed class PlayerTargetingController : MonoBehaviour
     /// <returns>現在のTargetPoint。</returns>
     private TargetPoint GetCurrentTargetPoint()
     {
-        if (m_currentEnemy == null ||
-            m_currentTargetPointIndex < 0 ||
-            m_currentTargetPointIndex >=
-            m_currentEnemy.TargetPoints.Count)
+        if (!IsTargetPointAvailable(m_currentTargetPoint) ||
+            m_targetPointManager == null ||
+            !m_targetPointManager.IsTargetable(
+                m_currentTargetPoint,
+                transform.position))
         {
             return null;
         }
 
-        return
-            m_currentEnemy.TargetPoints[
-                m_currentTargetPointIndex];
+        return m_currentTargetPoint;
     }
 
     /// <summary>
-    /// 最も近いTargetableEnemyを取得します。
+    /// TargetPointがロックオン可能な状態か確認します。
     /// </summary>
-    /// <returns>最も近い敵。</returns>
-    private TargetableEnemy FindNearestEnemy()
+    /// <param name="targetPoint">確認対象の部位。</param>
+    /// <returns>ロックオン可能な場合はtrue。</returns>
+    private bool IsTargetPointAvailable(TargetPoint targetPoint)
     {
-        Collider[] colliders =
-            Physics.OverlapSphere(
-                transform.position,
-                m_targetSearchRadius,
-                m_targetLayer);
-
-        TargetableEnemy nearestEnemy = null;
-        float nearestDistance = float.MaxValue;
-
-        foreach (Collider collider in colliders)
-        {
-            TargetableEnemy enemy =
-                collider.GetComponentInParent<TargetableEnemy>();
-
-            if (enemy == null ||
-                enemy.TargetPoints.Count == 0)
-            {
-                continue;
-            }
-
-            float distance =
-                (enemy.transform.position -
-                 transform.position).sqrMagnitude;
-
-            if (distance < nearestDistance)
-            {
-                nearestDistance = distance;
-                nearestEnemy = enemy;
-            }
-        }
-
-        return nearestEnemy;
+        return targetPoint != null &&
+               targetPoint.IsActive &&
+               targetPoint.TargetTransform != null &&
+               targetPoint.gameObject.activeInHierarchy;
     }
 
     /// <summary>

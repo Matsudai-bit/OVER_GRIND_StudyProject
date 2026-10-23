@@ -76,6 +76,10 @@ public sealed class PlayerGrindingState
     {
         if (!m_hasStarted)
         {
+            if (m_rail&&!m_rail.ForcesEscape &&  Owner.gameObject.TryGetComponent(out Collider collider))
+            {
+                collider.enabled = false;
+            }
             if (m_isResuming)
             {
                 Owner.GrindController.StartGrindAt(
@@ -101,17 +105,25 @@ public sealed class PlayerGrindingState
             return;
         }
 
+        if (Owner.gameObject.TryGetComponent(out Collider collide2r))
+        {
+            collide2r.enabled = true;
+        }
+
         if (Owner.GrindController.IsCollisionExiting)
         {
+       
             Owner.RequestRailStateChange<
                 PlayerRailExitingState>();
-
+          
             return;
         }
 
         if (Owner.InputReader.IsAttackHeld)
         {
+
             Owner.RequestRailStateChange<PlayerRailExitingState>(true);
+
             return;
         }
 

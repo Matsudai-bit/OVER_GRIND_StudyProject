@@ -21,6 +21,7 @@ public sealed class PlayerBoostChargingParameterAssetEditor : Editor
         DrawParameter("m_stationaryStartChargeTime", "停止中開始：最大チャージ時間", "停止中にチャージを開始した場合の最大時間（秒）。");
         DrawParameter("m_minBoostChargeRate", "ダッシュに必要な最低チャージ割合", "この割合以上でチャージを離すとブーストダッシュへ移行します。");
         DrawParameter("m_chargeMoveSpeedRate", "チャージ中の開始時速度倍率", "チャージ開始時の実速度に掛ける倍率。チャージ終了までこの速度を維持します。");
+        DrawParameter("m_minMovingChargeStartSpeed", "移動中チャージの最低開始速度", "現在の水平速度がこの値以上の場合のみ、移動中チャージを開始できます。停止中チャージには使用しません。");
 
         EditorGUILayout.Space();
         EditorGUILayout.LabelField("入力判定", EditorStyles.boldLabel);
@@ -37,6 +38,18 @@ public sealed class PlayerBoostChargingParameterAssetEditor : Editor
         DrawParameter("m_driftForwardTurnRate", "進行方向入力の旋回倍率", "最初に決めた進行方向へ入力したときの倍率。1で基準の旋回速度です。");
         DrawParameter("m_driftNeutralTurnRate", "無入力の旋回倍率", "無入力時に維持する内向き旋回の倍率。0で旋回しません。");
         DrawParameter("m_driftCounterTurnRate", "逆入力の旋回倍率", "逆入力でも旋回方向は維持されます。値を小さくするほど緩やかに曲がります。0で旋回しません。");
+
+        EditorGUILayout.Space();
+        EditorGUILayout.LabelField("ターゲット中の旋回設定", EditorStyles.boldLabel);
+        DrawParameter("m_targetDriftForwardTurnRate", "前入力の旋回倍率", "ターゲットを中心に旋回中、スティックを前へ倒したときの倍率。入力は移動方向ではなく旋回の強さだけに反映されます。");
+        DrawParameter("m_targetDriftNeutralTurnRate", "無入力の旋回倍率", "ターゲットを中心に旋回中、無入力時に使用する倍率。0でターゲット方向への旋回補正を行いません。");
+        DrawParameter("m_targetDriftCounterTurnRate", "後ろ入力の旋回倍率", "ターゲットを中心に旋回中、スティックを後ろへ倒したときの倍率。入力は移動方向ではなく旋回の強さだけに反映されます。");
+        DrawParameter("m_targetOrbitRadius", "維持する旋回距離", "対象との水平距離がこの値より大きい間は、前後入力に応じて内側へ入りながら旋回します。");
+        DrawParameter("m_targetOrbitMaxInwardAngle", "接近時の最大内向き角度", "対象から遠い場合に接線方向を内側へ傾ける最大角度（度）。大きいほど素早く接近します。");
+        DrawParameter("m_targetOrbitNeutralInwardRate", "無入力時の接近割合", "無入力時に適用する内向き角度の割合。前入力で1へ、後ろ入力で0へ変化します。");
+
+        EditorGUILayout.Space();
+        EditorGUILayout.LabelField("ドリフト共通設定", EditorStyles.boldLabel);
         DrawParameter("m_counterInputMovementAngle", "逆入力の外側移動角度", "逆入力中に移動方向を旋回外側へ傾ける角度。右旋回なら左側、左旋回なら右側へ移動します。");
         DrawParameter("m_driftSteeringResponseTime", "旋回入力の反応時間", "旋回入力へ到達するまでの時間（秒）。大きいほど入力変化が穏やかになります。");
         DrawParameter("m_facingRotationSpeed", "プレイヤーの向き変更速度", "プレイヤーの見た目が進行方向へ向く速度（度/秒）。");
@@ -76,7 +89,8 @@ public sealed class PlayerBoostChargingParameterAssetEditor : Editor
         EditorGUILayout.HelpBox(
             "移動中は、チャージボタン押下時から実際の移動方向が「方向固定前の自由旋回角度」以上変化した場合のみチャージを開始できます。" +
             "進行方向入力・無入力・逆入力は、それぞれ個別の旋回倍率で調整できます。" +
-            "逆入力でも最初に決めた旋回方向を維持し、実際の移動方向だけを設定角度だけ外側へ傾けます。",
+            "逆入力でも最初に決めた旋回方向を維持し、実際の移動方向だけを設定角度だけ外側へ傾けます。" +
+            "ターゲット中は左右入力を使用せず、前入力・無入力・後ろ入力で旋回倍率だけを変更します。",
             MessageType.Info);
     }
 
