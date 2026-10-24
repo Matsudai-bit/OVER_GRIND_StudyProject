@@ -2,8 +2,12 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
+/// <summary>
+/// ゲームパッドの振動再生を一元管理します。
+/// </summary>
 public class GamepadRumbleController : MonoBehaviour
 {
+    /// <summary>シングルトンインスタンス。</summary>
     public static GamepadRumbleController Instance { get; private set; }
 
     [SerializeField, Header("振動要求イベント")]
@@ -13,7 +17,7 @@ public class GamepadRumbleController : MonoBehaviour
     private PauseChangedEvent m_pauseChangedEvent;
 
     [SerializeField, Header("競合制御方式")]
-    private GamepadRumbleConflictMode m_conflictMode = GamepadRumbleConflictMode.Priority;
+    private GamepadRumbleConflictMode m_conflictMode = GamepadRumbleConflictMode.PRIORITY;
 
     [Header("将来の拡張用設定")]
     [SerializeField, Header("振動機能の有効/無効")]
@@ -22,21 +26,33 @@ public class GamepadRumbleController : MonoBehaviour
     [SerializeField, Range(0f, 1f), Header("全体倍率 (0.0 ~ 1.0)")]
     private float m_masterStrength = 1.0f;
 
+    // 現在再生中の振動アセット
     private GamepadRumbleAsset m_currentAsset;
+
+    // 現在の振動の経過時間
     private float m_currentElapsedTime = 0f;
+
+    // ポーズ中かどうか
     private bool m_isPaused = false;
+
+    // 実行中の振動コルーチン
     private Coroutine m_activeRumbleCoroutine;
 
+    /// <summary>振動機能の有効/無効を取得または設定します。</summary>
     public bool IsEnabled
     {
         get => m_isEnabled;
         set
         {
             m_isEnabled = value;
-            if (!m_isEnabled) StopAndResetMotors();
+            if (!m_isEnabled)
+            {
+                StopAndResetMotors();
+            }
         }
     }
 
+    /// <summary>振動の全体倍率を取得または設定します。</summary>
     public float MasterStrength
     {
         get => m_masterStrength;
@@ -63,7 +79,6 @@ public class GamepadRumbleController : MonoBehaviour
             m_rumbleRequestEvent.OnRequested += OnRumbleRequested;
         }
 
-        // 既存 PauseChangedEvent の登録用メソッドを使用
         if (m_pauseChangedEvent != null)
         {
             m_pauseChangedEvent.RegisterListener(OnPauseChanged);
@@ -77,7 +92,6 @@ public class GamepadRumbleController : MonoBehaviour
             m_rumbleRequestEvent.OnRequested -= OnRumbleRequested;
         }
 
-        // 既存 PauseChangedEvent の解除用メソッドを使用
         if (m_pauseChangedEvent != null)
         {
             m_pauseChangedEvent.UnregisterListener(OnPauseChanged);
@@ -86,11 +100,14 @@ public class GamepadRumbleController : MonoBehaviour
         StopAndResetMotors();
     }
 
-    // 既存 PauseChangedEventData を受け取るイベントハンドラー
+    /// <summary>
+    /// ポーズ状態の変更を受け取ります。
+    /// </summary>
+    /// <param name="eventData">ポーズ状態変更情報。</param>
     private void OnPauseChanged(PauseChangedEventData eventData)
     {
-        // struct（値型）のため null チェックは不要です
-        bool isPaused = eventData.IsPaused; // ※実際のプロパティ名に合わせてください
+        // 既存のPauseChangedEventData構造体のプロパティ名に合わせてください
+        bool isPaused = eventData.IsPaused;
 
         if (isPaused)
         {
@@ -102,26 +119,42 @@ public class GamepadRumbleController : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// 振動を一時停止します。
+    /// </summary>
     public void PauseHaptics()
     {
         m_isPaused = true;
         ResetGamepadMotors();
     }
 
+    /// <summary>
+    /// 振動を再開します。
+    /// </summary>
     public void ResumeHaptics()
     {
         m_isPaused = false;
     }
 
+    /// <summary>
+    /// 振動要求を受け取ります。
+    /// </summary>
+    /// <param name="requestAsset">要求された振動アセット。</param>
     private void OnRumbleRequested(GamepadRumbleAsset requestAsset)
     {
-        if (requestAsset == null || !m_isEnabled) return;
+        if (requestAsset == null || !m_isEnabled)
+        {
+            return;
+        }
 
-        if (m_isPaused) return;
+        if (m_isPaused)
+        {
+            return;
+        }
 
         if (m_currentAsset != null && m_activeRumbleCoroutine != null)
         {
-            if (!ShouldOverride(requestAsset))
+            if (!CheckOverride(requestAsset))
             {
                 return;
             }
@@ -130,26 +163,43 @@ public class GamepadRumbleController : MonoBehaviour
         StartRumble(requestAsset);
     }
 
-    private bool ShouldOverride(GamepadRumbleAsset newAsset)
+    /// <summary>
+    /// 新しい振動で上書きするかどうかを判定します。
+    /// </summary>
+    /// <param name="newAsset">新しく要求された振動アセット。</param>
+    /// <returns>
+    /// true：上書きします。
+    /// false：上書きしません。
+    /// </returns>
+    private bool CheckOverride(GamepadRumbleAsset newAsset)
     {
-        if (m_currentAsset == null) return true;
+        if (m_currentAsset == null)
+        {
+            return true;
+        }
 
-        if (m_conflictMode == GamepadRumbleConflictMode.Priority)
+        if (m_conflictMode == GamepadRumbleConflictMode.PRIORITY)
         {
             return newAsset.Priority >= m_currentAsset.Priority;
         }
         else
         {
+            // 時間経過による現在の強さを計算
             float currentProgress = m_currentAsset.Duration > 0f ? (m_currentElapsedTime / m_currentAsset.Duration) : 1f;
             float currentDamping = m_currentAsset.DampingCurve != null ? m_currentAsset.DampingCurve.Evaluate(Mathf.Clamp01(currentProgress)) : 1f;
             float currentRealtimePower = (m_currentAsset.LowFrequencyStrength + m_currentAsset.HighFrequencyStrength) * currentDamping;
 
+            // 新しい振動の初期強さを計算
             float newInitialPower = newAsset.LowFrequencyStrength + newAsset.HighFrequencyStrength;
 
             return newInitialPower >= currentRealtimePower;
         }
     }
 
+    /// <summary>
+    /// 振動を開始します。
+    /// </summary>
+    /// <param name="asset">再生する振動アセット。</param>
     private void StartRumble(GamepadRumbleAsset asset)
     {
         if (m_activeRumbleCoroutine != null)
@@ -162,6 +212,9 @@ public class GamepadRumbleController : MonoBehaviour
         m_activeRumbleCoroutine = StartCoroutine(RumbleRoutine());
     }
 
+    /// <summary>
+    /// 振動処理を実行するコルーチンです。
+    /// </summary>
     private IEnumerator RumbleRoutine()
     {
         while (m_currentElapsedTime < m_currentAsset.Duration)
@@ -201,6 +254,9 @@ public class GamepadRumbleController : MonoBehaviour
         StopAndResetMotors();
     }
 
+    /// <summary>
+    /// 進行中の振動を停止し、モーターをリセットします。
+    /// </summary>
     public void StopAndResetMotors()
     {
         if (m_activeRumbleCoroutine != null)
@@ -214,6 +270,9 @@ public class GamepadRumbleController : MonoBehaviour
         ResetGamepadMotors();
     }
 
+    /// <summary>
+    /// ゲームパッドのモーター出力をゼロにします。
+    /// </summary>
     private void ResetGamepadMotors()
     {
         if (Gamepad.current != null)

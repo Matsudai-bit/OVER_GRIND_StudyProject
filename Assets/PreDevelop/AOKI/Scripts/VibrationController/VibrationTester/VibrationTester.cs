@@ -2,57 +2,63 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 
 /// <summary>
-/// New Input System対応の振動テスト実行スクリプト
+/// イベント駆動型 GamepadRumbleController の動作確認用テストスクリプト
 /// </summary>
-public class VibrationTester : MonoBehaviour
+public class GamepadRumbleTester : MonoBehaviour
 {
     [System.Serializable]
-    public struct VibrationTestEntry
+    public struct RumbleTestEntry
     {
         [Tooltip("テスト用の説明（例: 弱攻撃、爆発など）")]
         public string label;
 
-        [Tooltip("実行するキー（例: Digit1, Digit2, Rなど）")]
+        [Tooltip("実行するキー")]
         public Key triggerKey;
 
-        [Tooltip("再生する振動データ")]
-        public VibrationData vibrationData;
+        [Tooltip("再生する振動アセット")]
+        public GamepadRumbleAsset rumbleAsset;
     }
 
+    [Header("発行するイベントアセット")]
+    [SerializeField] private GamepadRumbleRequestEvent m_rumbleRequestEvent;
+
     [Header("テスト用振動リスト")]
-    [SerializeField] private VibrationTestEntry[] testEntries;
+    [SerializeField] private RumbleTestEntry[] m_testEntries;
 
     [Header("テスト用停止キー")]
-    [SerializeField] private Key stopKey = Key.Space;
+    [SerializeField] private Key m_stopKey = Key.Enter;
 
     private void Update()
     {
-        if (VibrationManager.Instance == null) return;
-
         var keyboard = Keyboard.current;
         if (keyboard == null) return;
 
-        // 停止キーの判定（再生処理より先に判定し、同一キー指定時の即死競合をガード）
-        if (keyboard[stopKey].wasPressedThisFrame)
+        // 強制停止の処理
+        if (keyboard[m_stopKey].wasPressedThisFrame)
         {
-            Debug.Log("[VibrationTest] 振動を強制停止");
-            VibrationManager.Instance.StopAllVibrations();
+            Debug.Log("[RumbleTest] 振動を強制停止しました");
+            if (GamepadRumbleController.Instance != null)
+            {
+                GamepadRumbleController.Instance.StopAndResetMotors();
+            }
             return;
         }
 
-        // リストに登録されたキーの判定と再生
-        foreach (var entry in testEntries)
+        if (m_rumbleRequestEvent == null) return;
+
+        // 振動再生の処理
+        foreach (var entry in m_testEntries)
         {
             if (keyboard[entry.triggerKey].wasPressedThisFrame)
             {
-                if (entry.vibrationData != null)
+                if (entry.rumbleAsset != null)
                 {
-                    Debug.Log($"[VibrationTest] 再生: {entry.label} (Key: {entry.triggerKey})");
-                    VibrationManager.Instance.Play(entry.vibrationData);
+                    Debug.Log($"[RumbleTest] イベント発行: {entry.label} (Key: {entry.triggerKey})");
+                    m_rumbleRequestEvent.Raise(entry.rumbleAsset);
                 }
                 else
                 {
-                    Debug.LogWarning($"[VibrationTest] {entry.label} に VibrationData が割り当てられていません。");
+                    Debug.LogWarning($"[RumbleTest] {entry.label} に GamepadRumbleAsset が割り当てられていません。");
                 }
             }
         }
