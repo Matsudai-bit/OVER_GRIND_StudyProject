@@ -25,6 +25,12 @@ public sealed class PlayerMotor : MonoBehaviour
     // 停止後に再加速を許可する、体と入力方向の角度差（度）
     private const float START_FACING_TOLERANCE = 1.0f;
 
+    // 衝突計算の微小な上向き速度を無視するための閾値
+    private const float UPWARD_VELOCITY_THRESHOLD = 0.01f;
+
+    // 接地面として扱う接触法線のY成分
+    private const float SUPPORT_NORMAL_Y_THRESHOLD = 0.5f;
+
     // カメラ基準移動に使用するTransform
     [SerializeField, Header("移動基準")]
     private Transform m_movementReference;
@@ -43,6 +49,11 @@ public sealed class PlayerMotor : MonoBehaviour
     [Min(0.0f)]
     private float m_obstacleDecelerationPerSecond = 20.0f;
 
+    // 高速移動中の衝突で発生する意図しない上向き速度を抑制する最低速度
+    [SerializeField, Header("高速衝突")]
+    [Min(0.0f)]
+    private float m_collisionLiftPreventionMinSpeed = 16.0f;
+
     // プレイヤーの物理ボディ
     private Rigidbody m_playerRigidbody;
 
@@ -59,6 +70,11 @@ public sealed class PlayerMotor : MonoBehaviour
     private Vector3 m_railVelocity;
     private readonly PlayerRailCollisionGuard m_railCollisionGuard = new PlayerRailCollisionGuard();
 
+    // 物理演算前の速度を保持し、衝突応答だけで上向き速度が発生したか判定します。
+    private float m_verticalVelocityBeforePhysics;
+    private float m_horizontalSpeedBeforePhysics;
+    private float m_lastIntentionalUpwardVelocityFixedTime = float.NegativeInfinity;
+
     /// <summary>方向指定ジャンプの離陸元レールとの衝突を一時的に無視します。</summary>
     public void BeginRailCollisionIgnore(SplineRailInfo rail, float minimumDuration)
     {
@@ -68,8 +84,102 @@ public sealed class PlayerMotor : MonoBehaviour
     /// <summary>ジャンプ中断時などにレールとの衝突を復元します。</summary>
     public void RestoreRailCollisions() => m_railCollisionGuard.Restore();
 
-    /// <summary>物理更新ごとにレールから離れたことを確認します。</summary>
-    private void FixedUpdate() => m_railCollisionGuard.Update();
+    /// <summary>物理演算前の速度を記録し、レールから離れたことを確認します。</summary>
+    private void FixedUpdate()
+    {
+        if (m_isInitialized && !m_playerRigidbody.isKinematic)
+        {
+            Vector3 velocity = m_playerRigidbody.linearVelocity;
+            m_verticalVelocityBeforePhysics = velocity.y;
+            velocity.y = 0.0f;
+            m_horizontalSpeedBeforePhysics = velocity.magnitude;
+        }
+
+        m_railCollisionGuard.Update();
+    }
+
+    /// <summary>衝突開始時に、物理衝突だけで発生した上向き速度を除去します。</summary>
+    /// <param name="collision">衝突情報。</param>
+    private void OnCollisionEnter(Collision collision)
+    {
+        PreventUnintentionalCollisionLift(collision);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        RecordRailJumpContact(collision);
+#endif
+    }
+
+    /// <summary>衝突継続中に、物理衝突だけで発生した上向き速度を除去します。</summary>
+    /// <param name="collision">衝突情報。</param>
+    private void OnCollisionStay(Collision collision)
+    {
+        PreventUnintentionalCollisionLift(collision);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        RecordRailJumpContact(collision);
+#endif
+    }
+
+    /// <summary>高速移動中の衝突が生成した、意図しない上向き速度を除去します。</summary>
+    /// <param name="collision">衝突情報。</param>
+    private void PreventUnintentionalCollisionLift(Collision collision)
+    {
+        if (!m_isInitialized ||
+            m_playerRigidbody.isKinematic ||
+            m_isRailMotionActive ||
+            collision.contactCount <= 0 ||
+            m_horizontalSpeedBeforePhysics < m_collisionLiftPreventionMinSpeed ||
+            m_verticalVelocityBeforePhysics > UPWARD_VELOCITY_THRESHOLD ||
+            WasIntentionalUpwardVelocitySetThisStep())
+        {
+            return;
+        }
+
+        Vector3 velocity = m_playerRigidbody.linearVelocity;
+        if (velocity.y <= UPWARD_VELOCITY_THRESHOLD)
+        {
+            return;
+        }
+
+        // 水平速度は通常の衝突応答を維持し、勝手なジャンプ成分だけを除去します。
+        // 足元の接触では0にして地面へ押し込まず、側面接触では元の落下速度を維持します。
+        velocity.y = HasSupportingContact(collision)
+            ? 0.0f
+            : Mathf.Min(0.0f, m_verticalVelocityBeforePhysics);
+        m_playerRigidbody.linearVelocity = velocity;
+    }
+
+    /// <summary>衝突情報にPlayerを下から支える接触面が含まれるか確認します。</summary>
+    /// <param name="collision">確認する衝突情報。</param>
+    /// <returns>true：下から支える接触面が含まれています。</returns>
+    private bool HasSupportingContact(Collision collision)
+    {
+        for (int i = 0; i < collision.contactCount; i++)
+        {
+            if (collision.GetContact(i).normal.y >= SUPPORT_NORMAL_Y_THRESHOLD)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>現在の物理更新でゲーム処理が上向き速度を設定したか確認します。</summary>
+    /// <returns>true：ジャンプなどで上向き速度が設定されています。</returns>
+    private bool WasIntentionalUpwardVelocitySetThisStep()
+    {
+        return Time.fixedTime - m_lastIntentionalUpwardVelocityFixedTime <=
+            Time.fixedDeltaTime * 0.5f;
+    }
+
+    /// <summary>ジャンプや吹き飛ばしによる意図した上向き速度を記録します。</summary>
+    /// <param name="verticalVelocity">設定する垂直速度。</param>
+    private void RegisterIntentionalUpwardVelocity(float verticalVelocity)
+    {
+        if (verticalVelocity > UPWARD_VELOCITY_THRESHOLD)
+        {
+            m_lastIntentionalUpwardVelocityFixedTime = Time.fixedTime;
+        }
+    }
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
     private string m_lastRailJumpContact = "none";
@@ -80,12 +190,6 @@ public sealed class PlayerMotor : MonoBehaviour
     /// <summary>ジャンプ診断用の物理設定と直近の接触相手を取得します。</summary>
     public string RailJumpPhysicsDetails => m_playerRigidbody == null ? "Rigidbody missing" :
         $"kinematic={m_playerRigidbody.isKinematic}, constraints={m_playerRigidbody.constraints}, contact={m_lastRailJumpContact}";
-
-    /// <summary>新しい接触の相手と法線を診断用に記録します。</summary>
-    private void OnCollisionEnter(Collision collision) => RecordRailJumpContact(collision);
-
-    /// <summary>継続中の接触の相手と法線を診断用に記録します。</summary>
-    private void OnCollisionStay(Collision collision) => RecordRailJumpContact(collision);
 
     /// <summary>衝突が初速を打ち消した場合に確認できる情報を保持します。</summary>
     private void RecordRailJumpContact(Collision collision)
@@ -116,6 +220,7 @@ public sealed class PlayerMotor : MonoBehaviour
     public void SetWorldVelocity(Vector3 velocity)
     {
         if (!m_isInitialized) return;
+        RegisterIntentionalUpwardVelocity(velocity.y);
         m_playerRigidbody.linearVelocity = velocity;
     }
 
@@ -152,6 +257,7 @@ public sealed class PlayerMotor : MonoBehaviour
         Vector3 velocity = (position - m_playerRigidbody.position) / deltaTime;
         // 停止・緩やかな下降を重力に上書きされないよう、次の物理更新分を補償します。
         if (m_playerRigidbody.useGravity) velocity -= Physics.gravity * deltaTime;
+        RegisterIntentionalUpwardVelocity(velocity.y);
         m_playerRigidbody.linearVelocity = velocity;
     }
 
@@ -176,7 +282,11 @@ public sealed class PlayerMotor : MonoBehaviour
         m_playerRigidbody.isKinematic = m_previousIsKinematic;
         m_playerRigidbody.collisionDetectionMode = m_previousCollisionDetection;
         m_isRailMotionActive = false;
-        if (!m_playerRigidbody.isKinematic) m_playerRigidbody.linearVelocity = exitVelocity;
+        if (!m_playerRigidbody.isKinematic)
+        {
+            RegisterIntentionalUpwardVelocity(exitVelocity.y);
+            m_playerRigidbody.linearVelocity = exitVelocity;
+        }
     }
 
     /// <summary>無効化や破棄の際にも、一時的な物理設定を元に戻します。</summary>
@@ -437,6 +547,11 @@ public sealed class PlayerMotor : MonoBehaviour
         }
         m_playerRigidbody.constraints |= RigidbodyConstraints.FreezeRotation;
 
+        Vector3 initialVelocity = m_playerRigidbody.linearVelocity;
+        m_verticalVelocityBeforePhysics = initialVelocity.y;
+        initialVelocity.y = 0.0f;
+        m_horizontalSpeedBeforePhysics = initialVelocity.magnitude;
+
         m_isInitialized = true;
 
         if (m_playerRigidbody.isKinematic)
@@ -615,6 +730,7 @@ public sealed class PlayerMotor : MonoBehaviour
 
         nextVelocity.y = jumpPower;
 
+        RegisterIntentionalUpwardVelocity(nextVelocity.y);
         m_playerRigidbody.linearVelocity =
             nextVelocity;
     }
@@ -1294,8 +1410,10 @@ public sealed class PlayerMotor : MonoBehaviour
         {
             direction = Vector3.back;
         }
-        m_playerRigidbody.linearVelocity = direction.normalized * Mathf.Max(0.0f, speed)
+        Vector3 knockbackVelocity = direction.normalized * Mathf.Max(0.0f, speed)
             + Vector3.up * Mathf.Max(0.0f, liftSpeed);
+        RegisterIntentionalUpwardVelocity(knockbackVelocity.y);
+        m_playerRigidbody.linearVelocity = knockbackVelocity;
     }
 
     /// <summary>吹き飛び速度を解除します。以降の落下には通常の重力を使用します。</summary>
@@ -1326,6 +1444,7 @@ public sealed class PlayerMotor : MonoBehaviour
         m_obstacleLayerMask = m_parameterAsset.ObstacleLayerMask;
         m_obstacleSkinWidth = m_parameterAsset.ObstacleSkinWidth;
         m_obstacleDecelerationPerSecond = m_parameterAsset.ObstacleDecelerationPerSecond;
+        m_collisionLiftPreventionMinSpeed = m_parameterAsset.CollisionLiftPreventionMinSpeed;
     }
 
 }
