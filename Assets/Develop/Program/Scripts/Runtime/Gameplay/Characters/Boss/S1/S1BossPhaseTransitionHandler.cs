@@ -118,7 +118,10 @@ public sealed class S1BossPhaseTransitionHandler : MonoBehaviour
     /// </summary>
     private void StartS1P2Transition()
     {
-        m_phaseController?.AdvancePhase();
+
+        m_bossController.StateMachine
+            .ChangeState<S1P2BossCollapsingState>();
+        //m_phaseController?.AdvancePhase();
     }
 
     /// <summary>

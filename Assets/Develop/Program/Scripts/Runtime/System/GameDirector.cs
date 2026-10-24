@@ -62,7 +62,8 @@ public class GameDirector : MonoBehaviour
     void Start()
     {
         start = false;
-   
+        Cursor.visible = false;
+
     }
     void Update()
     {
