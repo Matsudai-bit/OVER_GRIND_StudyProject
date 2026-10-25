@@ -22,6 +22,9 @@ public class GameDirector : MonoBehaviour
     [SerializeField]
     Health m_playerHealth;
 
+    [SerializeField]
+    BossPhaseController bossPhaseController;
+
     [Header("遷移関連")]
     [SerializeField, Header("次のステージボタンを押した時の遷移先")]
     string nextStageSceneName;
@@ -63,6 +66,17 @@ public class GameDirector : MonoBehaviour
     {
         start = false;
         Cursor.visible = false;
+
+        bossPhaseController.PhaseCompletionRequested += (phaseID) =>
+        {
+            if (phaseID == BossPhaseID.PHASE_3)
+            {
+                m_gameFlowController.ChangeState(GameFlowStateType.ENDING);
+                m_gameFlowController.ChangeState(GameFlowStateType.RESULT);
+
+            }
+        };
+ 
 
     }
     void Update()

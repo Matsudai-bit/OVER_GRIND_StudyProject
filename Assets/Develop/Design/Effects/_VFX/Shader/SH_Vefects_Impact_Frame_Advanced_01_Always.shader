@@ -643,10 +643,9 @@ Shader "Vefects/SH_Vefects_Impact_Frame_Advanced_01_Always"
 					outputDepth = DeviceDepth;
 				#endif
 
-				#ifdef _WRITE_RENDERING_LAYERS
-					uint renderingLayers = GetMeshRenderingLayer();
-					outRenderingLayers = float4( EncodeMeshRenderingLayer( renderingLayers ), 0, 0, 0 );
-				#endif
+			#ifdef _WRITE_RENDERING_LAYERS
+    outRenderingLayers = EncodeMeshRenderingLayer();
+#endif
 
 				#if defined( ASE_OPAQUE_KEEP_ALPHA )
 					return half4( Color, Alpha );
@@ -1747,10 +1746,9 @@ Shader "Vefects/SH_Vefects_Impact_Frame_Advanced_01_Always"
 					outNormalWS = half4(NormalizeNormalPerPixel( NormalWS ), 0.0);
 				#endif
 
-				#ifdef _WRITE_RENDERING_LAYERS
-					uint renderingLayers = GetMeshRenderingLayer();
-					outRenderingLayers = float4(EncodeMeshRenderingLayer(renderingLayers), 0, 0, 0);
-				#endif
+#ifdef _WRITE_RENDERING_LAYERS
+    outRenderingLayers = EncodeMeshRenderingLayer();
+#endif
 			}
 			ENDHLSL
 		}
