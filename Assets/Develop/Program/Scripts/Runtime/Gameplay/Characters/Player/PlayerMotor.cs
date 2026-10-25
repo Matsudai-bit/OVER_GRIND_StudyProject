@@ -31,22 +31,32 @@ public sealed class PlayerMotor : MonoBehaviour
     // 接地面として扱う接触法線のY成分
     private const float SUPPORT_NORMAL_Y_THRESHOLD = 0.5f;
 
+    // 段差として扱う最小高さ
+    private const float MIN_STEP_HEIGHT = 0.005f;
+
+    // 段差正面の最下段Rayを配置する高さ
+    private const float MIN_STEP_WALL_CHECK_HEIGHT = 0.005f;
+
+    // 段差正面を複数高さで確認するRay数
+    private const int STEP_WALL_CHECK_RAY_COUNT = 3;
+
+    // 段差乗り越え後の空間確認で保持するCollider数
+    private const int STEP_CLEARANCE_BUFFER_SIZE = 16;
+
+    // 段差判定Raycastで保持するHit数
+    private const int STEP_RAYCAST_BUFFER_SIZE = 16;
+
     // カメラ基準移動に使用するTransform
     [SerializeField, Header("移動基準")]
     private Transform m_movementReference;
 
     // 障害物として扱うレイヤー
-    [SerializeField, Header("障害物検知")]
     private LayerMask m_obstacleLayerMask;
 
     // 障害物への食い込みを防ぐための手前バッファ距離
-    [SerializeField]
-    [Min(0.0f)]
     private float m_obstacleSkinWidth = 0.05f;
 
     // 障害物に接触している間、1秒あたり減速する速度
-    [SerializeField]
-    [Min(0.0f)]
     private float m_obstacleDecelerationPerSecond = 20.0f;
 
     // 高速移動中の衝突で発生する意図しない上向き速度を抑制する最低速度
@@ -54,8 +64,49 @@ public sealed class PlayerMotor : MonoBehaviour
     [Min(0.0f)]
     private float m_collisionLiftPreventionMinSpeed = 16.0f;
 
+    // 自動で乗り越えられる最大段差高さ
+    private float m_maxStepHeight = 0.3f;
+
+    // Capsule前方から段差正面を探索する距離
+    private float m_stepCheckDistance = 0.25f;
+
+    // 足元から段差正面判定を行う高さ
+    private float m_stepLowerCheckHeight = 0.05f;
+
+    // 段差正面より少し奥で上面を探索する距離
+    private float m_stepForwardOffset = 0.05f;
+
+    // 乗り越え後のCollider接触を避けるための余白
+    private float m_stepClearanceSkin = 0.02f;
+
     // プレイヤーの物理ボディ
     private Rigidbody m_playerRigidbody;
+
+    // プレイヤーの移動用CapsuleCollider
+    [SerializeField, Header("Collider")]
+    private CapsuleCollider m_playerCapsuleCollider;
+
+    // 段差乗り越え後の空間確認用バッファ
+    private readonly Collider[] m_stepClearanceBuffer =
+        new Collider[STEP_CLEARANCE_BUFFER_SIZE];
+
+    // 段差判定Raycast用バッファ
+    private readonly RaycastHit[] m_stepRaycastBuffer =
+        new RaycastHit[STEP_RAYCAST_BUFFER_SIZE];
+
+    // プレイヤーの周辺環境監視機能
+    private PlayerMonitor m_monitor;
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+    // 直近のStep Up判定結果。段差判定の切り分けに使用します。
+    [SerializeField, Header("Step Up Debug"), TextArea]
+    private string m_stepDebugReason = "未判定";
+
+    /// <summary>
+    /// 直近のStep Up判定結果を取得します。
+    /// </summary>
+    public string StepDebugReason => m_stepDebugReason;
+#endif
 
     // 現在使用している最大移動速度
     private float m_currentMaxMoveSpeed;
@@ -337,87 +388,87 @@ public sealed class PlayerMotor : MonoBehaviour
 
         float nearestDistance =
             float.PositiveInfinity;
-  
-            if (distance > Mathf.Epsilon)
+
+        if (distance > Mathf.Epsilon)
+        {
+            Physics.SyncTransforms();
+
+            RaycastHit[] hits =
+                m_playerRigidbody.SweepTestAll(
+                    displacement / distance,
+                    distance,
+                    QueryTriggerInteraction.Ignore);
+
+            foreach (RaycastHit hit in hits)
             {
-                Physics.SyncTransforms();
+                Collider hitCollider =
+                    hit.collider;
 
-                RaycastHit[] hits =
-                    m_playerRigidbody.SweepTestAll(
-                        displacement / distance,
-                        distance,
-                        QueryTriggerInteraction.Ignore);
-
-                foreach (RaycastHit hit in hits)
+                if (hitCollider == null)
                 {
-                    Collider hitCollider =
-                        hit.collider;
-
-                    if (hitCollider == null)
-                    {
-                        continue;
-                    }
-
-                    // 自分自身は無視
-                    if (hitCollider.attachedRigidbody ==
-                        m_playerRigidbody)
-                    {
-                        continue;
-                    }
-
-                    // レール自身は無視
-                    if (IsRailCollider(hitCollider))
-                    {
-                        continue;
-                    }
-                    if (!isForcedExit)
-                    {
-                        continue;
-                    }
-
-                    // Obstacle Layer以外は無視
-                    if (!IsObstacleLayer(
-                        hitCollider.gameObject.layer))
-                    {
-                        continue;
-                    }
-
-                    // 最も近い障害物を採用
-                    if (hit.distance >= nearestDistance)
-                    {
-                        continue;
-                    }
-
-                    nearestDistance =
-                        hit.distance;
-
-                    obstacle = hit;
+                    continue;
                 }
+
+                // 自分自身は無視
+                if (hitCollider.attachedRigidbody ==
+                    m_playerRigidbody)
+                {
+                    continue;
+                }
+
+                // レール自身は無視
+                if (IsRailCollider(hitCollider))
+                {
+                    continue;
+                }
+                if (!isForcedExit)
+                {
+                    continue;
+                }
+
+                // Obstacle Layer以外は無視
+                if (!IsObstacleLayer(
+                    hitCollider.gameObject.layer))
+                {
+                    continue;
+                }
+
+                // 最も近い障害物を採用
+                if (hit.distance >= nearestDistance)
+                {
+                    continue;
+                }
+
+                nearestDistance =
+                    hit.distance;
+
+                obstacle = hit;
             }
+        }
 
-            // 障害物が存在する
-            if (!float.IsPositiveInfinity(
-                nearestDistance))
-            {
-                float safeDistance =
-                    Mathf.Max(
-                        nearestDistance -
-                        m_obstacleSkinWidth,
-                        0.0f);
+        // 障害物が存在する
+        if (!float.IsPositiveInfinity(
+            nearestDistance))
+        {
+            float safeDistance =
+                Mathf.Max(
+                    nearestDistance -
+                    m_obstacleSkinWidth,
+                    0.0f);
 
-                Vector3 movement =
-                    displacement.normalized *
-                    safeDistance;
+            Vector3 movement =
+                displacement.normalized *
+                safeDistance;
 
-                m_playerRigidbody.position +=
-                    movement;
+            m_playerRigidbody.position +=
+                movement;
 
-                m_railVelocity =
-                    movement / deltaTime;
+            m_railVelocity =
+                movement / deltaTime;
 
-                return false;
-            }
-        
+            return false;
+        }
+
 
         // 障害物がなければ目標位置へ移動
         m_railVelocity =
@@ -521,9 +572,25 @@ public sealed class PlayerMotor : MonoBehaviour
 
     /// <summary>
     /// PlayerMotorを初期化します。
+    /// 既存コードとの互換用です。
     /// </summary>
     /// <param name="playerRigidbody">プレイヤーのRigidbody。</param>
-    public void Initialize(Rigidbody playerRigidbody)
+    public void Initialize(
+        Rigidbody playerRigidbody)
+    {
+        Initialize(
+            playerRigidbody,
+            GetComponent<PlayerMonitor>());
+    }
+
+    /// <summary>
+    /// PlayerMotorを初期化します。
+    /// </summary>
+    /// <param name="playerRigidbody">プレイヤーのRigidbody。</param>
+    /// <param name="monitor">プレイヤーの周辺環境監視機能。</param>
+    public void Initialize(
+        Rigidbody playerRigidbody,
+        PlayerMonitor monitor)
     {
         ApplyParameterAsset();
 
@@ -537,15 +604,51 @@ public sealed class PlayerMotor : MonoBehaviour
             return;
         }
 
-        m_playerRigidbody = playerRigidbody;
+        if (monitor == null)
+        {
+            Debug.LogError(
+                $"[{nameof(PlayerMotor)}] PlayerMonitorが指定されていません。",
+                this);
 
-        // 向きは移動・レール処理で制御するため、衝突による物理回転を全軸で固定します。
-        // 位置の制約は維持し、シーン側の設定に依存せず回転を防ぎます。
+            m_isInitialized = false;
+            return;
+        }
+
+        m_playerRigidbody =
+            playerRigidbody;
+
+        m_monitor =
+            monitor;
+
+        if (m_playerCapsuleCollider == null)
+        {
+            m_playerCapsuleCollider =
+                GetComponent<CapsuleCollider>();
+        }
+
+        if (m_playerCapsuleCollider == null)
+        {
+            Debug.LogWarning(
+                $"[{nameof(PlayerMotor)}] " +
+                "CapsuleColliderが見つからないため段差乗り越えを無効化します。",
+                this);
+        }
+        else if (m_playerCapsuleCollider.direction != 1)
+        {
+            Debug.LogWarning(
+                $"[{nameof(PlayerMotor)}] " +
+                "段差乗り越えはY軸方向のCapsuleColliderを前提としています。",
+                this);
+        }
+
         if (!m_playerRigidbody.isKinematic)
         {
-            m_playerRigidbody.angularVelocity = Vector3.zero;
+            m_playerRigidbody.angularVelocity =
+                Vector3.zero;
         }
-        m_playerRigidbody.constraints |= RigidbodyConstraints.FreezeRotation;
+
+        m_playerRigidbody.constraints |=
+            RigidbodyConstraints.FreezeRotation;
 
         Vector3 initialVelocity = m_playerRigidbody.linearVelocity;
         m_verticalVelocityBeforePhysics = initialVelocity.y;
@@ -589,10 +692,15 @@ public sealed class PlayerMotor : MonoBehaviour
                 moveInput,
                 1.0f);
 
-        // 入力をカメラ基準のワールド方向へ変換
-        Vector3 moveDirection =
+        // 本体の向きを決めるための水平移動方向
+        Vector3 horizontalMoveDirection =
             CalculateCameraRelativeDirection(
                 normalizedInput);
+
+        // 実際の物理移動では接地面に沿った方向を使用
+        Vector3 moveDirection =
+            CalculateGroundMoveDirection(
+                horizontalMoveDirection);
 
         float inputMagnitude =
             normalizedInput.magnitude;
@@ -602,38 +710,70 @@ public sealed class PlayerMotor : MonoBehaviour
                 parameters.MaxMoveSpeed,
                 0.0f);
 
-        m_currentMaxMoveSpeed = maxMoveSpeed;
+        m_currentMaxMoveSpeed =
+            maxMoveSpeed;
 
-        // 目標水平速度を計算
-        Vector3 targetHorizontalVelocity =
+        Vector3 targetMoveVelocity =
             moveDirection *
             (maxMoveSpeed * inputMagnitude);
 
-        Vector3 currentHorizontalVelocity =
-            GetHorizontalVelocity();
+        Vector3 currentMoveVelocity =
+            GetMoveVelocity();
 
-        if (ShouldBrakeForReverseInput(currentHorizontalVelocity, moveDirection))
+        if (ShouldBrakeForReverseInput(
+            currentMoveVelocity,
+            moveDirection))
         {
-            // 通常の減速度に倍率を掛け、向きを維持したまま急ブレーキをかけます。
-            float brakeAcceleration = CalculateAcceleration(maxMoveSpeed, parameters.TimeToStop)
-                * Mathf.Max(1.0f, parameters.ReverseBrakeMultiplier);
-            Vector3 brakingVelocity = Vector3.MoveTowards(
-                currentHorizontalVelocity, Vector3.zero, brakeAcceleration * deltaTime);
-            ApplyHorizontalVelocity(brakingVelocity, deltaTime, applyObstacleAvoidance);
+            float brakeAcceleration =
+                CalculateAcceleration(
+                    maxMoveSpeed,
+                    parameters.TimeToStop) *
+                Mathf.Max(
+                    1.0f,
+                    parameters.ReverseBrakeMultiplier);
+
+            Vector3 brakingVelocity =
+                Vector3.MoveTowards(
+                    currentMoveVelocity,
+                    Vector3.zero,
+                    brakeAcceleration *
+                    deltaTime);
+
+            ApplyHorizontalVelocity(
+                brakingVelocity,
+                deltaTime,
+                applyObstacleAvoidance);
+
             return;
         }
 
-        if (currentHorizontalVelocity.sqrMagnitude <=
-            STOP_SPEED_THRESHOLD * STOP_SPEED_THRESHOLD &&
-            moveDirection.sqrMagnitude > DIRECTION_SQR_THRESHOLD)
+        if (currentMoveVelocity.sqrMagnitude <=
+                STOP_SPEED_THRESHOLD *
+                STOP_SPEED_THRESHOLD &&
+            horizontalMoveDirection.sqrMagnitude >
+                DIRECTION_SQR_THRESHOLD)
         {
-            Vector3 facingDirection = m_playerRigidbody.rotation * Vector3.forward;
+            Vector3 facingDirection =
+                m_playerRigidbody.rotation *
+                Vector3.forward;
+
             facingDirection.y = 0.0f;
-            if (Vector3.Angle(facingDirection, moveDirection) > START_FACING_TOLERANCE)
+
+            if (Vector3.Angle(
+                    facingDirection,
+                    horizontalMoveDirection) >
+                START_FACING_TOLERANCE)
             {
-                // 水平速度を0に保って方向転換し、向きが揃った次の更新から加速します。
-                ApplyHorizontalVelocity(Vector3.zero, deltaTime, applyObstacleAvoidance);
-                RotateTowardsMoveDirection(moveDirection, parameters.RotationSpeed, deltaTime);
+                ApplyHorizontalVelocity(
+                    Vector3.zero,
+                    deltaTime,
+                    applyObstacleAvoidance);
+
+                RotateTowardsMoveDirection(
+                    horizontalMoveDirection,
+                    parameters.RotationSpeed,
+                    deltaTime);
+
                 return;
             }
         }
@@ -643,20 +783,20 @@ public sealed class PlayerMotor : MonoBehaviour
                 maxMoveSpeed,
                 parameters.TimeToMaxSpeed);
 
-        Vector3 nextHorizontalVelocity =
+        Vector3 nextMoveVelocity =
             Vector3.MoveTowards(
-                currentHorizontalVelocity,
-                targetHorizontalVelocity,
+                currentMoveVelocity,
+                targetMoveVelocity,
                 acceleration * deltaTime);
 
         ApplyHorizontalVelocity(
-            nextHorizontalVelocity,
+            nextMoveVelocity,
             deltaTime,
             applyObstacleAvoidance);
 
-        // 移動方向へ徐々に回転
+        // 本体の向きは水平面上だけで回転させる
         RotateTowardsMoveDirection(
-            moveDirection,
+            horizontalMoveDirection,
             parameters.RotationSpeed,
             deltaTime);
     }
@@ -693,24 +833,25 @@ public sealed class PlayerMotor : MonoBehaviour
                 parameters.MaxMoveSpeed,
                 0.0f);
 
-        m_currentMaxMoveSpeed = maxMoveSpeed;
+        m_currentMaxMoveSpeed =
+            maxMoveSpeed;
 
-        Vector3 currentHorizontalVelocity =
-            GetHorizontalVelocity();
+        Vector3 currentMoveVelocity =
+            GetMoveVelocity();
 
         float deceleration =
             CalculateAcceleration(
                 maxMoveSpeed,
                 parameters.TimeToStop);
 
-        Vector3 nextHorizontalVelocity =
+        Vector3 nextMoveVelocity =
             Vector3.MoveTowards(
-                currentHorizontalVelocity,
+                currentMoveVelocity,
                 Vector3.zero,
                 deceleration * deltaTime);
 
         ApplyHorizontalVelocity(
-            nextHorizontalVelocity,
+            nextMoveVelocity,
             deltaTime);
     }
 
@@ -901,6 +1042,44 @@ public sealed class PlayerMotor : MonoBehaviour
     }
 
     /// <summary>
+    /// 水平移動方向を現在の接地面に沿った方向へ変換します。
+    /// </summary>
+    /// <param name="horizontalDirection">水平面上の移動方向。</param>
+    /// <returns>接地面に沿った移動方向。</returns>
+    private Vector3 CalculateGroundMoveDirection(
+        Vector3 horizontalDirection)
+    {
+        if (!CanUseGroundSurface())
+        {
+            horizontalDirection.y = 0.0f;
+            return horizontalDirection;
+        }
+
+        Vector3 groundDirection =
+            Vector3.ProjectOnPlane(
+                horizontalDirection,
+                m_monitor.GroundNormal);
+
+        if (groundDirection.sqrMagnitude <=
+            DIRECTION_SQR_THRESHOLD)
+        {
+            return horizontalDirection;
+        }
+
+        return groundDirection.normalized;
+    }
+
+    /// <summary>
+    /// 接地面を移動計算へ利用できるか確認します。
+    /// </summary>
+    private bool CanUseGroundSurface()
+    {
+        return m_monitor != null &&
+               m_monitor.IsGrounded &&
+               m_monitor.HasGroundSurface;
+    }
+
+    /// <summary>
     /// 移動方向へプレイヤーを徐々に回転させます。
     /// </summary>
     /// <param name="moveDirection">移動方向。</param>
@@ -939,55 +1118,897 @@ public sealed class PlayerMotor : MonoBehaviour
     }
 
     /// <summary>
-    /// 現在の水平速度を取得します。
+    /// 現在の移動面に沿った速度を取得します。
     /// </summary>
-    /// <returns>現在の水平速度。</returns>
-    private Vector3 GetHorizontalVelocity()
+    /// <returns>
+    /// 接地中は接地面の接線速度、非接地中は水平速度。
+    /// </returns>
+    private Vector3 GetMoveVelocity()
     {
-        Vector3 horizontalVelocity =
+        Vector3 velocity =
             m_playerRigidbody.linearVelocity;
 
-        horizontalVelocity.y = 0.0f;
+        if (CanUseGroundSurface())
+        {
+            return Vector3.ProjectOnPlane(
+                velocity,
+                m_monitor.GroundNormal);
+        }
 
-        return horizontalVelocity;
+        velocity.y = 0.0f;
+
+        return velocity;
     }
 
     /// <summary>
-    /// 水平速度をRigidbodyへ適用します。
-    /// 障害物検知を行う場合、進行方向に障害物がないかを確認し、
-    /// あれば緩やかに減速させます（<see cref="ClampVelocityForObstacles"/>）。
+    /// 移動速度をRigidbodyへ適用します。
+    /// 接地中は速度を接地面へ沿わせ、
+    /// 障害物検知を行う場合は進行方向の障害物を考慮します。
     /// </summary>
     /// <param name="horizontalVelocity">
-    /// 適用したい水平速度（障害物検知前の目標値）。
+    /// 適用したい移動速度。
+    /// 呼び出し元が水平速度を渡した場合も接地中は斜面へ沿わせます。
     /// </param>
-    /// <param name="deltaTime">
-    /// この速度が適用される時間幅。障害物までの距離判定に使用する。
-    /// </param>
+    /// <param name="deltaTime">この速度が適用される時間幅。</param>
     /// <param name="applyObstacleAvoidance">
     /// 障害物検知による減速を適用するかどうか。
-    /// falseの場合、目標速度をそのまま適用します
-    /// （攻撃状態など、独自の速度制御を優先したい場合に使用）。
     /// </param>
     private void ApplyHorizontalVelocity(
         Vector3 horizontalVelocity,
         float deltaTime,
         bool applyObstacleAvoidance = true)
     {
-        Vector3 nextHorizontalVelocity =
-            applyObstacleAvoidance
+        Vector3 alignedMoveVelocity =
+            AlignVelocityToGround(
+                horizontalVelocity);
+
+        bool didStepUp = false;
+
+        if (applyObstacleAvoidance)
+        {
+            didStepUp =
+                TryStepUp(
+                    alignedMoveVelocity,
+                    deltaTime);
+        }
+
+        Vector3 nextMoveVelocity =
+            applyObstacleAvoidance &&
+            !didStepUp
                 ? ClampVelocityForObstacles(
-                    horizontalVelocity,
+                    alignedMoveVelocity,
                     deltaTime)
-                : horizontalVelocity;
+                : alignedMoveVelocity;
 
-        Vector3 nextVelocity =
-            nextHorizontalVelocity;
+        Vector3 currentVelocity =
+            m_playerRigidbody.linearVelocity;
 
-        nextVelocity.y =
-            m_playerRigidbody.linearVelocity.y;
+        if (CanUseGroundSurface())
+        {
+            Vector3 groundNormal =
+                m_monitor.GroundNormal;
+
+            // 重力や接触反力による法線方向速度は維持し、
+            // 接線方向だけを移動制御する。
+            Vector3 normalVelocity =
+                Vector3.Project(
+                    currentVelocity,
+                    groundNormal);
+
+            m_playerRigidbody.linearVelocity =
+                nextMoveVelocity +
+                normalVelocity;
+
+            return;
+        }
+
+        // 空中では従来通りY速度を維持する。
+        nextMoveVelocity.y =
+            currentVelocity.y;
 
         m_playerRigidbody.linearVelocity =
-            nextVelocity;
+            nextMoveVelocity;
+    }
+
+    /// <summary>
+    /// 指定速度を現在の接地面へ沿わせます。
+    /// 速度の大きさは維持します。
+    /// </summary>
+    /// <param name="velocity">変換する速度。</param>
+    /// <returns>接地面へ沿わせた速度。</returns>
+    private Vector3 AlignVelocityToGround(
+        Vector3 velocity)
+    {
+        if (!CanUseGroundSurface())
+        {
+            velocity.y = 0.0f;
+            return velocity;
+        }
+
+        float speed =
+            velocity.magnitude;
+
+        if (speed <=
+            DIRECTION_SQR_THRESHOLD)
+        {
+            return Vector3.zero;
+        }
+
+        Vector3 groundVelocity =
+            Vector3.ProjectOnPlane(
+                velocity,
+                m_monitor.GroundNormal);
+
+        if (groundVelocity.sqrMagnitude <=
+            DIRECTION_SQR_THRESHOLD)
+        {
+            return Vector3.zero;
+        }
+
+        return groundVelocity.normalized *
+               speed;
+    }
+
+    /// <summary>
+    /// 段差判定に使用するLayerMaskを取得します。
+    /// GroundとObstacleの両方を対象にします。
+    /// </summary>
+    private int GetStepDetectionLayerMask()
+    {
+        int groundLayerMask =
+            m_monitor != null
+                ? m_monitor.GroundLayerMask.value
+                : 0;
+
+        return m_obstacleLayerMask.value |
+               groundLayerMask;
+    }
+
+    /// <summary>
+    /// 進行方向に乗り越え可能な小段差がある場合、
+    /// Rigidbodyを段差上面まで持ち上げます。
+    /// </summary>
+    /// <param name="moveVelocity">現在要求されている移動速度。</param>
+    /// <returns>true：段差を乗り越えた。false：段差ではない、または乗り越え不可。</returns>
+    private bool TryStepUp(
+        Vector3 moveVelocity,
+        float deltaTime)
+    {
+        // ParameterAssetはInitialize時だけではなく、
+        // Play中の調整も即座に反映できるようStep判定直前にも同期します。
+        ApplyStepParameterAsset();
+
+        if (!CanUseGroundSurface())
+        {
+            return FailStep("接地面を使用できません。");
+        }
+
+        if (m_isRailMotionActive)
+        {
+            return FailStep("レール移動中です。");
+        }
+
+        if (m_playerCapsuleCollider == null)
+        {
+            return FailStep("CapsuleColliderがありません。");
+        }
+
+        if (m_playerCapsuleCollider.direction != 1)
+        {
+            return FailStep("CapsuleColliderがY軸方向ではありません。");
+        }
+
+        if (m_maxStepHeight <= MIN_STEP_HEIGHT)
+        {
+            return FailStep("Max Step Heightが小さすぎます。");
+        }
+
+        if (m_stepCheckDistance <= 0.0f)
+        {
+            return FailStep("Step Check Distanceが0以下です。");
+        }
+
+        if (deltaTime <= 0.0f)
+        {
+            return FailStep("deltaTimeが0以下です。");
+        }
+
+        Vector3 horizontalDirection =
+            Vector3.ProjectOnPlane(
+                moveVelocity,
+                Vector3.up);
+
+        float horizontalSpeed =
+            horizontalDirection.magnitude;
+
+        if (horizontalSpeed <=
+            OBSTACLE_CHECK_SPEED_THRESHOLD)
+        {
+            return FailStep("移動速度が不足しています。");
+        }
+
+        horizontalDirection /=
+            horizontalSpeed;
+
+        if (!TryGetCapsuleWorldGeometry(
+            out Vector3 topSphereCenter,
+            out Vector3 bottomSphereCenter,
+            out float capsuleRadius))
+        {
+            return FailStep("CapsuleCollider形状を取得できません。");
+        }
+
+        if (!TryGetCurrentStepSupportPoint(
+            bottomSphereCenter,
+            capsuleRadius,
+            out Vector3 currentSupportPoint))
+        {
+            return FailStep("現在立っている支持面を取得できません。");
+        }
+
+        float currentGroundHeight =
+            currentSupportPoint.y;
+
+        Vector3 groundReferencePosition =
+            new Vector3(
+                bottomSphereCenter.x,
+                currentGroundHeight,
+                bottomSphereCenter.z);
+
+        float lowerCheckHeight =
+            Mathf.Clamp(
+                m_stepLowerCheckHeight,
+                MIN_STEP_HEIGHT,
+                m_maxStepHeight);
+
+        float travelDistance =
+            horizontalSpeed *
+            deltaTime;
+
+        float lowerCheckDistance =
+            capsuleRadius +
+            Mathf.Min(
+                m_stepCheckDistance,
+                travelDistance +
+                m_obstacleSkinWidth +
+                m_stepClearanceSkin);
+
+        if (lowerCheckDistance <=
+            capsuleRadius)
+        {
+            return FailStep("下部判定距離がCapsule半径以下です。");
+        }
+
+        if (!TryGetNearestStepWallHit(
+            groundReferencePosition,
+            horizontalDirection,
+            lowerCheckDistance,
+            lowerCheckHeight,
+            out RaycastHit lowerHit))
+        {
+            return FailStep("LOWER_HIT_FAILED: 段差正面を検出できません。");
+        }
+
+        float distanceFromCapsuleSurface =
+            lowerHit.distance -
+            capsuleRadius;
+
+        if (distanceFromCapsuleSurface >
+            m_stepCheckDistance +
+            m_stepClearanceSkin)
+        {
+            return FailStep(
+                $"LOWER_TOO_FAR: Capsule表面から{distanceFromCapsuleSurface:F3}m先です。");
+        }
+
+        Vector3 upperOrigin =
+            groundReferencePosition +
+            Vector3.up *
+            (m_maxStepHeight +
+             m_stepClearanceSkin);
+
+        float upperCheckDistance =
+            lowerHit.distance +
+            m_stepForwardOffset +
+            m_stepClearanceSkin;
+
+        if (TryGetNearestStepHit(
+            upperOrigin,
+            horizontalDirection,
+            upperCheckDistance,
+            out RaycastHit upperHit))
+        {
+            return FailStep(
+                $"UPPER_BLOCKED: {upperHit.collider.name} が上部を塞いでいます。");
+        }
+
+        if (!TryFindStepLandingSurface(
+            lowerHit.point,
+            horizontalDirection,
+            currentGroundHeight,
+            out RaycastHit landingHit,
+            out _))
+        {
+            return FailStep("LANDING_FAILED: 登れる上面を検出できません。");
+        }
+
+        float stepHeight =
+            landingHit.point.y -
+            currentGroundHeight;
+
+        if (stepHeight <= MIN_STEP_HEIGHT)
+        {
+            return FailStep(
+                $"STEP_TOO_LOW: 段差高さ={stepHeight:F3}m");
+        }
+
+        if (stepHeight >
+            m_maxStepHeight +
+            m_stepClearanceSkin)
+        {
+            return FailStep(
+                $"STEP_TOO_HIGH: 段差高さ={stepHeight:F3}m / 最大={m_maxStepHeight:F3}m");
+        }
+
+        // landingHit.pointはワールド座標です。
+        // 壁面からのsampleDistanceだけではなく、現在位置からLanding地点までを使います。
+        Vector3 horizontalToLanding =
+            Vector3.ProjectOnPlane(
+                landingHit.point -
+                groundReferencePosition,
+                Vector3.up);
+
+        float forwardStepDistance =
+            Mathf.Max(
+                Vector3.Dot(
+                    horizontalToLanding,
+                    horizontalDirection) +
+                m_stepClearanceSkin,
+                0.0f);
+
+        Vector3 stepOffset =
+            Vector3.up *
+            (stepHeight +
+             m_stepClearanceSkin) +
+            horizontalDirection *
+            forwardStepDistance;
+
+        if (!HasStepDestinationClearance(
+            topSphereCenter,
+            bottomSphereCenter,
+            capsuleRadius,
+            stepOffset))
+        {
+            return FailStep("CLEARANCE_FAILED: 移動先でCapsuleが他Colliderと重なります。");
+        }
+
+        m_playerRigidbody.position +=
+            stepOffset;
+
+        SetStepDebugReason(
+            $"SUCCESS: height={stepHeight:F3}m, forward={forwardStepDistance:F3}m, " +
+            $"landing={landingHit.collider.name}");
+
+        return true;
+    }
+
+    /// <summary>
+    /// 地面付近を複数高さで確認し、最も近い段差正面を取得します。
+    /// </summary>
+    /// <param name="groundReferencePosition">現在床の基準位置。</param>
+    /// <param name="direction">確認する進行方向。</param>
+    /// <param name="distance">確認距離。</param>
+    /// <param name="maxCheckHeight">下部判定の最大高さ。</param>
+    /// <param name="nearestHit">最も近い段差正面。</param>
+    /// <returns>
+    /// true：段差正面を検出しました。
+    /// false：段差正面はありません。
+    /// </returns>
+    private bool TryGetNearestStepWallHit(
+        Vector3 groundReferencePosition,
+        Vector3 direction,
+        float distance,
+        float maxCheckHeight,
+        out RaycastHit nearestHit)
+    {
+        nearestHit = default;
+
+        if (distance <= 0.0f ||
+            direction.sqrMagnitude <=
+            DIRECTION_SQR_THRESHOLD)
+        {
+            return false;
+        }
+
+        direction.Normalize();
+
+        float safeMaxCheckHeight =
+            Mathf.Max(
+                maxCheckHeight,
+                MIN_STEP_WALL_CHECK_HEIGHT);
+
+        float nearestDistance =
+            float.PositiveInfinity;
+
+        bool hasHit =
+            false;
+
+        for (int rayIndex = 0;
+             rayIndex < STEP_WALL_CHECK_RAY_COUNT;
+             rayIndex++)
+        {
+            float heightRate =
+                STEP_WALL_CHECK_RAY_COUNT <= 1
+                    ? 0.0f
+                    : (float)rayIndex /
+                      (STEP_WALL_CHECK_RAY_COUNT - 1);
+
+            float checkHeight =
+                Mathf.Lerp(
+                    MIN_STEP_WALL_CHECK_HEIGHT,
+                    safeMaxCheckHeight,
+                    heightRate);
+
+            Vector3 origin =
+                groundReferencePosition +
+                Vector3.up * checkHeight;
+
+            int hitCount =
+                Physics.RaycastNonAlloc(
+                    origin,
+                    direction,
+                    m_stepRaycastBuffer,
+                    distance,
+                    GetStepDetectionLayerMask(),
+                    QueryTriggerInteraction.Ignore);
+
+            for (int hitIndex = 0;
+                 hitIndex < hitCount;
+                 hitIndex++)
+            {
+                RaycastHit hit =
+                    m_stepRaycastBuffer[hitIndex];
+
+                Collider hitCollider =
+                    hit.collider;
+
+                if (hitCollider == null)
+                {
+                    continue;
+                }
+
+                // 自分自身に属するColliderは無視する。
+                if (hitCollider.attachedRigidbody ==
+                    m_playerRigidbody)
+                {
+                    continue;
+                }
+
+                // 通常移動で登れる面は坂処理へ任せる。
+                // 登れない急斜面は、垂直壁と同様にStep Up候補として扱う。
+                if (m_monitor != null &&
+                    m_monitor.IsClimbableGroundSurface(
+                        hit.normal))
+                {
+                    continue;
+                }
+
+                if (hit.distance >=
+                    nearestDistance)
+                {
+                    continue;
+                }
+
+                nearestDistance =
+                    hit.distance;
+
+                nearestHit =
+                    hit;
+
+                hasHit =
+                    true;
+            }
+        }
+
+        return hasHit;
+    }
+
+    /// <summary>
+    /// 段差正面から前方へ複数地点を調べ、最初に見つかった登坂可能な上面を取得します。
+    /// </summary>
+    /// <param name="stepWallPoint">段差正面のHit位置。</param>
+    /// <param name="direction">進行方向。</param>
+    /// <param name="currentGroundHeight">現在立っている支持面の高さ。</param>
+    /// <param name="landingHit">採用した段差上面。</param>
+    /// <param name="forwardStepDistance">段差を越えるために前進させる距離。</param>
+    /// <returns>true：登坂可能な上面を検出した。false：有効な上面がない。</returns>
+    private bool TryFindStepLandingSurface(
+        Vector3 stepWallPoint,
+        Vector3 direction,
+        float currentGroundHeight,
+        out RaycastHit landingHit,
+        out float forwardStepDistance)
+    {
+        landingHit = default;
+        forwardStepDistance = 0.0f;
+
+        if (m_monitor == null ||
+            direction.sqrMagnitude <=
+            DIRECTION_SQR_THRESHOLD)
+        {
+            return false;
+        }
+
+        direction.Normalize();
+
+        float sampleInterval =
+            Mathf.Max(
+                m_stepForwardOffset,
+                m_stepClearanceSkin,
+                MIN_STEP_HEIGHT);
+
+        float maxSearchDistance =
+            Mathf.Max(
+                m_stepCheckDistance,
+                sampleInterval);
+
+        float landingProbeHeight =
+            currentGroundHeight +
+            m_maxStepHeight +
+            m_stepClearanceSkin;
+
+        float landingProbeDistance =
+            m_maxStepHeight +
+            m_stepClearanceSkin * 2.0f;
+
+        int sampleCount =
+            Mathf.Max(
+                Mathf.CeilToInt(
+                    maxSearchDistance /
+                    sampleInterval),
+                1);
+
+        for (int sampleIndex = 1;
+             sampleIndex <= sampleCount;
+             sampleIndex++)
+        {
+            float sampleDistance =
+                Mathf.Min(
+                    sampleInterval * sampleIndex,
+                    maxSearchDistance);
+
+            Vector3 horizontalPosition =
+                stepWallPoint +
+                direction * sampleDistance;
+
+            Vector3 probeOrigin =
+                new Vector3(
+                    horizontalPosition.x,
+                    landingProbeHeight,
+                    horizontalPosition.z);
+
+            if (!TryGetNearestStepHit(
+                probeOrigin,
+                Vector3.down,
+                landingProbeDistance,
+                out RaycastHit candidateHit))
+            {
+                continue;
+            }
+
+            // 急斜面を拾った場合は、さらに奥の上面を探索する。
+            if (!m_monitor.IsClimbableGroundSurface(
+                candidateHit.normal))
+            {
+                continue;
+            }
+
+            float stepHeight =
+                candidateHit.point.y -
+                currentGroundHeight;
+
+            if (stepHeight <= MIN_STEP_HEIGHT ||
+                stepHeight >
+                m_maxStepHeight +
+                m_stepClearanceSkin)
+            {
+                continue;
+            }
+
+            landingHit =
+                candidateHit;
+
+            // 呼び出し側でワールド座標から正確な前進量を再計算します。
+            forwardStepDistance =
+                sampleDistance;
+
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Step Upの基準に使用する、現在のプレイヤー直下の支持面を取得します。
+    /// Ground Probeが前方の段差上面を先に検出しても、現在床の高さを維持できます。
+    /// </summary>
+    /// <param name="bottomSphereCenter">CapsuleCollider下側球の中心。</param>
+    /// <param name="capsuleRadius">CapsuleColliderのワールド半径。</param>
+    /// <param name="supportPoint">現在の支持面上の点。</param>
+    /// <returns>true：支持面を取得できた。false：取得できなかった。</returns>
+    private bool TryGetCurrentStepSupportPoint(
+        Vector3 bottomSphereCenter,
+        float capsuleRadius,
+        out Vector3 supportPoint)
+    {
+        supportPoint = Vector3.zero;
+
+        if (m_monitor == null)
+        {
+            return false;
+        }
+
+        // プレイヤー中心直下だけを見ることで、
+        // 前方にある段差上面を現在床として誤採用しない。
+        Vector3 origin =
+            bottomSphereCenter;
+
+        float probeDistance =
+            Mathf.Max(
+                capsuleRadius +
+                m_stepClearanceSkin +
+                m_stepCheckDistance,
+                0.5f);
+
+        int hitCount =
+            Physics.RaycastNonAlloc(
+                origin,
+                Vector3.down,
+                m_stepRaycastBuffer,
+                probeDistance,
+                m_monitor.GroundLayerMask,
+                QueryTriggerInteraction.Ignore);
+
+        float nearestDistance =
+            float.PositiveInfinity;
+
+        bool hasHit =
+            false;
+
+        for (int i = 0; i < hitCount; i++)
+        {
+            RaycastHit hit =
+                m_stepRaycastBuffer[i];
+
+            Collider hitCollider =
+                hit.collider;
+
+            if (hitCollider == null)
+            {
+                continue;
+            }
+
+            if (hitCollider.attachedRigidbody ==
+                m_playerRigidbody)
+            {
+                continue;
+            }
+
+            if (!m_monitor.IsClimbableGroundSurface(
+                hit.normal))
+            {
+                continue;
+            }
+
+            if (hit.distance >=
+                nearestDistance)
+            {
+                continue;
+            }
+
+            nearestDistance =
+                hit.distance;
+
+            supportPoint =
+                hit.point;
+
+            hasHit =
+                true;
+        }
+
+        return hasHit;
+    }
+
+    /// <summary>
+    /// 段差判定用Raycastから、自身のColliderを除外して最も近いHitを取得します。
+    /// </summary>
+    private bool TryGetNearestStepHit(
+        Vector3 origin,
+        Vector3 direction,
+        float distance,
+        out RaycastHit nearestHit)
+    {
+        nearestHit = default;
+
+        if (distance <= 0.0f ||
+            direction.sqrMagnitude <=
+            DIRECTION_SQR_THRESHOLD)
+        {
+            return false;
+        }
+
+        direction.Normalize();
+
+        int hitCount =
+            Physics.RaycastNonAlloc(
+                origin,
+                direction,
+                m_stepRaycastBuffer,
+                distance,
+                GetStepDetectionLayerMask(),
+                QueryTriggerInteraction.Ignore);
+
+        float nearestDistance =
+            float.PositiveInfinity;
+
+        bool hasHit =
+            false;
+
+        for (int i = 0; i < hitCount; i++)
+        {
+            RaycastHit hit =
+                m_stepRaycastBuffer[i];
+
+            Collider hitCollider =
+                hit.collider;
+
+            if (hitCollider == null)
+            {
+                continue;
+            }
+
+            if (hitCollider.attachedRigidbody ==
+                m_playerRigidbody)
+            {
+                continue;
+            }
+
+            if (hit.distance >=
+                nearestDistance)
+            {
+                continue;
+            }
+
+            nearestDistance =
+                hit.distance;
+
+            nearestHit =
+                hit;
+
+            hasHit =
+                true;
+        }
+
+        return hasHit;
+    }
+
+    /// <summary>
+    /// CapsuleColliderのワールド空間形状を取得します。
+    /// </summary>
+    /// <param name="topSphereCenter">上側球の中心。</param>
+    /// <param name="bottomSphereCenter">下側球の中心。</param>
+    /// <param name="radius">ワールド空間の半径。</param>
+    /// <returns>true：取得成功。false：Y軸CapsuleColliderではない。</returns>
+    private bool TryGetCapsuleWorldGeometry(
+        out Vector3 topSphereCenter,
+        out Vector3 bottomSphereCenter,
+        out float radius)
+    {
+        topSphereCenter = Vector3.zero;
+        bottomSphereCenter = Vector3.zero;
+        radius = 0.0f;
+
+        if (m_playerCapsuleCollider == null ||
+            m_playerCapsuleCollider.direction != 1)
+        {
+            return false;
+        }
+
+        Transform capsuleTransform =
+            m_playerCapsuleCollider.transform;
+
+        Vector3 lossyScale =
+            capsuleTransform.lossyScale;
+
+        float horizontalScale =
+            Mathf.Max(
+                Mathf.Abs(lossyScale.x),
+                Mathf.Abs(lossyScale.z));
+
+        float verticalScale =
+            Mathf.Abs(lossyScale.y);
+
+        radius =
+            m_playerCapsuleCollider.radius *
+            horizontalScale;
+
+        float height =
+            Mathf.Max(
+                m_playerCapsuleCollider.height *
+                verticalScale,
+                radius * 2.0f);
+
+        float sphereCenterOffset =
+            Mathf.Max(
+                height * 0.5f - radius,
+                0.0f);
+
+        Vector3 worldCenter =
+            capsuleTransform.TransformPoint(
+                m_playerCapsuleCollider.center);
+
+        topSphereCenter =
+            worldCenter +
+            Vector3.up * sphereCenterOffset;
+
+        bottomSphereCenter =
+            worldCenter -
+            Vector3.up * sphereCenterOffset;
+
+        return true;
+    }
+
+    /// <summary>
+    /// 段差上へ移動したCapsuleColliderが他Colliderへ重ならないか確認します。
+    /// </summary>
+    /// <param name="topSphereCenter">現在の上側球中心。</param>
+    /// <param name="bottomSphereCenter">現在の下側球中心。</param>
+    /// <param name="capsuleRadius">Capsule半径。</param>
+    /// <param name="stepOffset">段差上へ持ち上げる量。</param>
+    /// <returns>true：移動先に十分な空間がある。false：他Colliderと重なる。</returns>
+    private bool HasStepDestinationClearance(
+        Vector3 topSphereCenter,
+        Vector3 bottomSphereCenter,
+        float capsuleRadius,
+        Vector3 stepOffset)
+    {
+        float clearanceRadius =
+            Mathf.Max(
+                capsuleRadius -
+                m_stepClearanceSkin,
+                0.01f);
+
+        int hitCount =
+            Physics.OverlapCapsuleNonAlloc(
+                bottomSphereCenter + stepOffset,
+                topSphereCenter + stepOffset,
+                clearanceRadius,
+                m_stepClearanceBuffer,
+                Physics.DefaultRaycastLayers,
+                QueryTriggerInteraction.Ignore);
+
+        for (int i = 0; i < hitCount; i++)
+        {
+            Collider hitCollider =
+                m_stepClearanceBuffer[i];
+
+            if (hitCollider == null)
+            {
+                continue;
+            }
+
+            if (hitCollider ==
+                    m_playerCapsuleCollider ||
+                hitCollider.attachedRigidbody ==
+                    m_playerRigidbody)
+            {
+                continue;
+            }
+
+            return false;
+        }
+
+        return true;
     }
 
     /// <summary>
@@ -1088,7 +2109,7 @@ public sealed class PlayerMotor : MonoBehaviour
 
         // 現在の実際の水平速度
         float currentActualSpeed =
-            GetHorizontalVelocity().magnitude;
+            GetMoveVelocity().magnitude;
 
         float decelerationThisStep =
             m_obstacleDecelerationPerSecond *
@@ -1437,6 +2458,53 @@ public sealed class PlayerMotor : MonoBehaviour
 
         return (m_obstacleLayerMask.value & layerMask) != 0;
     }
+    /// <summary>
+    /// Step Upで使用するParameterAssetの値を実行時キャッシュへ同期します。
+    /// Play中のInspector調整も次のStep判定から反映されます。
+    /// </summary>
+    private void ApplyStepParameterAsset()
+    {
+        if (m_parameterAsset == null)
+        {
+            return;
+        }
+
+        m_maxStepHeight =
+            m_parameterAsset.MaxStepHeight;
+
+        m_stepCheckDistance =
+            m_parameterAsset.StepCheckDistance;
+
+        m_stepLowerCheckHeight =
+            m_parameterAsset.StepLowerCheckHeight;
+
+        m_stepForwardOffset =
+            m_parameterAsset.StepForwardOffset;
+
+        m_stepClearanceSkin =
+            m_parameterAsset.StepClearanceSkin;
+    }
+
+    /// <summary>
+    /// Step Up失敗理由を記録してfalseを返します。
+    /// </summary>
+    private bool FailStep(string reason)
+    {
+        SetStepDebugReason(reason);
+        return false;
+    }
+
+    /// <summary>
+    /// Step Up診断情報を更新します。
+    /// </summary>
+    private void SetStepDebugReason(string reason)
+    {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        m_stepDebugReason =
+            reason;
+#endif
+    }
+
     /// <summary>Applies the assigned parameter asset.</summary>
     private void ApplyParameterAsset()
     {
@@ -1445,6 +2513,11 @@ public sealed class PlayerMotor : MonoBehaviour
         m_obstacleSkinWidth = m_parameterAsset.ObstacleSkinWidth;
         m_obstacleDecelerationPerSecond = m_parameterAsset.ObstacleDecelerationPerSecond;
         m_collisionLiftPreventionMinSpeed = m_parameterAsset.CollisionLiftPreventionMinSpeed;
+        m_maxStepHeight = m_parameterAsset.MaxStepHeight;
+        m_stepCheckDistance = m_parameterAsset.StepCheckDistance;
+        m_stepLowerCheckHeight = m_parameterAsset.StepLowerCheckHeight;
+        m_stepForwardOffset = m_parameterAsset.StepForwardOffset;
+        m_stepClearanceSkin = m_parameterAsset.StepClearanceSkin;
     }
 
 }
