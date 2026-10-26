@@ -13004,6 +13004,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 563039506}
+  - component: {fileID: 563039507}
   m_Layer: 0
   m_Name: FieldReference
   m_TagString: Untagged
@@ -13033,6 +13034,27 @@ Transform:
   - {fileID: 476802668}
   m_Father: {fileID: 1841588947}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &563039507
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 563039505}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 83576abde87af754f9573f95a4f30984, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::S1FieldController
+  m_eventChannel: {fileID: 11400000, guid: df9d164d5f445284d9a90cfc59a579f9, type: 2}
+  m_phaseFieldGroup:
+    m_dictionaryElements:
+    - m_key: 0
+      m_value:
+      - {fileID: 1732587347}
+    - m_key: 1
+      m_value:
+      - {fileID: 638864600}
 --- !u!1001 &564011927
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -21858,7 +21880,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 734408da4e186084f93f198e02228b1d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameFlowController
-  m_initialState: 1
+  m_initialState: 2
   m_stateChangedEvent: {fileID: 11400000, guid: 3c24164873d50a4479bdb3f6441eb8b1, type: 2}
 --- !u!4 &890991075 stripped
 Transform:
@@ -26735,7 +26757,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Health
   m_maxHealth: 100
   m_currentHealth: 0
-  m_healthValueParameterAsset: {fileID: 11400000, guid: 8fce6f60dbebd4c48a3ea089d2747e62, type: 2}
+  m_healthValueParameterAsset: {fileID: 11400000, guid: 722ac21a5600f364181758f0a36293fa, type: 2}
 --- !u!1 &1030115760
 GameObject:
   m_ObjectHideFlags: 0
@@ -63289,7 +63311,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ac89aa99baa547944a6deb0c0b7f7216, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BossPhaseController
-  m_initialPhase: 0
+  m_phaseEventChannel: {fileID: 11400000, guid: df9d164d5f445284d9a90cfc59a579f9, type: 2}
+  m_initialPhase: 1
   m_phaseDefinitions:
   - m_phaseID: 0
     m_phaseRoot: {fileID: 7893520892662239548}
