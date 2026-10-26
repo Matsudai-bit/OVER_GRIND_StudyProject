@@ -129,7 +129,6 @@ public sealed class S1BossPhaseTransitionHandler : MonoBehaviour
     /// </summary>
     private void StartS1P3Transition()
     {
-        SceneManager.LoadScene(
-            "TitleScene");
+  
     }
 }

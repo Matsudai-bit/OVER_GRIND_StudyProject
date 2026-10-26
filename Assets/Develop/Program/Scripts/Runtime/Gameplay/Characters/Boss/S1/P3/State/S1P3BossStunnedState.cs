@@ -233,7 +233,8 @@ public sealed class S1P3BossStunnedState :
 
         CompleteStun();
 
-        m_references.CoreHealth.TakeDamage(m_references.CoreHealth.CurrentHealth);
+        AttackDamageData attackDamage = new(999999);
+        m_references.BreakablePart.TakeDamage(attackDamage);
     }
 
     /// <summary>

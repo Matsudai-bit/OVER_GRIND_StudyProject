@@ -65,7 +65,7 @@ public sealed class S1P3BossReferences :
         m_sequenceChangedEvent;
 
     [SerializeField]
-    private Health m_coreHealth;
+    private BossBreakablePart m_coreHealth;
     /// <summary>
     /// 状態パラメータを取得します。
     /// </summary>
@@ -131,7 +131,7 @@ public sealed class S1P3BossReferences :
     public GameplaySequenceChangedEvent SequenceChangedEvent =>
         m_sequenceChangedEvent;
 
-    public Health CoreHealth => m_coreHealth;
+    public BossBreakablePart BreakablePart => m_coreHealth;
     /// <summary>
     /// フェーズで使用するパラメータを生成します。
     /// </summary>

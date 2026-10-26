@@ -70,7 +70,7 @@ public sealed class S1P3CoreDestructionObjective : BossPhaseObjective
                 return;
             }
         }
-
+        Debug.Log("すべての弱点が破壊された");
         CompleteObjective();
     }
 }
