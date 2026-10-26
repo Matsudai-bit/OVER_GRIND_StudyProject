@@ -21,6 +21,12 @@ public class GamepadRumbleAsset : ScriptableObject
     [SerializeField, Header("固定優先度 (PRIORITYモード用)")]
     private int m_priority = 0;
 
+    [SerializeField, Header("ループ再生を行うかどうか")]
+    private bool m_isLoop = false;
+
+    [SerializeField, Header("優先度の高い振動に割り込まれた後、復帰再生させるか")]
+    private bool m_canResumeAfterInterrupt = true;
+
     /// <summary>振動持続時間を取得します。</summary>
     public float Duration => m_duration;
 
@@ -35,4 +41,18 @@ public class GamepadRumbleAsset : ScriptableObject
 
     /// <summary>固定優先度を取得します。</summary>
     public int Priority => m_priority;
+
+    /// <summary>ループ再生フラグを取得または設定します。</summary>
+    public bool IsLoop
+    {
+        get => m_isLoop;
+        set => m_isLoop = value;
+    }
+
+    /// <summary>割り込み後の復帰許可フラグを取得または設定します。</summary>
+    public bool CanResumeAfterInterrupt
+    {
+        get => m_canResumeAfterInterrupt;
+        set => m_canResumeAfterInterrupt = value;
+    }
 }

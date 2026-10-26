@@ -12,31 +12,33 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3e4e5c3822269e244a0def0c489507a3, type: 3}
   m_Name: Game 2
   m_EditorClassIdentifier: Assembly-CSharp::GamepadRumbleAsset
-  lowFrequency: 0.5
-  highFrequency: 0.5
-  duration: 0.2
-  dampingCurve:
+  m_duration: 4
+  m_lowFrequencyStrength: 1
+  m_highFrequencyStrength: 0
+  m_dampingCurve:
     serializedVersion: 2
     m_Curve:
     - serializedVersion: 3
       time: 0
       value: 1
       inSlope: 0
-      outSlope: -1
-      tangentMode: 0
+      outSlope: 0
+      tangentMode: 34
       weightedMode: 0
       inWeight: 0
       outWeight: 0
     - serializedVersion: 3
       time: 1
-      value: 0
-      inSlope: -1
+      value: 1
+      inSlope: 0
       outSlope: 0
-      tangentMode: 0
+      tangentMode: 34
       weightedMode: 0
       inWeight: 0
       outWeight: 0
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  priority: 0
+  m_priority: 0
+  m_isLoop: 1
+  m_canResumeAfterInterrupt: 1

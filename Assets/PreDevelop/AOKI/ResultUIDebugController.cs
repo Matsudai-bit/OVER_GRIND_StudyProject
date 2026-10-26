@@ -1,19 +1,19 @@
 using System.Collections;
 using UnityEngine;
-using UnityEngine.InputSystem; // ★ 新 Input System 用の参照を追加
+using UnityEngine.InputSystem; // Input System 用の参照を追加
 
 /// <summary>
 /// Spaceキーを押すことで、リザルトUI全体の演出を一括でリセット＆再再生するデバッグ用スクリプトです（New Input System対応）。
 /// </summary>
 public class ResultUIDebugController : MonoBehaviour
 {
-    [Header("再再生対象のルートUI")]
+    [Header("再生対象のルートUI")]
     [Tooltip("Hierarchy上にある ResultUI や View_Root などをドラッグ＆ドロップしてください")]
     [SerializeField] private GameObject m_resultRootUI;
 
     private void Update()
     {
-        // ★ 新 Input System での Spaceキー入力判定
+        // Input System での Spaceキー入力判定
         if (Keyboard.current != null && Keyboard.current.spaceKey.wasPressedThisFrame)
         {
             RestartAllSequences();
@@ -39,13 +39,13 @@ public class ResultUIDebugController : MonoBehaviour
 
     private IEnumerator RestartCoroutine()
     {
-        // 1. ルートオブジェクトを一度OFFにして演出を初期化
+        // ルートオブジェクトを一度OFFにして演出を初期化
         m_resultRootUI.SetActive(false);
 
-        // 2. 1フレーム待機（内部状態を確実にクリア）
+        // 1フレーム待機（内部状態を確実にクリア）
         yield return null;
 
-        // 3. 再びONにして演出を一括再再生！
+        // 再びONにして演出を一括再再生！
         m_resultRootUI.SetActive(true);
 
         Debug.Log("?? [ResultUIDebug] リザルト演出を一括再再生しました！");

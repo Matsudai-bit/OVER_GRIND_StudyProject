@@ -1,14 +1,35 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
 /// <summary>
 /// ゲームパッドの振動再生を一元管理します。
+/// シングルトンではなく、シーン上のコンポーネントとして動作します。
 /// </summary>
 public class GamepadRumbleController : MonoBehaviour
 {
-    /// <summary>シングルトンインスタンス。</summary>
-    public static GamepadRumbleController Instance { get; private set; }
+    /// <summary>
+    /// 現在進行中の振動再生状態を保持する内部クラス。
+    /// </summary>
+    private class RumbleState
+    {
+        /// <summary>再生中の振動アセット。</summary>
+        public GamepadRumbleAsset Asset { get; }
+
+        /// <summary>再生開始からの経過時間 (秒)。</summary>
+        public float ElapsedTime { get; set; }
+
+        /// <summary>ループ再生フラグ。</summary>
+        public bool IsLoop { get; set; }
+
+        public RumbleState(GamepadRumbleAsset asset)
+        {
+            Asset = asset;
+            ElapsedTime = 0f;
+            IsLoop = asset.IsLoop;
+        }
+    }
 
     [SerializeField, Header("振動要求イベント")]
     private GamepadRumbleRequestEvent m_rumbleRequestEvent;
@@ -26,11 +47,8 @@ public class GamepadRumbleController : MonoBehaviour
     [SerializeField, Range(0f, 1f), Header("全体倍率 (0.0 ~ 1.0)")]
     private float m_masterStrength = 1.0f;
 
-    // 現在再生中の振動アセット
-    private GamepadRumbleAsset m_currentAsset;
-
-    // 現在の振動の経過時間
-    private float m_currentElapsedTime = 0f;
+    // 現在管理中の振動リスト
+    private readonly List<RumbleState> m_activeRumbleList = new List<RumbleState>();
 
     // ポーズ中かどうか
     private bool m_isPaused = false;
@@ -57,19 +75,6 @@ public class GamepadRumbleController : MonoBehaviour
     {
         get => m_masterStrength;
         set => m_masterStrength = Mathf.Clamp01(value);
-    }
-
-    private void Awake()
-    {
-        if (Instance == null)
-        {
-            Instance = this;
-            DontDestroyOnLoad(gameObject);
-        }
-        else
-        {
-            Destroy(gameObject);
-        }
     }
 
     private void OnEnable()
@@ -106,7 +111,6 @@ public class GamepadRumbleController : MonoBehaviour
     /// <param name="eventData">ポーズ状態変更情報。</param>
     private void OnPauseChanged(PauseChangedEventData eventData)
     {
-        // 既存のPauseChangedEventData構造体のプロパティ名に合わせてください
         bool isPaused = eventData.IsPaused;
 
         if (isPaused)
@@ -137,59 +141,115 @@ public class GamepadRumbleController : MonoBehaviour
     }
 
     /// <summary>
+    /// 特定の振動アセットのループ再生フラグを切り替えます。
+    /// </summary>
+    /// <param name="asset">対象の振動アセット。</param>
+    /// <param name="isLoop">ループさせる場合は true、止める場合は false。</param>
+    public void SetLoop(GamepadRumbleAsset asset, bool isLoop)
+    {
+        if (asset == null)
+        {
+            return;
+        }
+
+        asset.IsLoop = isLoop;
+
+        RumbleState state = m_activeRumbleList.Find(s => s.Asset == asset);
+        if (state != null)
+        {
+            state.IsLoop = isLoop;
+        }
+    }
+
+    /// <summary>
+    /// 指定された振動アセットの再生を個別に停止します。
+    /// </summary>
+    /// <param name="asset">停止させる振動アセット。</param>
+    public void StopRumble(GamepadRumbleAsset asset)
+    {
+        if (asset == null)
+        {
+            return;
+        }
+
+        m_activeRumbleList.RemoveAll(s => s.Asset == asset);
+
+        if (m_activeRumbleList.Count == 0)
+        {
+            StopAndResetMotors();
+        }
+    }
+
+    /// <summary>
     /// 振動要求を受け取ります。
     /// </summary>
     /// <param name="requestAsset">要求された振動アセット。</param>
     private void OnRumbleRequested(GamepadRumbleAsset requestAsset)
     {
-        if (requestAsset == null || !m_isEnabled)
+        if (requestAsset == null || !m_isEnabled || m_isPaused)
         {
             return;
         }
 
-        if (m_isPaused)
+        // 新しい要求が入った際、それより優先度の低くなる既存振動のうち「復帰不可」のものを破棄
+        for (int i = m_activeRumbleList.Count - 1; i >= 0; i--)
         {
-            return;
-        }
+            RumbleState existingState = m_activeRumbleList[i];
 
-        if (m_currentAsset != null && m_activeRumbleCoroutine != null)
-        {
-            if (!CheckOverride(requestAsset))
+            // 新要求の方が強くて上書きされる場合
+            if (CheckOverride(existingState, requestAsset))
             {
-                return;
+                // アセット側で復帰不可(CanResumeAfterInterrupt == false)が設定されている場合は削除
+                if (!existingState.Asset.CanResumeAfterInterrupt)
+                {
+                    m_activeRumbleList.RemoveAt(i);
+                }
             }
         }
 
-        StartRumble(requestAsset);
+        RumbleState targetState = m_activeRumbleList.Find(s => s.Asset == requestAsset);
+        if (targetState != null)
+        {
+            targetState.ElapsedTime = 0f;
+            targetState.IsLoop = requestAsset.IsLoop;
+        }
+        else
+        {
+            m_activeRumbleList.Add(new RumbleState(requestAsset));
+        }
+
+        if (m_activeRumbleCoroutine == null)
+        {
+            m_activeRumbleCoroutine = StartCoroutine(RumbleRoutine());
+        }
     }
 
     /// <summary>
-    /// 新しい振動で上書きするかどうかを判定します。
+    /// 新しい振動で上書き可能かを判定します。
     /// </summary>
+    /// <param name="currentState">現在再生中の振動状態。</param>
     /// <param name="newAsset">新しく要求された振動アセット。</param>
     /// <returns>
-    /// true：上書きします。
-    /// false：上書きしません。
+    /// true：上書き可能です。
+    /// false：上書き不可能です。
     /// </returns>
-    private bool CheckOverride(GamepadRumbleAsset newAsset)
+    private bool CheckOverride(RumbleState currentState, GamepadRumbleAsset newAsset)
     {
-        if (m_currentAsset == null)
+        if (currentState == null || currentState.Asset == null)
         {
             return true;
         }
 
         if (m_conflictMode == GamepadRumbleConflictMode.PRIORITY)
         {
-            return newAsset.Priority >= m_currentAsset.Priority;
+            return newAsset.Priority >= currentState.Asset.Priority;
         }
         else
         {
-            // 時間経過による現在の強さを計算
-            float currentProgress = m_currentAsset.Duration > 0f ? (m_currentElapsedTime / m_currentAsset.Duration) : 1f;
-            float currentDamping = m_currentAsset.DampingCurve != null ? m_currentAsset.DampingCurve.Evaluate(Mathf.Clamp01(currentProgress)) : 1f;
-            float currentRealtimePower = (m_currentAsset.LowFrequencyStrength + m_currentAsset.HighFrequencyStrength) * currentDamping;
+            float currentProgress = currentState.Asset.Duration > 0f ? (currentState.ElapsedTime / currentState.Asset.Duration) : 1f;
+            float currentDamping = currentState.Asset.DampingCurve != null ? currentState.Asset.DampingCurve.Evaluate(Mathf.Clamp01(currentProgress)) : 1f;
+            float currentRealtimePower = (currentState.Asset.LowFrequencyStrength + currentState.Asset.HighFrequencyStrength) * currentDamping;
 
-            // 新しい振動の初期強さを計算
             float newInitialPower = newAsset.LowFrequencyStrength + newAsset.HighFrequencyStrength;
 
             return newInitialPower >= currentRealtimePower;
@@ -197,19 +257,28 @@ public class GamepadRumbleController : MonoBehaviour
     }
 
     /// <summary>
-    /// 振動を開始します。
+    /// 現在のリストの中で最も優先度が高い振動状態を取得します。
     /// </summary>
-    /// <param name="asset">再生する振動アセット。</param>
-    private void StartRumble(GamepadRumbleAsset asset)
+    /// <returns>最も優先度が高い RumbleState。</returns>
+    private RumbleState GetHighestPriorityState()
     {
-        if (m_activeRumbleCoroutine != null)
+        if (m_activeRumbleList.Count == 0)
         {
-            StopCoroutine(m_activeRumbleCoroutine);
+            return null;
         }
 
-        m_currentAsset = asset;
-        m_currentElapsedTime = 0f;
-        m_activeRumbleCoroutine = StartCoroutine(RumbleRoutine());
+        RumbleState highest = m_activeRumbleList[0];
+
+        for (int i = 1; i < m_activeRumbleList.Count; i++)
+        {
+            RumbleState candidate = m_activeRumbleList[i];
+            if (CheckOverride(highest, candidate.Asset))
+            {
+                highest = candidate;
+            }
+        }
+
+        return highest;
     }
 
     /// <summary>
@@ -217,7 +286,7 @@ public class GamepadRumbleController : MonoBehaviour
     /// </summary>
     private IEnumerator RumbleRoutine()
     {
-        while (m_currentElapsedTime < m_currentAsset.Duration)
+        while (m_activeRumbleList.Count > 0)
         {
             while (m_isPaused)
             {
@@ -234,19 +303,45 @@ public class GamepadRumbleController : MonoBehaviour
 
             if (!m_isEnabled)
             {
-                ResetGamepadMotors();
+                StopAndResetMotors();
                 yield break;
             }
 
-            m_currentElapsedTime += Time.unscaledDeltaTime;
+            float deltaTime = Time.unscaledDeltaTime;
 
-            float progress = Mathf.Clamp01(m_currentElapsedTime / m_currentAsset.Duration);
-            float damping = m_currentAsset.DampingCurve != null ? m_currentAsset.DampingCurve.Evaluate(progress) : 1f;
+            // 全ての振動のタイマーを進行させ、期限切れのものを自動削除
+            for (int i = m_activeRumbleList.Count - 1; i >= 0; i--)
+            {
+                RumbleState state = m_activeRumbleList[i];
+                state.ElapsedTime += deltaTime;
 
-            float low = m_currentAsset.LowFrequencyStrength * damping * m_masterStrength;
-            float high = m_currentAsset.HighFrequencyStrength * damping * m_masterStrength;
+                if (!state.IsLoop && state.ElapsedTime >= state.Asset.Duration)
+                {
+                    m_activeRumbleList.RemoveAt(i);
+                }
+            }
 
-            gamepad.SetMotorSpeeds(low, high);
+            if (m_activeRumbleList.Count == 0)
+            {
+                break;
+            }
+
+            // 現在最も優先度の高い振動を選択して制御
+            RumbleState highestState = GetHighestPriorityState();
+            if (highestState != null)
+            {
+                float progress = highestState.Asset.Duration > 0f ? Mathf.Clamp01(highestState.ElapsedTime / highestState.Asset.Duration) : 0f;
+                float damping = highestState.Asset.DampingCurve != null ? highestState.Asset.DampingCurve.Evaluate(progress) : 1f;
+
+                float low = highestState.Asset.LowFrequencyStrength * damping * m_masterStrength;
+                float high = highestState.Asset.HighFrequencyStrength * damping * m_masterStrength;
+
+                gamepad.SetMotorSpeeds(low, high);
+            }
+            else
+            {
+                ResetGamepadMotors();
+            }
 
             yield return null;
         }
@@ -255,7 +350,7 @@ public class GamepadRumbleController : MonoBehaviour
     }
 
     /// <summary>
-    /// 進行中の振動を停止し、モーターをリセットします。
+    /// 全ての振動を停止し、モーターをリセットします。
     /// </summary>
     public void StopAndResetMotors()
     {
@@ -265,8 +360,7 @@ public class GamepadRumbleController : MonoBehaviour
             m_activeRumbleCoroutine = null;
         }
 
-        m_currentAsset = null;
-        m_currentElapsedTime = 0f;
+        m_activeRumbleList.Clear();
         ResetGamepadMotors();
     }
 
