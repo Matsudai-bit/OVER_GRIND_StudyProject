@@ -99,8 +99,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 415096441624393917}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0.98034513, z: -0, w: -0.1972904}
-  m_LocalPosition: {x: 18.5, y: 3.5, z: 10.5}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 13.7, y: 0, z: -68.2}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -108,7 +108,7 @@ Transform:
   - {fileID: 86029869826681732}
   - {fileID: 301451982182821376}
   m_Father: {fileID: 2180805532895616550}
-  m_LocalEulerAnglesHint: {x: 0, y: 517.243, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!54 &2496564107683638181
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -723,7 +723,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3186272502889636224}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.4957705, y: 0.4957705, z: -0.504194, w: 0.504194}
+  m_LocalRotation: {x: -0.49577045, y: 0.49577066, z: -0.50419384, w: 0.5041941}
   m_LocalPosition: {x: -0.20799945, y: 0.076, z: 0.07799961}
   m_LocalScale: {x: 0.13, y: 0.54, z: 0.06}
   m_ConstrainProportionsScale: 0
@@ -762,7 +762,7 @@ PositionConstraint:
   serializedVersion: 2
   m_Weight: 1
   m_TranslationAtRest: {x: -0.20799945, y: 0.076, z: 0.07799961}
-  m_TranslationOffset: {x: 0.011257827, y: -0.027777888, z: -0.011360168}
+  m_TranslationOffset: {x: 0.011256948, y: -0.027778126, z: -0.011363491}
   m_AffectTranslationX: 1
   m_AffectTranslationY: 1
   m_AffectTranslationZ: 1
@@ -1090,7 +1090,7 @@ Transform:
   m_GameObject: {fileID: 7634725366974383490}
   serializedVersion: 2
   m_LocalRotation: {x: 0.015347484, y: 0.8746025, z: -0.027744666, w: 0.48380283}
-  m_LocalPosition: {x: -73.90166, y: 10.244931, z: -122.96366}
+  m_LocalPosition: {x: -78.70166, y: 6.744931, z: -201.66367}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1260,7 +1260,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 8394686957764197884}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.5041939, y: 0.5041939, z: 0.49577063, w: 0.49577063}
+  m_LocalRotation: {x: 0.50419396, y: 0.5041939, z: 0.49577066, w: 0.49577063}
   m_LocalPosition: {x: 0.255, y: 0.076, z: 0.036}
   m_LocalScale: {x: 0.13, y: 0.54, z: 0.06}
   m_ConstrainProportionsScale: 0
@@ -1299,7 +1299,7 @@ PositionConstraint:
   serializedVersion: 2
   m_Weight: 1
   m_TranslationAtRest: {x: 0.255, y: 0.076, z: 0.036}
-  m_TranslationOffset: {x: 0.035745382, y: -0.027778126, z: -0.05336462}
+  m_TranslationOffset: {x: 0.035741687, y: -0.027778126, z: -0.0533631}
   m_AffectTranslationX: 1
   m_AffectTranslationY: 1
   m_AffectTranslationZ: 1
@@ -1390,6 +1390,7 @@ GameObject:
   - component: {fileID: 1163282603766494091}
   - component: {fileID: 6842484610000000002}
   - component: {fileID: 1994846380004905968}
+  - component: {fileID: 3948827051236997928}
   m_Layer: 0
   m_Name: CinemachineCamera
   m_TagString: Untagged
@@ -1406,7 +1407,7 @@ Transform:
   m_GameObject: {fileID: 8690278387845699989}
   serializedVersion: 2
   m_LocalRotation: {x: 0.015347485, y: 0.8746025, z: -0.027744666, w: 0.4838029}
-  m_LocalPosition: {x: -73.90166, y: 10.244931, z: -122.96366}
+  m_LocalPosition: {x: -78.70166, y: 6.744931, z: -201.66367}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1638,6 +1639,45 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &3948827051236997928
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8690278387845699989}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dbe43d662878a7c43bcd44d43c9e2094, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.Cinemachine::Unity.Cinemachine.CinemachineDeoccluder
+  CollideAgainst:
+    serializedVersion: 2
+    m_Bits: 4104
+  IgnoreTag: 
+  TransparentLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  MinimumDistanceFromTarget: 0.3
+  AvoidObstacles:
+    Enabled: 1
+    DistanceLimit: 0
+    MinimumOcclusionTime: 0
+    CameraRadius: 0.4
+    UseFollowTarget:
+      Enabled: 0
+      YOffset: 0
+    Strategy: 0
+    MaximumEffort: 4
+    SmoothingTime: 0
+    Damping: 0.4
+    DampingWhenOccluded: 0.2
+  ShotQualityEvaluation:
+    Enabled: 0
+    OptimalDistance: 10
+    NearLimit: 5
+    FarLimit: 30
+    MaxQualityBoost: 0.2
 --- !u!1001 &262406724028549611
 PrefabInstance:
   m_ObjectHideFlags: 0
