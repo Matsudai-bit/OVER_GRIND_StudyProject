@@ -22457,7 +22457,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 022d213c1b48ad041b35de06c99bb1a4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CinemachineShake
-  impulseSource: {fileID: 2058835216}
+  m_impulseSource: {fileID: 0}
 --- !u!114 &1204587807
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -27527,20 +27527,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f61d97b31cb92a942be9dea86943c11f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CameraShakeTest
-  cameraShake: {fileID: 1204032201}
-  preset1:
-    presetName: "\u30D1\u30BF\u30FC\u30F31\uFF08\u52A0\u7B97\uFF09"
-    triggerKey: 29
-    duration: 0.3
-    magnitude: 0.5
-    overwrite: 0
-  preset2:
-    presetName: "\u30D1\u30BF\u30FC\u30F32\uFF08\u4E0A\u66F8\u304D\uFF09"
-    triggerKey: 30
-    duration: 0.4
-    magnitude: 0.2
-    overwrite: 1
-  stopKey: 27
+  m_cinemachineShake: {fileID: 0}
+  m_preset1:
+    m_presetName: "\u30D1\u30BF\u30FC\u30F31\uFF08\u52A0\u7B97\uFF09"
+    m_triggerKey: 29
+    m_duration: 0.3
+    m_magnitude: 0.5
+    m_isOverwrite: 0
+  m_preset2:
+    m_presetName: "\u30D1\u30BF\u30FC\u30F32\uFF08\u4E0A\u66F8\u304D\uFF09"
+    m_triggerKey: 30
+    m_duration: 1
+    m_magnitude: 1
+    m_isOverwrite: 1
+  m_stopKey: 27
 --- !u!4 &1558546824
 Transform:
   m_ObjectHideFlags: 0

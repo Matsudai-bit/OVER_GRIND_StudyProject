@@ -2,9 +2,9 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 
 /// <summary>
-/// CinemachineShake クラスの動作テストおよびデバッグを行うクラス。
+/// CameraShake クラスの動作テストおよびデバッグを行うクラス。
 /// </summary>
-public class CinemachineShakeTest : MonoBehaviour
+public class CameraShakeTest : MonoBehaviour
 {
     /// <summary>
     /// 振動入力テスト用のプリセット設定データ。
@@ -38,11 +38,11 @@ public class CinemachineShakeTest : MonoBehaviour
         public bool m_isOverwrite = false;
     }
     /// <summary>
-    /// 制御対象の CinemachineShake コンポーネント。
+    /// 制御対象の CameraShake コンポーネント。
     /// </summary>
     [Header("制御対象")]
     [SerializeField]
-    private CinemachineShake m_cinemachineShake;
+    private CameraShake m_CameraShake;
 
     /// <summary>
     /// 振動設定パターン1（加算テスト用）。
@@ -85,9 +85,9 @@ public class CinemachineShakeTest : MonoBehaviour
     private void Start()
     {
         // 参照未設定の場合はシーン内から自動取得
-        if (m_cinemachineShake == null)
+        if (m_CameraShake == null)
         {
-            m_cinemachineShake = FindFirstObjectByType<CinemachineShake>();
+            m_CameraShake = FindFirstObjectByType<CameraShake>();
         }
     }
 
@@ -128,7 +128,7 @@ public class CinemachineShakeTest : MonoBehaviour
     private void OnGUI()
     {
         GUILayout.BeginArea(new Rect(20, 20, 320, 220), GUI.skin.box);
-        GUILayout.Label("<b>Cinemachine Shake Tester</b>");
+        GUILayout.Label("<b>Camera Shake Tester</b>");
 
         DrawPresetButton(m_preset1);
         DrawPresetButton(m_preset2);
@@ -147,12 +147,12 @@ public class CinemachineShakeTest : MonoBehaviour
     /// <param name="preset">実行対象の入力プリセットデータ。</param>
     private void TriggerShake(ShakeInputPreset preset)
     {
-        if (m_cinemachineShake == null || preset == null)
+        if (m_CameraShake == null || preset == null)
         {
             return;
         }
 
-        m_cinemachineShake.Shake(preset.m_duration, preset.m_magnitude, preset.m_isOverwrite);
+        m_CameraShake.Shake(preset.m_duration, preset.m_magnitude, preset.m_isOverwrite);
     }
 
     /// <summary>
@@ -160,9 +160,9 @@ public class CinemachineShakeTest : MonoBehaviour
     /// </summary>
     private void StopShake()
     {
-        if (m_cinemachineShake != null)
+        if (m_CameraShake != null)
         {
-            m_cinemachineShake.StopShake();
+            m_CameraShake.StopShake();
         }
     }
 
