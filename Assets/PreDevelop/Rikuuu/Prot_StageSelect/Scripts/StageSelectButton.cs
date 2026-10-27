@@ -13,6 +13,10 @@ public class StageSelectButton : MonoBehaviour
     [SerializeField]
     private UnityEngine.UI.Image m_image;
 
+    // アニメーション
+    [SerializeField]
+    private ReadyButtonAnimation m_animation;
+
     private SelectButton selectButton;
 
     /// <summary>
@@ -41,6 +45,8 @@ public class StageSelectButton : MonoBehaviour
         m_image.sprite = m_OnCursorTexture;
         // カーソルが合わさっている
         m_isOnCursor = true;
+        // アニメーションを再生させる
+        m_animation.Play();
     }
 
     public void OnCursorExit()
@@ -49,6 +55,8 @@ public class StageSelectButton : MonoBehaviour
         m_image.sprite = m_defaultTexture;
         // カーソルが合わさっていない
         m_isOnCursor = false;
+        // アニメーションを停止させる
+        m_animation.Stop();
     }
 
     public void OnClick()

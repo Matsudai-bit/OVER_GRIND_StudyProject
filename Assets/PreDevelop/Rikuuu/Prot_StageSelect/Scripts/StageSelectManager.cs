@@ -22,6 +22,9 @@ public struct StageInfomation
     // ステージ名（英語）
     public string stageNameEng;
 
+    // ランク
+    public string rank;
+
     // ベストタイム
     public int bestTime;
 
@@ -81,6 +84,9 @@ public class StageSelectManager : MonoBehaviour
     // ステージ名（英語）
     [SerializeField]
     private ScrambleText[] m_stageNameEng;
+    // ランク
+    [SerializeField]
+    private ScrambleText m_rank;
     // ベストタイム
     [SerializeField]
     private ScrambleText m_bestTime;
@@ -107,6 +113,9 @@ public class StageSelectManager : MonoBehaviour
     // ステージ名（英語）のデフォルト値
     [SerializeField]
     private string m_defaultStageNameEn = "-------------";
+    // ランクのデフォルト値
+    [SerializeField]
+    private string m_defaultRank = "-";
     // ベストタイムのデフォルト値
     [SerializeField]
     private string m_defaultBestTime = "-:-.-";
@@ -187,69 +196,90 @@ public class StageSelectManager : MonoBehaviour
         // マップの移動・拡大縮小（Update）の後で判定する
         int hoveredIndex = FindHoveredIndex();
 
-        // 変化がなければ何もしない
-        if (hoveredIndex == m_hoveredIndex)
+        // ホバー状態が変わったときだけ、表示の更新を行う
+        if (hoveredIndex != m_hoveredIndex)
         {
-            return;
+            m_hoveredIndex = hoveredIndex;
+            OnHoverChanged();
         }
-        m_hoveredIndex = hoveredIndex;
 
-        // カーソルが乗ったら
-        if (IsHovering)
-        {
-            // ステージ番号の表示
-            m_stageNumber.text = "STAGE-" + m_stagePoints[m_hoveredIndex].stageNumber.ToString();
-            // セクター番号の表示
-            m_sectorNumber.sprite = m_stagePoints[m_hoveredIndex].stageSectorNumber;
+        // 決定キーの判定は、ホバー状態に変化がなくても毎フレーム行う
+        UpdateReadyButtonInput();
+    }
 
-            // ステージ名の表示
-            m_stageNameJa.Play(m_stagePoints[m_hoveredIndex].stageNameJa);
-            foreach (var stageName in m_stageNameEng)
-            {
-                stageName.Play(m_stagePoints[m_hoveredIndex].stageNameEng);  // ← .text = から変更
-            }
-
-            // ベストタイムの表示
-            int bestTime = m_stagePoints[m_hoveredIndex].bestTime;
-            int minutes = bestTime / 60;
-            float seconds = bestTime - (minutes * 60);
-
-            string timeText = minutes.ToString("00") + ":" + seconds.ToString("00.00");
-            m_bestTime.Play(timeText);
-
-            // イメージコンポーネントの表示
-            m_onCursorImage.enabled = true;
-            m_arrowLineImage.enabled = true;
-
-            // プレイできる場合
-            if (m_stagePoints[m_hoveredIndex].canPlay) 
-            {
-                // ボタンにカーソルが合っている状態にする
-                m_readyButton.OnCursor();
-            }
-        }
+    /// <summary>
+    /// ホバー状態が変わったときの表示の更新
+    /// </summary>
+    private void OnHoverChanged()
+    {
         // カーソルが離れたら
-        else
+        if (!IsHovering)
         {
             // コンポーネントの内容を初期化する
             ResetConmornent();
+            return;
         }
 
-        // カーソルが合わさっていたら
-        if(m_readyButton.m_isOnCursor)
+        // ステージ番号の表示
+        m_stageNumber.text = "STAGE-" + m_stagePoints[m_hoveredIndex].stageNumber.ToString();
+        // セクター番号の表示
+        m_sectorNumber.sprite = m_stagePoints[m_hoveredIndex].stageSectorNumber;
+
+        // ステージ名の表示
+        m_stageNameJa.Play(m_stagePoints[m_hoveredIndex].stageNameJa);
+        foreach (var stageName in m_stageNameEng)
         {
-            // 決定キーが押されたら
-            if (m_enterActionRef != null && m_enterActionRef.action.WasPressedThisFrame())
-            {
-                // キーが押されたときの処理を実行する
-                m_readyButton.OnClick();
-            }
-            // 決定ボタンが離されたら
-            if (m_enterActionRef != null && m_enterActionRef.action.WasReleasedThisFrame())
-            {
-                // キーが離されたときの処理を実行する
-                m_readyButton.OnClickExit();
-            }
+            stageName.Play(m_stagePoints[m_hoveredIndex].stageNameEng);
+        }
+
+        // ランクの表示
+        if (m_defaultRank != m_stagePoints[m_hoveredIndex].rank)
+        {
+            m_rank.Play(m_stagePoints[m_hoveredIndex].rank);
+        }
+
+        // ベストタイムの表示
+        int bestTime = m_stagePoints[m_hoveredIndex].bestTime;
+        int minutes = bestTime / 60;
+        float seconds = bestTime - (minutes * 60);
+
+        string timeText = minutes.ToString("00") + ":" + seconds.ToString("00.00");
+        m_bestTime.Play(timeText);
+
+        // イメージコンポーネントの表示
+        m_onCursorImage.enabled = true;
+        m_arrowLineImage.enabled = true;
+
+        // プレイできる場合
+        if (m_stagePoints[m_hoveredIndex].canPlay)
+        {
+            // ボタンにカーソルが合っている状態にする
+            m_readyButton.OnCursor();
+        }
+    }
+
+    /// <summary>
+    /// READYボタンへの決定キー入力の判定
+    /// </summary>
+    private void UpdateReadyButtonInput()
+    {
+        // カーソルが合わさっていなければ何もしない
+        if (m_readyButton == null || !m_readyButton.m_isOnCursor || m_enterActionRef == null)
+        {
+            return;
+        }
+
+        // 決定キーが押されたら
+        if (m_enterActionRef.action.WasPressedThisFrame())
+        {
+            // キーが押されたときの処理を実行する
+            m_readyButton.OnClick();
+        }
+        // 決定ボタンが離されたら
+        if (m_enterActionRef.action.WasReleasedThisFrame())
+        {
+            // キーが離されたときの処理を実行する
+            m_readyButton.OnClickExit();
         }
     }
 
@@ -398,6 +428,9 @@ public class StageSelectManager : MonoBehaviour
             stageName.Play(m_defaultStageNameEn);
         }
 
+        // ランクの初期化
+        m_rank.Play(m_defaultRank);
+
         // ベストタイムの初期化
         m_bestTime.Play(m_defaultBestTime);
 
@@ -406,6 +439,7 @@ public class StageSelectManager : MonoBehaviour
         m_arrowLineImage.enabled = false;
 
         // ボタンにカーソルが合っていない状態にする
+        Debug.Log("OnCursorExitReadyButton");
         m_readyButton.OnCursorExit();
     }
 }
