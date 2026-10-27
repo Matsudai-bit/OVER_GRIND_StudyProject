@@ -14,11 +14,79 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::S1BossChargeAttackParameterAsset
   m_preparationDuration: 5
   m_rotationSpeed: 70
-  m_chargeSpeed: 100
-  m_maxChargeDistance: 30
-  m_stopMargin: 3
-  m_endDuration: 0.5
-  m_preparationAnimationBoolName: 
-  m_chargeAnimationBoolName: ChargingAttack
-  m_endAnimationBoolName: 
-  m_attackIdentifier: {fileID: 11400000, guid: 5a4e3e18cb17cd44fa51915313dee76e, type: 2}
+  m_chargeSpeed: 41
+  m_maxChargeDistance: 100
+  m_targetOverrunDistance: 50
+  m_stopMargin: 30
+  m_accelerationDuration: 2
+  m_accelerationCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 0.2270726
+      value: 0.5248879
+      inSlope: 2.1929512
+      outSlope: 2.1929512
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.10259917
+      outWeight: 0.095155925
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  m_decelerationDistance: 10
+  m_decelerationCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 0.3689583
+      value: 0.46711862
+      inSlope: 1.4800186
+      outSlope: 1.4800186
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  m_endDuration: 1.5
+  m_animationActiveBoolName: Charging
+  m_animationPhaseIntName: ChargingPhase
+  m_attackIdentifier: {fileID: 11400000, guid: 2fd57e956e79fcf41a5433fee6e68c49, type: 2}

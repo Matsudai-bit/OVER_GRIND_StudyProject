@@ -340,6 +340,8 @@ private void UpdatePhaseMovement()
                 if (Owner.Monitor.IsGrounded &&
                     m_isWaitingForMovingCharge &&
                     Owner.InputReader.HasVBoostHoldStarted &&
+                    Owner.BoostChargingParameterAsset.CanStartMovingCharge(
+                        Owner.Motor.HorizontalSpeed) &&
                     Owner.BoostChargingParameterAsset.HasLateralChargeInput(
                         Owner.InputReader.MoveInput) &&
                     Owner.BoostChargingParameterAsset.HasExceededFreeSteeringAngle(

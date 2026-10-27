@@ -1,3 +1,5 @@
+using UnityEngine;
+
 /// <summary>
 /// ボスの突進攻撃で使用するパラメータを保持します。
 /// </summary>
@@ -14,7 +16,7 @@ public sealed class S1BossChargeAttackParameters
     public float RotationSpeed { get; }
 
     /// <summary>
-    /// 突進速度を取得します。
+    /// 突進の最高速度を取得します。
     /// </summary>
     public float ChargeSpeed { get; }
 
@@ -24,7 +26,7 @@ public sealed class S1BossChargeAttackParameters
     public float MaxChargeDistance { get; }
 
     /// <summary>
-    /// 障害物や移動範囲との停止余白を取得します。
+    /// NavMesh境界との停止余白を取得します。
     /// </summary>
     public float StopMargin { get; }
 
@@ -34,19 +36,39 @@ public sealed class S1BossChargeAttackParameters
     public float EndDuration { get; }
 
     /// <summary>
-    /// 準備アニメーションのBool名を取得します。
+    /// 最高速度へ到達するまでの時間を取得します。
     /// </summary>
-    public string PreparationAnimationBoolName { get; }
+    public float AccelerationDuration { get; }
 
     /// <summary>
-    /// 突進アニメーションのBool名を取得します。
+    /// 突進加速時のイージングを取得します。
     /// </summary>
-    public string ChargeAnimationBoolName { get; }
+    public AnimationCurve AccelerationCurve { get; }
 
     /// <summary>
-    /// 終了アニメーションのBool名を取得します。
+    /// 停止地点の何m手前から減速を開始するか取得します。
     /// </summary>
-    public string EndAnimationBoolName { get; }
+    public float DecelerationDistance { get; }
+
+    /// <summary>
+    /// 突進減速時のイージングを取得します。
+    /// </summary>
+    public AnimationCurve DecelerationCurve { get; }
+
+    /// <summary>
+    /// 対象位置を通過してから進む距離を取得します。
+    /// </summary>
+    public float TargetOverrunDistance { get; }
+
+    /// <summary>
+    /// 突進攻撃中を示すAnimator Bool名を取得します。
+    /// </summary>
+    public string AnimationActiveBoolName { get; }
+
+    /// <summary>
+    /// 突進攻撃の段階を示すAnimator Int名を取得します。
+    /// </summary>
+    public string AnimationPhaseIntName { get; }
 
     /// <summary>
     /// 突進攻撃の識別子を取得します。
@@ -63,27 +85,55 @@ public sealed class S1BossChargeAttackParameters
         float maxChargeDistance,
         float stopMargin,
         float endDuration,
-        string preparationAnimationBoolName,
-        string chargeAnimationBoolName,
-        string endAnimationBoolName,
+        float accelerationDuration,
+        AnimationCurve accelerationCurve,
+        float decelerationDistance,
+        AnimationCurve decelerationCurve,
+        float targetOverrunDistance,
+        string animationActiveBoolName,
+        string animationPhaseIntName,
         AttackIdentifier attackIdentifier)
     {
-        PreparationDuration = preparationDuration;
-        RotationSpeed = rotationSpeed;
-        ChargeSpeed = chargeSpeed;
-        MaxChargeDistance = maxChargeDistance;
-        StopMargin = stopMargin;
-        EndDuration = endDuration;
+        PreparationDuration =
+            preparationDuration;
 
-        PreparationAnimationBoolName =
-            preparationAnimationBoolName;
+        RotationSpeed =
+            rotationSpeed;
 
-        ChargeAnimationBoolName =
-            chargeAnimationBoolName;
+        ChargeSpeed =
+            chargeSpeed;
 
-        EndAnimationBoolName =
-            endAnimationBoolName;
+        MaxChargeDistance =
+            maxChargeDistance;
 
-        AttackIdentifier = attackIdentifier;
+        StopMargin =
+            stopMargin;
+
+        EndDuration =
+            endDuration;
+
+        AccelerationDuration =
+            accelerationDuration;
+
+        AccelerationCurve =
+            accelerationCurve;
+
+        DecelerationDistance =
+            decelerationDistance;
+
+        DecelerationCurve =
+            decelerationCurve;
+
+        TargetOverrunDistance =
+            targetOverrunDistance;
+
+        AnimationActiveBoolName =
+            animationActiveBoolName;
+
+        AnimationPhaseIntName =
+            animationPhaseIntName;
+
+        AttackIdentifier =
+            attackIdentifier;
     }
 }

@@ -30,6 +30,10 @@ public sealed class PlayerBoostChargingParameterAsset : ScriptableObject
     [SerializeField, Min(0.0f)]
     private float m_chargeMoveSpeedRate = 0.75f;
 
+    [Tooltip("移動中チャージを開始できる最低水平速度。この速度未満では移動中チャージへ遷移しません。")]
+    [SerializeField, Min(0.0f)]
+    private float m_minMovingChargeStartSpeed = 5.0f;
+
     [Tooltip("移動中チャージ開始時の進行方向を基準に、方向を固定せず左右へ自由旋回できる角度（度）。現在の進行方向がこの角度を超えると旋回方向を固定します。")]
     [SerializeField, Range(1.0f, 89.0f)]
     [FormerlySerializedAs("m_forwardInputHalfAngle")]
@@ -102,6 +106,32 @@ public sealed class PlayerBoostChargingParameterAsset : ScriptableObject
     [Tooltip("最初に決めた進行方向と逆へ入力したときの旋回倍率。旋回方向は変えず、値を小さくするほど緩やかに曲がります。")]
     [SerializeField, Range(0.0f, 2.0f)]
     private float m_driftCounterTurnRate = 0.10f;
+
+    [Header("ターゲット中の旋回設定")]
+
+    [Tooltip("ターゲット中にスティックを前へ倒したときの旋回倍率。1で基準の旋回速度になります。")]
+    [SerializeField, Range(0.0f, 2.0f)]
+    private float m_targetDriftForwardTurnRate = 1.0f;
+
+    [Tooltip("ターゲット中に移動入力がないときの旋回倍率。0でターゲット方向への旋回補正を行いません。")]
+    [SerializeField, Range(0.0f, 2.0f)]
+    private float m_targetDriftNeutralTurnRate = 0.15f;
+
+    [Tooltip("ターゲット中にスティックを後ろへ倒したときの旋回倍率。0でターゲット方向への旋回補正を行いません。")]
+    [SerializeField, Range(0.0f, 2.0f)]
+    private float m_targetDriftCounterTurnRate = 0.10f;
+
+    [Tooltip("ターゲット旋回で維持する対象との水平距離。この距離より外側では、前後入力に応じて内側へ入りながら旋回します。")]
+    [SerializeField, Min(0.1f)]
+    private float m_targetOrbitRadius = 5.0f;
+
+    [Tooltip("ターゲットから遠い場合に、旋回方向を対象側へ傾ける最大角度（度）。大きいほど素早く接近します。")]
+    [SerializeField, Range(0.0f, 89.0f)]
+    private float m_targetOrbitMaxInwardAngle = 45.0f;
+
+    [Tooltip("ターゲット旋回中の無入力時に適用する内向き角度の割合。0で接近せず、1で前入力時と同じ強さで接近します。")]
+    [SerializeField, Range(0.0f, 1.0f)]
+    private float m_targetOrbitNeutralInwardRate = 0.5f;
 
     [Tooltip("逆入力中に実際の移動方向を旋回外側へ傾ける角度。0で進行方向、値を大きくするほど外側へ大きく移動します。")]
     [SerializeField, Range(0.0f, 89.0f)]
@@ -197,6 +227,21 @@ public sealed class PlayerBoostChargingParameterAsset : ScriptableObject
     public float ChargeMoveSpeedRate =>
         Mathf.Max(0.0f, m_chargeMoveSpeedRate);
 
+    /// <summary>移動中チャージを開始できる最低水平速度を取得します。</summary>
+    public float MinMovingChargeStartSpeed =>
+        Mathf.Max(0.0f, m_minMovingChargeStartSpeed);
+
+    /// <summary>現在の速度で移動中チャージを開始できるか確認します。</summary>
+    /// <param name="horizontalSpeed">現在の水平速度。</param>
+    /// <returns>
+    /// true：最低速度以上で開始できます。
+    /// false：最低速度未満のため開始できません。
+    /// </returns>
+    public bool CanStartMovingCharge(float horizontalSpeed)
+    {
+        return horizontalSpeed >= MinMovingChargeStartSpeed;
+    }
+
     /// <summary>
     /// チャージ開始直後の曲がりやすさ（度/秒）を取得します。
     /// </summary>
@@ -217,6 +262,30 @@ public sealed class PlayerBoostChargingParameterAsset : ScriptableObject
 
     /// <summary>進行方向と逆へ入力したときの旋回倍率を取得します。</summary>
     public float DriftCounterTurnRate => Mathf.Clamp(m_driftCounterTurnRate, 0.0f, 2.0f);
+
+    /// <summary>ターゲット中の前入力時に使用する旋回倍率を取得します。</summary>
+    public float TargetDriftForwardTurnRate =>
+        Mathf.Clamp(m_targetDriftForwardTurnRate, 0.0f, 2.0f);
+
+    /// <summary>ターゲット中の無入力時に使用する旋回倍率を取得します。</summary>
+    public float TargetDriftNeutralTurnRate =>
+        Mathf.Clamp(m_targetDriftNeutralTurnRate, 0.0f, 2.0f);
+
+    /// <summary>ターゲット中の後ろ入力時に使用する旋回倍率を取得します。</summary>
+    public float TargetDriftCounterTurnRate =>
+        Mathf.Clamp(m_targetDriftCounterTurnRate, 0.0f, 2.0f);
+
+    /// <summary>ターゲット旋回で維持する対象との水平距離を取得します。</summary>
+    public float TargetOrbitRadius =>
+        Mathf.Max(0.1f, m_targetOrbitRadius);
+
+    /// <summary>ターゲットから遠い場合に使用する最大内向き角度を取得します。</summary>
+    public float TargetOrbitMaxInwardAngle =>
+        Mathf.Clamp(m_targetOrbitMaxInwardAngle, 0.0f, 89.0f);
+
+    /// <summary>ターゲット旋回中の無入力時に適用する内向き角度の割合を取得します。</summary>
+    public float TargetOrbitNeutralInwardRate =>
+        Mathf.Clamp01(m_targetOrbitNeutralInwardRate);
 
     /// <summary>逆入力中に実移動方向を旋回外側へ傾ける角度を取得します。</summary>
     public float CounterInputMovementAngle => Mathf.Clamp(m_counterInputMovementAngle, 0.0f, 89.0f);

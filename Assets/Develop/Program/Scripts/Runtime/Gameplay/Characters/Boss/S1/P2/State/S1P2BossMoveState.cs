@@ -33,7 +33,7 @@ public sealed class S1P2BossMoveState :
                 m_parameter,
                 out BossMoveRoute route))
         {
-            Debug.LogError(
+            Debug.LogWarning(
                 "S1P2ボスの移動経路を生成できませんでした。");
 
             SetFailed();
