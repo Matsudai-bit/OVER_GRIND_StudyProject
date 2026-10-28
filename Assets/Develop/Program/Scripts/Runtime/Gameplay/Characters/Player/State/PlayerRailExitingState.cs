@@ -29,7 +29,7 @@ public sealed class PlayerRailExitingState
     protected override void OnStartState()
     {
         m_elapsedTime = 0f;
-        Owner.AnimationPresenter.PlayJumpAnimation();
+        Owner.AnimationPresenter.PlayJumpAnimation( PlayerJumpAnimationType.RAIL);
         if (m_startAirAttack && Owner.InputReader.IsAttackHeld)
         {
             m_airAttack = new PlayerContinuousAttack(Owner, true);

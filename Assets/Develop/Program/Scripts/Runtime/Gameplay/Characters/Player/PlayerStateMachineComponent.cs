@@ -46,7 +46,7 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
     // ============================================================
     // 参照
     // ============================================================
-
+    private PlayerStatusProvider m_statusProvider;
     // プレイヤー入力
     private PlayerInputReader m_inputReader;
 
@@ -74,6 +74,8 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
 
     /// <summary>毎フレーム更新する速度モデルを取得します。</summary>
     public SpeedPlaceModel SpeedPlaceModel => m_speedPlaceModel;
+
+    public PlayerStatusProvider StatusProvider => m_statusProvider;
 
     // プレイヤーカメラ機能
     private PlayerCamera m_playerCamera;
@@ -312,7 +314,8 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
         PlayerCamera playerCamera,
         Transform modelTransform,
         VGaugePlaceModel vGaugePlaceModel,
-        SpeedPlaceModel speedPlaceModel)
+        SpeedPlaceModel speedPlaceModel,
+        PlayerStatusProvider statusProvider)
     {
         ApplyParameterAsset();
 
@@ -326,7 +329,8 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
             vBoostMovementParameterAsset == null ||
             boostChargingParameterAsset == null ||
             vGaugePlaceModel == null ||
-            speedPlaceModel == null)
+            speedPlaceModel == null ||
+            statusProvider == null)
         {
             Debug.LogError(
                 $"[{nameof(PlayerStateMachineComponent)}] " +
@@ -404,6 +408,8 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
         m_speedPlaceModel = speedPlaceModel;
         m_vGaugePlaceModel.ResetGauge();
         m_speedPlaceModel.ResetSpeed();
+
+        m_statusProvider = statusProvider;
 
         m_stateMachine =
             new StateMachine<PlayerStateMachineComponent>(

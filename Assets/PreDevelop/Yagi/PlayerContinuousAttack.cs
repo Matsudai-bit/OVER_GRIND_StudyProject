@@ -46,7 +46,6 @@ public sealed class PlayerContinuousAttack
             m_owner.transform,
             GetAttackPowerType());
         m_owner.AttackController.EnableContinuousAttackHitboxes();
-        m_owner.AnimationPresenter.PlayAttackAnimation();
         m_owner.SetSpeedDisplayOverride(m_remainingSpeed);
     }
 
@@ -150,7 +149,6 @@ public sealed class PlayerContinuousAttack
             m_airAttachment.Detach();
             m_airAttachment = null;
         }
-        m_owner.AnimationPresenter.StopAttackAnimation();
         m_owner.AttackController.DisableAttackHitboxes();
         AttackPowerSourceRegistry.Unregister(m_owner.transform);
         m_owner.ClearSpeedDisplayOverride();
