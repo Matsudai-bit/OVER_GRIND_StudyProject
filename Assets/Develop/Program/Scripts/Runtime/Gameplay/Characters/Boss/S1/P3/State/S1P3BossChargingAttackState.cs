@@ -17,6 +17,7 @@ public sealed class S1P3BossChargingAttackState :
     // フェーズ3固有参照
     private S1P3BossReferences m_references;
 
+    // フェーズ共通参照
     private BossPhaseReferences m_commonReferences;
 
     // 連続突進パラメータ
@@ -40,8 +41,14 @@ public sealed class S1P3BossChargingAttackState :
     // 突進攻撃フェーズInt ID
     private int m_animationPhaseIntID;
 
+    // 現在Animatorへ反映している旋回方向
+    private BossChargeTurnDirection?
+        m_currentAnimationTurnDirection;
+
     // Animation設定を初期化済みか
     private bool m_isAnimationInitialized;
+    // 突進攻撃の旋回方向Int ID
+    private int m_animationTurnDirectionIntID;
 
     /// <summary>
     /// 連続突進を開始します。
@@ -51,7 +58,6 @@ public sealed class S1P3BossChargingAttackState :
         if (!TryInitializeReferences())
         {
             SetFailed();
-
             return;
         }
 
@@ -69,7 +75,6 @@ public sealed class S1P3BossChargingAttackState :
                 "連続突進パラメータが不足しています。");
 
             SetFailed();
-
             return;
         }
 
@@ -81,11 +86,14 @@ public sealed class S1P3BossChargingAttackState :
                 Owner);
 
         /*
-         * Start()内でPREPARATION通知が発行されるため、
+         * Start()内でフェーズ・旋回方向通知が発生するため、
          * 開始より先に購読します。
          */
         m_chargeExecutor.PhaseChanged +=
             HandleChargePhaseChanged;
+
+        m_chargeExecutor.TurnDirectionChanged +=
+            HandleTurnDirectionChanged;
 
         Owner.SetStateExecutionStatus(
             StateExecutionStatus.RUNNING);
@@ -108,7 +116,6 @@ public sealed class S1P3BossChargingAttackState :
         if (m_chargeExecutor == null)
         {
             SetFailed();
-
             return;
         }
 
@@ -118,7 +125,6 @@ public sealed class S1P3BossChargingAttackState :
         if (m_chargeExecutor.HasFailed)
         {
             SetFailed();
-
             return;
         }
 
@@ -142,19 +148,16 @@ public sealed class S1P3BossChargingAttackState :
                 m_parameters.ChargeParameters.Count)
         {
             SetFailed();
-
             return;
         }
 
         m_currentChargeParameters =
-            m_parameters
-                .ChargeParameters[
-                    m_currentChargeIndex];
+            m_parameters.ChargeParameters[
+                m_currentChargeIndex];
 
         if (m_currentChargeParameters == null)
         {
             SetFailed();
-
             return;
         }
 
@@ -167,7 +170,6 @@ public sealed class S1P3BossChargingAttackState :
                 "Animation設定を取得できませんでした。");
 
             SetFailed();
-
             return;
         }
 
@@ -176,16 +178,30 @@ public sealed class S1P3BossChargingAttackState :
                     targetPositionProvider))
         {
             SetFailed();
-
             return;
         }
+
+        m_currentAnimationTurnDirection =
+            null;
 
         if (!m_chargeExecutor.Start(
                 m_currentChargeParameters,
                 targetPositionProvider))
         {
             SetFailed();
+            return;
         }
+
+        /*
+         * Event発行タイミングに依存せず、
+         * 初回方向を確実にAnimatorへ反映します。
+         */
+        SetAnimationTurnDirection(
+            m_chargeExecutor.TurnDirection);
+
+        Owner.AnimationController.SetBool(
+            m_animationActiveBoolID,
+            true);
     }
 
     /// <summary>
@@ -193,11 +209,19 @@ public sealed class S1P3BossChargingAttackState :
     /// </summary>
     private void CompleteCurrentCharge()
     {
+
+        m_currentAnimationTurnDirection =
+            null;
+
         m_currentChargeIndex++;
 
         if (m_currentChargeIndex >=
             CHARGE_COUNT)
         {
+            Owner.AnimationController?.SetBool(
+                m_animationActiveBoolID,
+                false);
+
             Owner.SetStateExecutionStatus(
                 StateExecutionStatus.SUCCEEDED);
 
@@ -210,13 +234,6 @@ public sealed class S1P3BossChargingAttackState :
     /// <summary>
     /// 現在回数に応じた突進対象位置取得処理を生成します。
     /// </summary>
-    /// <param name="targetPositionProvider">
-    /// 対象位置を取得する処理。
-    /// </param>
-    /// <returns>
-    /// true：生成できました。
-    /// false：生成できませんでした。
-    /// </returns>
     private bool TryCreateTargetPositionProvider(
         out Func<Vector3>
             targetPositionProvider)
@@ -225,8 +242,7 @@ public sealed class S1P3BossChargingAttackState :
             null;
 
         /*
-         * 1、2回目は予備動作中も
-         * Playerの現在位置を追尾します。
+         * 1、2回目はPlayerの現在位置を追尾します。
          */
         if (m_currentChargeIndex < 2)
         {
@@ -243,7 +259,7 @@ public sealed class S1P3BossChargingAttackState :
 
         /*
          * 3回目はPlayerから最も遠い
-         * 目的地を選択して固定します。
+         * 目的地を固定目標として使用します。
          */
         if (!TryGetThirdChargeDestination(
                 out Transform destination))
@@ -263,9 +279,6 @@ public sealed class S1P3BossChargingAttackState :
     /// <summary>
     /// Playerの現在位置を取得します。
     /// </summary>
-    /// <returns>
-    /// Playerの現在位置。
-    /// </returns>
     private Vector3 GetPlayerPosition()
     {
         if (m_playerTransform == null)
@@ -279,13 +292,6 @@ public sealed class S1P3BossChargingAttackState :
     /// <summary>
     /// Playerから最も遠い3回目の突進地点を取得します。
     /// </summary>
-    /// <param name="destination">
-    /// 取得した目的地。
-    /// </param>
-    /// <returns>
-    /// true：目的地を取得しました。
-    /// false：有効な目的地がありません。
-    /// </returns>
     private bool TryGetThirdChargeDestination(
         out Transform destination)
     {
@@ -300,10 +306,8 @@ public sealed class S1P3BossChargingAttackState :
             return false;
         }
 
-        IReadOnlyList<Transform>
-            destinationPoints =
-                m_references
-                    .ChargeDestinationPoints;
+        IReadOnlyList<Transform> destinationPoints =
+            m_references.ChargeDestinationPoints;
 
         float farthestSqrDistance =
             -1.0f;
@@ -345,9 +349,6 @@ public sealed class S1P3BossChargingAttackState :
     /// <summary>
     /// Executorの行動フェーズ変更を処理します。
     /// </summary>
-    /// <param name="phase">
-    /// 変更後の行動フェーズ。
-    /// </param>
     private void HandleChargePhaseChanged(
         BossActionPhase phase)
     {
@@ -356,15 +357,18 @@ public sealed class S1P3BossChargingAttackState :
     }
 
     /// <summary>
+    /// Executorの旋回方向変更を処理します。
+    /// </summary>
+    private void HandleTurnDirectionChanged(
+        BossChargeTurnDirection direction)
+    {
+        SetAnimationTurnDirection(
+            direction);
+    }
+
+    /// <summary>
     /// 現在の突進用Animation設定を適用します。
     /// </summary>
-    /// <param name="parameters">
-    /// 突進パラメータ。
-    /// </param>
-    /// <returns>
-    /// true：設定できました。
-    /// false：設定できませんでした。
-    /// </returns>
     private bool ApplyAnimationParameters(
         S1BossChargeAttackParameters parameters)
     {
@@ -373,32 +377,38 @@ public sealed class S1P3BossChargingAttackState :
             string.IsNullOrEmpty(
                 parameters.AnimationActiveBoolName) ||
             string.IsNullOrEmpty(
-                parameters.AnimationPhaseIntName))
+                parameters.AnimationPhaseIntName) ||
+            string.IsNullOrEmpty(
+                parameters.AnimationTurnDirectionIntName))
         {
             return false;
         }
 
         int newActiveBoolID =
             Animator.StringToHash(
-                parameters
-                    .AnimationActiveBoolName);
+                parameters.AnimationActiveBoolName);
 
         int newPhaseIntID =
             Animator.StringToHash(
-                parameters
-                    .AnimationPhaseIntName);
+                parameters.AnimationPhaseIntName);
+
+        int newTurnDirectionIntID =
+            Animator.StringToHash(
+                parameters.AnimationTurnDirectionIntName);
 
         /*
-         * 突進ごとに別Animator Parameterを
-         * 使用する設定にも対応します。
+         * 前回の突進で別Parameterを使用していた場合、
+         * 旧Animationパラメータを解除します。
          */
-        if (m_isAnimationInitialized &&
-            m_animationActiveBoolID !=
-                newActiveBoolID)
+        if (m_isAnimationInitialized)
         {
-            Owner.AnimationController.SetBool(
-                m_animationActiveBoolID,
-                false);
+            if (m_animationActiveBoolID !=
+                newActiveBoolID)
+            {
+                Owner.AnimationController.SetBool(
+                    m_animationActiveBoolID,
+                    false);
+            }
         }
 
         m_animationActiveBoolID =
@@ -407,19 +417,17 @@ public sealed class S1P3BossChargingAttackState :
         m_animationPhaseIntID =
             newPhaseIntID;
 
+        m_animationTurnDirectionIntID =
+            newTurnDirectionIntID;
+
         m_isAnimationInitialized =
             true;
 
-        /*
-         * Boolを有効化する前にPhaseを初期化し、
-         * 前回値による誤遷移を防ぎます。
-         */
         SetAnimationPhase(
             BossActionPhase.PREPARATION);
 
-        Owner.AnimationController.SetBool(
-            m_animationActiveBoolID,
-            true);
+        m_currentAnimationTurnDirection =
+            null;
 
         return true;
     }
@@ -427,9 +435,6 @@ public sealed class S1P3BossChargingAttackState :
     /// <summary>
     /// Animatorへ現在の行動フェーズを設定します。
     /// </summary>
-    /// <param name="phase">
-    /// 設定する行動フェーズ。
-    /// </param>
     private void SetAnimationPhase(
         BossActionPhase phase)
     {
@@ -443,6 +448,33 @@ public sealed class S1P3BossChargingAttackState :
             m_animationPhaseIntID,
             (int)phase);
     }
+
+    /// <summary>
+    /// Animatorへ現在の旋回方向を設定します。
+    /// </summary>
+    private void SetAnimationTurnDirection(
+        BossChargeTurnDirection direction)
+    {
+        if (!m_isAnimationInitialized ||
+            Owner?.AnimationController == null)
+        {
+            return;
+        }
+
+        if (m_currentAnimationTurnDirection ==
+            direction)
+        {
+            return;
+        }
+
+        m_currentAnimationTurnDirection =
+            direction;
+
+        Owner.AnimationController.SetInteger(
+            m_animationTurnDirectionIntID,
+            (int)direction);
+    }
+
 
     /// <summary>
     /// 突進Animationを初期状態へ戻します。
@@ -459,9 +491,16 @@ public sealed class S1P3BossChargingAttackState :
             m_animationPhaseIntID,
             (int)BossActionPhase.PREPARATION);
 
+        Owner.AnimationController.SetInteger(
+            m_animationTurnDirectionIntID,
+            0);
+
         Owner.AnimationController.SetBool(
             m_animationActiveBoolID,
             false);
+
+        m_currentAnimationTurnDirection =
+            null;
 
         m_isAnimationInitialized =
             false;
@@ -470,10 +509,6 @@ public sealed class S1P3BossChargingAttackState :
     /// <summary>
     /// State開始に必要な参照を取得します。
     /// </summary>
-    /// <returns>
-    /// true：取得できました。
-    /// false：取得できませんでした。
-    /// </returns>
     private bool TryInitializeReferences()
     {
         if (Owner == null ||
@@ -490,16 +525,15 @@ public sealed class S1P3BossChargingAttackState :
         }
 
         if (!Owner.PhaseController
-               .TryGetCurrentPhaseComponent(
-                   out m_commonReferences))
+                .TryGetCurrentPhaseComponent(
+                    out m_commonReferences))
         {
             return false;
         }
 
-
-
-
-        if (m_commonReferences == null)
+        if (m_commonReferences == null ||
+            m_commonReferences.PlayerTransform ==
+                null)
         {
             return false;
         }
@@ -530,6 +564,9 @@ public sealed class S1P3BossChargingAttackState :
         m_playerTransform =
             null;
 
+        m_commonReferences =
+            null;
+
         m_references =
             null;
 
@@ -557,6 +594,9 @@ public sealed class S1P3BossChargingAttackState :
 
         m_chargeExecutor.PhaseChanged -=
             HandleChargePhaseChanged;
+
+        m_chargeExecutor.TurnDirectionChanged -=
+            HandleTurnDirectionChanged;
 
         m_chargeExecutor.Cancel();
 

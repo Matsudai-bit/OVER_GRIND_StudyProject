@@ -49,6 +49,11 @@ public sealed class S1P3BossStunnedState :
             return;
         }
 
+        if (Owner.PhaseController.TryGetCurrentPhaseComponent(out S1P3BossStateTransitionRequest request))
+        {
+            request.ConsumeStunnedRequest();
+        }
+
         m_animationBoolID =
             Animator.StringToHash(
                 STUN_ANIMATION_BOOL_NAME);

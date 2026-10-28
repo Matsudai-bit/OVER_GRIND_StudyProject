@@ -109,6 +109,20 @@ public sealed class BossAnimationController : MonoBehaviour
     }
 
     /// <summary>
+    /// Triggerパラメータを設定します。
+    /// </summary>
+    /// <param name="parameterID">AnimatorパラメータID。</param>
+    public void ResetTrigger(int parameterID)
+    {
+        if (m_currentAnimator == null)
+        {
+            return;
+        }
+
+        m_currentAnimator.ResetTrigger(parameterID);
+    }
+
+    /// <summary>
     /// AnimatorのIntegerパラメータを設定します。
     /// </summary>
     /// <param name="parameterID">

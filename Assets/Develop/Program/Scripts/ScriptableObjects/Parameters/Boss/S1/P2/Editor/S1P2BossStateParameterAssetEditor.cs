@@ -112,9 +112,12 @@ public sealed class S1P2BossStateParameterAssetEditor : Editor
 
         EditorGUILayout.BeginVertical(
             EditorStyles.helpBox);
+        DrawRelativeProperty(
+            m_moveProperty,
+            "m_attackEnableSpeed",
+            "攻撃判定有効速度",
+            "この速度以上で移動中の接触攻撃判定を有効化します。");
 
-        DrawMoveParameterFields(
-            m_moveProperty);
 
         EditorGUILayout.EndVertical();
     }
@@ -462,7 +465,34 @@ public sealed class S1P2BossStateParameterAssetEditor : Editor
             moveProperty,
             "m_arrivalDistance",
             "到着判定距離",
-            "最終地点へ到着したと判定する距離です。");
+            "最終地点へ到着したと判定する距離です.");
+
+        EditorGUILayout.Space(4.0f);
+
+        EditorGUILayout.LabelField(
+            "移動中追加攻撃",
+            EditorStyles.boldLabel);
+
+        DrawRelativeProperty(
+            moveProperty,
+            "m_enableTailSlam",
+            "尻尾叩きつけを使用",
+            "ONの場合、移動開始時に尻尾叩きつけ攻撃の行動選択条件を評価します.");
+
+        SerializedProperty enableTailSlamProperty =
+            moveProperty.FindPropertyRelative(
+                "m_enableTailSlam");
+
+        if (enableTailSlamProperty != null &&
+            enableTailSlamProperty.boolValue)
+        {
+            EditorGUILayout.HelpBox(
+                "判定条件はS1P2BossDecisionParameterAssetの" +
+                "「尻尾叩きつけ」を使用します。\n" +
+                "Playerが尻尾周辺ならNearProbability、" +
+                "範囲外ならDefaultProbabilityで抽選します。",
+                MessageType.Info);
+        }
     }
 
     /// <summary>

@@ -22,6 +22,7 @@ public sealed class S1P2BossMoveMissileState :
     // ミサイルパラメータ
     private S1P2BossMissileStateParameters m_missileParameters;
 
+    // 移動パラメータ
     private S1P2BossMoveStateParameters m_moveParameters;
 
     // 移動制御
@@ -33,19 +34,27 @@ public sealed class S1P2BossMoveMissileState :
     // 専用Animation Trigger ID
     private int m_animationTriggerID;
 
+    // AnimationEvent受信
+    private AnimationEventReceiver m_animationEventReceiver;
+
     // 移動完了
     private bool m_isMoveCompleted;
 
-    // ミサイル完了
+    // ミサイル発射開始済み
+    private bool m_hasStartedMissileLaunch;
+
+    // ミサイル発射完了
     private bool m_isMissileCompleted;
+
+    // Animation完了
+    private bool m_isAnimationCompleted;
 
     /// <summary>
     /// 移動ミサイル攻撃を開始します。
     /// </summary>
     protected override void OnStartState()
     {
-        m_isMoveCompleted = false;
-        m_isMissileCompleted = false;
+        ResetRuntimeState();
 
         if (!TryGetReferences())
         {
@@ -54,24 +63,28 @@ public sealed class S1P2BossMoveMissileState :
             return;
         }
 
-        // 先に経路を生成する
         if (!m_moveReferences.RoutePlanner.TryCreateRoute(
                 m_moveParameters,
                 out BossMoveRoute route))
         {
-            Debug.LogError(
-                "移動ミサイル攻撃用の経路を生成できませんでした。");
+            Debug.LogWarning(
+                $"[{nameof(S1P2BossMoveMissileState)}] " +
+                "移動経路を生成できませんでした。");
 
             SetFailed();
 
             return;
         }
 
-        // 専用Animationを取得する
+        /*
+         * Triggerを発火する前に
+         * AnimationEventを購読します。
+         */
         if (!TryGetAnimationSetting())
         {
             Debug.LogError(
-                "移動ミサイル攻撃用Animationを取得できませんでした。");
+                $"[{nameof(S1P2BossMoveMissileState)}] " +
+                "Animation設定を取得できませんでした。");
 
             SetFailed();
 
@@ -81,27 +94,13 @@ public sealed class S1P2BossMoveMissileState :
         m_moveController =
             m_moveReferences.MoveController;
 
-        // 移動を準備・開始
         if (!m_moveController.StartMove(
                 route,
                 m_moveParameters))
         {
             Debug.LogError(
-                "移動ミサイル攻撃の移動を開始できませんでした。");
-
-            SetFailed();
-
-            return;
-        }
-
-        // ミサイル攻撃を準備
-        if (!m_missileExecutor.PrepareAttack(
-                m_missileReferences,
-                m_missileParameters,
-                m_commonReferences.PlayerTransform))
-        {
-            Debug.LogError(
-                "移動ミサイル攻撃のミサイルを準備できませんでした。");
+                $"[{nameof(S1P2BossMoveMissileState)}] " +
+                "移動を開始できませんでした。");
 
             SetFailed();
 
@@ -109,29 +108,28 @@ public sealed class S1P2BossMoveMissileState :
         }
 
         /*
-         * 専用Animationとミサイル発射を
-         * 移動開始と同一State開始フレームで実行する。
+         * ミサイルはここでは準備のみ行います。
+         * 実際の発射開始はAnimationEventを待ちます。
          */
-        Owner.AnimationController.SetTrigger(
-            m_animationTriggerID);
-
-        if (!m_missileExecutor.BeginLaunch())
+        if (!m_missileExecutor.PrepareAttack(
+                m_missileReferences,
+                m_missileParameters,
+                m_commonReferences.PlayerTransform))
         {
             Debug.LogError(
-                "移動ミサイル攻撃の発射を開始できませんでした。");
+                $"[{nameof(S1P2BossMoveMissileState)}] " +
+                "ミサイル攻撃を準備できませんでした。");
 
             SetFailed();
 
             return;
         }
 
-        m_isMissileCompleted =
-            m_missileExecutor.IsCompleted;
-
         Owner.SetStateExecutionStatus(
             StateExecutionStatus.RUNNING);
 
-        TryCompleteState();
+        Owner.AnimationController.SetTrigger(
+            m_animationTriggerID);
     }
 
     /// <summary>
@@ -143,13 +141,19 @@ public sealed class S1P2BossMoveMissileState :
     protected override void OnUpdate(
         float deltaTime)
     {
-        if (Owner.GetStateExecutionStatus() !=
-            StateExecutionStatus.RUNNING)
+        if (Owner == null ||
+            Owner.GetStateExecutionStatus() !=
+                StateExecutionStatus.RUNNING)
         {
             return;
         }
 
-        if (m_isMissileCompleted)
+        /*
+         * AnimationEventで発射が許可されるまでは
+         * Executorを更新しません。
+         */
+        if (!m_hasStartedMissileLaunch ||
+            m_isMissileCompleted)
         {
             return;
         }
@@ -176,8 +180,8 @@ public sealed class S1P2BossMoveMissileState :
             return;
         }
 
-        // ミサイルだけ終了した場合、移動は止めない
-        m_isMissileCompleted = true;
+        m_isMissileCompleted =
+            true;
 
         TryCompleteState();
     }
@@ -187,8 +191,9 @@ public sealed class S1P2BossMoveMissileState :
     /// </summary>
     protected override void OnFixedUpdate()
     {
-        if (Owner.GetStateExecutionStatus() !=
-            StateExecutionStatus.RUNNING)
+        if (Owner == null ||
+            Owner.GetStateExecutionStatus() !=
+                StateExecutionStatus.RUNNING)
         {
             return;
         }
@@ -221,12 +226,14 @@ public sealed class S1P2BossMoveMissileState :
         }
 
         /*
-         * 移動だけ先に終了した場合はBossを停止する。
-         * ミサイル攻撃はOnUpdateでそのまま継続する。
+         * 移動のみ終了させます。
+         * ミサイル発射やAnimationは継続します。
          */
-        m_isMoveCompleted = true;
+        m_isMoveCompleted =
+            true;
 
-        Owner.Motor?.StopHorizontalMovement();
+        Owner.Motor?
+            .StopHorizontalMovement();
 
         TryCompleteState();
     }
@@ -236,43 +243,156 @@ public sealed class S1P2BossMoveMissileState :
     /// </summary>
     protected override void OnExitState()
     {
+        UnregisterAnimationEvent();
+
         m_moveController?.Cancel();
 
         m_missileExecutor?.Cancel();
 
-        Owner.Motor?.StopHorizontalMovement();
+        Owner?.Motor?
+            .StopHorizontalMovement();
 
-        if (Owner.GetStateExecutionStatus() ==
-            StateExecutionStatus.RUNNING)
+        if (Owner != null &&
+            Owner.GetStateExecutionStatus() ==
+                StateExecutionStatus.RUNNING)
         {
             Owner.SetStateExecutionStatus(
                 StateExecutionStatus.FAILED);
         }
 
-        m_references = null;
-        m_commonReferences = null;
+        m_references =
+            null;
 
-        m_moveReferences = null;
-        m_missileReferences = null;
-        m_missileParameters = null;
+        m_commonReferences =
+            null;
 
-        m_moveController = null;
-        m_missileExecutor = null;
+        m_moveReferences =
+            null;
+
+        m_missileReferences =
+            null;
+
+        m_missileParameters =
+            null;
+
+        m_moveParameters =
+            null;
+
+        m_moveController =
+            null;
+
+        m_missileExecutor =
+            null;
+
+        m_animationEventReceiver =
+            null;
     }
 
     /// <summary>
-    /// 移動とミサイルの両方が終了した場合に
-    /// Stateを正常終了します。
+    /// 攻撃AnimationEventを処理します。
     /// </summary>
-    private void TryCompleteState()
+    /// <param name="attackEventData">
+    /// 攻撃イベント情報。
+    /// </param>
+    private void HandleAttackEvent(
+        AttackEventData attackEventData)
     {
-        if (!m_isMoveCompleted ||
-            !m_isMissileCompleted)
+        if (attackEventData == null ||
+            Owner == null ||
+            Owner.GetStateExecutionStatus() !=
+                StateExecutionStatus.RUNNING)
         {
             return;
         }
 
-        Owner.Motor?.StopHorizontalMovement();
+        switch (attackEventData.AttackEventType)
+        {
+            case AttackEventType.HITBOX_ENABLE:
+                StartMissileLaunch();
+                break;
+
+            case AttackEventType.HITBOX_DISABLE:
+                break;
+
+            case AttackEventType.ANIMATION_END:
+                HandleAnimationEnd();
+                break;
+        }
+    }
+
+    /// <summary>
+    /// AnimationEventを起点に
+    /// 全ミサイルの連続発射を開始します。
+    /// </summary>
+    private void StartMissileLaunch()
+    {
+        /*
+         * HITBOX_ENABLEが複数回発生しても
+         * 発射処理は1回しか開始しません。
+         */
+        if (m_hasStartedMissileLaunch)
+        {
+            return;
+        }
+
+        if (m_missileExecutor == null)
+        {
+            SetFailed();
+
+            return;
+        }
+
+        if (!m_missileExecutor.BeginLaunch())
+        {
+            SetFailed();
+
+            return;
+        }
+
+        m_hasStartedMissileLaunch =
+            true;
+
+        /*
+         * LaunchSiteが1つだけの場合など、
+         * BeginLaunch直後に完了する場合にも対応します。
+         */
+        if (!m_missileExecutor.IsCompleted)
+        {
+            return;
+        }
+
+        m_isMissileCompleted =
+            true;
+
+        TryCompleteState();
+    }
+
+    /// <summary>
+    /// 攻撃Animation終了を処理します。
+    /// </summary>
+    private void HandleAnimationEnd()
+    {
+        m_isAnimationCompleted =
+            true;
+
+        TryCompleteState();
+    }
+
+    /// <summary>
+    /// 移動・ミサイル・Animationが
+    /// すべて終了した場合にStateを完了します。
+    /// </summary>
+    private void TryCompleteState()
+    {
+        if (!m_isMoveCompleted ||
+            !m_isMissileCompleted ||
+            !m_isAnimationCompleted)
+        {
+            return;
+        }
+
+        Owner.Motor?
+            .StopHorizontalMovement();
 
         Owner.SetStateExecutionStatus(
             StateExecutionStatus.SUCCEEDED);
@@ -294,28 +414,41 @@ public sealed class S1P2BossMoveMissileState :
             return false;
         }
 
-        if (!Owner.PhaseController.TryGetCurrentPhaseComponent(
-                out m_references))
+        if (!Owner.PhaseController
+                .TryGetCurrentPhaseComponent(
+                    out m_references))
         {
             return false;
         }
 
-        if (!Owner.PhaseController.TryGetCurrentPhaseComponent(
-                out m_commonReferences))
+        if (!Owner.PhaseController
+                .TryGetCurrentPhaseComponent(
+                    out m_commonReferences))
         {
             return false;
         }
 
-        // 移動
+        if (m_references.StateParameterAsset == null)
+        {
+            return false;
+        }
+
+        /*
+         * 移動
+         */
         m_moveReferences =
             m_references.MoveStateReferences;
 
-        if (!m_references.StateParameterAsset.TryGetMoveMissileParameters(out S1P2BossMoveMissileStateParameters  moveMissileStateParameters))
+        if (!m_references.StateParameterAsset
+                .TryGetMoveMissileParameters(
+                    out S1P2BossMoveMissileStateParameters
+                        moveMissileParameters))
         {
             return false;
         }
 
-        m_moveParameters = moveMissileStateParameters.Move;
+        m_moveParameters =
+            moveMissileParameters.Move;
 
         if (m_moveReferences == null ||
             m_moveParameters == null ||
@@ -325,25 +458,18 @@ public sealed class S1P2BossMoveMissileState :
             return false;
         }
 
-        // ミサイル
+        /*
+         * ミサイル
+         */
         m_missileReferences =
             m_references.MissileReferences;
 
+        m_missileParameters =
+            moveMissileParameters.Missile;
+
         if (m_missileReferences == null ||
-            !m_missileReferences.HasRequiredReferences())
-        {
-            return false;
-        }
-
-        if (m_references.StateParameterAsset == null ||
-            !m_references.StateParameterAsset.HasRequiredParameters())
-        {
-            return false;
-        }
-
-        m_missileParameters = moveMissileStateParameters.Missile;
-
-        if (m_missileParameters == null ||
+            !m_missileReferences.HasRequiredReferences() ||
+            m_missileParameters == null ||
             !m_missileParameters.HasRequiredParameters())
         {
             return false;
@@ -357,12 +483,7 @@ public sealed class S1P2BossMoveMissileState :
         m_missileExecutor =
             m_references.MissileExecutor;
 
-        if (m_missileExecutor == null)
-        {
-            return false;
-        }
-
-        return true;
+        return m_missileExecutor != null;
     }
 
     /// <summary>
@@ -403,11 +524,58 @@ public sealed class S1P2BossMoveMissileState :
             return false;
         }
 
+        m_animationEventReceiver =
+            Owner.AnimationController
+                .CurrentAnimationEventReceiver;
+
+        if (m_animationEventReceiver == null)
+        {
+            return false;
+        }
+
         m_animationTriggerID =
             Animator.StringToHash(
                 animationTriggerName);
 
+        /*
+         * Triggerより先にAnimationEventを購読します。
+         */
+        m_animationEventReceiver.AttackEventReceived +=
+            HandleAttackEvent;
+
         return true;
+    }
+
+    /// <summary>
+    /// AnimationEventの購読を解除します。
+    /// </summary>
+    private void UnregisterAnimationEvent()
+    {
+        if (m_animationEventReceiver == null)
+        {
+            return;
+        }
+
+        m_animationEventReceiver.AttackEventReceived -=
+            HandleAttackEvent;
+    }
+
+    /// <summary>
+    /// Runtime状態を初期化します。
+    /// </summary>
+    private void ResetRuntimeState()
+    {
+        m_isMoveCompleted =
+            false;
+
+        m_hasStartedMissileLaunch =
+            false;
+
+        m_isMissileCompleted =
+            false;
+
+        m_isAnimationCompleted =
+            false;
     }
 
     /// <summary>
@@ -419,7 +587,8 @@ public sealed class S1P2BossMoveMissileState :
 
         m_missileExecutor?.Cancel();
 
-        Owner?.Motor?.StopHorizontalMovement();
+        Owner?.Motor?
+            .StopHorizontalMovement();
 
         if (Owner == null)
         {

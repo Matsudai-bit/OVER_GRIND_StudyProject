@@ -22,17 +22,17 @@ public sealed class S1P1BossMissileState :
     // 次に使用する発射地点のIndex
     private int m_nextLaunchSiteIndex;
 
-    // 前回の発射からの経過時間
-    private float m_launchElapsedTime;
+    // 発射済みミサイル数
+    private int m_firedMissileCount;
+
+    // 攻撃終了を要求しているか
+    private bool m_isFinishRequested;
 
     // 停止状態への変更を要求したか
     private bool m_isIdleRequested;
 
-    // ミサイルを発射可能か
-    private bool m_canLaunch;
-
-    // Animator Trigger ID
-    private int m_animationTriggerID;
+    // Animator Bool ID
+    private int m_animationBoolID;
 
     // 爆発Hitboxへ渡す攻撃ID
     private AttackIdentifier m_attackIdentifier;
@@ -46,9 +46,9 @@ public sealed class S1P1BossMissileState :
     protected override void OnStartState()
     {
         m_nextLaunchSiteIndex = 0;
-        m_launchElapsedTime = 0.0f;
+        m_firedMissileCount = 0;
+        m_isFinishRequested = false;
         m_isIdleRequested = false;
-        m_canLaunch = false;
 
         Owner.Motor?.StopHorizontalMovement();
 
@@ -72,47 +72,6 @@ public sealed class S1P1BossMissileState :
 
         Owner.SetStateExecutionStatus(
             StateExecutionStatus.RUNNING);
-
-        if (HasFinishedLaunching())
-        {
-            CompleteMissileAttack();
-        }
-    }
-
-    /// <summary>
-    /// ミサイルの連続発射を更新します。
-    /// </summary>
-    /// <param name="deltaTime">前フレームからの経過時間。</param>
-    protected override void OnUpdate(float deltaTime)
-    {
-        if (!m_canLaunch ||
-            m_isIdleRequested ||
-            m_parameters == null ||
-            HasFinishedLaunching())
-        {
-            return;
-        }
-
-        m_launchElapsedTime += deltaTime;
-
-        if (m_launchElapsedTime <
-            m_parameters.LaunchInterval)
-        {
-            return;
-        }
-
-        m_launchElapsedTime = 0.0f;
-
-        if (!TryLaunchNextMissile())
-        {
-            RequestFailedIdleState();
-            return;
-        }
-
-        if (HasFinishedLaunching())
-        {
-            CompleteMissileAttack();
-        }
     }
 
     /// <summary>
@@ -127,6 +86,10 @@ public sealed class S1P1BossMissileState :
             m_animationEventReceiver.AttackEventReceived -=
                 HandleAttackEvent;
         }
+
+        Owner.AnimationController?.SetBool(
+            m_animationBoolID,
+            false);
 
         Owner.Motor?.StopHorizontalMovement();
 
@@ -143,34 +106,6 @@ public sealed class S1P1BossMissileState :
         m_playerTransform = null;
         m_animationEventReceiver = null;
         m_attackIdentifier = null;
-
-        Owner.SetStateExecutionStatus(
-      StateExecutionStatus.SUCCEEDED);
-    }
-
-    /// <summary>
-    /// 正常終了したミサイル攻撃のクールタイムを開始します。
-    /// </summary>
-    private void StartCoolTimeIfSucceeded()
-    {
-        if (Owner.GetStateExecutionStatus() !=
-            StateExecutionStatus.SUCCEEDED ||
-            m_references == null ||
-            m_references.DecisionParameterAsset == null)
-        {
-            return;
-        }
-
-        BossStateCoolTimeManager coolTimeManager =
-            Owner.GetComponent<BossStateCoolTimeManager>();
-
-        if (coolTimeManager == null)
-        {
-            return;
-        }
-
-        coolTimeManager.StartCoolTime<S1P1BossMissileState>(
-            m_references.DecisionParameterAsset.Missile.CoolTime);
     }
 
     /// <summary>
@@ -185,19 +120,36 @@ public sealed class S1P1BossMissileState :
         IReadOnlyList<Transform> launchSites =
             m_missileReferences.LaunchSites;
 
-        while (m_nextLaunchSiteIndex <
-               launchSites.Count)
+        if (launchSites == null ||
+            launchSites.Count == 0)
         {
-            Transform launchSite =
-                launchSites[m_nextLaunchSiteIndex];
+            return false;
+        }
 
-            m_nextLaunchSiteIndex++;
+        // 全発射地点がnullだった場合の無限ループを防ぐ
+        int searchCount = 0;
+
+        while (searchCount < launchSites.Count)
+        {
+            // 発射地点を順番に使用し、
+            // 最後まで到達したら先頭へ戻る
+            int launchSiteIndex =
+                m_nextLaunchSiteIndex %
+                launchSites.Count;
+
+            m_nextLaunchSiteIndex =
+                (launchSiteIndex + 1) %
+                launchSites.Count;
+
+            searchCount++;
+
+            Transform launchSite =
+                launchSites[launchSiteIndex];
 
             if (launchSite == null)
             {
                 Debug.LogWarning(
-                    $"ミサイル発射地点 " +
-                    $"{m_nextLaunchSiteIndex - 1} がnullです。");
+                    $"ミサイル発射地点 {launchSiteIndex} がnullです。");
 
                 continue;
             }
@@ -209,7 +161,6 @@ public sealed class S1P1BossMissileState :
                     launchSite.rotation,
                     m_missileReferences.MissileParent);
 
-            // StateParameterAssetから取得したミサイル本体設定を渡す
             missile.Initialize(
                 m_parameters.MissileParameterAsset,
                 m_playerTransform,
@@ -225,22 +176,36 @@ public sealed class S1P1BossMissileState :
     }
 
     /// <summary>
-    /// すべてのミサイルを発射したか確認します。
+    /// 指定された数のミサイルを発射したか確認します。
     /// </summary>
-    /// <returns>
-    /// true：すべて発射しました。
-    /// false：未発射のミサイルがあります。
-    /// </returns>
     private bool HasFinishedLaunching()
     {
-        if (m_missileReferences == null ||
-            m_missileReferences.LaunchSites == null)
+        if (m_parameters == null)
         {
             return true;
         }
 
-        return m_nextLaunchSiteIndex >=
-               m_missileReferences.LaunchSites.Count;
+        return m_firedMissileCount >=
+               m_parameters.LaunchCount;
+    }
+
+    /// <summary>
+    /// ミサイル攻撃の終了を要求します。
+    /// </summary>
+    private void RequestFinishAttack()
+    {
+        if (m_isFinishRequested)
+        {
+            return;
+        }
+
+        m_isFinishRequested = true;
+
+        // BoolをOFFにしてAnimationループを終了させる。
+        // この時点ではまだStateをSUCCEEDEDにしない。
+        Owner.AnimationController?.SetBool(
+            m_animationBoolID,
+            false);
     }
 
     /// <summary>
@@ -248,7 +213,13 @@ public sealed class S1P1BossMissileState :
     /// </summary>
     private void CompleteMissileAttack()
     {
-  
+        if (m_isIdleRequested)
+        {
+            return;
+        }
+
+        Owner.SetStateExecutionStatus(
+            StateExecutionStatus.SUCCEEDED);
 
         RequestIdleState();
     }
@@ -288,10 +259,6 @@ public sealed class S1P1BossMissileState :
     /// <summary>
     /// 現在フェーズからミサイル攻撃に必要な参照とパラメータを取得します。
     /// </summary>
-    /// <returns>
-    /// true：必要な情報を取得できました。
-    /// false：取得できませんでした。
-    /// </returns>
     private bool TryGetReferencesAndParameters()
     {
         if (Owner.PhaseController == null)
@@ -349,10 +316,6 @@ public sealed class S1P1BossMissileState :
     /// <summary>
     /// ミサイル攻撃のAnimation設定を適用します。
     /// </summary>
-    /// <returns>
-    /// true：設定できました。
-    /// false：設定できませんでした。
-    /// </returns>
     private bool ApplyAttackSetting()
     {
         S1P1BossAttackSettings attackSettings =
@@ -368,30 +331,32 @@ public sealed class S1P1BossMissileState :
         if (!attackSettings.TryGetAttackSetting(
                 S1P1BossAttackType.MISSILE,
                 out m_attackIdentifier,
-                out string animationTriggerName))
+                out string animationParameterName))
         {
             return false;
         }
 
         m_animationEventReceiver =
-            Owner.AnimationController.CurrentAnimationEventReceiver;
+            Owner.AnimationController
+                .CurrentAnimationEventReceiver;
 
         if (m_animationEventReceiver == null ||
             string.IsNullOrEmpty(
-                animationTriggerName))
+                animationParameterName))
         {
             return false;
         }
 
-        m_animationTriggerID =
+        m_animationBoolID =
             Animator.StringToHash(
-                animationTriggerName);
-
-        Owner.AnimationController.SetTrigger(
-            m_animationTriggerID);
+                animationParameterName);
 
         m_animationEventReceiver.AttackEventReceived +=
             HandleAttackEvent;
+
+        Owner.AnimationController.SetBool(
+            m_animationBoolID,
+            true);
 
         return true;
     }
@@ -399,33 +364,97 @@ public sealed class S1P1BossMissileState :
     /// <summary>
     /// 攻撃AnimationEventを処理します。
     /// </summary>
-    /// <param name="attackEventData">攻撃イベント情報。</param>
+    /// <param name="attackEventData">
+    /// 攻撃イベント情報。
+    /// </param>
     private void HandleAttackEvent(
         AttackEventData attackEventData)
     {
+        if (attackEventData == null)
+        {
+            return;
+        }
+
         switch (attackEventData.AttackEventType)
         {
             case AttackEventType.HITBOX_ENABLE:
-                if (!TryLaunchNextMissile())
-                {
-                    RequestFailedIdleState();
-                    return;
-                }
-
-                if (HasFinishedLaunching())
-                {
-                    CompleteMissileAttack();
-                    return;
-                }
-
-                m_canLaunch = true;
+                HandleEnableAttack();
                 break;
 
             case AttackEventType.HITBOX_DISABLE:
                 break;
 
             case AttackEventType.ANIMATION_END:
+                HandleAnimationEnd();
                 break;
         }
+    }
+
+    /// <summary>
+    /// EnableAttackごとにミサイルを1発発射します。
+    /// </summary>
+    private void HandleEnableAttack()
+    {
+        if (m_isFinishRequested)
+        {
+            return;
+        }
+
+        if (!TryLaunchNextMissile())
+        {
+            RequestFailedIdleState();
+            return;
+        }
+
+        m_firedMissileCount++;
+
+        if (!HasFinishedLaunching())
+        {
+            return;
+        }
+
+        RequestFinishAttack();
+    }
+
+    /// <summary>
+    /// Animation終了時に攻撃終了を確定します。
+    /// </summary>
+    private void HandleAnimationEnd()
+    {
+        // 途中のAnimationループ終了では
+        // Stateを終了させない
+        if (!m_isFinishRequested)
+        {
+            return;
+        }
+
+        CompleteMissileAttack();
+    }
+
+    /// <summary>
+    /// 正常終了したミサイル攻撃のクールタイムを開始します。
+    /// </summary>
+    private void StartCoolTimeIfSucceeded()
+    {
+        if (Owner.GetStateExecutionStatus() !=
+                StateExecutionStatus.SUCCEEDED ||
+            m_references == null ||
+            m_references.DecisionParameterAsset == null)
+        {
+            return;
+        }
+
+        BossStateCoolTimeManager coolTimeManager =
+            Owner.GetComponent<BossStateCoolTimeManager>();
+
+        if (coolTimeManager == null)
+        {
+            return;
+        }
+
+        coolTimeManager.StartCoolTime<S1P1BossMissileState>(
+            m_references.DecisionParameterAsset
+                .Missile
+                .CoolTime);
     }
 }
