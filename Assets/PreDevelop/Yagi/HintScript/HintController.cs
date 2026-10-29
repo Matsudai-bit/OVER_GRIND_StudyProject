@@ -43,7 +43,7 @@ public sealed class HintController : MonoBehaviour
     /// </summary>
     private void OnEnable()
     {
-        HideAllHintUi();
+        HideAllHintUi(false);
         m_currentCue = null;
         m_currentHintUiObject = null;
         m_activeCues.Clear();
@@ -69,7 +69,7 @@ public sealed class HintController : MonoBehaviour
             m_cueChangedEvent.UnregisterListener(OnCueChanged);
         }
 
-        HideAllHintUi();
+        HideAllHintUi(false);
         m_currentCue = null;
         m_currentHintUiObject = null;
         m_activeCues.Clear();
@@ -126,7 +126,7 @@ public sealed class HintController : MonoBehaviour
     /// </summary>
     private void RefreshHintUi()
     {
-        HideAllHintUi();
+        HideAllHintUi(true);
         m_currentCue = null;
         m_currentHintUiObject = null;
 
@@ -149,7 +149,7 @@ public sealed class HintController : MonoBehaviour
 
         m_currentCue = cue;
         m_currentHintUiObject = hintUiObject;
-        m_currentHintUiObject.SetActive(true);
+        GetUiAnimator(m_currentHintUiObject).PlayShow();
     }
 
     /// <summary>
@@ -175,14 +175,40 @@ public sealed class HintController : MonoBehaviour
     /// <summary>
     /// 対応表に登録されたヒントUIをすべて非表示にします。
     /// </summary>
-    private void HideAllHintUi()
+    private void HideAllHintUi(bool animate)
     {
         foreach (CueHintBinding binding in m_cueHintBindings)
         {
-            if (binding?.HintUiObject != null)
+            if (binding?.HintUiObject == null)
             {
-                binding.HintUiObject.SetActive(false);
+                continue;
+            }
+
+            UiTweenAnimator animator = GetUiAnimator(binding.HintUiObject);
+            if (animate)
+            {
+                animator.PlayHide();
+            }
+            else
+            {
+                animator.HideImmediately();
             }
         }
+    }
+
+    /// <summary>
+    /// 指定UIのアニメーションコンポーネントを取得します。
+    /// </summary>
+    /// <param name="uiObject">対象UI。</param>
+    /// <returns>UIアニメーションコンポーネント。</returns>
+    private UiTweenAnimator GetUiAnimator(GameObject uiObject)
+    {
+        UiTweenAnimator animator = uiObject.GetComponent<UiTweenAnimator>();
+        if (animator == null)
+        {
+            animator = uiObject.AddComponent<UiTweenAnimator>();
+            animator.SetAnimationType(UiTweenAnimator.AnimationType.SLIDE);
+        }
+        return animator;
     }
 }

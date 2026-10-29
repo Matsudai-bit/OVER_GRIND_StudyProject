@@ -37,7 +37,7 @@ public sealed class TutorialController : MonoBehaviour
     /// </summary>
     private void OnEnable()
     {
-        HideAllUi();
+        HideAllUi(false);
         m_currentCue = null;
         m_currentUiObject = null;
         m_activeCues.Clear();
@@ -63,7 +63,7 @@ public sealed class TutorialController : MonoBehaviour
             m_cueChangedEvent.UnregisterListener(OnCueChanged);
         }
 
-        HideAllUi();
+        HideAllUi(false);
         m_currentCue = null;
         m_currentUiObject = null;
         m_activeCues.Clear();
@@ -120,7 +120,7 @@ public sealed class TutorialController : MonoBehaviour
     /// </summary>
     private void RefreshUi()
     {
-        HideAllUi();
+        HideAllUi(true);
         m_currentCue = null;
         m_currentUiObject = null;
 
@@ -143,7 +143,7 @@ public sealed class TutorialController : MonoBehaviour
 
         m_currentCue = cue;
         m_currentUiObject = uiObject;
-        m_currentUiObject.SetActive(true);
+        GetUiAnimator(m_currentUiObject).PlayShow();
     }
 
     /// <summary>
@@ -169,14 +169,40 @@ public sealed class TutorialController : MonoBehaviour
     /// <summary>
     /// 対応表に登録されたUIをすべて非表示にします。
     /// </summary>
-    private void HideAllUi()
+    private void HideAllUi(bool animate)
     {
         foreach (CueUiBinding binding in m_cueUiBindings)
         {
-            if (binding?.UiObject != null)
+            if (binding?.UiObject == null)
             {
-                binding.UiObject.SetActive(false);
+                continue;
+            }
+
+            UiTweenAnimator animator = GetUiAnimator(binding.UiObject);
+            if (animate)
+            {
+                animator.PlayHide();
+            }
+            else
+            {
+                animator.HideImmediately();
             }
         }
+    }
+
+    /// <summary>
+    /// 指定UIのアニメーションコンポーネントを取得します。
+    /// </summary>
+    /// <param name="uiObject">対象UI。</param>
+    /// <returns>UIアニメーションコンポーネント。</returns>
+    private UiTweenAnimator GetUiAnimator(GameObject uiObject)
+    {
+        UiTweenAnimator animator = uiObject.GetComponent<UiTweenAnimator>();
+        if (animator == null)
+        {
+            animator = uiObject.AddComponent<UiTweenAnimator>();
+            animator.SetAnimationType(UiTweenAnimator.AnimationType.HORIZONTAL_EXPAND);
+        }
+        return animator;
     }
 }
