@@ -30,6 +30,7 @@ public sealed class TutorialController : MonoBehaviour
 
     private GameplayCueAsset m_currentCue;
     private GameObject m_currentUiObject;
+    private readonly List<GameplayCueAsset> m_activeCues = new();
 
     /// <summary>
     /// Cue変更イベントを購読し、UIを初期化します。
@@ -39,6 +40,7 @@ public sealed class TutorialController : MonoBehaviour
         HideAllUi();
         m_currentCue = null;
         m_currentUiObject = null;
+        m_activeCues.Clear();
 
         if (m_cueChangedEvent == null)
         {
@@ -64,6 +66,7 @@ public sealed class TutorialController : MonoBehaviour
         HideAllUi();
         m_currentCue = null;
         m_currentUiObject = null;
+        m_activeCues.Clear();
     }
 
     /// <summary>
@@ -95,19 +98,10 @@ public sealed class TutorialController : MonoBehaviour
     /// <param name="cue">開始されたCue。</param>
     private void ShowCueUi(GameplayCueAsset cue)
     {
-        HideAllUi();
-        m_currentCue = cue;
-        m_currentUiObject = FindUiObject(cue);
+        m_activeCues.Remove(cue);
+        m_activeCues.Add(cue);
 
-        if (m_currentUiObject == null)
-        {
-            Debug.LogWarning(
-                $"Cueに対応するUIが設定されていません。 Cue: {cue.name}",
-                this);
-            return;
-        }
-
-        m_currentUiObject.SetActive(true);
+        RefreshUi();
     }
 
     /// <summary>
@@ -116,18 +110,40 @@ public sealed class TutorialController : MonoBehaviour
     /// <param name="cue">終了されたCue。</param>
     private void HideFinishedCueUi(GameplayCueAsset cue)
     {
-        if (m_currentCue != cue)
+        m_activeCues.Remove(cue);
+
+        RefreshUi();
+    }
+
+    /// <summary>
+    /// 有効なCueのうち、最後に開始されたCueのUIを表示します。
+    /// </summary>
+    private void RefreshUi()
+    {
+        HideAllUi();
+        m_currentCue = null;
+        m_currentUiObject = null;
+
+        if (m_activeCues.Count == 0)
         {
             return;
         }
 
-        if (m_currentUiObject != null)
+        GameplayCueAsset cue =
+            m_activeCues[m_activeCues.Count - 1];
+        GameObject uiObject = FindUiObject(cue);
+
+        if (uiObject == null)
         {
-            m_currentUiObject.SetActive(false);
+            Debug.LogWarning(
+                $"Cueに対応するUIが設定されていません。 Cue: {cue.name}",
+                this);
+            return;
         }
 
-        m_currentCue = null;
-        m_currentUiObject = null;
+        m_currentCue = cue;
+        m_currentUiObject = uiObject;
+        m_currentUiObject.SetActive(true);
     }
 
     /// <summary>

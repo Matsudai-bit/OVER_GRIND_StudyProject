@@ -36,6 +36,7 @@ public sealed class HintController : MonoBehaviour
 
     private GameplayCueAsset m_currentCue;
     private GameObject m_currentHintUiObject;
+    private readonly List<GameplayCueAsset> m_activeCues = new();
 
     /// <summary>
     /// Cue変更イベントを購読し、ヒントUIを初期化します。
@@ -45,6 +46,7 @@ public sealed class HintController : MonoBehaviour
         HideAllHintUi();
         m_currentCue = null;
         m_currentHintUiObject = null;
+        m_activeCues.Clear();
 
         if (m_cueChangedEvent == null)
         {
@@ -70,6 +72,7 @@ public sealed class HintController : MonoBehaviour
         HideAllHintUi();
         m_currentCue = null;
         m_currentHintUiObject = null;
+        m_activeCues.Clear();
     }
 
     /// <summary>
@@ -101,20 +104,10 @@ public sealed class HintController : MonoBehaviour
     /// <param name="cue">開始されたCue。</param>
     private void ShowCueHintUi(GameplayCueAsset cue)
     {
-        HideAllHintUi();
+        m_activeCues.Remove(cue);
+        m_activeCues.Add(cue);
 
-        m_currentCue = cue;
-        m_currentHintUiObject = FindHintUiObject(cue);
-
-        if (m_currentHintUiObject == null)
-        {
-            Debug.LogWarning(
-                $"Cueに対応するヒントUIが設定されていません。 Cue: {cue.name}",
-                this);
-            return;
-        }
-
-        m_currentHintUiObject.SetActive(true);
+        RefreshHintUi();
     }
 
     /// <summary>
@@ -123,18 +116,40 @@ public sealed class HintController : MonoBehaviour
     /// <param name="cue">終了されたCue。</param>
     private void HideFinishedCueHintUi(GameplayCueAsset cue)
     {
-        if (m_currentCue != cue)
+        m_activeCues.Remove(cue);
+
+        RefreshHintUi();
+    }
+
+    /// <summary>
+    /// 有効なCueのうち、最後に開始されたCueのヒントUIを表示します。
+    /// </summary>
+    private void RefreshHintUi()
+    {
+        HideAllHintUi();
+        m_currentCue = null;
+        m_currentHintUiObject = null;
+
+        if (m_activeCues.Count == 0)
         {
             return;
         }
 
-        if (m_currentHintUiObject != null)
+        GameplayCueAsset cue =
+            m_activeCues[m_activeCues.Count - 1];
+        GameObject hintUiObject = FindHintUiObject(cue);
+
+        if (hintUiObject == null)
         {
-            m_currentHintUiObject.SetActive(false);
+            Debug.LogWarning(
+                $"Cueに対応するヒントUIが設定されていません。 Cue: {cue.name}",
+                this);
+            return;
         }
 
-        m_currentCue = null;
-        m_currentHintUiObject = null;
+        m_currentCue = cue;
+        m_currentHintUiObject = hintUiObject;
+        m_currentHintUiObject.SetActive(true);
     }
 
     /// <summary>

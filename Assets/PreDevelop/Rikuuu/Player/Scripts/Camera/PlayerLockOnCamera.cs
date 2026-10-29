@@ -18,6 +18,18 @@ public sealed class PlayerLockOnCamera : CinemachineExtension
     [SerializeField, Min(0.0f)] private float m_bodyPadding = 0.2f;
     [SerializeField, Min(0.1f)] private float m_minimumDistance = 5.0f;
 
+    [Header("Wall Collision")]
+    [SerializeField, Tooltip("カメラを貫通させない壁のLayer。")]
+    private LayerMask m_collisionLayerMask;
+    [SerializeField, Min(0.01f), Tooltip("壁判定に使用するカメラ周囲の半径。")]
+    private float m_collisionRadius = 0.3f;
+    [SerializeField, Min(0.0f), Tooltip("壁との接触位置から追加で確保する余白。")]
+    private float m_collisionPadding = 0.05f;
+    [SerializeField, Min(0.0f), Tooltip("追従対象の位置から壁判定を開始する高さ。")]
+    private float m_collisionOriginHeight = 1.0f;
+
+    private const float MIN_CAST_DISTANCE = 0.0001f;
+
     private Transform m_target;
     private Transform m_player;
     private Renderer[] m_renderers;
@@ -40,6 +52,23 @@ public sealed class PlayerLockOnCamera : CinemachineExtension
 
     /// <summary>ロックオンまたは通常カメラへの復帰が進行中かを取得します。</summary>
     public bool IsControlling => m_active || m_releasing;
+
+    /// <summary>ロックオン中にも通常カメラと同じ壁判定を使用します。</summary>
+    /// <param name="collisionLayerMask">壁として判定するLayer。</param>
+    /// <param name="collisionRadius">カメラ周囲の衝突判定半径。</param>
+    /// <param name="collisionPadding">接触位置から確保する追加の余白。</param>
+    /// <param name="collisionOriginHeight">追従対象から判定を開始する高さ。</param>
+    public void ConfigureCollision(
+        LayerMask collisionLayerMask,
+        float collisionRadius,
+        float collisionPadding,
+        float collisionOriginHeight)
+    {
+        m_collisionLayerMask = collisionLayerMask;
+        m_collisionRadius = Mathf.Max(0.01f, collisionRadius);
+        m_collisionPadding = Mathf.Max(0.0f, collisionPadding);
+        m_collisionOriginHeight = Mathf.Max(0.0f, collisionOriginHeight);
+    }
 
     /// <summary>現在のカメラ状態を維持してロックオンを開始します。</summary>
     public void BeginFocus(Transform target, float duration)
@@ -125,6 +154,7 @@ public sealed class PlayerLockOnCamera : CinemachineExtension
             m_rotation = Quaternion.Slerp(m_releaseRotation, state.GetFinalOrientation(), progress);
             if (progress >= 1.0f)
                 m_releasing = false;
+            ApplyCollision(m_player != null ? m_player.position : start, ref m_position);
             ApplyState(ref state);
             return;
         }
@@ -156,6 +186,7 @@ public sealed class PlayerLockOnCamera : CinemachineExtension
             m_previousPlayerPosition = m_player.position;
             m_initialize = false;
             m_hasOutput = true;
+            ApplyCollision(m_player.position, ref m_position);
             ApplyState(ref state);
             return;
         }
@@ -196,7 +227,60 @@ public sealed class PlayerLockOnCamera : CinemachineExtension
             m_rotation = Quaternion.Slerp(m_rotation, desiredRotation,
                 1.0f - Mathf.Exp(-dt / m_duration));
         }
+        ApplyCollision(m_player.position, ref m_position);
         ApplyState(ref state);
+    }
+
+    /// <summary>算出したカメラ位置を壁手前へ補正します。</summary>
+    /// <param name="originTargetPosition">壁判定の始点となる追従対象の位置。</param>
+    /// <param name="cameraPosition">補正対象のカメラ位置。</param>
+    private void ApplyCollision(Vector3 originTargetPosition, ref Vector3 cameraPosition)
+    {
+        if (m_collisionLayerMask.value == 0)
+        {
+            return;
+        }
+
+        Vector3 origin = originTargetPosition + Vector3.up * m_collisionOriginHeight;
+        Vector3 castVector = cameraPosition - origin;
+        float castDistance = castVector.magnitude;
+        if (castDistance <= MIN_CAST_DISTANCE)
+        {
+            return;
+        }
+
+        Vector3 castDirection = castVector / castDistance;
+
+        // カメラの中心線上にあるBGColliderを優先して検出します。
+        // 壁のBoxColliderが薄くても、始点からカメラ予定位置までのRayで手前位置を確定できます。
+        if (Physics.Raycast(
+                origin,
+                castDirection,
+                out RaycastHit rayHit,
+                castDistance,
+                m_collisionLayerMask,
+                QueryTriggerInteraction.Collide))
+        {
+            float rayCorrectedDistance = Mathf.Max(0.0f, rayHit.distance - m_collisionPadding);
+            cameraPosition = origin + castDirection * rayCorrectedDistance;
+            return;
+        }
+
+        if (!Physics.SphereCast(
+                origin,
+                m_collisionRadius,
+                castDirection,
+                out RaycastHit hit,
+                castDistance,
+                m_collisionLayerMask,
+                // BGCollider側のBoxCollider設定をそのまま利用するため、Triggerも判定します。
+                QueryTriggerInteraction.Collide))
+        {
+            return;
+        }
+
+        float correctedDistance = Mathf.Max(0.0f, hit.distance - m_collisionPadding);
+        cameraPosition = origin + castDirection * correctedDistance;
     }
 
     /// <summary>体の描画境界を取得します。エフェクトの大きさは構図へ含めません。</summary>
