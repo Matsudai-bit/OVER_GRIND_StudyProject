@@ -25,7 +25,7 @@ public class ScrambleText : MonoBehaviour
 
     void Awake() => tmp = GetComponent<TMP_Text>();
 
-    public void Play(string target)
+    public void Play(string target, float duration = 0.5f)
     {
         if (tmp == null) tmp = GetComponent<TMP_Text>();
         if (routine != null) { StopCoroutine(routine); routine = null; }
