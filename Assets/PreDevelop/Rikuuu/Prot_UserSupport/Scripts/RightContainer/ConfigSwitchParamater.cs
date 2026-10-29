@@ -53,7 +53,7 @@ public class ConfigSwitchParamater : MonoBehaviour
     private void OnDisable()
     {
         // –³Œø‚É‚·‚é
-        m_enterActionRef?.action.Disable();
+        //m_enterActionRef?.action.Disable();
     }
 
     private void Start()

@@ -10,11 +10,13 @@ public sealed class S1P3BossStateParameterAssetEditor : Editor
     private SerializedProperty m_energyCannonProperty;
     private SerializedProperty m_dreadAttackProperty;
     private SerializedProperty m_chargeParameterAssetProperty;
+    private SerializedProperty m_stunnedProperty;
 
     private bool m_showEnergyCannon = true;
     private bool m_showDreadAttack = true;
     private bool m_showCharge = true;
     private bool m_showChargeDetails = true;
+    private bool m_showStunned = true;
 
     private Editor m_chargeParameterEditor;
     private S1P3BossChargeAttackParameterAsset m_currentChargeParameterAsset;
@@ -32,6 +34,9 @@ public sealed class S1P3BossStateParameterAssetEditor : Editor
 
         m_chargeParameterAssetProperty =
             serializedObject.FindProperty("m_chargeParameterAsset");
+
+        m_stunnedProperty =
+            serializedObject.FindProperty("m_stunned");
     }
 
     /// <summary>
@@ -61,6 +66,10 @@ public sealed class S1P3BossStateParameterAssetEditor : Editor
 
         EditorGUILayout.Space(8.0f);
 
+        DrawStunnedParameters();
+
+        EditorGUILayout.Space(8.0f);
+
         DrawValidationMessages();
 
         serializedObject.ApplyModifiedProperties();
@@ -82,35 +91,61 @@ public sealed class S1P3BossStateParameterAssetEditor : Editor
             return;
         }
 
-        EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+        EditorGUILayout.BeginVertical(
+            EditorStyles.helpBox);
 
         EditorGUILayout.HelpBox(
-            "エネルギー集中 → 直線発射 → Player方向への追従、の3段階で使用する状態パラメータです。",
+            "予備動作 → 発射 → 終了動作の3段階でAnimationを制御します。\n" +
+            "直線発射とPlayer追従はどちらも発射状態として扱います。",
             MessageType.Info);
 
         DrawRelativeProperty(
             m_energyCannonProperty,
             "m_preparationDuration",
             "予備動作時間",
-            "口を開け、コア前へエネルギーを集中させる時間です。");
+            "エネルギー砲を発射する前の予備動作時間です。");
 
         DrawRelativeProperty(
             m_energyCannonProperty,
             "m_straightFireDuration",
             "直線発射時間",
-            "Player位置へ向けてエネルギー砲を一直線に放つ時間です。");
+            "正面方向へエネルギー砲を放つ時間です。");
 
         DrawRelativeProperty(
             m_energyCannonProperty,
             "m_trackingDuration",
             "追従時間",
-            "直線発射後、Player方向へエネルギー砲を動かす時間です。");
+            "発射後にPlayer方向へ追従する時間です。");
 
         DrawRelativeProperty(
             m_energyCannonProperty,
             "m_trackingSpeed",
             "追従速度",
-            "Player方向へエネルギー砲を左右に動かす速度です。");
+            "Player方向へ向ける回転速度です。");
+
+        DrawRelativeProperty(
+            m_energyCannonProperty,
+            "m_endDuration",
+            "終了動作時間",
+            "発射終了後のAnimationを再生する時間です。");
+
+        EditorGUILayout.Space();
+
+        EditorGUILayout.LabelField(
+            "Animation",
+            EditorStyles.boldLabel);
+
+        DrawRelativeProperty(
+            m_energyCannonProperty,
+            "m_animationActiveBoolName",
+            "Active Bool",
+            "エネルギー砲攻撃全体が実行中であることを示すAnimator Boolです。");
+
+        DrawRelativeProperty(
+            m_energyCannonProperty,
+            "m_animationPhaseIntName",
+            "Phase Int",
+            "予備・発射・終了の段階を示すAnimator Intです。");
 
         EditorGUILayout.EndVertical();
     }
@@ -269,7 +304,11 @@ public sealed class S1P3BossStateParameterAssetEditor : Editor
         EditorGUILayout.BeginVertical(EditorStyles.helpBox);
 
         EditorGUILayout.HelpBox(
-            "既存のS1P3BossChargeAttackParameterAssetをそのまま利用します。",
+            "連続突進は「回転 → 狙い確定 → 突進 → 終了動作」の4段階で実行します。\n" +
+            "回転では左右Animationを分岐し、狙い確定に入った時点の方向を固定して、" +
+            "一定時間その方向を向いた後に突進します。\n" +
+            "各突進の詳細値はS1P3BossChargeAttackParameterAsset内の" +
+            "S1BossChargeAttackParameterAssetで設定します。",
             MessageType.Info);
 
         EditorGUILayout.PropertyField(
@@ -360,6 +399,35 @@ public sealed class S1P3BossStateParameterAssetEditor : Editor
         }
 
         m_currentChargeParameterAsset = null;
+    }
+
+
+    /// <summary>
+    /// スタン状態のパラメータを描画します。
+    /// </summary>
+    private void DrawStunnedParameters()
+    {
+        m_showStunned =
+            EditorGUILayout.Foldout(
+                m_showStunned,
+                "スタン",
+                true);
+
+        if (!m_showStunned)
+        {
+            return;
+        }
+
+        EditorGUILayout.BeginVertical(
+            EditorStyles.helpBox);
+
+        DrawRelativeProperty(
+            m_stunnedProperty,
+            "m_duration",
+            "スタン時間",
+            "スタン状態を継続する時間です。");
+
+        EditorGUILayout.EndVertical();
     }
 
     /// <summary>

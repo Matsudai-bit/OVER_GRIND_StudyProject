@@ -4,27 +4,24 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.InputSystem;
 using DG.Tweening;
+using UnityEngine.Events;
 
 /// <summary>
 /// リザルト画面における選択 UI の入力とアニメーションを制御するクラスです。
-/// 複数のボタンパネルに対するシーン登場時フェード＆スライドイン演出に対応しています。
+/// ボタンパネル群の初回フェードイン登場演出および選択状態ループ制御を行います。
 /// </summary>
 public class ResultSelectionInput : MonoBehaviour
 {
-    [Header("★ 登場（ふわっと出現）演出設定")]
-    [Tooltip("チェックを入れると開始時に下からフェード＆スライドインして出現します")]
+    [Tooltip("チェックを入れると開始時にフェードイン（不透明度0→1）して出現します")]
     [SerializeField] private bool m_playEntranceOnStart = true;
 
     [Tooltip("登場アニメーションが始まるまでの待ち時間（秒）")]
     [SerializeField] private float m_entranceDelay = 1.2f;
 
-    [Tooltip("登場アニメーションにかかる時間（秒）")]
+    [Tooltip("登場アニメーション（フェードイン）にかかる時間（秒）")]
     [SerializeField] private float m_entranceDuration = 0.5f;
 
-    [Tooltip("登場時にどれくらい下から上がってくるかの Y オフセット距離（ピクセル）")]
-    [SerializeField] private float m_entranceOffsetY = -80f;
-
-    [Tooltip("アニメーションさせる対象のボタンパネル群（2枚以上ある場合は配列にすべて登録）")]
+    [Tooltip("アニメーションさせる対象のボタンパネル群（[Next Stage][Stage Select] パネル等を登録）")]
     [SerializeField] private RectTransform[] m_targetPanels;
 
     [Header("Next Stage (画像切り替え & スライド移動)")]
@@ -74,6 +71,11 @@ public class ResultSelectionInput : MonoBehaviour
     /// <summary>「Stage Select」選択中に拡大し続ける割合 (X, Y)。</summary>
     [Tooltip("白枠が選択中に拡大し続ける割合 (X, Y)")]
     [SerializeField] private Vector2 m_loopScaleAmount = new Vector2(1.05f, 1.2f);
+
+    [SerializeField, Header("次のステージボタンを押した")]
+    private UnityEvent m_onNextStageButton = new();
+    [SerializeField, Header("ステージ選択画面に戻るボタンを押した")]
+    private UnityEvent m_onReturnStageSelectButton = new();
 
     /// <summary>現在「Next Stage」が選択されているかどうか。</summary>
     private bool m_isNextStageSelected = true;
@@ -130,7 +132,7 @@ public class ResultSelectionInput : MonoBehaviour
     }
 
     /// <summary>
-    /// 設定された複数枚のパネルを同時に下からフェードインしながら「ふわっと」登場させます。
+    /// 設定された複数枚のパネルの位置を固定したまま、純粋なフェードイン（alpha: 0 -> 1）のみで出現させます。
     /// </summary>
     public void PlayEntranceAnimation()
     {
@@ -145,26 +147,26 @@ public class ResultSelectionInput : MonoBehaviour
 
         m_isEntrancePlaying = true;
 
-        // ★ 1. 最初に対象パネルをすべて完全透明＆下側に配置
+        // 位置を動かさず、不透明度（alpha）のみ 0 に初期化
         for (int i = 0; i < m_targetPanels.Length; i++)
         {
             if (m_targetPanels[i] == null || m_targetCanvasGroups[i] == null) continue;
 
             m_targetCanvasGroups[i].alpha = 0f;
-            m_targetPanels[i].anchoredPosition = m_targetOriginalAnchoredPoses[i] + new Vector2(0f, m_entranceOffsetY);
+            m_targetPanels[i].anchoredPosition = m_targetOriginalAnchoredPoses[i]; // 元の位置を維持
         }
 
         UpdateVisuals(true);
 
         Sequence entranceSeq = DOTween.Sequence();
 
-        // ★ 2. 指定時間（Entrance Delay）待機
+        // 指定の遅延時間待機
         if (m_entranceDelay > 0f)
         {
             entranceSeq.AppendInterval(m_entranceDelay);
         }
 
-        // ★ 3. 待機完了後にフェード＆移動アニメーションを開始（最初の要素は Append にする）
+        //  DOFade のみでふわっとフェードイン
         bool isFirstTween = true;
 
         for (int i = 0; i < m_targetPanels.Length; i++)
@@ -172,22 +174,19 @@ public class ResultSelectionInput : MonoBehaviour
             if (m_targetPanels[i] == null || m_targetCanvasGroups[i] == null) continue;
 
             Tween fadeTween = m_targetCanvasGroups[i].DOFade(1f, m_entranceDuration).SetEase(Ease.OutCubic);
-            Tween moveTween = m_targetPanels[i].DOAnchorPos(m_targetOriginalAnchoredPoses[i], m_entranceDuration).SetEase(Ease.OutCubic);
 
             if (isFirstTween)
             {
                 entranceSeq.Append(fadeTween);
-                entranceSeq.Join(moveTween);
                 isFirstTween = false;
             }
             else
             {
                 entranceSeq.Join(fadeTween);
-                entranceSeq.Join(moveTween);
             }
         }
 
-        // 登場アニメーション完了後に通常操作ループを開始
+        // フェード完了後に通常選択ループを開始
         entranceSeq.OnComplete(() =>
         {
             m_isEntrancePlaying = false;
@@ -226,10 +225,12 @@ public class ResultSelectionInput : MonoBehaviour
             if (m_isNextStageSelected)
             {
                 Debug.Log("Next Stage 決定！");
+                m_onNextStageButton?.Invoke();
             }
             else
             {
                 Debug.Log("Stage Select 決定！");
+                m_onReturnStageSelectButton?.Invoke();
             }
         }
     }

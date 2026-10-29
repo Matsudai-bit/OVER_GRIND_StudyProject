@@ -199,11 +199,10 @@ public class SplineGrindController : MonoBehaviour
                 ExitGrind(true);
                 return;
             }
-
             currentT = nextT;
             Vector3 forward = ((Vector3)spline.EvaluateTangent(currentT)).normalized * directionFactor;
-            if (!m_motor.TryMoveAlongRail(nextPosition + Vector3.up * RideHeight, forward,
-                deltaTime, out RaycastHit obstacle))
+            if (!m_motor.TryMoveAlongRail(nextPosition + Vector3.up * RideHeight, forward, 
+                deltaTime, currentRail.ForcesEscape, out RaycastHit obstacle))
                 ExitGrindOnCollision(obstacle.normal);
         }
     }
@@ -253,7 +252,7 @@ public class SplineGrindController : MonoBehaviour
     /// </summary>
     private void HandleGrindCollision(Collision collision)
     {
-        if (!IsGrinding) return;
+        if (!IsGrinding || !currentRail.ForcesEscape) return;
 
         // 複合コライダーでは接触点ごとに相手を確認し、レールの接触点を除外します。
         for (int i = 0; i < collision.contactCount; i++)
@@ -334,7 +333,7 @@ public class SplineGrindController : MonoBehaviour
         {
             Vector3 tangent = currentRail.Container.EvaluateTangent(Mathf.Clamp01(currentT));
             exitVelocity = tangent.normalized * currentSpeed * directionFactor;
-            if (currentRail.IsBoostRail) exitVelocity *= exitSpeedScale;
+          //  if (currentRail.IsBoostRail) exitVelocity *= exitSpeedScale;
         }
 
         // 終端付近で毎フレーム再搭乗して位置が戻ることを防ぎます。

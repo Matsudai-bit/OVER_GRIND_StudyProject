@@ -22,6 +22,8 @@ public sealed class AttackHitbox : MonoBehaviour
     [SerializeField, Tooltip("攻撃部の中心。未設定の場合は攻撃Colliderの中心を使用します。")]
     private Transform m_attackCenter;
 
+    private PlayerMotor m_playerMotor;
+
     /// <summary>攻撃部の中心位置をワールド座標で取得します。</summary>
     public Vector3 AttackCenter => m_attackCenter != null
         ? m_attackCenter.position
@@ -38,12 +40,34 @@ public sealed class AttackHitbox : MonoBehaviour
     /// <summary>攻撃中心を対応する受け手へ渡し、無敵中の命中通知を抑制します。</summary>
     private bool TryApplyDamage(IDamageable damageReceiver)
     {
-        if (damageReceiver is IDirectionalDamageable directionalReceiver)
+        AttackDamageData damageData = m_currentDamageData;
+
+        if (AttackPowerContext.TryGetCurrent(
+                out AttackPowerType attackPowerType))
         {
-            return directionalReceiver.TryTakeDamage(m_currentDamageData, AttackCenter);
+            damageData =
+                damageData.WithAttackPowerType(attackPowerType);
+        }
+        else if (AttackPowerSourceRegistry.TryGet(
+                     transform,
+                     out attackPowerType))
+        {
+            damageData =
+                damageData.WithAttackPowerType(attackPowerType);
         }
 
-        damageReceiver.TakeDamage(m_currentDamageData);
+        if (m_playerMotor != null)
+        {
+            damageData = damageData.WithSourceFacingDirection(
+                m_playerMotor.FacingDirection);
+        }
+
+        if (damageReceiver is IDirectionalDamageable directionalReceiver)
+        {
+            return directionalReceiver.TryTakeDamage(damageData, AttackCenter);
+        }
+
+        damageReceiver.TakeDamage(damageData);
         return true;
     }
 
@@ -70,6 +94,17 @@ public sealed class AttackHitbox : MonoBehaviour
     // 現在Triggerに重なっている対象と、その対象側のCollider（多段ヒットモード用）
     // 貫通量計算（Physics.ComputePenetration）にも使用する
     private readonly Dictionary<IDamageable, Collider> m_overlappingTargets = new();
+    // 同じHurtbox配下のColliderを個別に保持し、一部の離脱で対象を失わないようにします。
+    private readonly Dictionary<Collider, IDamageable> m_contactColliders = new();
+
+    // 接触回数方式の対象を周期ダメージから除外するために保持します。
+    private readonly HashSet<IDamageable> m_contactDamageTargets = new();
+
+    // 攻撃接触の通知対象と、対象ごとの接触Collider数を管理します。
+    private readonly Dictionary<IAttackContactReceiver, int> m_contactReceiverCounts = new();
+
+    // プレイヤーの前進を止める対象との接触数を管理します。
+    private readonly Dictionary<IAttackMovementBlocker, int> m_movementBlockerCounts = new();
 
     // 多段ヒットモードで判定中かどうか
     private bool m_isContinuousHitMode;
@@ -98,6 +133,7 @@ public sealed class AttackHitbox : MonoBehaviour
     private void Awake()
     {
         ResolveCollider();
+        m_playerMotor = GetComponentInParent<PlayerMotor>();
 
         if (m_hitboxCollider == null)
         {
@@ -135,7 +171,8 @@ public sealed class AttackHitbox : MonoBehaviour
             m_currentDamageData = new AttackDamageData(m_defaultDamage);
         }
 
-        // 新しい攻撃判定として命中履歴を初期化します。
+        // 新しい攻撃判定として命中履歴と以前の接触状態を初期化します。
+        ClearAttackContacts();
         m_hitTargetIds.Clear();
         m_isContinuousHitMode = false;
         m_hitboxCollider.enabled = true;
@@ -183,6 +220,7 @@ public sealed class AttackHitbox : MonoBehaviour
             m_currentDamageData = new AttackDamageData(m_defaultDamage);
         }
 
+        ClearAttackContacts();
         m_hitTargetIds.Clear();
         m_overlappingTargets.Clear();
         m_isContinuousHitMode = true;
@@ -229,10 +267,10 @@ public sealed class AttackHitbox : MonoBehaviour
         }
 
         m_hitboxCollider.enabled = false;
-        gameObject.SetActive(false);
-
+        ClearAttackContacts();
         m_isContinuousHitMode = false;
         m_overlappingTargets.Clear();
+        gameObject.SetActive(false);
     }
 
     /// <summary>
@@ -268,6 +306,12 @@ public sealed class AttackHitbox : MonoBehaviour
             if (receiverComponent == null)
             {
                 m_overlappingTargets.Remove(damageReceiver);
+                m_contactDamageTargets.Remove(damageReceiver);
+                continue;
+            }
+
+            if (m_contactDamageTargets.Contains(damageReceiver))
+            {
                 continue;
             }
 
@@ -351,7 +395,7 @@ public sealed class AttackHitbox : MonoBehaviour
     /// <param name="other">侵入したCollider。</param>
     private void OnTriggerEnter(Collider other)
     {
-        if (other == null)
+        if (other == null || m_contactColliders.ContainsKey(other))
         {
             return;
         }
@@ -370,11 +414,29 @@ public sealed class AttackHitbox : MonoBehaviour
             return;
         }
 
+        bool wasAlreadyOverlapping =
+            IsDamageReceiverAlreadyOverlapping(damageReceiver);
+
+        m_contactColliders.Add(other, damageReceiver);
+        RegisterAttackContact(other);
+        RegisterMovementBlocker(other);
+
         if (m_isContinuousHitMode)
         {
-            // 多段ヒットモードでは即時ダメージを与えず、
-            // 重なっている対象・対象側Colliderとして記録するのみに留めます。
             m_overlappingTargets[damageReceiver] = other;
+
+            if (other.GetComponentInParent<IAttackContactDamageReceiver>() != null)
+            {
+                m_contactDamageTargets.Add(damageReceiver);
+
+                // 同じ対象の複数Colliderへ同時に触れても、1回の接触として扱います。
+                if (!wasAlreadyOverlapping &&
+                    TryApplyDamage(damageReceiver))
+                {
+                    AttackHit?.Invoke(damageReceiver);
+                }
+            }
+
             return;
         }
 
@@ -399,26 +461,197 @@ public sealed class AttackHitbox : MonoBehaviour
         }
     }
 
+    /// <summary>判定の再有効化などでEnterを取り逃がした接触を復元します。</summary>
+    /// <param name="other">接触中のCollider。</param>
+    private void OnTriggerStay(Collider other)
+    {
+        if (m_isContinuousHitMode && !m_contactColliders.ContainsKey(other))
+        {
+            OnTriggerEnter(other);
+        }
+    }
+
     /// <summary>
     /// Triggerから離脱した対象を処理します（多段ヒットモード用）。
     /// </summary>
     /// <param name="other">離脱したCollider。</param>
     private void OnTriggerExit(Collider other)
     {
-        if (!m_isContinuousHitMode || other == null)
+        if (other == null || !m_contactColliders.TryGetValue(other, out IDamageable damageReceiver))
         {
             return;
         }
 
-        IDamageable damageReceiver =
-            (IDamageable)other.GetComponentInParent<Hurtbox>() ?? other.GetComponentInParent<IDamageable>();
+        m_contactColliders.Remove(other);
+        UnregisterAttackContact(other);
+        UnregisterMovementBlocker(other);
 
-        if (damageReceiver == null)
+        if (!m_isContinuousHitMode)
         {
             return;
+        }
+
+        foreach (KeyValuePair<Collider, IDamageable> contact in m_contactColliders)
+        {
+            if (contact.Value == damageReceiver && contact.Key != null &&
+                contact.Key.enabled && contact.Key.gameObject.activeInHierarchy)
+            {
+                m_overlappingTargets[damageReceiver] = contact.Key;
+                return;
+            }
         }
 
         m_overlappingTargets.Remove(damageReceiver);
+        m_contactDamageTargets.Remove(damageReceiver);
+    }
+
+    /// <summary>同じダメージ受付対象との接触が既に存在するか確認します。</summary>
+    /// <param name="damageReceiver">確認するダメージ受付対象。</param>
+    /// <returns>true：接触中。false：未接触。</returns>
+    private bool IsDamageReceiverAlreadyOverlapping(
+        IDamageable damageReceiver)
+    {
+        foreach (IDamageable trackedReceiver in m_contactColliders.Values)
+        {
+            if (trackedReceiver == damageReceiver)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// 移動遮断対象との接触を登録します。
+    /// </summary>
+    /// <param name="other">接触した対象側Collider。</param>
+    private void RegisterMovementBlocker(Collider other)
+    {
+        IAttackMovementBlocker movementBlocker =
+            other.GetComponentInParent<IAttackMovementBlocker>();
+
+        if (movementBlocker == null)
+        {
+            return;
+        }
+
+        m_movementBlockerCounts.TryGetValue(
+            movementBlocker,
+            out int blockerContactCount);
+        m_movementBlockerCounts[movementBlocker] = blockerContactCount + 1;
+
+        if (blockerContactCount == 0 && m_movementBlockerCounts.Count == 1)
+        {
+            AttackMovementBlockRegistry.Register(this);
+        }
+    }
+
+    /// <summary>
+    /// 移動遮断対象との接触を解除します。
+    /// </summary>
+    /// <param name="other">離れた対象側Collider。</param>
+    private void UnregisterMovementBlocker(Collider other)
+    {
+        IAttackMovementBlocker movementBlocker =
+            other.GetComponentInParent<IAttackMovementBlocker>();
+
+        if (movementBlocker == null ||
+            !m_movementBlockerCounts.TryGetValue(movementBlocker, out int blockerContactCount))
+        {
+            return;
+        }
+
+        if (blockerContactCount <= 1)
+        {
+            m_movementBlockerCounts.Remove(movementBlocker);
+
+            if (m_movementBlockerCounts.Count == 0)
+            {
+                AttackMovementBlockRegistry.Unregister(this);
+            }
+        }
+        else
+        {
+            m_movementBlockerCounts[movementBlocker] = blockerContactCount - 1;
+        }
+    }
+
+    /// <summary>攻撃接触の開始を対象へ通知します。</summary>
+    /// <param name="other">接触した対象側Collider。</param>
+    private void RegisterAttackContact(Collider other)
+    {
+        IAttackContactReceiver contactReceiver =
+            other.GetComponentInParent<IAttackContactReceiver>();
+
+        if (contactReceiver == null)
+        {
+            return;
+        }
+
+        m_contactReceiverCounts.TryGetValue(
+            contactReceiver,
+            out int contactCount);
+        m_contactReceiverCounts[contactReceiver] = contactCount + 1;
+
+        if (contactCount == 0)
+        {
+            contactReceiver.BeginAttackContact(GetInstanceID());
+        }
+    }
+
+    /// <summary>攻撃接触の終了を対象へ通知します。</summary>
+    /// <param name="other">離れた対象側Collider。</param>
+    private void UnregisterAttackContact(Collider other)
+    {
+        IAttackContactReceiver contactReceiver =
+            other.GetComponentInParent<IAttackContactReceiver>();
+
+        if (contactReceiver == null ||
+            !m_contactReceiverCounts.TryGetValue(contactReceiver, out int contactCount))
+        {
+            return;
+        }
+
+        if (contactCount > 1)
+        {
+            m_contactReceiverCounts[contactReceiver] = contactCount - 1;
+            return;
+        }
+
+        m_contactReceiverCounts.Remove(contactReceiver);
+        contactReceiver.EndAttackContact(GetInstanceID());
+    }
+
+    /// <summary>
+    /// 追跡中の攻撃接触と移動遮断状態をすべて解除します。
+    /// </summary>
+    private void ClearAttackContacts()
+    {
+        int attackSourceId = GetInstanceID();
+
+        foreach (IAttackContactReceiver contactReceiver in m_contactReceiverCounts.Keys)
+        {
+            Component receiverComponent = contactReceiver as Component;
+
+            if (receiverComponent != null)
+            {
+                contactReceiver.EndAttackContact(attackSourceId);
+            }
+        }
+
+        m_contactReceiverCounts.Clear();
+        m_contactColliders.Clear();
+        m_overlappingTargets.Clear();
+        m_contactDamageTargets.Clear();
+        m_movementBlockerCounts.Clear();
+        AttackMovementBlockRegistry.Unregister(this);
+    }
+
+    /// <summary>非アクティブ化時に残っている接触状態を解除します。</summary>
+    private void OnDisable()
+    {
+        ClearAttackContacts();
     }
 
     /// <summary>

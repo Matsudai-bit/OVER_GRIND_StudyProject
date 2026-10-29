@@ -20,6 +20,9 @@ public sealed class S1BossPhaseTransitionHandler : MonoBehaviour
     [SerializeField]
     private GameFlowController GameFlowController;
 
+    [SerializeField, Header("フェーズ1で終了するかどうか")]
+    private bool m_endPhase1 = false;
+
     /// <summary>
     /// 必要なコンポーネントを取得します。
     /// </summary>
@@ -102,8 +105,12 @@ public sealed class S1BossPhaseTransitionHandler : MonoBehaviour
             .ChangeState<S1P1BossLegsCollapsingState>(
                 m_s1P1BossLegsController);
 
-        GameFlowController.ChangeState(GameFlowStateType.ENDING);
-        GameFlowController.ChangeState(GameFlowStateType.RESULT);
+        if (m_endPhase1)
+        {
+            GameFlowController.ChangeState(GameFlowStateType.ENDING);
+            GameFlowController.ChangeState(GameFlowStateType.RESULT);
+        }
+
     }
 
     /// <summary>
@@ -111,7 +118,10 @@ public sealed class S1BossPhaseTransitionHandler : MonoBehaviour
     /// </summary>
     private void StartS1P2Transition()
     {
-        m_phaseController?.AdvancePhase();
+
+        m_bossController.StateMachine
+            .ChangeState<S1P2BossCollapsingState>();
+        //m_phaseController?.AdvancePhase();
     }
 
     /// <summary>
@@ -119,7 +129,6 @@ public sealed class S1BossPhaseTransitionHandler : MonoBehaviour
     /// </summary>
     private void StartS1P3Transition()
     {
-        SceneManager.LoadScene(
-            "TitleScene");
+  
     }
 }

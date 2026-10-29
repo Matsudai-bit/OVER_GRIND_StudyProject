@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: S1P2BossStateParameter
   m_EditorClassIdentifier: Assembly-CSharp::S1P2BossStateParameterAsset
   m_move:
-    m_minRoutePointCount: 3
+    m_minRoutePointCount: 2
     m_maxRoutePointCount: 5
     m_requiredFarPointDistance: 5
     m_routeSearchAttemptCount: 100
@@ -21,18 +21,20 @@ MonoBehaviour:
     m_initialDirectionGuideDistance: 5
     m_minRouteSegmentDistance: 5
     m_maxRouteTurnAngle: 100
-    m_maxMoveSpeed: 34.8
-    m_timeToMaxSpeed: 2
+    m_maxMoveSpeed: 62.9
+    m_timeToMaxSpeed: 4
     m_timeToStop: 1
     m_rotationSpeed: 70
     m_turnSlowdownStartAngle: 60
     m_turnInPlaceAngle: 100
     m_lookAheadDistance: 50
     m_arrivalDistance: 3
+    m_enableTailSlam: 1
+    m_attackEnableSpeed: 1
   m_missile:
     m_missileParameterAsset: {fileID: 11400000, guid: c8367b183b12490418b1fdbe61bc30dd, type: 2}
     m_launchInterval: 0.5
-    m_missileUpwardDuration: 1.5
+    m_missileUpwardDuration: 4.14
     m_idleDuration: 3
     m_volleyCount: 2
   m_moveMissile:
@@ -55,6 +57,8 @@ MonoBehaviour:
       m_turnInPlaceAngle: 100
       m_lookAheadDistance: 50
       m_arrivalDistance: 3
+      m_enableTailSlam: 1
+      m_attackEnableSpeed: 20
     m_missileParameters:
       m_missileParameterAsset: {fileID: 11400000, guid: ecf183fc9496a424cbe3298c607a0eb4, type: 2}
       m_launchInterval: 0.5

@@ -1,5 +1,6 @@
 using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class GameDirector : MonoBehaviour
 {
@@ -18,6 +19,17 @@ public class GameDirector : MonoBehaviour
     GameplayModeController m_modeController;
     [SerializeField]
     GameplaySequenceChangedEvent m_gameplaySequenceChangedEvent;
+    [SerializeField]
+    Health m_playerHealth;
+
+    [SerializeField]
+    BossPhaseController bossPhaseController;
+
+    [Header("遷移関連")]
+    [SerializeField, Header("次のステージボタンを押した時の遷移先")]
+    string nextStageSceneName;
+    [SerializeField, Header("ステージ選択画面シーン名")]
+    string stageSelectSceneName;
 
     bool start = false;
 
@@ -46,12 +58,26 @@ public class GameDirector : MonoBehaviour
                 
             }
         });
+
+        m_playerHealth.HealthChanged += OnChangePlayerHealth;
     }
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
         start = false;
-   
+        Cursor.visible = false;
+
+        bossPhaseController.PhaseCompletionRequested += (phaseID) =>
+        {
+            if (phaseID == BossPhaseID.PHASE_3)
+            {
+                m_gameFlowController.ChangeState(GameFlowStateType.ENDING);
+                m_gameFlowController.ChangeState(GameFlowStateType.RESULT);
+
+            }
+        };
+ 
+
     }
     void Update()
     {
@@ -69,5 +95,25 @@ public class GameDirector : MonoBehaviour
         m_gameFlowController.ChangeState(GameFlowStateType.INTRO);
     }
 
+    public void LoadNextStage()
+    {
+        SceneManager.LoadScene(nextStageSceneName);
+    }
+    public void LoadStageSelect()
+    {
+        SceneManager.LoadScene(stageSelectSceneName);
+    }
+    public void LoadRestartScene()
+    {
+        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+    }
 
+
+    void OnChangePlayerHealth(int hp, int hp1)
+    {
+        if (0 >= hp)
+        {
+            m_gameFlowController.ChangeState(GameFlowStateType.GAME_OVER);
+        }
+    }
 }

@@ -1,138 +1,215 @@
-using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
-using TMPro;
 using DG.Tweening;
 
 /// <summary>
-/// クリアタイム（秒数）を受け取り、デジタル時計形式（00:00.00）で表示・演出制御する Presenter クラスです。
+/// ResultTimeModel から「今回のクリアタイム（ClearTime）」を取得し、
+/// View への表示・カウントアップ演出、および新記録（IsNewRecord）時の赤点滅演出を制御する Presenter です。
 /// </summary>
-public class ResultTimePresenter : MonoBehaviour
+public class ResultBestTimePresenter : MonoBehaviour
 {
-    [Header("★ UI テキストコンポーネント")]
-    [SerializeField] private TextMeshProUGUI m_tmpText;
-    [SerializeField] private Text m_uiText;
+    [Header("★ View と Model の参照")]
+    [SerializeField] private ResultTimeView m_view;
+    [SerializeField] private ResultTimeModel m_model;
 
-    [Header("★ 演出設定")]
-    [Tooltip("チェックを入れると開始時に自動でカウントアップ演出を再生します")]
-    [SerializeField] private bool m_playOnStart = false;
+    [Header("★ 表示演出設定")]
+    [Tooltip("チェックを入れると開始時に自動でタイムを表示します")]
+    [SerializeField] private bool m_playOnStart = true;
 
-    [Tooltip("自動再生時のテスト用クリアタイム（秒）")]
-    [SerializeField] private float m_debugClearTime = 91.46f; // 例: 01:31.46
+    [Tooltip("チェックを入れると数字回転（カウントアップ）演出を行います（オフなら即時表示）")]
+    [SerializeField] private bool m_useCountUp = true;
 
-    [Tooltip("カウントアップ演出にかかる時間（秒）")]
-    [SerializeField] private float m_countUpDuration = 1.0f;
+    [Tooltip("カウントアップ演出時間（秒）")]
+    [SerializeField] private float m_countUpDuration = 1.2f;
 
-    [Tooltip("表示が始まるまでの待ち時間（秒）")]
-    [SerializeField] private float m_delay = 0.5f;
+    [Tooltip("演出が始まるまでの待ち時間（秒）")]
+    [SerializeField] private float m_delay = 0.3f;
+
+    [Tooltip("アニメーションの加減速カーブ")]
+    [SerializeField] private Ease m_countUpEase = Ease.OutQuint;
+
+    [Header("★ 赤点滅（New Best 演出）設定")]
+    [Tooltip("新記録（IsNewRecord）時に赤点滅させる対象の Image")]
+    [SerializeField] private Image m_blinkTargetImage;
+
+    [Tooltip("点滅時の赤色の濃度・色合い")]
+    [SerializeField] private Color m_blinkRedColor = new Color(1f, 0.2f, 0.2f, 1f);
+
+    [Tooltip("点滅1周の速度（秒）")]
+    [SerializeField] private float m_blinkDuration = 0.4f;
 
     private Tween m_countUpTween;
+    private Tween m_blinkTween;
+    private Color m_originalColor = Color.white;
 
     private void Awake()
     {
-        InitializeComponents();
+        EnsureReferences();
+
+        if (m_blinkTargetImage != null)
+        {
+            m_originalColor = m_blinkTargetImage.color;
+        }
     }
 
-    private void Start()
+    private void EnsureReferences()
     {
-        if (m_playOnStart)
+        if (m_view == null) m_view = GetComponent<ResultTimeView>();
+        if (m_model == null) m_model = FindFirstObjectByType<ResultTimeModel>();
+    }
+
+    private void OnEnable()
+    {
+        EnsureReferences();
+        if (m_model != null)
         {
-            SetTimeWithAnimation(m_debugClearTime);
+            m_model.OnTimeChanged += OnModelTimeChanged;
         }
     }
 
     private void OnDisable()
     {
-        m_countUpTween?.Kill();
+        if (m_model != null)
+        {
+            m_model.OnTimeChanged -= OnModelTimeChanged;
+        }
+        StopAllTweens();
     }
 
-    private void InitializeComponents()
+    private void Start()
     {
-        if (m_tmpText == null) TryGetComponent<TextMeshProUGUI>(out m_tmpText);
-        if (m_uiText == null) TryGetComponent<Text>(out m_uiText);
+        EnsureReferences();
+
+        if (m_playOnStart && m_model != null)
+        {
+            RefreshBestTime();
+        }
+    }
+
+    private void OnModelTimeChanged(float newTime)
+    {
+        if (m_countUpTween == null || !m_countUpTween.IsActive())
+        {
+            RefreshViewDirect();
+        }
     }
 
     /// <summary>
-    /// タイム（秒数）を直接セットして即座に「00:00.00」形式で表示します。
-    /// 例: 91.46f -> "01:31.46"
+    /// ResultTimeModel から「今回のクリアタイム（新しい数字）」を直接取得します。
     /// </summary>
-    /// <param name="clearTimeInSeconds">クリアタイム（秒）</param>
-    public void SetTime(float clearTimeInSeconds)
+    public float GetClearTime()
     {
-        InitializeComponents();
-        m_countUpTween?.Kill();
-
-        string formattedTime = FormatTime(clearTimeInSeconds);
-        ApplyText(formattedTime);
+        if (m_model == null) return 0f;
+        return m_model.ClearTime; // ★ 「今回のクリアタイム」をそのまま返す
     }
 
     /// <summary>
-    /// 0秒から指定タイムまでパラパラと高速カウントアップしながら表示する演出を行います。
+    /// 即座に今回のクリアタイムを表示します（アニメーションなし）
     /// </summary>
-    /// <param name="clearTimeInSeconds">最終目標のクリアタイム（秒）</param>
-    /// <param name="delay">開始までの待ち時間（秒）</param>
-    public void SetTimeWithAnimation(float clearTimeInSeconds, float delay = -1f)
+    public void RefreshViewDirect()
     {
-        InitializeComponents();
-        m_countUpTween?.Kill();
+        StopAllTweens();
+        EnsureReferences();
 
-        float startDelay = (delay >= 0f) ? delay : m_delay;
+        float clearTime = GetClearTime();
 
-        // 開始前は 00:00.00 表示
-        ApplyText(FormatTime(0f));
+        if (m_view != null)
+        {
+            m_view.DisplayTime(clearTime);
+        }
+
+        // Model の IsNewRecord を見て新記録なら赤点滅
+        if (m_model != null && m_model.IsNewRecord)
+        {
+            StartBlinking();
+        }
+        else
+        {
+            StopBlinking();
+        }
+    }
+
+    /// <summary>
+    /// 今回のクリアタイムを表示（カウントアップ演出付き）し、新記録（m_model.IsNewRecord）なら赤点滅を開始します。
+    /// </summary>
+    public void RefreshBestTime()
+    {
+        EnsureReferences();
+        if (m_view == null || m_model == null) return;
+
+        StopAllTweens();
+
+        float clearTime = GetClearTime();
+        bool isNewRecord = m_model.IsNewRecord; // Model から新記録判定を取得
+
+        if (!m_useCountUp)
+        {
+            m_view.DisplayTime(clearTime);
+            if (isNewRecord) StartBlinking();
+            return;
+        }
+
+        m_view.DisplayTime(0f);
 
         Sequence seq = DOTween.Sequence();
 
-        if (startDelay > 0f)
+        if (m_delay > 0f)
         {
-            seq.AppendInterval(startDelay);
+            seq.AppendInterval(m_delay);
         }
 
-        float currentTime = 0f;
-
         seq.Append(
-            DOVirtual.Float(0f, clearTimeInSeconds, m_countUpDuration, value =>
+            DOVirtual.Float(0f, clearTime, m_countUpDuration, value =>
             {
-                currentTime = value;
-                ApplyText(FormatTime(currentTime));
+                if (m_view != null) m_view.DisplayTime(value);
             })
-            .SetEase(Ease.OutCubic)
+            .SetEase(m_countUpEase)
         );
 
-        // 最後にピタッと正確なタイムをセット
+        seq.SetUpdate(true);
+
         seq.OnComplete(() =>
         {
-            ApplyText(FormatTime(clearTimeInSeconds));
+            if (m_view != null) m_view.DisplayTime(clearTime);
+
+            // カウント完了後、IsNewRecord が true なら赤点滅開始
+            if (isNewRecord)
+            {
+                StartBlinking();
+            }
+            else
+            {
+                StopBlinking();
+            }
         });
 
         m_countUpTween = seq;
     }
 
-    /// <summary>
-    /// 秒数を 「00:00.00」 形式の文字列にフォーマット変換します。
-    /// </summary>
-    private string FormatTime(float timeInSeconds)
+    private void StartBlinking()
     {
-        if (timeInSeconds < 0f) timeInSeconds = 0f;
+        StopBlinking();
 
-        int minutes = Mathf.FloorToInt(timeInSeconds / 60f);
-        int seconds = Mathf.FloorToInt(timeInSeconds % 60f);
-        int fraction = Mathf.FloorToInt((timeInSeconds * 100f) % 100f);
+        if (m_blinkTargetImage == null) return;
 
-        // 99分59秒99 を上限とするガード
-        if (minutes > 99)
-        {
-            minutes = 99;
-            seconds = 59;
-            fraction = 99;
-        }
-
-        return string.Format("{0:D2}:{1:D2}.{2:D2}", minutes, seconds, fraction);
+        m_blinkTween = m_blinkTargetImage.DOColor(m_blinkRedColor, m_blinkDuration)
+            .SetEase(Ease.InOutSine)
+            .SetLoops(-1, LoopType.Yoyo)
+            .SetUpdate(true);
     }
 
-    private void ApplyText(string textValue)
+    private void StopBlinking()
     {
-        if (m_tmpText != null) m_tmpText.text = textValue;
-        if (m_uiText != null) m_uiText.text = textValue;
+        m_blinkTween?.Kill();
+        if (m_blinkTargetImage != null)
+        {
+            m_blinkTargetImage.color = m_originalColor;
+        }
+    }
+
+    private void StopAllTweens()
+    {
+        m_countUpTween?.Kill();
+        StopBlinking();
     }
 }

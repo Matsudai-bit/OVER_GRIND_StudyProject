@@ -5,9 +5,8 @@ using UnityEngine.InputSystem;
 
 /// <summary>
 /// プレイヤーのターゲット注視機能を管理します。
-/// Xボタンを押している間だけターゲット画像を表示し、
-/// 対象部位へ一度だけカメラを向けます。
-/// ターゲット中もカメラは自由に操作できます。
+/// 右スティック押し込みでターゲット機能を切り替え、
+/// ターゲット中は右スティック左右入力で対象を切り替えます。
 /// </summary>
 public sealed class PlayerTargetingController : MonoBehaviour
 {
@@ -16,13 +15,13 @@ public sealed class PlayerTargetingController : MonoBehaviour
     [SerializeField, Header("Parameter Asset")]
     private PlayerTargetingControllerParameterAsset m_parameterAsset;
 
-    [Header("Target Search")]
+    [SerializeField, Header("Target Search")]
+    [Tooltip("シーン内のTargetPointと個別の選択可能距離を管理するManagerです。")]
+    private TargetPointManager m_targetPointManager;
 
-    [SerializeField, Min(0.1f)]
-    private float m_targetSearchRadius = 20.0f;
-
-    [SerializeField]
-    private LayerMask m_targetLayer;
+    [SerializeField, Min(0.0f)]
+    [Tooltip("初回ロックオン時に画面中央を優先する円形範囲の半径（px）です。")]
+    private float m_initialPriorityScreenRadius = 360.0f;
 
     [Header("Target Reticle")]
 
@@ -50,20 +49,38 @@ public sealed class PlayerTargetingController : MonoBehaviour
              "位置を決定できるようにするために使用します。未設定の場合は移動方向を渡しません。")]
     private PlayerMotor m_playerMotor;
 
-    private readonly List<TargetableEnemy> m_candidates =
-        new List<TargetableEnemy>();
+    private readonly List<TargetPoint> m_targetCandidates = new();
 
     private InputAction m_targetAction;
     private InputAction m_targetLeftAction;
     private InputAction m_targetRightAction;
 
-    private TargetableEnemy m_currentEnemy;
-    private int m_currentTargetPointIndex = -1;
+    private TargetPoint m_currentTargetPoint;
 
     private TargetReticleBillboard m_targetReticle;
     private Tween m_reticleTween;
 
     private bool m_isTargeting;
+
+    /// <summary>
+    /// 現在ターゲット中の対象Transformを取得します。
+    /// </summary>
+    /// <returns>
+    /// ターゲット中かつ対象が有効な場合は対象Transform、
+    /// それ以外の場合はnull。
+    /// </returns>
+    public Transform GetCurrentTargetTransform()
+    {
+        if (!m_isTargeting)
+        {
+            return null;
+        }
+
+        TargetPoint targetPoint = GetCurrentTargetPoint();
+        return targetPoint != null
+            ? targetPoint.TargetTransform
+            : null;
+    }
 
     /// <summary>
     /// 初期化を行います。
@@ -90,8 +107,6 @@ public sealed class PlayerTargetingController : MonoBehaviour
             return;
         }
 
-        m_targetSearchRadius = m_parameterAsset.TargetSearchRadius;
-        m_targetLayer = m_parameterAsset.TargetLayer;
         m_targetReticlePrefab = m_parameterAsset.TargetReticlePrefab;
         m_reticleDistanceFromTarget = m_parameterAsset.ReticleDistanceFromTarget;
         m_reticleMoveDuration = m_parameterAsset.ReticleMoveDuration;
@@ -134,7 +149,7 @@ public sealed class PlayerTargetingController : MonoBehaviour
         {
             Vector3 targetPosition =
                 GetReticlePosition(
-                    targetPoint.transform);
+                    targetPoint.TargetTransform);
 
             m_targetReticle.transform.position =
                 Vector3.Lerp(
@@ -148,7 +163,7 @@ public sealed class PlayerTargetingController : MonoBehaviour
             // ★修正点: Playerの移動方向を渡すことで、
             // 後退・斜め後退移動時にもカメラがPlayerの背後寄りへ回り込みやすくする
             m_playerCamera.UpdateTargetFocus(
-                targetPoint.transform,
+                targetPoint.TargetTransform,
                 GetPlayerMoveDirection());
         }
     }
@@ -184,8 +199,7 @@ public sealed class PlayerTargetingController : MonoBehaviour
     /// </summary>
     private void OnEnable()
     {
-        m_targetAction.started += OnTargetStarted;
-        m_targetAction.canceled += OnTargetCanceled;
+        m_targetAction.performed += OnTargetPerformed;
 
         m_targetLeftAction.performed += OnTargetLeftPerformed;
         m_targetRightAction.performed += OnTargetRightPerformed;
@@ -197,35 +211,30 @@ public sealed class PlayerTargetingController : MonoBehaviour
     private void OnDisable()
     {
         StopTargeting();
-        m_targetAction.started -= OnTargetStarted;
-        m_targetAction.canceled -= OnTargetCanceled;
+        m_targetAction.performed -= OnTargetPerformed;
 
         m_targetLeftAction.performed -= OnTargetLeftPerformed;
         m_targetRightAction.performed -= OnTargetRightPerformed;
     }
 
     /// <summary>
-    /// Xボタンを押したときの処理を行います。
+    /// 右スティックを押し込んだときにターゲット機能を切り替えます。
     /// </summary>
     /// <param name="context">入力コンテキスト。</param>
-    private void OnTargetStarted(
+    private void OnTargetPerformed(
         InputAction.CallbackContext context)
     {
+        if (m_isTargeting)
+        {
+            StopTargeting();
+            return;
+        }
+
         StartTargeting();
     }
 
     /// <summary>
-    /// Xボタンを離したときの処理を行います。
-    /// </summary>
-    /// <param name="context">入力コンテキスト。</param>
-    private void OnTargetCanceled(
-        InputAction.CallbackContext context)
-    {
-        StopTargeting();
-    }
-
-    /// <summary>
-    /// Xボタンを押したときにターゲットを開始します。
+    /// 右スティック押し込みでターゲットを開始します。
     /// </summary>
     private void StartTargeting()
     {
@@ -234,17 +243,31 @@ public sealed class PlayerTargetingController : MonoBehaviour
             return;
         }
 
-        TargetableEnemy nearestEnemy =
-            FindNearestEnemy();
+        if (m_targetPointManager == null)
+        {
+            Debug.LogWarning(
+                $"{nameof(TargetPointManager)}が設定されていません。",
+                this);
+            return;
+        }
 
-        if (nearestEnemy == null ||
-            nearestEnemy.TargetPoints.Count == 0)
+        m_targetPointManager.GetTargetablePoints(
+            transform.position,
+            m_targetCandidates);
+
+        if (m_targetCandidates.Count == 0)
         {
             return;
         }
 
-        m_currentEnemy = nearestEnemy;
-        m_currentTargetPointIndex = 0;
+        m_currentTargetPoint =
+            FindBestInitialTarget(Camera.main);
+
+        if (m_currentTargetPoint == null)
+        {
+            return;
+        }
+
         m_isTargeting = true;
 
         TargetPoint targetPoint =
@@ -257,21 +280,21 @@ public sealed class PlayerTargetingController : MonoBehaviour
         }
 
         ShowTargetReticle(
-            targetPoint.transform,
+            targetPoint.TargetTransform,
             false);
 
         if (m_playerCamera != null)
         {
             // ★修正点: 開始時点の移動方向も渡し、カメラ軌道の初期スナップに反映する
             m_playerCamera.BeginTargetFocus(
-                targetPoint.transform,
+                targetPoint.TargetTransform,
                 m_cameraFocusDuration,
                 GetPlayerMoveDirection());
         }
     }
 
     /// <summary>
-    /// Xボタンを離したときにターゲットを終了します。
+    /// 右スティック押し込みでターゲットを終了します。
     /// </summary>
     private void StopTargeting()
     {
@@ -282,8 +305,8 @@ public sealed class PlayerTargetingController : MonoBehaviour
 
         m_isTargeting = false;
 
-        m_currentEnemy = null;
-        m_currentTargetPointIndex = -1;
+        m_currentTargetPoint = null;
+        m_targetCandidates.Clear();
 
         HideTargetReticle();
 
@@ -294,7 +317,7 @@ public sealed class PlayerTargetingController : MonoBehaviour
     }
 
     /// <summary>
-    /// D-Pad左でTargetPointを切り替えます。
+    /// 右スティックを左へ倒してTargetPointを切り替えます。
     /// </summary>
     /// <param name="context">入力コンテキスト。</param>
     private void OnTargetLeftPerformed(
@@ -309,7 +332,7 @@ public sealed class PlayerTargetingController : MonoBehaviour
     }
 
     /// <summary>
-    /// D-Pad右でTargetPointを切り替えます。
+    /// 右スティックを右へ倒してTargetPointを切り替えます。
     /// </summary>
     /// <param name="context">入力コンテキスト。</param>
     private void OnTargetRightPerformed(
@@ -331,23 +354,35 @@ public sealed class PlayerTargetingController : MonoBehaviour
     /// </param>
     private void ChangeTargetPoint(int direction)
     {
-        if (m_currentEnemy == null ||
-            m_currentEnemy.TargetPoints.Count == 0)
+        if (m_targetPointManager == null ||
+            m_currentTargetPoint == null ||
+            direction == 0)
         {
             return;
         }
 
-        int count =
-            m_currentEnemy.TargetPoints.Count;
+        m_targetPointManager.GetTargetablePoints(
+            transform.position,
+            m_targetCandidates);
 
-        m_currentTargetPointIndex =
-            (m_currentTargetPointIndex +
-             direction +
-             count) %
-            count;
+        if (m_targetCandidates.Count == 0)
+        {
+            StopTargeting();
+            return;
+        }
 
-        TargetPoint targetPoint =
-            GetCurrentTargetPoint();
+        TargetPoint nextTargetPoint =
+            FindClosestTargetInScreenDirection(
+                Camera.main,
+                direction);
+
+        if (nextTargetPoint == null)
+        {
+            return;
+        }
+
+        m_currentTargetPoint = nextTargetPoint;
+        TargetPoint targetPoint = m_currentTargetPoint;
 
         if (targetPoint == null)
         {
@@ -355,17 +390,210 @@ public sealed class PlayerTargetingController : MonoBehaviour
         }
 
         ShowTargetReticle(
-            targetPoint.transform,
+            targetPoint.TargetTransform,
             true);
 
         if (m_playerCamera != null)
         {
             // ★修正点: TargetPoint切り替え時も移動方向を渡す
             m_playerCamera.BeginTargetFocus(
-                targetPoint.transform,
+                targetPoint.TargetTransform,
                 m_cameraFocusDuration,
                 GetPlayerMoveDirection());
         }
+    }
+
+    /// <summary>
+    /// 画面中央の優先ゾーン内では中央に最も近いTargetPointを取得します。
+    /// ゾーン内に候補がない場合は、カメラ方向に関係なくPlayerに最も近い対象を取得します。
+    /// </summary>
+    /// <param name="targetCamera">スクリーン座標への変換に使用するカメラ。</param>
+    /// <returns>初回ロックオンに最適なTargetPoint。選択可能な対象がない場合はnull。</returns>
+    private TargetPoint FindBestInitialTarget(
+        Camera targetCamera)
+    {
+        Vector2 screenCenter = targetCamera != null
+            ? targetCamera.pixelRect.center
+            : default;
+        float priorityRadiusSqr =
+            m_initialPriorityScreenRadius *
+            m_initialPriorityScreenRadius;
+        TargetPoint priorityTargetPoint = null;
+        float priorityScreenSqrDistance = float.PositiveInfinity;
+        TargetPoint closestWorldTargetPoint = null;
+        float closestWorldSqrDistance = float.PositiveInfinity;
+        float closestScreenSqrDistance = float.PositiveInfinity;
+
+        foreach (TargetPoint candidate in m_targetCandidates)
+        {
+            float worldSqrDistance =
+                (candidate.Position - transform.position).sqrMagnitude;
+            bool hasScreenPosition =
+                TryGetScreenPosition(
+                    targetCamera,
+                    candidate,
+                    out Vector2 candidateScreenPosition);
+            float screenSqrDistance = hasScreenPosition
+                ? (candidateScreenPosition - screenCenter).sqrMagnitude
+                : float.PositiveInfinity;
+
+            if (hasScreenPosition &&
+                screenSqrDistance <= priorityRadiusSqr &&
+                screenSqrDistance < priorityScreenSqrDistance)
+            {
+                priorityScreenSqrDistance = screenSqrDistance;
+                priorityTargetPoint = candidate;
+            }
+
+            bool isCloserInWorld =
+                worldSqrDistance < closestWorldSqrDistance;
+            bool isSameWorldDistanceAndCloserToCenter =
+                Mathf.Approximately(
+                    worldSqrDistance,
+                    closestWorldSqrDistance) &&
+                screenSqrDistance < closestScreenSqrDistance;
+
+            if (!isCloserInWorld &&
+                !isSameWorldDistanceAndCloserToCenter)
+            {
+                continue;
+            }
+
+            closestWorldSqrDistance = worldSqrDistance;
+            closestScreenSqrDistance = screenSqrDistance;
+            closestWorldTargetPoint = candidate;
+        }
+
+        return priorityTargetPoint != null
+            ? priorityTargetPoint
+            : closestWorldTargetPoint;
+    }
+
+    /// <summary>
+    /// 現在対象より指定した画面左右方向にある候補を2D判定で抽出し、
+    /// Playerとの3D距離が最も近いTargetPointを取得します。
+    /// 同距離の場合は現在対象との2D距離が近い対象を優先します。
+    /// 指定方向に候補がない場合は反対側の端へ循環します。
+    /// </summary>
+    /// <param name="targetCamera">スクリーン座標への変換に使用するカメラ。</param>
+    /// <param name="direction">左は-1、右は1。</param>
+    /// <returns>指定方向で最も近いTargetPoint。候補がない場合はnull。</returns>
+    private TargetPoint FindClosestTargetInScreenDirection(
+        Camera targetCamera,
+        int direction)
+    {
+        if (targetCamera == null ||
+            direction == 0 ||
+            !TryGetScreenPosition(
+                targetCamera,
+                m_currentTargetPoint,
+                out Vector2 currentScreenPosition))
+        {
+            return null;
+        }
+
+        TargetPoint closestTargetPoint = null;
+        float closestWorldSqrDistance = float.PositiveInfinity;
+        float closestScreenSqrDistance = float.PositiveInfinity;
+        TargetPoint wrapTargetPoint = null;
+        float wrapTargetScreenX = direction < 0
+            ? float.NegativeInfinity
+            : float.PositiveInfinity;
+        float wrapTargetWorldSqrDistance = float.PositiveInfinity;
+
+        foreach (TargetPoint candidate in m_targetCandidates)
+        {
+            if (candidate == m_currentTargetPoint ||
+                !TryGetScreenPosition(
+                    targetCamera,
+                    candidate,
+                    out Vector2 candidateScreenPosition))
+            {
+                continue;
+            }
+
+            bool isCloserToWrapEdge = direction < 0
+                ? candidateScreenPosition.x > wrapTargetScreenX
+                : candidateScreenPosition.x < wrapTargetScreenX;
+            float worldSqrDistance =
+                (candidate.Position - transform.position).sqrMagnitude;
+            bool isSameWrapEdgeAndCloserInWorld =
+                Mathf.Approximately(
+                    candidateScreenPosition.x,
+                    wrapTargetScreenX) &&
+                worldSqrDistance < wrapTargetWorldSqrDistance;
+
+            if (isCloserToWrapEdge ||
+                isSameWrapEdgeAndCloserInWorld)
+            {
+                wrapTargetScreenX = candidateScreenPosition.x;
+                wrapTargetWorldSqrDistance = worldSqrDistance;
+                wrapTargetPoint = candidate;
+            }
+
+            Vector2 screenOffset =
+                candidateScreenPosition - currentScreenPosition;
+
+            if (screenOffset.x * direction <= 0.0f)
+            {
+                continue;
+            }
+
+            float screenSqrDistance = screenOffset.sqrMagnitude;
+            bool isCloserInWorld =
+                worldSqrDistance < closestWorldSqrDistance;
+            bool isSameWorldDistanceAndCloserOnScreen =
+                Mathf.Approximately(
+                    worldSqrDistance,
+                    closestWorldSqrDistance) &&
+                screenSqrDistance < closestScreenSqrDistance;
+
+            if (!isCloserInWorld &&
+                !isSameWorldDistanceAndCloserOnScreen)
+            {
+                continue;
+            }
+
+            closestWorldSqrDistance = worldSqrDistance;
+            closestScreenSqrDistance = screenSqrDistance;
+            closestTargetPoint = candidate;
+        }
+
+        return closestTargetPoint != null
+            ? closestTargetPoint
+            : wrapTargetPoint;
+    }
+
+    /// <summary>
+    /// TargetPointをスクリーン座標へ変換し、カメラ前方にあるか確認します。
+    /// </summary>
+    /// <param name="targetCamera">スクリーン座標への変換に使用するカメラ。</param>
+    /// <param name="targetPoint">変換対象のTargetPoint。</param>
+    /// <param name="screenPosition">変換後のスクリーン座標。</param>
+    /// <returns>対象が有効かつカメラ前方にある場合はtrue。</returns>
+    private bool TryGetScreenPosition(
+        Camera targetCamera,
+        TargetPoint targetPoint,
+        out Vector2 screenPosition)
+    {
+        screenPosition = default;
+
+        if (targetCamera == null ||
+            !IsTargetPointAvailable(targetPoint))
+        {
+            return false;
+        }
+
+        Vector3 projectedPosition =
+            targetCamera.WorldToScreenPoint(targetPoint.Position);
+
+        if (projectedPosition.z <= 0.0f)
+        {
+            return false;
+        }
+
+        screenPosition = projectedPosition;
+        return true;
     }
 
     /// <summary>
@@ -374,57 +602,29 @@ public sealed class PlayerTargetingController : MonoBehaviour
     /// <returns>現在のTargetPoint。</returns>
     private TargetPoint GetCurrentTargetPoint()
     {
-        if (m_currentEnemy == null ||
-            m_currentTargetPointIndex < 0 ||
-            m_currentTargetPointIndex >=
-            m_currentEnemy.TargetPoints.Count)
+        if (!IsTargetPointAvailable(m_currentTargetPoint) ||
+            m_targetPointManager == null ||
+            !m_targetPointManager.IsTargetable(
+                m_currentTargetPoint,
+                transform.position))
         {
             return null;
         }
 
-        return
-            m_currentEnemy.TargetPoints[
-                m_currentTargetPointIndex];
+        return m_currentTargetPoint;
     }
 
     /// <summary>
-    /// 最も近いTargetableEnemyを取得します。
+    /// TargetPointがロックオン可能な状態か確認します。
     /// </summary>
-    /// <returns>最も近い敵。</returns>
-    private TargetableEnemy FindNearestEnemy()
+    /// <param name="targetPoint">確認対象の部位。</param>
+    /// <returns>ロックオン可能な場合はtrue。</returns>
+    private bool IsTargetPointAvailable(TargetPoint targetPoint)
     {
-        Collider[] colliders =
-            Physics.OverlapSphere(
-                transform.position,
-                m_targetSearchRadius,
-                m_targetLayer);
-
-        TargetableEnemy nearestEnemy = null;
-        float nearestDistance = float.MaxValue;
-
-        foreach (Collider collider in colliders)
-        {
-            TargetableEnemy enemy =
-                collider.GetComponentInParent<TargetableEnemy>();
-
-            if (enemy == null ||
-                enemy.TargetPoints.Count == 0)
-            {
-                continue;
-            }
-
-            float distance =
-                (enemy.transform.position -
-                 transform.position).sqrMagnitude;
-
-            if (distance < nearestDistance)
-            {
-                nearestDistance = distance;
-                nearestEnemy = enemy;
-            }
-        }
-
-        return nearestEnemy;
+        return targetPoint != null &&
+               targetPoint.IsActive &&
+               targetPoint.TargetTransform != null &&
+               targetPoint.gameObject.activeInHierarchy;
     }
 
     /// <summary>

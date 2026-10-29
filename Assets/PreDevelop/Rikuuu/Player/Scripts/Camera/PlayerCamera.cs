@@ -31,6 +31,25 @@ public class PlayerCamera : MonoBehaviour
     [Tooltip("カメラ挙動のパラメータを設定したアセット。")]
     private PlayerCameraParameterAsset m_parameterAsset;
 
+
+    [Header("Ground Collision")]
+
+    [SerializeField]
+    [Tooltip("カメラを貫通させない地面のLayer。")]
+    private LayerMask m_groundLayerMask = 1 << 3;
+
+    [SerializeField, Min(0.01f)]
+    [Tooltip("地面との判定に使用するカメラ周囲の半径。")]
+    private float m_groundCollisionRadius = 0.3f;
+
+    [SerializeField, Min(0.0f)]
+    [Tooltip("地面との接触位置から追加で確保する余白。")]
+    private float m_groundCollisionPadding = 0.05f;
+
+    [SerializeField, Min(0.0f)]
+    [Tooltip("Player位置から地面判定を開始する高さ。足元との誤接触を防ぎます。")]
+    private float m_groundCollisionOriginHeight = 1.0f;
+
     // アセットから生成した、カメラ制御用のパラメータ
     private PlayerCameraParameter m_parameter;
 
@@ -53,6 +72,7 @@ public class PlayerCamera : MonoBehaviour
 
     private CinemachineOrbitalFollow m_orbitalFollow;
     private PlayerLockOnCamera m_lockOnCamera;
+    private PlayerCameraGroundCollision m_groundCollision;
     private bool m_isDriftOverrideActive;
     private float m_overrideStartAngle;
     private float m_overrideTargetAngle;
@@ -78,6 +98,16 @@ public class PlayerCamera : MonoBehaviour
         m_lockOnCamera = m_cinemachineCamera.GetComponent<PlayerLockOnCamera>();
         if (m_lockOnCamera == null)
             m_lockOnCamera = m_cinemachineCamera.gameObject.AddComponent<PlayerLockOnCamera>();
+
+        m_groundCollision = m_cinemachineCamera.GetComponent<PlayerCameraGroundCollision>();
+        if (m_groundCollision == null)
+            m_groundCollision = m_cinemachineCamera.gameObject.AddComponent<PlayerCameraGroundCollision>();
+
+        m_groundCollision.Configure(
+            m_groundLayerMask,
+            m_groundCollisionRadius,
+            m_groundCollisionPadding,
+            m_groundCollisionOriginHeight);
     }
 
     /// <summary>通常カメラへの復帰が完了した後に入力を戻します。</summary>

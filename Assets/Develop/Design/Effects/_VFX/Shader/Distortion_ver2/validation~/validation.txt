@@ -1,0 +1,110 @@
+PASS Isolated ShaderValidation project (Unity 6000.3.17f1, installed NOVA 3.6.0)
+PASS Requested Distortion ver2 shader exists
+PASS Original and ver2 are distinct shaders
+PASS Shader supported on Direct3D11
+PASS Both new masks default OFF
+PASS Original distortion actually rendered
+PASS Masks OFF matches original GPU output
+PASS Rim attenuates sphere without hiding it
+PASS Rim preserves front-facing center
+PASS Rim softens visible silhouette
+PASS Rim follows camera (4.00, 0.00, 0.00)
+PASS Rim follows camera (2.00, 2.00, -3.00)
+PASS Orthographic camera rim works
+PASS Nonuniformly scaled sphere renders finite distortion
+PASS Inverse Rim removes center
+PASS Inverse Rim retains edge
+PASS Rim Progress 0 preserves distortion
+PASS Rim Progress 1 removes distortion
+PASS Rim Sharpness 1 has no NaN/Infinity
+PASS Luminance Progress 0 preserves distortion
+PASS Luminance Progress 1 removes distortion
+PASS Luminance Sharpness 1 has no NaN/Infinity
+PASS Luminance GPU mask matches sampled RGB luminance
+PASS Luminance Inverse complements mask
+PASS Rim and Luminance multiply independently
+PASS Existing Alpha Transition Fade composes with both masks
+PASS Dissolve + Rim + Luminance compiles and renders
+PASS Rim Progress Custom Coord drives fade
+PASS Pass 0 with Rim/Soft/Depth compiles
+PASS Pass 1 with Rim/Soft/Depth compiles
+PASS Pass 2 with Rim/Soft/Depth compiles
+PASS Pass 0 with Rim/Luminance/Flow/Fade compiles
+PASS Pass 1 with Rim/Luminance/Flow/Fade compiles
+PASS Pass 2 with Rim/Luminance/Flow/Fade compiles
+GPU instance diagnostics: original=199.96, originalInstanced=199.96, combined=111.2318, newInstanced=111.2318, maxDelta=0
+Keywords: _TRANSPARENCY_BY_LUMINANCE,_TRANSPARENCY_BY_RIM
+PASS NOVA procedural GPU instancing matches non-instanced Rim/Luminance output
+PASS No shader errors after GPU rendering and procedural instancing
+PASS Unity resolves new custom inspector
+PASS Rim matches actual NOVA Unlit GPU alpha: inverse=0, sharpness=0, progress=0.2, maxDelta=3.481275E-07
+PASS Rim matches actual NOVA Unlit GPU alpha: inverse=0, sharpness=0, progress=0.5, maxDelta=3.626428E-07
+PASS Rim matches actual NOVA Unlit GPU alpha: inverse=0, sharpness=0, progress=0.8, maxDelta=2.20533E-07
+PASS Rim matches actual NOVA Unlit GPU alpha: inverse=0, sharpness=0.5, progress=0.2, maxDelta=4.411537E-07
+PASS Rim matches actual NOVA Unlit GPU alpha: inverse=0, sharpness=0.5, progress=0.5, maxDelta=4.711226E-07
+PASS Rim matches actual NOVA Unlit GPU alpha: inverse=0, sharpness=0.5, progress=0.8, maxDelta=4.345701E-07
+PASS Rim matches actual NOVA Unlit GPU alpha: inverse=0, sharpness=0.9, progress=0.2, maxDelta=1.225381E-06
+PASS Rim matches actual NOVA Unlit GPU alpha: inverse=0, sharpness=0.9, progress=0.5, maxDelta=1.897483E-06
+PASS Rim matches actual NOVA Unlit GPU alpha: inverse=0, sharpness=0.9, progress=0.8, maxDelta=1.892441E-06
+PASS Rim matches actual NOVA Unlit GPU alpha: inverse=1, sharpness=0, progress=0.2, maxDelta=3.731764E-07
+PASS Rim matches actual NOVA Unlit GPU alpha: inverse=1, sharpness=0, progress=0.5, maxDelta=4.026896E-07
+PASS Rim matches actual NOVA Unlit GPU alpha: inverse=1, sharpness=0, progress=0.8, maxDelta=1.221443E-07
+PASS Rim matches actual NOVA Unlit GPU alpha: inverse=1, sharpness=0.5, progress=0.2, maxDelta=4.886472E-07
+PASS Rim matches actual NOVA Unlit GPU alpha: inverse=1, sharpness=0.5, progress=0.5, maxDelta=5.52841E-07
+PASS Rim matches actual NOVA Unlit GPU alpha: inverse=1, sharpness=0.5, progress=0.8, maxDelta=2.66245E-07
+PASS Rim matches actual NOVA Unlit GPU alpha: inverse=1, sharpness=0.9, progress=0.2, maxDelta=1.804798E-06
+PASS Rim matches actual NOVA Unlit GPU alpha: inverse=1, sharpness=0.9, progress=0.5, maxDelta=1.856158E-06
+PASS Rim matches actual NOVA Unlit GPU alpha: inverse=1, sharpness=0.9, progress=0.8, maxDelta=1.001832E-06
+PASS Luminance matches actual NOVA Unlit GPU alpha: inverse=0, sharpness=0, progress=0.2, maxDelta=2.980232E-07
+PASS Luminance matches actual NOVA Unlit GPU alpha: inverse=0, sharpness=0, progress=0.5, maxDelta=3.552784E-07
+PASS Luminance matches actual NOVA Unlit GPU alpha: inverse=0, sharpness=0, progress=0.8, maxDelta=5.020119E-08
+PASS Luminance matches actual NOVA Unlit GPU alpha: inverse=0, sharpness=0.5, progress=0.2, maxDelta=2.980232E-07
+PASS Luminance matches actual NOVA Unlit GPU alpha: inverse=0, sharpness=0.5, progress=0.5, maxDelta=2.740053E-07
+PASS Luminance matches actual NOVA Unlit GPU alpha: inverse=0, sharpness=0.5, progress=0.8, maxDelta=2.607892E-08
+PASS Luminance matches actual NOVA Unlit GPU alpha: inverse=0, sharpness=0.9, progress=0.2, maxDelta=2.980232E-07
+PASS Luminance matches actual NOVA Unlit GPU alpha: inverse=0, sharpness=0.9, progress=0.5, maxDelta=2.980232E-07
+PASS Luminance matches actual NOVA Unlit GPU alpha: inverse=0, sharpness=0.9, progress=0.8, maxDelta=0
+PASS Luminance matches actual NOVA Unlit GPU alpha: inverse=1, sharpness=0, progress=0.2, maxDelta=1.424662E-07
+PASS Luminance matches actual NOVA Unlit GPU alpha: inverse=1, sharpness=0, progress=0.5, maxDelta=3.862868E-08
+PASS Luminance matches actual NOVA Unlit GPU alpha: inverse=1, sharpness=0, progress=0.8, maxDelta=0
+PASS Luminance matches actual NOVA Unlit GPU alpha: inverse=1, sharpness=0.5, progress=0.2, maxDelta=2.455326E-07
+PASS Luminance matches actual NOVA Unlit GPU alpha: inverse=1, sharpness=0.5, progress=0.5, maxDelta=4.005896E-08
+PASS Luminance matches actual NOVA Unlit GPU alpha: inverse=1, sharpness=0.5, progress=0.8, maxDelta=0
+PASS Luminance matches actual NOVA Unlit GPU alpha: inverse=1, sharpness=0.9, progress=0.2, maxDelta=2.980232E-07
+PASS Luminance matches actual NOVA Unlit GPU alpha: inverse=1, sharpness=0.9, progress=0.5, maxDelta=0
+PASS Luminance matches actual NOVA Unlit GPU alpha: inverse=1, sharpness=0.9, progress=0.8, maxDelta=0
+PASS Original Unlit reference rendered without shader errors
+PASS Rim Progress Custom Coord 1 matches material value
+PASS Rim Progress Custom Coord 11 matches material value
+PASS Rim Progress Custom Coord 21 matches material value
+PASS Rim Progress Custom Coord 31 matches material value
+PASS Rim Progress Custom Coord 2 matches material value
+PASS Rim Progress Custom Coord 12 matches material value
+PASS Rim Progress Custom Coord 22 matches material value
+PASS Rim Progress Custom Coord 32 matches material value
+PASS Rim Sharpness Custom Coord 1 matches material value
+PASS Rim Sharpness Custom Coord 11 matches material value
+PASS Rim Sharpness Custom Coord 21 matches material value
+PASS Rim Sharpness Custom Coord 31 matches material value
+PASS Rim Sharpness Custom Coord 2 matches material value
+PASS Rim Sharpness Custom Coord 12 matches material value
+PASS Rim Sharpness Custom Coord 22 matches material value
+PASS Rim Sharpness Custom Coord 32 matches material value
+PASS Luminance Progress Custom Coord 1 matches material value
+PASS Luminance Progress Custom Coord 11 matches material value
+PASS Luminance Progress Custom Coord 21 matches material value
+PASS Luminance Progress Custom Coord 31 matches material value
+PASS Luminance Progress Custom Coord 2 matches material value
+PASS Luminance Progress Custom Coord 12 matches material value
+PASS Luminance Progress Custom Coord 22 matches material value
+PASS Luminance Progress Custom Coord 32 matches material value
+PASS Luminance Sharpness Custom Coord 1 matches material value
+PASS Luminance Sharpness Custom Coord 11 matches material value
+PASS Luminance Sharpness Custom Coord 21 matches material value
+PASS Luminance Sharpness Custom Coord 31 matches material value
+PASS Luminance Sharpness Custom Coord 2 matches material value
+PASS Luminance Sharpness Custom Coord 12 matches material value
+PASS Luminance Sharpness Custom Coord 22 matches material value
+PASS Luminance Sharpness Custom Coord 32 matches material value
+PASS No material assets created
+DISTORTION_VER2_VALIDATION_OK
