@@ -4,7 +4,7 @@ using UnityEngine.InputSystem; // 新しいInput Systemを使用
 public class SoundPlayer : MonoBehaviour
 {
     [Header("鳴らしたいサウンドID")]
-    [SerializeField] private SoundID_Aoki m_testSoundID;
+    [SerializeField] private AudioID m_testSoundID;
 
     private int m_currentHandle = -1;
 

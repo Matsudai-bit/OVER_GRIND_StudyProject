@@ -1,11 +1,15 @@
 using UnityEngine;
-using Unity.Cinemachine;
+using Unity.Cinemachine; // Unity 6 (6000.x) 標準名前空間 (旧バージョンでは Cinemachine)
 
 /// <summary>
 /// Cinemachine Impulse 機能を利用してカメラの振動（シェイク）を制御するクラス。
 /// </summary>
 public class CinemachineShake : MonoBehaviour
 {
+    // ==========================================
+    // メンバー変数
+    // ==========================================
+
     /// <summary>
     /// 振動の発生源となる Cinemachine Impulse Source コンポーネント。
     /// </summary>
@@ -13,17 +17,38 @@ public class CinemachineShake : MonoBehaviour
     [SerializeField]
     private CinemachineImpulseSource m_impulseSource;
 
+    // ==========================================
+    // Unity イベント関数
+    // ==========================================
+
     /// <summary>
     /// コンポーネントの初期化処理を行います。
     /// </summary>
     private void Awake()
     {
-        // Inspector で未設定の場合、同一 GameObject から自動取得
+        // 参照が未設定の場合、自身または子オブジェクトから自動取得
         if (m_impulseSource == null)
         {
-            m_impulseSource = GetComponent<CinemachineImpulseSource>();
+            m_impulseSource = GetComponentInChildren<CinemachineImpulseSource>();
+        }
+
+        // それでも見つからない場合はシーン全体から検索
+        if (m_impulseSource == null)
+        {
+            m_impulseSource = FindFirstObjectByType<CinemachineImpulseSource>();
+        }
+
+        // 検索結果の検証ログ
+        if (m_impulseSource == null)
+        {
+            Debug.LogError("【CinemachineShake】CinemachineImpulseSource が見つかりません。Inspector で設定してください。");
         }
     }
+
+    // ==========================================
+    // public メソッド
+    // ==========================================
+
     /// <summary>
     /// 指定された条件でカメラの振動（シェイク）を開始します。
     /// </summary>
@@ -38,7 +63,7 @@ public class CinemachineShake : MonoBehaviour
         // 安全のための null チェック
         if (m_impulseSource == null)
         {
-            Debug.LogWarning("【CinemachineShake】CinemachineImpulseSource が設定されていません。");
+            Debug.LogWarning("【CinemachineShake】CinemachineImpulseSource が設定されていないため振動できません。");
             return;
         }
 

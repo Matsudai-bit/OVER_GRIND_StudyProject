@@ -6,7 +6,7 @@ using UnityEngine;
 /// @ date :: 2026/09/12
 public class SoundEmitter_Aoki : MonoBehaviour
 {
-    [SerializeField] private SoundID_Aoki m_soundID; // 発生させるサウンド（メンバー変数規約適用）
+    [SerializeField] private AudioID m_soundID; // 発生させるサウンド（メンバー変数規約適用）
     [SerializeField] private Transform m_spawnPoint; // 再生位置の基準点
 
     private int m_currentHandle = -1; // 再生中の個別ハンドル保持用

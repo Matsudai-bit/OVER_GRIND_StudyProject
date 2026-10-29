@@ -23,8 +23,8 @@ public class SoundManager_Aoki : MonoBehaviour
 
     [SerializeField] private SoundDatabase m_database;
 
-    private Dictionary<SoundID_Aoki, Queue<SoundNode_Aoki>> m_poolDict = new Dictionary<SoundID_Aoki, Queue<SoundNode_Aoki>>();
-    private Dictionary<SoundID_Aoki, List<SoundNode_Aoki>> m_activeDict = new Dictionary<SoundID_Aoki, List<SoundNode_Aoki>>();
+    private Dictionary<AudioID, Queue<AudioPlayerNode>> m_poolDict = new Dictionary<AudioID, Queue<AudioPlayerNode>>();
+    private Dictionary<AudioID, List<AudioPlayerNode>> m_activeDict = new Dictionary<AudioID, List<AudioPlayerNode>>();
     private int m_handleCounter = 0;
 
     private void Awake()
@@ -47,9 +47,9 @@ public class SoundManager_Aoki : MonoBehaviour
     /// <summary>
     /// 識別子(ID)を指定するだけで音を再生します（AudioClipの指定不要）
     /// </summary>
-    public int Play(SoundID_Aoki id, Vector3 position = default, Transform parent = null)
+    public int Play(AudioID id, Vector3 position = default, Transform parent = null)
     {
-        if (id == SoundID_Aoki.None) return -1;
+        if (id == AudioID.None) return -1;
 
         // データベース自動ロードのバックアップ処理
         if (m_database == null)
@@ -65,7 +65,7 @@ public class SoundManager_Aoki : MonoBehaviour
         SoundDatabase.SoundData data = m_database.GetSoundData(id);
         if (data == null || data.m_clip == null) return -1;
 
-        SoundNode_Aoki node = GetFromPool(id);
+        AudioPlayerNode node = GetFromPool(id);
         if (node == null) return -1;
 
         int handle = ++m_handleCounter;
@@ -74,7 +74,7 @@ public class SoundManager_Aoki : MonoBehaviour
         node.transform.position = position;
         node.gameObject.SetActive(true);
 
-        if (!m_activeDict.ContainsKey(id)) m_activeDict[id] = new List<SoundNode_Aoki>();
+        if (!m_activeDict.ContainsKey(id)) m_activeDict[id] = new List<AudioPlayerNode>();
         m_activeDict[id].Add(node);
 
         node.Init(handle, data, (completedNode) => ReturnToPool(id, completedNode));
@@ -83,7 +83,7 @@ public class SoundManager_Aoki : MonoBehaviour
         return handle;
     }
 
-    public void Stop(SoundID_Aoki id)
+    public void Stop(AudioID id)
     {
         if (m_activeDict.TryGetValue(id, out var list))
         {
@@ -132,11 +132,11 @@ public class SoundManager_Aoki : MonoBehaviour
         }
     }
 
-    private SoundNode_Aoki GetFromPool(SoundID_Aoki id)
+    private AudioPlayerNode GetFromPool(AudioID id)
     {
         if (!m_poolDict.TryGetValue(id, out var pool))
         {
-            pool = new Queue<SoundNode_Aoki>();
+            pool = new Queue<AudioPlayerNode>();
             m_poolDict[id] = pool;
         }
 
@@ -145,18 +145,18 @@ public class SoundManager_Aoki : MonoBehaviour
         {
             GameObject go = new GameObject($"SoundNode_{id}");
             go.transform.SetParent(transform);
-            return go.AddComponent<SoundNode_Aoki>();
+            return go.AddComponent<AudioPlayerNode>();
         }
     }
 
-    private void ReturnToPool(SoundID_Aoki id, SoundNode_Aoki node)
+    private void ReturnToPool(AudioID id, AudioPlayerNode node)
     {
         node.gameObject.SetActive(false);
         if (m_activeDict.TryGetValue(id, out var list)) list.Remove(node);
 
         if (!m_poolDict.TryGetValue(id, out var pool))
         {
-            pool = new Queue<SoundNode_Aoki>();
+            pool = new Queue<AudioPlayerNode>();
             m_poolDict[id] = pool;
         }
         pool.Enqueue(node);

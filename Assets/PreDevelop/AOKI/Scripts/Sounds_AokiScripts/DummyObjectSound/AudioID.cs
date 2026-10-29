@@ -1,5 +1,5 @@
 ﻿// 自動生成用ファイルです。直接編集しないでください。
-public enum SoundID_Aoki
+public enum AudioID
 {
     None = 0,
     Aoki,

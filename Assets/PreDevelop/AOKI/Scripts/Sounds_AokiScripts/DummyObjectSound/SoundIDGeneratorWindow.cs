@@ -47,10 +47,10 @@ public class SoundIDGeneratorWindow : EditorWindow
     private bool m_updateLoop = false;
     private string m_lastUpdateSelectedID = "";
 
-    [MenuItem("Tools/Audio/SoundID_Aoki 編集・追加ツール")]
+    [MenuItem("Tools/Audio/AudioID 編集・追加ツール")]
     public static void ShowWindow()
     {
-        var window = GetWindow<SoundIDGeneratorWindow>("SoundID_Aoki 編集");
+        var window = GetWindow<SoundIDGeneratorWindow>("AudioID 編集");
         window.minSize = new Vector2(450, 750); // ウィンドウが少し大きくなるよう調整
     }
 
@@ -126,7 +126,7 @@ public class SoundIDGeneratorWindow : EditorWindow
 
         // サウンド試聴
         EditorGUILayout.LabelField("サウンド試聴", EditorStyles.boldLabel);
-        string[] currentNames = Enum.GetNames(typeof(SoundID_Aoki));
+        string[] currentNames = Enum.GetNames(typeof(AudioID));
 
         if (currentNames.Length > 0)
         {
@@ -225,7 +225,7 @@ public class SoundIDGeneratorWindow : EditorWindow
             return;
         }
 
-        if (Enum.TryParse<SoundID_Aoki>(idName, out var targetID))
+        if (Enum.TryParse<AudioID>(idName, out var targetID))
         {
             var data = db.GetSoundData(targetID);
             if (data != null && data.m_clip != null)
@@ -241,7 +241,7 @@ public class SoundIDGeneratorWindow : EditorWindow
 
     private void BatchAddProcess()
     {
-        List<string> existingNames = new List<string>(Enum.GetNames(typeof(SoundID_Aoki)));
+        List<string> existingNames = new List<string>(Enum.GetNames(typeof(AudioID)));
         PendingPackage package = new PendingPackage();
         List<string> newIDs = new List<string>(existingNames);
 
@@ -289,7 +289,7 @@ public class SoundIDGeneratorWindow : EditorWindow
         foreach (var entry in package.entries)
         {
             AudioClip clip = AssetDatabase.LoadAssetAtPath<AudioClip>(entry.clipPath);
-            SoundID_Aoki targetID = (SoundID_Aoki)Enum.Parse(typeof(SoundID_Aoki), entry.idName);
+            AudioID targetID = (AudioID)Enum.Parse(typeof(AudioID), entry.idName);
 
             bool exists = false;
             for (int i = 0; i < db.m_soundList.Count; i++)
@@ -341,7 +341,7 @@ public class SoundIDGeneratorWindow : EditorWindow
             AssetDatabase.SaveAssets();
         }
 
-        List<string> existingNames = new List<string>(Enum.GetNames(typeof(SoundID_Aoki)));
+        List<string> existingNames = new List<string>(Enum.GetNames(typeof(AudioID)));
         existingNames.Remove(targetID);
         GenerateEnumFile(existingNames);
         AssetDatabase.Refresh();
@@ -351,7 +351,7 @@ public class SoundIDGeneratorWindow : EditorWindow
     {
         StringBuilder sb = new StringBuilder();
         sb.AppendLine("// 自動生成用ファイルです。直接編集しないでください。");
-        sb.AppendLine("public enum SoundID_Aoki");
+        sb.AppendLine("public enum AudioID");
         sb.AppendLine("{");
 
         sb.AppendLine("    None = 0,");
@@ -363,8 +363,8 @@ public class SoundIDGeneratorWindow : EditorWindow
         }
         sb.AppendLine("}");
 
-        string[] guids = AssetDatabase.FindAssets("SoundID_Aoki t:MonoScript");
-        string path = guids.Length > 0 ? AssetDatabase.GUIDToAssetPath(guids[0]) : "Assets/SoundID_Aoki.cs";
+        string[] guids = AssetDatabase.FindAssets("AudioID t:MonoScript");
+        string path = guids.Length > 0 ? AssetDatabase.GUIDToAssetPath(guids[0]) : "Assets/AudioID.cs";
         File.WriteAllText(path, sb.ToString(), Encoding.UTF8);
     }
 
@@ -405,7 +405,7 @@ public class SoundIDGeneratorWindow : EditorWindow
         SoundDatabase db = GetDatabaseStatic();
         if (db == null) return;
 
-        if (Enum.TryParse<SoundID_Aoki>(idName, out var targetID))
+        if (Enum.TryParse<AudioID>(idName, out var targetID))
         {
             var data = db.m_soundList.Find(x => x.m_id == targetID);
             if (data != null)
@@ -427,7 +427,7 @@ public class SoundIDGeneratorWindow : EditorWindow
 
         Undo.RecordObject(db, "Update Sound Data");
 
-        if (Enum.TryParse<SoundID_Aoki>(idName, out var targetID))
+        if (Enum.TryParse<AudioID>(idName, out var targetID))
         {
             var data = db.m_soundList.Find(x => x.m_id == targetID);
             if (data != null)

@@ -7998,6 +7998,54 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 462889873}
   m_Mesh: {fileID: 0}
+--- !u!1 &463604555
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 463604557}
+  - component: {fileID: 463604556}
+  m_Layer: 0
+  m_Name: AudioTester
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &463604556
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 463604555}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 16ea573c8425a1e47af23b60f3bfd8ff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AudioSystemTester
+  m_followTarget: {fileID: 1622825675}
+  m_se2dId: 3
+  m_se3dPosId: 1
+  m_se3dFollowId: 2
+--- !u!4 &463604557
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 463604555}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 96.88261, y: 14.80243, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &463885939
 GameObject:
   m_ObjectHideFlags: 0
@@ -20217,11 +20265,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3208208578447851079, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 6.744931
+      value: 6.791931
       objectReference: {fileID: 0}
     - target: {fileID: 3208208578447851079, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -133.46365
+      value: -133.13092
       objectReference: {fileID: 0}
     - target: {fileID: 3208208578447851079, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
       propertyPath: m_LocalRotation.w
@@ -20265,11 +20313,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3994456450058773638, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 6.744931
+      value: 6.791931
       objectReference: {fileID: 0}
     - target: {fileID: 3994456450058773638, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -133.46365
+      value: -133.13092
       objectReference: {fileID: 0}
     - target: {fileID: 3994456450058773638, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
       propertyPath: m_LocalRotation.w
@@ -20309,7 +20357,11 @@ PrefabInstance:
       objectReference: {fileID: 2100000, guid: 60945adf6c7a7f7448731b5fe5c3b0e9, type: 2}
     - target: {fileID: 4226464411741103425, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -5.34
+      value: -5.387
+      objectReference: {fileID: 0}
+    - target: {fileID: 4226464411741103425, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 135.264
       objectReference: {fileID: 0}
     - target: {fileID: 4306324553482417882, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
@@ -22457,7 +22509,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 022d213c1b48ad041b35de06c99bb1a4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CinemachineShake
-  impulseSource: {fileID: 2058835216}
+  m_impulseSource: {fileID: 0}
 --- !u!114 &1204587807
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -27509,7 +27561,7 @@ GameObject:
   - component: {fileID: 1558546823}
   - component: {fileID: 1558546825}
   m_Layer: 0
-  m_Name: CameraObjects
+  m_Name: CameraShakeTester
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -27527,20 +27579,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f61d97b31cb92a942be9dea86943c11f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CameraShakeTest
-  cameraShake: {fileID: 1204032201}
-  preset1:
-    presetName: "\u30D1\u30BF\u30FC\u30F31\uFF08\u52A0\u7B97\uFF09"
-    triggerKey: 29
-    duration: 0.3
-    magnitude: 0.5
-    overwrite: 0
-  preset2:
-    presetName: "\u30D1\u30BF\u30FC\u30F32\uFF08\u4E0A\u66F8\u304D\uFF09"
-    triggerKey: 30
-    duration: 0.4
-    magnitude: 0.2
-    overwrite: 1
-  stopKey: 27
+  m_CameraShake: {fileID: 0}
+  m_preset1:
+    m_presetName: "\u30D1\u30BF\u30FC\u30F31\uFF08\u52A0\u7B97\uFF09"
+    m_triggerKey: 29
+    m_duration: 0.3
+    m_magnitude: 0.5
+    m_isOverwrite: 0
+  m_preset2:
+    m_presetName: "\u30D1\u30BF\u30FC\u30F32\uFF08\u4E0A\u66F8\u304D\uFF09"
+    m_triggerKey: 30
+    m_duration: 1
+    m_magnitude: 1
+    m_isOverwrite: 1
+  m_stopKey: 27
 --- !u!4 &1558546824
 Transform:
   m_ObjectHideFlags: 0
@@ -27568,14 +27620,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6e911bd683dba2945b7b5669d969bf22, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CinemachineShakeTest
-  cinemachineShake: {fileID: 1204032202}
-  key1: 29
-  duration1: 0.2
-  magnitude1: 0.5
-  key2: 30
-  duration2: 0.8
-  magnitude2: 0.9
-  stopKey: 27
+  m_cinemachineShake: {fileID: 0}
+  m_key1: 29
+  m_duration1: 0.3
+  m_magnitude1: 1
+  m_key2: 30
+  m_duration2: 1
+  m_magnitude2: 3
+  m_stopKey: 27
 --- !u!4 &1561995277 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 302610411674959744, guid: 547bdcb48addfd5449f128ba9d0976ea, type: 3}
@@ -34044,6 +34096,57 @@ SkinnedMeshRenderer:
   m_CorrespondingSourceObject: {fileID: 4985198088649746502, guid: 547bdcb48addfd5449f128ba9d0976ea, type: 3}
   m_PrefabInstance: {fileID: 996596696}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1838682860
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1838682862}
+  - component: {fileID: 1838682861}
+  m_Layer: 0
+  m_Name: AudioManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1838682861
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1838682860}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f89946938e733f14f83981303bf26499, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AudioManager
+  m_database: {fileID: 11400000, guid: 43e92f041b2396c4f8154bcf9836d48d, type: 2}
+  m_nodePrefab: {fileID: 1649518430635763053, guid: 61567741aa71cd1418583b403826a96d, type: 3}
+  m_audioMixer: {fileID: 24100000, guid: 92efa1181db63df4589087842d3f9432, type: 2}
+  m_bgmGroup: {fileID: -9003556318561669881, guid: 92efa1181db63df4589087842d3f9432, type: 2}
+  m_seInGameGroup: {fileID: 7582648151821128564, guid: 92efa1181db63df4589087842d3f9432, type: 2}
+  m_seSystemGroup: {fileID: -3005181193011271721, guid: 92efa1181db63df4589087842d3f9432, type: 2}
+  m_voiceGroup: {fileID: 8036085287806068569, guid: 92efa1181db63df4589087842d3f9432, type: 2}
+--- !u!4 &1838682862
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1838682860}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 96.88261, y: 14.80243, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1841588946
 GameObject:
   m_ObjectHideFlags: 0
@@ -54722,3 +54825,5 @@ SceneRoots:
   - {fileID: 1727703581}
   - {fileID: 1664248440}
   - {fileID: 1558546824}
+  - {fileID: 1838682862}
+  - {fileID: 463604557}
