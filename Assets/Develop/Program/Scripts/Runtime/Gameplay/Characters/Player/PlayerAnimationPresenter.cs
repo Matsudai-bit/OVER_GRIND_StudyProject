@@ -176,7 +176,7 @@ public sealed class PlayerAnimationPresenter : MonoBehaviour
                 AnimatorControllerParameterType.Bool);
         public static readonly AnimatorParameterDefinition ChargeAttackStart =
           new(
-              "AerialAttackStart",
+              "ChargeAttackStart",
               AnimatorControllerParameterType.Trigger);
         public static readonly AnimatorParameterDefinition IsAerialAttacking =
        new(
