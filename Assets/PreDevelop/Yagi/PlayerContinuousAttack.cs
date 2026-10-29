@@ -1,4 +1,5 @@
 using UnityEngine;
+using static UnityEngine.UI.GridLayoutGroup;
 
 /// <summary>地上・空中で共通の連続攻撃、速度消費、命中時の滞空を管理します。</summary>
 public sealed class PlayerContinuousAttack
@@ -40,6 +41,7 @@ public sealed class PlayerContinuousAttack
         {
             m_airAttachment = new PlayerAirAttackAttachment(m_owner);
             m_owner.AttackController.ContinuousAttackHit += m_airAttachment.AttachToTarget;
+            m_owner.AnimationPresenter.PlayAerialAttackingAnimation();
         }
 
         AttackPowerSourceRegistry.Register(
@@ -148,6 +150,10 @@ public sealed class PlayerContinuousAttack
             m_owner.AttackController.ContinuousAttackHit -= m_airAttachment.AttachToTarget;
             m_airAttachment.Detach();
             m_airAttachment = null;
+        }
+        if (m_isAirAttack)
+        {
+            m_owner.AnimationPresenter.StopAerialAttackingAnimation();
         }
         m_owner.AttackController.DisableAttackHitboxes();
         AttackPowerSourceRegistry.Unregister(m_owner.transform);

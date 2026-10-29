@@ -71,12 +71,27 @@ public sealed class PlayerAnimationPresenter : MonoBehaviour
         public static readonly AnimatorParameterDefinition MoveSpeed =
             new(
                 "MoveSpeed",
+                AnimatorControllerParameterType.Float); 
+        public static readonly AnimatorParameterDefinition VerticalSpeed =
+            new(
+                "VerticalSpeed",
                 AnimatorControllerParameterType.Float);
+        public static readonly AnimatorParameterDefinition HorizonalSpeed =
+                   new(
+                       "HorizonalSpeed",
+                       AnimatorControllerParameterType.Float);
+
 
         public static readonly AnimatorParameterDefinition IsGrounded =
             new(
                 "IsGrounded",
-                AnimatorControllerParameterType.Bool);
+                AnimatorControllerParameterType.Bool);    
+        public static readonly AnimatorParameterDefinition HealthValue =
+            new(
+                "HealthValue",
+                AnimatorControllerParameterType.Int);
+
+
 
         // ------------------------------------------------------------
         // Stateから明示的に設定するパラメータ
@@ -117,14 +132,13 @@ public sealed class PlayerAnimationPresenter : MonoBehaviour
                 "IsWalking",
                 AnimatorControllerParameterType.Bool);
 
-        public static readonly AnimatorParameterDefinition Hit =
+        public static readonly AnimatorParameterDefinition VRunStart =
             new(
-                "Hit",
+                "VRunStart",
                 AnimatorControllerParameterType.Trigger);
-
-        public static readonly AnimatorParameterDefinition VRunning =
+        public static readonly AnimatorParameterDefinition IsVRunning =
             new(
-                "VRunning",
+                "IsVRunning",
                 AnimatorControllerParameterType.Bool);
 
         public static readonly AnimatorParameterDefinition StationaryChargeStart =
@@ -137,10 +151,14 @@ public sealed class PlayerAnimationPresenter : MonoBehaviour
                 "IsStationaryCharging",
                 AnimatorControllerParameterType.Bool);
 
-        public static readonly AnimatorParameterDefinition RailGrind =
+        public static readonly AnimatorParameterDefinition IsRailGrinding =
             new(
-                "RailGrind",
+                "IsRailGrinding",
                 AnimatorControllerParameterType.Bool);
+        public static readonly AnimatorParameterDefinition RailGrindStart =
+            new(
+                "RailGrindStart",
+                AnimatorControllerParameterType.Trigger);
 
         public static readonly AnimatorParameterDefinition MoveChargeStart =
             new(
@@ -158,7 +176,15 @@ public sealed class PlayerAnimationPresenter : MonoBehaviour
                 AnimatorControllerParameterType.Bool);
         public static readonly AnimatorParameterDefinition ChargeAttackStart =
           new(
-              "ChargeAttackStart",
+              "AerialAttackStart",
+              AnimatorControllerParameterType.Trigger);
+        public static readonly AnimatorParameterDefinition IsAerialAttacking =
+       new(
+           "IsAerialAttacking",
+           AnimatorControllerParameterType.Bool);
+        public static readonly AnimatorParameterDefinition AerialAttackStart =
+          new(
+              "AerialAttackStart",
               AnimatorControllerParameterType.Trigger);
 
         public static readonly AnimatorParameterDefinition MoveChargeDirection =
@@ -166,12 +192,28 @@ public sealed class PlayerAnimationPresenter : MonoBehaviour
                 "MoveChargeDirection",
                 AnimatorControllerParameterType.Int);
 
+        public static readonly AnimatorParameterDefinition HitStart =
+        new(
+            "HitStart",
+            AnimatorControllerParameterType.Trigger);
+
+        public static readonly AnimatorParameterDefinition IsHitting =
+            new(
+                "IsHitting",
+                AnimatorControllerParameterType.Bool);
+        public static readonly AnimatorParameterDefinition HitType =
+    new(
+        "HitType",
+        AnimatorControllerParameterType.Int);
+
         /// <summary>
         /// Presenterが使用する全Animatorパラメータです。
         /// </summary>
         public static readonly AnimatorParameterDefinition[] All =
         {
             MoveSpeed,
+            VerticalSpeed,
+            HorizonalSpeed,
             IsGrounded,
             JumpStart,
             IsJumping,
@@ -180,16 +222,24 @@ public sealed class PlayerAnimationPresenter : MonoBehaviour
             IsAttacking,
             WalkStart,
             IsWalking,
-            Hit,
-            VRunning,
+            VRunStart,
+            IsVRunning,
             StationaryChargeStart,
             IsStationaryCharging,
-            RailGrind,
+            IsRailGrinding,
+            RailGrindStart,
             MoveChargeStart,
             IsMoveCharging,
             IsChargeAttacking,
             ChargeAttackStart,
-            MoveChargeDirection
+            MoveChargeDirection,
+            AerialAttackStart,
+            IsAerialAttacking,
+            HitStart,
+            IsHitting,
+            HitType,
+            HealthValue
+
         };
     }
 
@@ -325,10 +375,27 @@ public sealed class PlayerAnimationPresenter : MonoBehaviour
     /// <summary>
     /// 被弾アニメーションを要求します。
     /// </summary>
-    public void PlayHitAnimation()
+    public void PlayHitAnimation(int type)
     {
         SetTrigger(
-            AnimatorParameters.Hit);
+            AnimatorParameters.HitStart);
+        SetBool(
+            AnimatorParameters.IsHitting,
+            true);
+        SetInt(AnimatorParameters.HitType, type);
+    }
+    /// <summary>
+    /// 被弾アニメーションを要求します。
+    /// </summary>
+    public void StopHitAnimation()
+    {
+        ResetTrigger(
+            AnimatorParameters.HitStart);
+        SetBool(
+            AnimatorParameters.IsHitting,
+            false);
+        SetInt(AnimatorParameters.HitType, -1);
+
     }
 
     /// <summary>
@@ -367,8 +434,11 @@ public sealed class PlayerAnimationPresenter : MonoBehaviour
     /// </summary>
     public void PlayRailGrindAnimation()
     {
+
+        SetTrigger(
+            AnimatorParameters.RailGrindStart);
         SetBool(
-            AnimatorParameters.RailGrind,
+            AnimatorParameters.IsRailGrinding,
             true);
     }
 
@@ -377,8 +447,10 @@ public sealed class PlayerAnimationPresenter : MonoBehaviour
     /// </summary>
     public void StopRailGrindAnimation()
     {
+        ResetTrigger(
+    AnimatorParameters.RailGrindStart);
         SetBool(
-            AnimatorParameters.RailGrind,
+            AnimatorParameters.IsRailGrinding,
             false);
     }
 
@@ -387,8 +459,10 @@ public sealed class PlayerAnimationPresenter : MonoBehaviour
     /// </summary>
     public void PlayVBoostRunningAnimation()
     {
+        SetTrigger(
+    AnimatorParameters.VRunStart);
         SetBool(
-            AnimatorParameters.VRunning,
+            AnimatorParameters.IsVRunning,
             true);
     }
 
@@ -397,8 +471,11 @@ public sealed class PlayerAnimationPresenter : MonoBehaviour
     /// </summary>
     public void StopVBoostRunningAnimation()
     {
+        ResetTrigger(
+        AnimatorParameters.VRunStart);
+
         SetBool(
-            AnimatorParameters.VRunning,
+            AnimatorParameters.IsVRunning,
             false);
     }
 
@@ -412,8 +489,7 @@ public sealed class PlayerAnimationPresenter : MonoBehaviour
             AnimatorParameters.IsStationaryCharging,
             true);
 
-        ResetTrigger(
-            AnimatorParameters.StationaryChargeStart);
+
 
         SetTrigger(
             AnimatorParameters.StationaryChargeStart);
@@ -541,6 +617,42 @@ public sealed class PlayerAnimationPresenter : MonoBehaviour
             AnimatorParameters.IsChargeAttacking,
             false);
     }
+    /// <summary>
+    /// チャージ攻撃アニメーション状態を開始します。
+    /// </summary>
+    public void PlayAerialAttackingAnimation()
+    {
+        if (m_statusProvider != null)
+        {
+            m_statusProvider.SetStateCondition(
+                PlayerConditionFlags.ATTACKING,
+                true);
+        }
+
+        SetBool(
+            AnimatorParameters.IsAerialAttacking,
+            true);
+        SetTrigger(
+       AnimatorParameters.AerialAttackStart);
+    }
+    /// <summary>
+    /// チャージ攻撃アニメーション状態を開始します。
+    /// </summary>
+    public void StopAerialAttackingAnimation()
+    {
+        if (m_statusProvider != null)
+        {
+            m_statusProvider.SetStateCondition(
+                PlayerConditionFlags.ATTACKING,
+                false);
+        }
+
+        SetBool(
+            AnimatorParameters.IsAerialAttacking,
+            false);
+        ResetTrigger(
+       AnimatorParameters.AerialAttackStart);
+    }
 
     /// <summary>
     /// アクション用Triggerをリセットします。
@@ -548,7 +660,7 @@ public sealed class PlayerAnimationPresenter : MonoBehaviour
     public void ResetActionTriggers()
     {
         ResetTrigger(
-            AnimatorParameters.Hit);
+            AnimatorParameters.HitStart);
 
         ResetTrigger(
             AnimatorParameters.JumpStart);
@@ -620,6 +732,16 @@ public sealed class PlayerAnimationPresenter : MonoBehaviour
                 m_moveSpeedDampTime,
                 Time.deltaTime);
         }
+
+        SetFloat(
+    AnimatorParameters.VerticalSpeed,
+    status.VerticalSpeed);
+        SetFloat(
+    AnimatorParameters.HorizonalSpeed,
+    status.HorizontalSpeed);
+        SetInt(
+AnimatorParameters.HealthValue,
+status.HealthValue);
 
         SetBool(
             AnimatorParameters.IsGrounded,

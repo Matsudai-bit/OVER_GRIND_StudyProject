@@ -17,7 +17,8 @@ public readonly struct PlayerStatusSnapshot
         float maxMoveSpeed,
         Vector3 groundNormal,
         float groundSlopeAngle,
-        Collider groundCollider)
+        Collider groundCollider,
+        int healthValue)
     {
         Conditions = conditions;
         Position = position;
@@ -29,8 +30,10 @@ public readonly struct PlayerStatusSnapshot
         GroundNormal = groundNormal;
         GroundSlopeAngle = Mathf.Max(groundSlopeAngle, 0.0f);
         GroundCollider = groundCollider;
+        HealthValue = healthValue;
     }
 
+    public int HealthValue { get; }
     /// <summary>
     /// 現在成立している状態フラグを取得します。
     /// </summary>

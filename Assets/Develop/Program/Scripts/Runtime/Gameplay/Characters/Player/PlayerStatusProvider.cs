@@ -192,7 +192,6 @@ public sealed class PlayerStatusProvider : MonoBehaviour
             m_monitor.HasGroundSurface
                 ? m_monitor.GroundNormal
                 : Vector3.up;
-
         return new PlayerStatusSnapshot(
             conditions,
             m_motor.Position,
@@ -201,7 +200,8 @@ public sealed class PlayerStatusProvider : MonoBehaviour
             m_motor.MaxMoveSpeed,
             groundNormal,
             m_monitor.GroundSlopeAngle,
-            m_monitor.GroundCollider);
+            m_monitor.GroundCollider,
+           m_stateMachine.Health.CurrentHealth);
     }
 
     /// <summary>

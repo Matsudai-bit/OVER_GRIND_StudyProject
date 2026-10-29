@@ -100,8 +100,13 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
     private StateMachine<PlayerStateMachineComponent>
         m_stateMachine;
 
+    private Health m_health;
+
     // 初期化されているか
     private bool m_isInitialized;
+
+    public Health Health => m_health;
+
 
     /// <summary>
     /// プレイヤー入力を取得します。
@@ -315,7 +320,8 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
         Transform modelTransform,
         VGaugePlaceModel vGaugePlaceModel,
         SpeedPlaceModel speedPlaceModel,
-        PlayerStatusProvider statusProvider)
+        PlayerStatusProvider statusProvider,
+        Health health)
     {
         ApplyParameterAsset();
 
@@ -418,6 +424,8 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
         m_isInitialized = true;
 
         m_stateMachine.ChangeState<PlayerIdlingState>();
+
+        m_health = health;
     }
 
 

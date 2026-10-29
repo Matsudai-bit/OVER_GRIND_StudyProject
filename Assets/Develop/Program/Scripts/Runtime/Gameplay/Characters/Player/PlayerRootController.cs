@@ -13,6 +13,7 @@ using UnityEngine;
 [RequireComponent(typeof(PlayerStateMachineComponent))]
 [RequireComponent(typeof(PlayerAttackController))]
 [RequireComponent(typeof(SplineGrindController))]
+[RequireComponent(typeof(Health))]
 public sealed class PlayerRootController : MonoBehaviour
 {
     [SerializeField, Header("Parameter Asset")]
@@ -97,6 +98,9 @@ public sealed class PlayerRootController : MonoBehaviour
     // 初期化されているか
     private bool m_isInitialized;
 
+    [SerializeField]
+    private Health m_health;
+
     /// <summary>
     /// プレイヤー状況提供機能を取得します。
     /// </summary>
@@ -132,20 +136,8 @@ public sealed class PlayerRootController : MonoBehaviour
             return;
         }
 
-        m_statusProvider.Initialize(
-            m_monitor,
-            m_motor,
-            m_stateMachineComponent);
+   
 
-        if (!m_statusProvider.IsInitialized)
-        {
-            m_isInitialized = false;
-            enabled = false;
-            return;
-        }
-
-        m_animationPresenter.Initialize(
-            m_statusProvider);
 
         m_stateMachineComponent.Initialize(
     m_inputReader,
@@ -163,8 +155,23 @@ public sealed class PlayerRootController : MonoBehaviour
     m_modelTransform,
     m_vGaugePlaceModel,
     m_speedPlaceModel,
-    m_statusProvider);
+    m_statusProvider,
+    m_health);
+        m_statusProvider.Initialize(
+       m_monitor,
+       m_motor,
+       m_stateMachineComponent);
 
+        if (!m_statusProvider.IsInitialized)
+        {
+            m_isInitialized = false;
+            enabled = false;
+         
+            return;
+        }
+
+        m_animationPresenter.Initialize(
+            m_statusProvider);
         // StateMachine初期化後の状態を即座にStatusへ反映する。
         // PlayerAnimationPresenterもStatusUpdated経由で初期値を受け取ります。
         m_statusProvider.RefreshStatus();

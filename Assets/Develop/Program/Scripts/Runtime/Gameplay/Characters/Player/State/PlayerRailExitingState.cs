@@ -69,6 +69,7 @@ public sealed class PlayerRailExitingState
         Owner.GrindController.FinishCollisionExit();
         StopAirAttack();
         Owner.AnimationPresenter.StopJumpAnimation();
+        Owner.AnimationPresenter.StopAerialAttackingAnimation();
     }
 
     /// <summary>Stops the air attack and clears its hitboxes.</summary>
