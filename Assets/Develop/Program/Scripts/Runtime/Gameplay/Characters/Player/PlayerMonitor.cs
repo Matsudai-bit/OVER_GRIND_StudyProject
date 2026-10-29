@@ -88,6 +88,13 @@ public sealed class PlayerMonitor : MonoBehaviour
     public bool IsGrounded => m_isGrounded;
 
     /// <summary>
+    /// 登坂可能な地面と実際に物理接触しているかを取得します。
+    /// </summary>
+    public bool HasGroundContact =>
+        m_isInitialized &&
+        m_groundContactColliderIds.Count > 0;
+
+    /// <summary>
     /// 有効な接地面が存在するかを取得します。
     /// </summary>
     public bool HasGroundSurface => m_hasGroundSurface;
@@ -138,7 +145,7 @@ public sealed class PlayerMonitor : MonoBehaviour
     /// <returns>true：実際に地面へ接触中。false：空中または接地検出範囲内のみ。</returns>
     public bool CanStartJump =>
         m_isGrounded &&
-        m_groundContactColliderIds.Count > 0;
+        HasGroundContact;
     /// <summary>足元の下向き判定で床面を確認し、側面への接触を除外します。</summary>
     /// <returns>true：足元に登坂可能な支持面あり。false：側面接触または空中。</returns>
     public bool HasGroundSupport()
