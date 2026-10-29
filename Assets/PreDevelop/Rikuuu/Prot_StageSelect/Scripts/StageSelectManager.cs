@@ -155,6 +155,10 @@ public class StageSelectManager : MonoBehaviour
 
     private void Start()
     {
+        // 入力を有効にする
+        m_enterActionRef?.action.Enable();
+        m_navigateActionRef?.action.Enable();
+
         // コンポーネントの内容を初期化する
         ResetConmornent();
 
@@ -190,6 +194,11 @@ public class StageSelectManager : MonoBehaviour
 
     private void LateUpdate()
     {
+        if (m_enterActionRef.action.WasPressedThisFrame())
+        {
+            Debug.Log("OnClickSubmit");
+        }
+
         // 判定の前にカーソルを吸着させる
         UpdateCursorSnap();
 
@@ -253,6 +262,8 @@ public class StageSelectManager : MonoBehaviour
         // プレイできる場合
         if (m_stagePoints[m_hoveredIndex].canPlay)
         {
+            Debug.Log("OnCursor ReadyButton");
+
             // ボタンにカーソルが合っている状態にする
             m_readyButton.OnCursor();
         }
@@ -266,12 +277,15 @@ public class StageSelectManager : MonoBehaviour
         // カーソルが合わさっていなければ何もしない
         if (m_readyButton == null || !m_readyButton.m_isOnCursor || m_enterActionRef == null)
         {
+            Debug.Log("null cursor");
             return;
         }
 
         // 決定キーが押されたら
         if (m_enterActionRef.action.WasPressedThisFrame())
         {
+            Debug.Log("OnClickSubmit");
+
             // キーが押されたときの処理を実行する
             m_readyButton.OnClick();
         }
