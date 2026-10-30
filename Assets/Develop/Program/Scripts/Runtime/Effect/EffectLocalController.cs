@@ -2,11 +2,15 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-/// <summary>キャラクターPrefab内のエフェクトを複数同時再生します。</summary>
+/// <summary>
+/// キャラクター内に事前配置したエフェクトをID単位で一括再生します。
+/// </summary>
 [DisallowMultipleComponent]
 public sealed class EffectLocalController : MonoBehaviour
 {
-    /// <summary>ローカルエフェクトごとの登録情報です。</summary>
+    /// <summary>
+    /// ローカルエフェクト1種類分の設定です。
+    /// </summary>
     [Serializable]
     public sealed class LocalEntry
     {
@@ -16,34 +20,39 @@ public sealed class EffectLocalController : MonoBehaviour
         private EffectInstance m_template;
         [SerializeField, Header("再生方式")]
         private EffectPlaybackMode m_playbackMode = EffectPlaybackMode.ONE_SHOT;
-        [SerializeField, Header("最大同時再生数"), Min(1)]
+        [SerializeField, Header("このテンプレートの最大同時再生数"), Min(1)]
         private int m_maxConcurrentCount = 3;
 
-        // クローンのみ再生し、テンプレートは変更しません。
+        // クローンのみを再生し、テンプレートは保持します。
         private readonly List<EffectInstance> m_instances = new List<EffectInstance>();
 
-        /// <summary>ID。</summary>
+        /// <summary>エフェクトIDを取得します。</summary>
         public EffectId Id => m_id;
-        /// <summary>原本。</summary>
+        /// <summary>テンプレートを取得します。</summary>
         public EffectInstance Template => m_template;
-        /// <summary>再生方式。</summary>
+        /// <summary>再生方式を取得します。</summary>
         public EffectPlaybackMode PlaybackMode => m_playbackMode;
-        /// <summary>同時再生の上限。</summary>
+        /// <summary>テンプレートごとの同時再生上限を取得します。</summary>
         public int MaxConcurrentCount => Mathf.Max(1, m_maxConcurrentCount);
-        /// <summary>生成済みのクローン。</summary>
+        /// <summary>再利用するクローン一覧を取得します。</summary>
         public List<EffectInstance> Instances => m_instances;
     }
 
     [SerializeField, Header("追従先アンカー表")]
     private EffectAnchorRegistry m_anchorRegistry;
-    [SerializeField, Header("事前配置エフェクト")]
+    [SerializeField, Header("事前配置エフェクト（同じIDを複数登録可能）")]
     private List<LocalEntry> m_entries = new List<LocalEntry>();
-    private readonly Dictionary<EffectId, LocalEntry> m_map =
-        new Dictionary<EffectId, LocalEntry>();
 
-    /// <summary>設定を読み込み、テンプレートの自動再生を防ぎます。</summary>
+    // 1つのIDに複数のテンプレートを対応付けます。
+    private readonly Dictionary<EffectId, List<LocalEntry>> m_map =
+        new Dictionary<EffectId, List<LocalEntry>>();
+
+    /// <summary>
+    /// 登録情報を読み込み、テンプレートの自動再生を防ぎます。
+    /// </summary>
     private void Awake()
     {
+        m_map.Clear();
         foreach (LocalEntry entry in m_entries)
         {
             if (entry == null || entry.Id == EffectId.NONE || entry.Template == null)
@@ -51,33 +60,63 @@ public sealed class EffectLocalController : MonoBehaviour
                 Debug.LogWarning("[EffectLocalController] IDまたはテンプレートが未設定です。", this);
                 continue;
             }
-            if (!m_map.TryAdd(entry.Id, entry))
+
+            if (!m_map.TryGetValue(entry.Id, out List<LocalEntry> group))
             {
-                Debug.LogError($"[EffectLocalController] IDが重複しています: {entry.Id}", this);
-                continue;
+                group = new List<LocalEntry>();
+                m_map.Add(entry.Id, group);
             }
-            // 原本は常に保持し、再生用インスタンスだけを作成します。
+            group.Add(entry);
             entry.Template.gameObject.SetActive(false);
         }
     }
 
-    /// <summary>エフェクトIDがローカル側に登録されているか。</summary>
+    /// <summary>
+    /// 指定IDがローカル型に登録されているか取得します。
+    /// </summary>
     public bool Contains(EffectId id)
     {
         return m_map.ContainsKey(id);
     }
 
-    /// <summary>登録済みエフェクトを空きインスタンスで再生します。</summary>
+    /// <summary>
+    /// 同じIDのすべてのテンプレートを同時に再生します。
+    /// </summary>
     /// <param name="id">エフェクトID。</param>
-    /// <returns>再生ハンドル。失敗時は無効です。</returns>
+    /// <returns>一括停止できるハンドル。失敗時は無効です。</returns>
     public EffectHandle Play(EffectId id)
     {
-        if (!m_map.TryGetValue(id, out LocalEntry entry))
+        if (!m_map.TryGetValue(id, out List<LocalEntry> group))
         {
             Debug.LogWarning($"[EffectLocalController] IDがありません: {id}", this);
             return default;
         }
 
+        List<EffectHandle> handles = new List<EffectHandle>(group.Count);
+        foreach (LocalEntry entry in group)
+        {
+            EffectHandle handle = PlayEntry(entry);
+            if (!handle.IsValid)
+            {
+                // グループが一部だけ再生された状態を残さないように戻します。
+                foreach (EffectHandle started in handles)
+                {
+                    started.Stop(EffectStopMode.IMMEDIATE);
+                }
+                Debug.LogWarning(
+                    $"[EffectLocalController] 同一IDグループの再生に失敗しました: {id} / {entry.Template.name}", this);
+                return default;
+            }
+            handles.Add(handle);
+        }
+        return EffectHandle.Combine(handles);
+    }
+
+    /// <summary>
+    /// 1つのテンプレートから空きインスタンスを取得して再生します。
+    /// </summary>
+    private EffectHandle PlayEntry(LocalEntry entry)
+    {
         EffectInstance instance = null;
         foreach (EffectInstance candidate in entry.Instances)
         {
@@ -87,29 +126,28 @@ public sealed class EffectLocalController : MonoBehaviour
                 break;
             }
         }
+
         if (instance == null)
         {
             if (entry.Instances.Count >= entry.MaxConcurrentCount)
             {
-                Debug.LogWarning($"[EffectLocalController] 同時再生上限: {id}", this);
                 return default;
             }
-            // オリジナルをテンプレートとして複製します。
+
+            // テンプレートは非アクティブのまま保持し、クローンだけを使用します。
             instance = Instantiate(entry.Template, entry.Template.transform.parent, false);
             instance.name = $"{entry.Template.name}_Runtime_{entry.Instances.Count}";
             instance.transform.localPosition = entry.Template.transform.localPosition;
             instance.transform.localRotation = entry.Template.transform.localRotation;
             instance.transform.localScale = entry.Template.transform.localScale;
-            EffectInstance captured = instance;
             if (!instance.Prepare(OnEffectFinished))
             {
-                Destroy(captured.gameObject);
+                Destroy(instance.gameObject);
                 return default;
             }
-            entry.Instances.Add(captured);
+            entry.Instances.Add(instance);
         }
 
-        // ローカル型は原本のローカルTransformを使います。
         EffectSpawnRequest request = new EffectSpawnRequest(
             Vector3.zero, Quaternion.identity, false, m_anchorRegistry);
         if (!instance.Play(request, entry.PlaybackMode))
@@ -121,11 +159,17 @@ public sealed class EffectLocalController : MonoBehaviour
         return new EffectHandle(instance, instance.Generation);
     }
 
-    /// <summary>モデル交換前に再生中エフェクトを停止します。</summary>
+    /// <summary>
+    /// モデル交換などの際にローカルエフェクトをすべて停止します。
+    /// </summary>
     public void StopAll()
     {
-        foreach (LocalEntry entry in m_map.Values)
+        foreach (LocalEntry entry in m_entries)
         {
+            if (entry == null)
+            {
+                continue;
+            }
             foreach (EffectInstance instance in entry.Instances)
             {
                 if (instance != null && instance.IsPlaying)
@@ -136,13 +180,17 @@ public sealed class EffectLocalController : MonoBehaviour
         }
     }
 
-    /// <summary>内部の全エフェクトを停止します。</summary>
+    /// <summary>
+    /// コンポーネント無効化時にすべて停止します。
+    /// </summary>
     private void OnDisable()
     {
         StopAll();
     }
 
-    /// <summary>終了したエフェクトを再利用待ちに戻します。</summary>
+    /// <summary>
+    /// 終了したインスタンスを再利用待ちに戻します。
+    /// </summary>
     private void OnEffectFinished(EffectInstance instance)
     {
         if (instance == null)

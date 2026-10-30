@@ -6,6 +6,9 @@ public sealed class PlayerAttackingState : StateBase<PlayerStateMachineComponent
     private PlayerContinuousAttack m_attack;
     private bool m_isTransitionPending;
 
+     EffectHandle m_effectHandle_I;
+     EffectHandle m_effectHandle_L;
+
     /// <summary>接地を確認して地上攻撃を開始します。</summary>
     protected override void OnStartState()
     {
@@ -34,6 +37,7 @@ public sealed class PlayerAttackingState : StateBase<PlayerStateMachineComponent
         {
             Owner.AnimationPresenter.PlayAttackAnimation();
         }
+        m_effectHandle_I = Owner.EffectEmitter.PlayAttached(EffectId.PLAYER_ATTACK_NORMAL_I);
 
         m_attack = new PlayerContinuousAttack(Owner, false);
         m_attack.StartAttack();
@@ -68,6 +72,15 @@ public sealed class PlayerAttackingState : StateBase<PlayerStateMachineComponent
             StopAttack();
             Machine.ChangeState<PlayerJumpingState>();
         }
+
+        if (Owner.AttackController.IsHittingAnyTarget())
+        {
+            if (!m_effectHandle_L.IsValid)
+            {
+
+                m_effectHandle_L = Owner.EffectEmitter.PlayAttached(EffectId.PLAYER_ATTACK_NORMAL_L);
+            }
+        }
     }
 
     /// <summary>攻撃を終了し、通常移動へ戻します。</summary>
@@ -81,6 +94,7 @@ public sealed class PlayerAttackingState : StateBase<PlayerStateMachineComponent
     /// <summary>遷移待ちの物理更新でも攻撃判定が残らないようにします。</summary>
     private void StopAttack()
     {
+        m_effectHandle_L.Stop();
         // State終了・中断時はチャージ攻撃フラグを必ずOFFに戻す。
         Owner.AnimationPresenter.StopChargeAttackingAnimation();
         Owner.AnimationPresenter.StopAttackAnimation();

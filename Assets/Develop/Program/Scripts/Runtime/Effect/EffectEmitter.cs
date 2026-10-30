@@ -1,6 +1,8 @@
 ﻿using UnityEngine;
 
-/// <summary>ゲームオブジェクトからローカル型・共通型のエフェクトを呼び出します。</summary>
+/// <summary>
+/// ゲームオブジェクトからローカル型・共通型エフェクトを再生します。
+/// </summary>
 [DisallowMultipleComponent]
 public sealed class EffectEmitter : MonoBehaviour
 {
@@ -10,20 +12,45 @@ public sealed class EffectEmitter : MonoBehaviour
     private EffectLocalController m_localController;
     [SerializeField, Header("IDからTransformを引くアンカー表（任意）")]
     private EffectAnchorRegistry m_anchorRegistry;
+    [SerializeField, Header("同じIDがローカル・共通の両方に存在する場合")]
+    private bool m_playBothWhenRegistered = false;
 
-    /// <summary>ローカル優先でIDから再生します。</summary>
+    /// <summary>
+    /// IDに登録されたエフェクトを再生します。通常はローカル優先です。
+    /// </summary>
     /// <param name="id">エフェクトID。</param>
-    /// <returns>再生ハンドル。</returns>
+    /// <returns>個別または一括停止に利用できるハンドル。</returns>
     public EffectHandle Play(EffectId id)
     {
-        if (m_localController != null && m_localController.Contains(id))
+        bool hasLocal = m_localController != null && m_localController.Contains(id);
+        if (!hasLocal)
+        {
+            return PlayAttached(id);
+        }
+
+        if (!m_playBothWhenRegistered || m_effectService == null || !m_effectService.Contains(id))
         {
             return m_localController.Play(id);
         }
-        return PlayAttached(id);
+
+        // ローカルと共通に同じIDが登録されていれば両方を再生します。
+        EffectHandle localHandle = m_localController.Play(id);
+        if (!localHandle.IsValid)
+        {
+            return default;
+        }
+        EffectHandle sharedHandle = PlayAttached(id);
+        if (!sharedHandle.IsValid)
+        {
+            localHandle.Stop(EffectStopMode.IMMEDIATE);
+            return default;
+        }
+        return EffectHandle.Combine(new[] { localHandle, sharedHandle });
     }
 
-    /// <summary>ローカル配置のエフェクトを再生します。</summary>
+    /// <summary>
+    /// ローカル型のみを再生します。
+    /// </summary>
     public EffectHandle PlayLocal(EffectId id)
     {
         if (m_localController == null)
@@ -34,7 +61,9 @@ public sealed class EffectEmitter : MonoBehaviour
         return m_localController.Play(id);
     }
 
-    /// <summary>共通プール型を指定ワールド位置で発生させます。</summary>
+    /// <summary>
+    /// 共通プール型を指定したワールド位置で発生させます。
+    /// </summary>
     /// <param name="id">エフェクトID。</param>
     /// <param name="position">発生位置。</param>
     /// <param name="rotation">発生回転。</param>
@@ -45,12 +74,14 @@ public sealed class EffectEmitter : MonoBehaviour
             Debug.LogWarning("[EffectEmitter] EffectServiceがありません。", this);
             return default;
         }
-        // 爆発など追従しないPrefabはAnchorRegistryを指定しません。
+        // 爆発など追従しないPrefabにはアンカー表を渡しません。
         return m_effectService.Play(id,
             new EffectSpawnRequest(position, rotation, true));
     }
 
-    /// <summary>共通プール型をアンカー表を使って再生します。</summary>
+    /// <summary>
+    /// 共通プール型をアンカー表を使って再生します。
+    /// </summary>
     public EffectHandle PlayAttached(EffectId id)
     {
         if (m_effectService == null)
@@ -62,11 +93,13 @@ public sealed class EffectEmitter : MonoBehaviour
             new EffectSpawnRequest(transform.position, transform.rotation, true, m_anchorRegistry));
     }
 
-    /// <summary>モデルを交換したときに全アンカーを一括更新します。</summary>
+    /// <summary>
+    /// モデルを交換したときにアンカーを一括更新します。
+    /// </summary>
     /// <param name="newModelRoot">新しいモデルルート。</param>
     public void SetModelRoot(Transform newModelRoot)
     {
-        // 旧モデルを参照する再生中のローカルエフェクトを終了させます。
+        // 旧モデルを参照するローカルエフェクトを安全のため停止します。
         if (m_localController != null)
         {
             m_localController.StopAll();

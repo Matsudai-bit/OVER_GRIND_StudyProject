@@ -29,4 +29,18 @@ public sealed class EffectDefinition : ScriptableObject
     public int MaxRetainedCount => Mathf.Max(1, m_maxRetainedCount);
     /// <summary>同時再生上限（0は無制限）。</summary>
     public int MaxActiveCount => Mathf.Max(0, m_maxActiveCount);
+
+#if UNITY_EDITOR
+    // 個別の定義がInspectorで変更されたときにCatalogへ通知します。
+    internal static event System.Action DefinitionChanged;
+
+    /// <summary>
+    /// 設定変更を検索マップへ通知します。
+    /// </summary>
+    private void OnValidate()
+    {
+        // OnValidateからはUnity APIを呼ばず、マップの更新要求だけを通知します。
+        DefinitionChanged?.Invoke();
+    }
+#endif
 }

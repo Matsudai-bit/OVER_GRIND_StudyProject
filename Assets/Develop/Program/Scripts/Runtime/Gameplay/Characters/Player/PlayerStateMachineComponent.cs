@@ -104,6 +104,9 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
 
     // 初期化されているか
     private bool m_isInitialized;
+    private EffectEmitter m_effectEmitter;
+
+    public EffectEmitter EffectEmitter => m_effectEmitter;
 
     public Health Health => m_health;
 
@@ -314,13 +317,12 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
             vBoostMovementParameterAsset,
         PlayerBoostChargingParameterAsset
             boostChargingParameterAsset,
-        VGaugeUI vGaugeUI,
-        VSpeedUI vSpeedUI,
         PlayerCamera playerCamera,
         Transform modelTransform,
         VGaugePlaceModel vGaugePlaceModel,
         SpeedPlaceModel speedPlaceModel,
         PlayerStatusProvider statusProvider,
+        EffectEmitter effectEmitter,
         Health health)
     {
         ApplyParameterAsset();
@@ -345,26 +347,6 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
 
             m_isInitialized = false;
             return;
-        }
-
-        // VGaugeUI・VSpeedUI・PlayerCamera・ModelTransformはUI/演出側の用途のため、
-        // 未設定でも初期化失敗とはしない
-        if (vGaugeUI == null)
-        {
-            Debug.LogWarning(
-                $"[{nameof(PlayerStateMachineComponent)}] " +
-                $"{nameof(VGaugeUI)}が設定されていません。" +
-                "ゲージ演出は行われません。",
-                this);
-        }
-
-        if (vSpeedUI == null)
-        {
-            Debug.LogWarning(
-                $"[{nameof(PlayerStateMachineComponent)}] " +
-                $"{nameof(VSpeedUI)}が設定されていません。" +
-                "速度表示は行われません。",
-                this);
         }
 
         if (playerCamera == null)
@@ -414,7 +396,7 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
         m_speedPlaceModel = speedPlaceModel;
         m_vGaugePlaceModel.ResetGauge();
         m_speedPlaceModel.ResetSpeed();
-
+        m_effectEmitter = effectEmitter;
         m_statusProvider = statusProvider;
 
         m_stateMachine =
