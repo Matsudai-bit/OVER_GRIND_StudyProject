@@ -8,6 +8,8 @@ public enum EffectAnchorId
     ATTACK_A,
     ATTACK_B,
     ATTACK_C,
+    FOOT_R,
+    FOOT_L,
     WEAPON,
     TAIL,
     CUSTOM_01,
