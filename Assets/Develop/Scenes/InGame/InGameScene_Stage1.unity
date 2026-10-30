@@ -7152,6 +7152,11 @@ Mesh:
       - serializedVersion: 1
         m_IndexStart: 0
         m_IndexCount: 0
+--- !u!1 &518922538 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 415096441624393917, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
+  m_PrefabInstance: {fileID: 1080929309}
+  m_PrefabAsset: {fileID: 0}
 --- !u!4 &522030642 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 7052205059672938400, guid: 02090478cb89d5b4a8529bf22e33167c, type: 3}
@@ -13717,7 +13722,13 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 415096441624393917, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1080929318}
+    - targetCorrespondingSourceObject: {fileID: 415096441624393917, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1080929317}
   m_SourcePrefab: {fileID: 100100000, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
 --- !u!4 &1080929310 stripped
 Transform:
@@ -13751,7 +13762,7 @@ MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 1405796748971180126, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
   m_PrefabInstance: {fileID: 1080929309}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
+  m_GameObject: {fileID: 518922538}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8222b5fb196ae104cb9d73fa23d19d13, type: 3}
@@ -13762,12 +13773,38 @@ MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 2209646600572280922, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
   m_PrefabInstance: {fileID: 1080929309}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
+  m_GameObject: {fileID: 518922538}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fef40de9a6e892748aa556e2209afb21, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerStatusProvider
+--- !u!114 &1080929317
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 518922538}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 42b1e7717f66ddd4bbf925a2d7b8df5f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AnimationEffectController
+  m_effectEmitter: {fileID: 70175743}
+--- !u!114 &1080929318
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 518922538}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 243bb0c21a3d22244b2aebe0706ec5b2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AnimationEffectEventReceiver
+  m_effectController: {fileID: 1080929317}
 --- !u!43 &1083724196
 Mesh:
   m_ObjectHideFlags: 8

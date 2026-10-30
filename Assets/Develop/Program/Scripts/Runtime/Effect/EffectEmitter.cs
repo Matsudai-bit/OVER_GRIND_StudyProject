@@ -80,6 +80,25 @@ public sealed class EffectEmitter : MonoBehaviour
     }
 
     /// <summary>
+    /// 登録されたアンカーの座標に共通プール型エフェクトを発生させます。
+    /// </summary>
+    /// <param name="id">エフェクトID。</param>
+    /// <param name="anchorId">発生位置のアンカーID。</param>
+    /// <returns>再生を操作するハンドル。失敗時は無効です。</returns>
+    public EffectHandle PlayAtAnchor(EffectId id, EffectAnchorId anchorId)
+    {
+        if (m_anchorRegistry == null ||
+            !m_anchorRegistry.TryGetTarget(anchorId, out Transform anchor))
+        {
+            Debug.LogWarning($"[EffectEmitter] アンカーを取得できません: {anchorId}", this);
+            return default;
+        }
+
+        // 発生時点のワールド座標を使用し、その後は追従させません。
+        return PlayAt(id, anchor.position, anchor.rotation);
+    }
+
+    /// <summary>
     /// 共通プール型をアンカー表を使って再生します。
     /// </summary>
     public EffectHandle PlayAttached(EffectId id)

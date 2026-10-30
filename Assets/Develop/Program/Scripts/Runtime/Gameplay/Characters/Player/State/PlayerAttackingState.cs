@@ -6,7 +6,6 @@ public sealed class PlayerAttackingState : StateBase<PlayerStateMachineComponent
     private PlayerContinuousAttack m_attack;
     private bool m_isTransitionPending;
 
-     EffectHandle m_effectHandle_I;
      EffectHandle m_effectHandle_L;
 
     /// <summary>接地を確認して地上攻撃を開始します。</summary>
@@ -37,8 +36,6 @@ public sealed class PlayerAttackingState : StateBase<PlayerStateMachineComponent
         {
             Owner.AnimationPresenter.PlayAttackAnimation();
         }
-        m_effectHandle_I = Owner.EffectEmitter.PlayAttached(EffectId.PLAYER_ATTACK_NORMAL_I);
-
         m_attack = new PlayerContinuousAttack(Owner, false);
         m_attack.StartAttack();
     }
