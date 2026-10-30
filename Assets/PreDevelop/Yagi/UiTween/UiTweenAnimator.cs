@@ -1,4 +1,5 @@
 using DG.Tweening;
+using System;
 using UnityEngine;
 
 /// <summary>
@@ -39,12 +40,30 @@ public sealed class UiTweenAnimator : MonoBehaviour
     private RectTransform m_rectTransform;
     private Vector2 m_visiblePosition;
     private Vector3 m_visibleScale;
+    private Tween m_activeTween;
+    private Action m_hideCompleted;
+    private bool m_isHiding;
+    private bool m_isInitialized;
 
     /// <summary>
     /// 初期表示状態を保存します。
     /// </summary>
     private void Awake()
     {
+        Initialize();
+    }
+
+    /// <summary>
+    /// UIアニメーションに必要な参照と初期状態を取得します。
+    /// 非アクティブなUIに対するController操作でも呼び出されます。
+    /// </summary>
+    private void Initialize()
+    {
+        if (m_isInitialized)
+        {
+            return;
+        }
+
         m_rectTransform = GetComponent<RectTransform>();
         m_canvasGroup = GetComponent<CanvasGroup>();
 
@@ -57,6 +76,7 @@ public sealed class UiTweenAnimator : MonoBehaviour
             ? m_rectTransform.anchoredPosition
             : Vector2.zero;
         m_visibleScale = transform.localScale;
+        m_isInitialized = true;
     }
 
     /// <summary>
@@ -73,7 +93,10 @@ public sealed class UiTweenAnimator : MonoBehaviour
     /// </summary>
     public void PlayShow()
     {
-        KillTweens();
+        Initialize();
+        StopActiveTween(false);
+        m_isHiding = false;
+        m_hideCompleted = null;
         gameObject.SetActive(true);
 
         Sequence sequence = DOTween.Sequence();
@@ -97,20 +120,31 @@ public sealed class UiTweenAnimator : MonoBehaviour
             sequence.Append(m_canvasGroup.DOFade(1f, m_showDuration).SetEase(m_showEase));
         }
 
-        sequence.SetTarget(this);
+        m_activeTween = sequence.SetTarget(this);
     }
 
     /// <summary>
     /// UIを非表示状態へアニメーションし、完了後に非アクティブ化します。
     /// </summary>
-    public void PlayHide()
+    public void PlayHide(System.Action onComplete = null)
     {
+        Initialize();
+
         if (!gameObject.activeSelf)
         {
+            onComplete?.Invoke();
             return;
         }
 
-        KillTweens();
+        if (m_isHiding && m_activeTween != null && m_activeTween.IsActive())
+        {
+            m_hideCompleted += onComplete;
+            return;
+        }
+
+        StopActiveTween(false);
+        m_isHiding = true;
+        m_hideCompleted = onComplete;
 
         Sequence sequence = DOTween.Sequence();
         if (m_animationType == AnimationType.SLIDE && m_rectTransform != null)
@@ -130,9 +164,17 @@ public sealed class UiTweenAnimator : MonoBehaviour
         {
             sequence.Append(m_canvasGroup.DOFade(0f, m_hideDuration).SetEase(m_hideEase));
         }
-        sequence.OnComplete(() => gameObject.SetActive(false));
+        sequence.OnComplete(() =>
+        {
+            m_activeTween = null;
+            m_isHiding = false;
+            gameObject.SetActive(false);
+            Action completed = m_hideCompleted;
+            m_hideCompleted = null;
+            completed?.Invoke();
+        });
 
-        sequence.SetTarget(this);
+        m_activeTween = sequence.SetTarget(this);
     }
 
     /// <summary>
@@ -140,7 +182,10 @@ public sealed class UiTweenAnimator : MonoBehaviour
     /// </summary>
     public void HideImmediately()
     {
-        KillTweens();
+        Initialize();
+        StopActiveTween(false);
+        m_isHiding = false;
+        m_hideCompleted = null;
         if (m_rectTransform != null)
         {
             m_rectTransform.anchoredPosition = m_visiblePosition;
@@ -153,10 +198,22 @@ public sealed class UiTweenAnimator : MonoBehaviour
     /// <summary>
     /// このUIに紐づくDOTweenアニメーションを停止します。
     /// </summary>
-    private void KillTweens()
+    private void StopActiveTween(bool complete)
     {
-        DOTween.Kill(this);
-        transform.DOKill();
-        m_canvasGroup.DOKill();
+        Tween activeTween = m_activeTween;
+        m_activeTween = null;
+        if (activeTween == null || !activeTween.IsActive())
+        {
+            return;
+        }
+
+        if (complete)
+        {
+            activeTween.Complete();
+        }
+        else
+        {
+            activeTween.Kill();
+        }
     }
 }

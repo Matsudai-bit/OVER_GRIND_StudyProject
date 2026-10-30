@@ -37,13 +37,15 @@ public sealed class HintController : MonoBehaviour
     private GameplayCueAsset m_currentCue;
     private GameObject m_currentHintUiObject;
     private readonly List<GameplayCueAsset> m_activeCues = new();
+    private int m_transitionVersion;
 
     /// <summary>
     /// Cue変更イベントを購読し、ヒントUIを初期化します。
     /// </summary>
     private void OnEnable()
     {
-        HideAllHintUi(false);
+        ++m_transitionVersion;
+        HideAllHintUi(immediate: true);
         m_currentCue = null;
         m_currentHintUiObject = null;
         m_activeCues.Clear();
@@ -69,7 +71,8 @@ public sealed class HintController : MonoBehaviour
             m_cueChangedEvent.UnregisterListener(OnCueChanged);
         }
 
-        HideAllHintUi(false);
+        ++m_transitionVersion;
+        HideAllHintUi(immediate: true);
         m_currentCue = null;
         m_currentHintUiObject = null;
         m_activeCues.Clear();
@@ -126,30 +129,30 @@ public sealed class HintController : MonoBehaviour
     /// </summary>
     private void RefreshHintUi()
     {
-        HideAllHintUi(true);
+        int transitionVersion = ++m_transitionVersion;
         m_currentCue = null;
         m_currentHintUiObject = null;
+        HideAllHintUi(() => ShowCurrentHintUi(transitionVersion));
+    }
 
-        if (m_activeCues.Count == 0)
+    private void ShowCurrentHintUi(int transitionVersion)
+    {
+        if (transitionVersion != m_transitionVersion || m_activeCues.Count == 0)
         {
             return;
         }
 
-        GameplayCueAsset cue =
-            m_activeCues[m_activeCues.Count - 1];
+        GameplayCueAsset cue = m_activeCues[m_activeCues.Count - 1];
         GameObject hintUiObject = FindHintUiObject(cue);
-
         if (hintUiObject == null)
         {
-            Debug.LogWarning(
-                $"Cueに対応するヒントUIが設定されていません。 Cue: {cue.name}",
-                this);
+            Debug.LogWarning($"Cueに対応するヒントUIが設定されていません。 Cue: {cue.name}", this);
             return;
         }
 
         m_currentCue = cue;
         m_currentHintUiObject = hintUiObject;
-        GetUiAnimator(m_currentHintUiObject).PlayShow();
+        GetUiAnimator(hintUiObject).PlayShow();
     }
 
     /// <summary>
@@ -175,8 +178,9 @@ public sealed class HintController : MonoBehaviour
     /// <summary>
     /// 対応表に登録されたヒントUIをすべて非表示にします。
     /// </summary>
-    private void HideAllHintUi(bool animate)
+    private void HideAllHintUi(Action onComplete = null, bool immediate = false)
     {
+        HashSet<UiTweenAnimator> activeAnimators = new();
         foreach (CueHintBinding binding in m_cueHintBindings)
         {
             if (binding?.HintUiObject == null)
@@ -185,15 +189,23 @@ public sealed class HintController : MonoBehaviour
             }
 
             UiTweenAnimator animator = GetUiAnimator(binding.HintUiObject);
-            if (animate)
-            {
-                animator.PlayHide();
-            }
-            else
+            if (immediate)
             {
                 animator.HideImmediately();
+                continue;
             }
+
+            if (binding.HintUiObject.activeSelf)
+            {
+                activeAnimators.Add(animator);
+            }
+            else animator.HideImmediately();
         }
+
+        if (activeAnimators.Count == 0) { onComplete?.Invoke(); return; }
+        int remaining = activeAnimators.Count;
+        foreach (UiTweenAnimator animator in activeAnimators)
+            animator.PlayHide(() => { if (--remaining == 0) onComplete?.Invoke(); });
     }
 
     /// <summary>

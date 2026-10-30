@@ -31,13 +31,15 @@ public sealed class TutorialController : MonoBehaviour
     private GameplayCueAsset m_currentCue;
     private GameObject m_currentUiObject;
     private readonly List<GameplayCueAsset> m_activeCues = new();
+    private int m_transitionVersion;
 
     /// <summary>
     /// Cue変更イベントを購読し、UIを初期化します。
     /// </summary>
     private void OnEnable()
     {
-        HideAllUi(false);
+        ++m_transitionVersion;
+        HideAllUi(immediate: true);
         m_currentCue = null;
         m_currentUiObject = null;
         m_activeCues.Clear();
@@ -63,7 +65,8 @@ public sealed class TutorialController : MonoBehaviour
             m_cueChangedEvent.UnregisterListener(OnCueChanged);
         }
 
-        HideAllUi(false);
+        ++m_transitionVersion;
+        HideAllUi(immediate: true);
         m_currentCue = null;
         m_currentUiObject = null;
         m_activeCues.Clear();
@@ -120,30 +123,50 @@ public sealed class TutorialController : MonoBehaviour
     /// </summary>
     private void RefreshUi()
     {
-        HideAllUi(true);
+        GameObject nextUiObject = GetHighestPriorityUiObject();
+        if (nextUiObject == m_currentUiObject)
+        {
+            return;
+        }
+
+        int transitionVersion = ++m_transitionVersion;
         m_currentCue = null;
         m_currentUiObject = null;
+        HideAllUi(() => ShowCurrentUi(transitionVersion));
+    }
 
+    /// <summary>
+    /// 最後に開始された有効Cueに対応するUIを取得します。
+    /// </summary>
+    private GameObject GetHighestPriorityUiObject()
+    {
         if (m_activeCues.Count == 0)
         {
-            return;
+            return null;
         }
 
-        GameplayCueAsset cue =
-            m_activeCues[m_activeCues.Count - 1];
-        GameObject uiObject = FindUiObject(cue);
+        return FindUiObject(m_activeCues[m_activeCues.Count - 1]);
+    }
 
+    private void ShowCurrentUi(int transitionVersion)
+    {
+        if (transitionVersion != m_transitionVersion || m_activeCues.Count == 0) return;
+        GameplayCueAsset cue = m_activeCues[m_activeCues.Count - 1];
+        GameObject uiObject = FindUiObject(cue);
         if (uiObject == null)
         {
-            Debug.LogWarning(
-                $"Cueに対応するUIが設定されていません。 Cue: {cue.name}",
-                this);
+            Debug.LogWarning($"Cueに対応するUIが設定されていません。 Cue: {cue.name}", this);
             return;
         }
 
+        // 退場中に優先Cueが変わった場合、古い予約のUIは表示しません。
+        if (uiObject == m_currentUiObject)
+        {
+            return;
+        }
         m_currentCue = cue;
         m_currentUiObject = uiObject;
-        GetUiAnimator(m_currentUiObject).PlayShow();
+        GetUiAnimator(uiObject).PlayShow();
     }
 
     /// <summary>
@@ -169,8 +192,9 @@ public sealed class TutorialController : MonoBehaviour
     /// <summary>
     /// 対応表に登録されたUIをすべて非表示にします。
     /// </summary>
-    private void HideAllUi(bool animate)
+    private void HideAllUi(Action onComplete = null, bool immediate = false)
     {
+        HashSet<UiTweenAnimator> activeAnimators = new();
         foreach (CueUiBinding binding in m_cueUiBindings)
         {
             if (binding?.UiObject == null)
@@ -179,15 +203,22 @@ public sealed class TutorialController : MonoBehaviour
             }
 
             UiTweenAnimator animator = GetUiAnimator(binding.UiObject);
-            if (animate)
-            {
-                animator.PlayHide();
-            }
-            else
+            if (immediate)
             {
                 animator.HideImmediately();
+                continue;
             }
+
+            if (binding.UiObject.activeSelf)
+            {
+                activeAnimators.Add(animator);
+            }
+            else animator.HideImmediately();
         }
+        if (activeAnimators.Count == 0) { onComplete?.Invoke(); return; }
+        int remaining = activeAnimators.Count;
+        foreach (UiTweenAnimator animator in activeAnimators)
+            animator.PlayHide(() => { if (--remaining == 0) onComplete?.Invoke(); });
     }
 
     /// <summary>
