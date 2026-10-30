@@ -104,8 +104,13 @@ public sealed class PlayerContinuousAttack
         }
 
         if (!m_isAirAttack &&
-            m_owner.AttackController.TryGetMaxPenetration(out Vector3 direction, out float distance))
+            m_owner.AttackController.TryGetMaxMovementBlockerPenetration(
+                out Vector3 direction,
+                out float distance))
+        {
+            // 判定の重なり量だけを解消し、攻撃接触の終了と再開を繰り返さないようにします。
             m_owner.Motor.ResolvePenetration(direction, distance);
+        }
         return true;
     }
 

@@ -270,6 +270,39 @@ public class PlayerAttackController : MonoBehaviour
         return hasFoundPenetration;
     }
 
+    /// <summary>移動遮断対象に対する最大めり込み方向と距離を取得します。</summary>
+    /// <param name="direction">貫通を解消する方向。</param>
+    /// <param name="distance">貫通している距離。</param>
+    /// <returns>true：対象への貫通がある。false：貫通がない。</returns>
+    public bool TryGetMaxMovementBlockerPenetration(
+        out Vector3 direction,
+        out float distance)
+    {
+        direction = Vector3.zero;
+        distance = 0.0f;
+        bool hasFoundPenetration = false;
+
+        foreach (AttackHitbox attackHitbox in m_attackHitboxes)
+        {
+            if (attackHitbox == null ||
+                !attackHitbox.TryGetMaxMovementBlockerPenetration(
+                    out Vector3 hitboxDirection,
+                    out float hitboxDistance))
+            {
+                continue;
+            }
+
+            if (!hasFoundPenetration || hitboxDistance > distance)
+            {
+                direction = hitboxDirection;
+                distance = hitboxDistance;
+                hasFoundPenetration = true;
+            }
+        }
+
+        return hasFoundPenetration;
+    }
+
     /// <summary>
     /// すべての攻撃ヒットボックスを無効化します。
     /// </summary>

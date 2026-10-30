@@ -342,6 +342,36 @@ public sealed class AttackHitbox : MonoBehaviour
         out Vector3 direction,
         out float distance)
     {
+        return TryGetMaxPenetration(
+            out direction,
+            out distance,
+            movementBlockersOnly: false);
+    }
+
+    /// <summary>移動遮断対象への最大めり込み方向と距離を取得します。</summary>
+    /// <param name="direction">貫通を解消する方向。</param>
+    /// <param name="distance">貫通している距離。</param>
+    /// <returns>true：移動遮断対象への貫通がある。false：貫通がない。</returns>
+    public bool TryGetMaxMovementBlockerPenetration(
+        out Vector3 direction,
+        out float distance)
+    {
+        return TryGetMaxPenetration(
+            out direction,
+            out distance,
+            movementBlockersOnly: true);
+    }
+
+    /// <summary>指定条件に合う対象への最大めり込み方向と距離を取得します。</summary>
+    /// <param name="direction">貫通を解消する方向。</param>
+    /// <param name="distance">貫通している距離。</param>
+    /// <param name="movementBlockersOnly">移動遮断対象だけを調べるか。</param>
+    /// <returns>true：貫通がある。false：貫通がない。</returns>
+    private bool TryGetMaxPenetration(
+        out Vector3 direction,
+        out float distance,
+        bool movementBlockersOnly)
+    {
         direction = Vector3.zero;
         distance = 0.0f;
 
@@ -357,6 +387,12 @@ public sealed class AttackHitbox : MonoBehaviour
         foreach (Collider otherCollider in m_overlappingTargets.Values)
         {
             if (otherCollider == null)
+            {
+                continue;
+            }
+
+            if (movementBlockersOnly &&
+                otherCollider.GetComponentInParent<IAttackMovementBlocker>() == null)
             {
                 continue;
             }
