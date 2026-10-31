@@ -23,16 +23,6 @@ public sealed class PlayerVRunningState
         NORMAL_MOVE
     }
 
-    // ブーストダッシュの継続時間
-    private const float BOOST_DASH_DURATION = 0.5f;
-
-    // ブーストダッシュ中の最大移動速度倍率
-    private const float DASH_SPEED_MULTIPLIER = 2.0f;
-
-    // ブーストダッシュ中のプレイヤー回転速度
-    // 値を大きくすると、より素早く進行方向を向きます。
-    private const float BOOST_DASH_ROTATION_SPEED = 360.0f;
-
     // 現在のブーストフェーズ
     private VBoostPhase m_currentPhase;
 
@@ -41,8 +31,9 @@ public sealed class PlayerVRunningState
 
     // ダッシュ中に使用する移動パラメータ（基本速度の2倍・瞬時到達）
     private PlayerMoveParameters m_dashMoveParameters;
+    private float m_dashCurrentSpeed;
 
-    // ダッシュ終了後に使用する通常移動パラメータ
+    // ダッシュ終了後に使用する安定ブーストの移動パラメータ
     private PlayerMoveParameters m_normalMoveParameters;
 
     // チャージ終了時に確定したダッシュ方向
@@ -65,15 +56,13 @@ public sealed class PlayerVRunningState
             Owner.MovementParameterAsset
                 .CreateMoveParameters();
 
-        m_dashMoveParameters =
-            new PlayerMoveParameters(
-                normalParameters.MaxMoveSpeed *
-                    DASH_SPEED_MULTIPLIER,
-                normalParameters.TimeToMaxSpeed,
-                normalParameters.TimeToStop,
-                normalParameters.RotationSpeed);
-
-        m_normalMoveParameters = normalParameters;
+        m_dashMoveParameters = Owner.VBoostMovementParameterAsset
+            .CreateInitialBoostParameters();
+        m_normalMoveParameters = Owner.VBoostMovementParameterAsset
+            .CreateStableBoostParameters();
+        m_dashCurrentSpeed = Mathf.Min(
+            Owner.Motor.HorizontalSpeed,
+            m_dashMoveParameters.MaxMoveSpeed);
 
         float fullTankDuration =
             Mathf.Max(
@@ -132,7 +121,7 @@ public sealed class PlayerVRunningState
                 $"ダッシュ方向={m_boostDashDirection} " +
                 $"ダッシュ最高速度={m_dashMoveParameters.MaxMoveSpeed:F2} " +
                 $"（通常速度={normalParameters.MaxMoveSpeed:F2}） " +
-                $"ダッシュ時間={BOOST_DASH_DURATION:F2}秒 " +
+                $"ダッシュ時間={Owner.VBoostMovementParameterAsset.InitialBoostDuration:F2}秒 " +
                 $"満タン消費時間={fullTankDuration:F2}秒",
                 Owner);
         }
@@ -289,15 +278,22 @@ private void UpdatePhaseMovement()
                 // チャージ終了時に確定した方向へ固定する。
                 //
 
+                // 初動の加速時間を反映し、確定した方向へ速度を上げます。
+                m_dashCurrentSpeed = Mathf.MoveTowards(
+                    m_dashCurrentSpeed,
+                    m_dashMoveParameters.MaxMoveSpeed,
+                    m_dashMoveParameters.MaxMoveSpeed /
+                    Mathf.Max(0.01f, m_dashMoveParameters.TimeToMaxSpeed) *
+                    Time.fixedDeltaTime);
                 Owner.Motor.MoveAtFixedWorldDirection(
                     m_boostDashDirection,
-                    m_dashMoveParameters.MaxMoveSpeed,
-                    BOOST_DASH_ROTATION_SPEED,
+                    m_dashCurrentSpeed,
+                    m_dashMoveParameters.RotationSpeed,
                     Time.fixedDeltaTime);
 
                 m_elapsedTime += Time.fixedDeltaTime;
 
-                if (m_elapsedTime >= BOOST_DASH_DURATION)
+                if (m_elapsedTime >= Owner.VBoostMovementParameterAsset.InitialBoostDuration)
                 {
                     // ダッシュ終了時に正面を進行方向へ合わせる
                     Vector3 finalForward =
