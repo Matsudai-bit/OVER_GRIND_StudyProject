@@ -6,6 +6,24 @@ using UnityEngine;
 /// </summary>
 public class PlayerAttackController : MonoBehaviour
 {
+    [SerializeField, Header("Attack Contact"), Min(0.0f)]
+    [Tooltip("連続命中を維持するため、押し出し後も残す攻撃判定の重なり量（m）です。")]
+    private float m_attackContactOverlap = 0.04f;
+
+    /// <summary>連続命中を維持するために許容する攻撃判定の重なり量を取得します。</summary>
+    public float AttackContactOverlap => Mathf.Max(0.0f, m_attackContactOverlap);
+
+    [SerializeField, Header("Attack Target Assist")]
+    private PlayerAttackTargetChecker m_attackTargetChecker = new();
+
+    /// <summary>近距離の正面対象への攻撃方向を取得します。</summary>
+    public bool TryGetAssistedAttackDirection(Transform owner, Vector3 forward, out Vector3 direction)
+    {
+        direction = Vector3.zero;
+        return m_attackTargetChecker != null &&
+            m_attackTargetChecker.TryGetDirection(owner, forward, out direction);
+    }
+
     [SerializeField, Header("Parameter Asset")]
     private PlayerAttackControllerParameterAsset m_parameterAsset;
 

@@ -97,9 +97,6 @@ public sealed class AttackHitbox : MonoBehaviour
     // 同じHurtbox配下のColliderを個別に保持し、一部の離脱で対象を失わないようにします。
     private readonly Dictionary<Collider, IDamageable> m_contactColliders = new();
 
-    // 接触回数方式の対象を周期ダメージから除外するために保持します。
-    private readonly HashSet<IDamageable> m_contactDamageTargets = new();
-
     // 攻撃接触の通知対象と、対象ごとの接触Collider数を管理します。
     private readonly Dictionary<IAttackContactReceiver, int> m_contactReceiverCounts = new();
 
@@ -306,12 +303,6 @@ public sealed class AttackHitbox : MonoBehaviour
             if (receiverComponent == null)
             {
                 m_overlappingTargets.Remove(damageReceiver);
-                m_contactDamageTargets.Remove(damageReceiver);
-                continue;
-            }
-
-            if (m_contactDamageTargets.Contains(damageReceiver))
-            {
                 continue;
             }
 
@@ -450,9 +441,6 @@ public sealed class AttackHitbox : MonoBehaviour
             return;
         }
 
-        bool wasAlreadyOverlapping =
-            IsDamageReceiverAlreadyOverlapping(damageReceiver);
-
         m_contactColliders.Add(other, damageReceiver);
         RegisterAttackContact(other);
         RegisterMovementBlocker(other);
@@ -460,18 +448,6 @@ public sealed class AttackHitbox : MonoBehaviour
         if (m_isContinuousHitMode)
         {
             m_overlappingTargets[damageReceiver] = other;
-
-            if (other.GetComponentInParent<IAttackContactDamageReceiver>() != null)
-            {
-                m_contactDamageTargets.Add(damageReceiver);
-
-                // 同じ対象の複数Colliderへ同時に触れても、1回の接触として扱います。
-                if (!wasAlreadyOverlapping &&
-                    TryApplyDamage(damageReceiver))
-                {
-                    AttackHit?.Invoke(damageReceiver);
-                }
-            }
 
             return;
         }
@@ -538,24 +514,6 @@ public sealed class AttackHitbox : MonoBehaviour
         }
 
         m_overlappingTargets.Remove(damageReceiver);
-        m_contactDamageTargets.Remove(damageReceiver);
-    }
-
-    /// <summary>同じダメージ受付対象との接触が既に存在するか確認します。</summary>
-    /// <param name="damageReceiver">確認するダメージ受付対象。</param>
-    /// <returns>true：接触中。false：未接触。</returns>
-    private bool IsDamageReceiverAlreadyOverlapping(
-        IDamageable damageReceiver)
-    {
-        foreach (IDamageable trackedReceiver in m_contactColliders.Values)
-        {
-            if (trackedReceiver == damageReceiver)
-            {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     /// <summary>
@@ -679,7 +637,6 @@ public sealed class AttackHitbox : MonoBehaviour
         m_contactReceiverCounts.Clear();
         m_contactColliders.Clear();
         m_overlappingTargets.Clear();
-        m_contactDamageTargets.Clear();
         m_movementBlockerCounts.Clear();
         AttackMovementBlockRegistry.Unregister(this);
     }
