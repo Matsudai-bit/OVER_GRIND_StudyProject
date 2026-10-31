@@ -78,6 +78,7 @@ public sealed class S1P1BossStateParameterAsset : ScriptableObject
     public bool HasRequiredParameters()
     {
         return m_walk != null &&
+               m_walk.HasRequiredParameters() &&
                m_turn != null &&
                m_stomp != null &&
                m_missile != null &&

@@ -29,7 +29,7 @@ public sealed class PlayerRailExitingState
     protected override void OnStartState()
     {
         m_elapsedTime = 0f;
-        Owner.AnimationPresenter.PlayJumpAnimation();
+        Owner.AnimationPresenter.PlayJumpAnimation( PlayerJumpAnimationType.RAIL);
         if (m_startAirAttack && Owner.InputReader.IsAttackHeld)
         {
             m_airAttack = new PlayerContinuousAttack(Owner, true);
@@ -69,6 +69,7 @@ public sealed class PlayerRailExitingState
         Owner.GrindController.FinishCollisionExit();
         StopAirAttack();
         Owner.AnimationPresenter.StopJumpAnimation();
+        Owner.AnimationPresenter.StopAerialAttackingAnimation();
     }
 
     /// <summary>Stops the air attack and clears its hitboxes.</summary>

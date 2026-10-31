@@ -304,7 +304,11 @@ public sealed class S1P3BossStateParameterAssetEditor : Editor
         EditorGUILayout.BeginVertical(EditorStyles.helpBox);
 
         EditorGUILayout.HelpBox(
-            "既存のS1P3BossChargeAttackParameterAssetをそのまま利用します。",
+            "連続突進は「回転 → 狙い確定 → 突進 → 終了動作」の4段階で実行します。\n" +
+            "回転では左右Animationを分岐し、狙い確定に入った時点の方向を固定して、" +
+            "一定時間その方向を向いた後に突進します。\n" +
+            "各突進の詳細値はS1P3BossChargeAttackParameterAsset内の" +
+            "S1BossChargeAttackParameterAssetで設定します。",
             MessageType.Info);
 
         EditorGUILayout.PropertyField(
