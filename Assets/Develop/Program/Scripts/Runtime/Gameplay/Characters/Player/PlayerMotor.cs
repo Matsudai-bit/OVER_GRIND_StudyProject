@@ -85,6 +85,8 @@ public sealed class PlayerMotor : MonoBehaviour
     // プレイヤーの移動用CapsuleCollider
     [SerializeField, Header("Collider")]
     private CapsuleCollider m_playerCapsuleCollider;
+    private PhysicsMaterial m_groundPhysicsMaterial;
+    private PhysicsMaterial m_airPhysicsMaterial;
 
     // 段差乗り越え後の空間確認用バッファ
     private readonly Collider[] m_stepClearanceBuffer =
@@ -125,6 +127,7 @@ public sealed class PlayerMotor : MonoBehaviour
     private float m_verticalVelocityBeforePhysics;
     private float m_horizontalSpeedBeforePhysics;
     private float m_lastIntentionalUpwardVelocityFixedTime = float.NegativeInfinity;
+    private bool m_wasMovingAlongGround;
 
     /// <summary>方向指定ジャンプの離陸元レールとの衝突を一時的に無視します。</summary>
     public void BeginRailCollisionIgnore(SplineRailInfo rail, float minimumDuration)
@@ -138,6 +141,7 @@ public sealed class PlayerMotor : MonoBehaviour
     /// <summary>物理演算前の速度を記録し、レールから離れたことを確認します。</summary>
     private void FixedUpdate()
     {
+        UpdateCapsuleFriction();
         if (m_isInitialized && !m_playerRigidbody.isKinematic)
         {
             Vector3 velocity = m_playerRigidbody.linearVelocity;
@@ -229,6 +233,7 @@ public sealed class PlayerMotor : MonoBehaviour
         if (verticalVelocity > UPWARD_VELOCITY_THRESHOLD)
         {
             m_lastIntentionalUpwardVelocityFixedTime = Time.fixedTime;
+            m_wasMovingAlongGround = false;
         }
     }
 
@@ -343,8 +348,37 @@ public sealed class PlayerMotor : MonoBehaviour
     /// <summary>無効化や破棄の際にも、一時的な物理設定を元に戻します。</summary>
     private void OnDisable()
     {
+        RestoreCapsuleFriction();
         RestoreRailCollisions();
         EndRailMotion(m_railVelocity);
+    }
+
+    /// <summary>生成した空中用PhysicsMaterialを解放します。</summary>
+    private void OnDestroy()
+    {
+        RestoreCapsuleFriction();
+        if (m_airPhysicsMaterial != null) Destroy(m_airPhysicsMaterial);
+    }
+
+    /// <summary>空中では壁との摩擦をなくし、接地後は元の摩擦へ戻します。</summary>
+    private void UpdateCapsuleFriction()
+    {
+        if (!m_isInitialized || m_playerCapsuleCollider == null ||
+            m_airPhysicsMaterial == null || m_monitor == null) return;
+
+        PhysicsMaterial desired = m_monitor.HasGroundSupport()
+            ? m_groundPhysicsMaterial
+            : m_airPhysicsMaterial;
+        if (m_playerCapsuleCollider.sharedMaterial != desired)
+            m_playerCapsuleCollider.sharedMaterial = desired;
+    }
+
+    /// <summary>PlayerのCapsuleColliderを元のPhysicsMaterialに戻します。</summary>
+    private void RestoreCapsuleFriction()
+    {
+        if (m_playerCapsuleCollider != null && m_airPhysicsMaterial != null &&
+            m_playerCapsuleCollider.sharedMaterial == m_airPhysicsMaterial)
+            m_playerCapsuleCollider.sharedMaterial = m_groundPhysicsMaterial;
     }
 
     /// <summary>
@@ -639,6 +673,17 @@ public sealed class PlayerMotor : MonoBehaviour
                 $"[{nameof(PlayerMotor)}] " +
                 "段差乗り越えはY軸方向のCapsuleColliderを前提としています。",
                 this);
+        }
+
+        if (m_playerCapsuleCollider != null && m_airPhysicsMaterial == null)
+        {
+            m_groundPhysicsMaterial = m_playerCapsuleCollider.sharedMaterial;
+            m_airPhysicsMaterial = new PhysicsMaterial("Player Air Frictionless")
+            {
+                dynamicFriction = 0.0f,
+                staticFriction = 0.0f,
+                frictionCombine = PhysicsMaterialCombine.Minimum
+            };
         }
 
         if (!m_playerRigidbody.isKinematic)
@@ -1185,6 +1230,7 @@ public sealed class PlayerMotor : MonoBehaviour
 
         if (CanUseGroundSurface())
         {
+            m_wasMovingAlongGround = true;
             Vector3 groundNormal =
                 m_monitor.GroundNormal;
 
@@ -1202,9 +1248,15 @@ public sealed class PlayerMotor : MonoBehaviour
             return;
         }
 
-        // 空中では従来通りY速度を維持する。
+        // 坂に沿った移動で得た上向き速度を、接地を離れた後のジャンプへ持ち越さない。
+        // 入力によるジャンプや吹き飛ばしで与えた上昇速度は維持します。
         nextMoveVelocity.y =
-            currentVelocity.y;
+            m_wasMovingAlongGround &&
+            currentVelocity.y > 0.0f &&
+            !WasIntentionalUpwardVelocitySetThisStep()
+                ? 0.0f
+                : currentVelocity.y;
+        m_wasMovingAlongGround = false;
 
         m_playerRigidbody.linearVelocity =
             nextMoveVelocity;
