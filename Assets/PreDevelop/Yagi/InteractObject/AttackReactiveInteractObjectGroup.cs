@@ -15,6 +15,7 @@ public sealed class AttackReactiveInteractObjectGroup : MonoBehaviour
     private readonly Dictionary<int, HashSet<AttackReactiveInteractObject>>
         m_contactMembersBySource = new();
     private readonly HashSet<int> m_damagedContactSourceIds = new();
+    private int m_lastDamageTickId;
     private bool m_hasDissolved;
 
     /// <summary>登録されたドラム缶にこのグループを設定します。</summary>
@@ -59,7 +60,7 @@ public sealed class AttackReactiveInteractObjectGroup : MonoBehaviour
         if (!contactMembers.Add(sourceMember))
         {
             // 前回の終了通知を取り逃がした状態で同じHitboxが再度開始した場合は、
-            // 古い接触とダメージ履歴を破棄して新しい攻撃として扱う。
+            // 古い接触と単発攻撃のダメージ履歴を破棄します。
             NotifyContactEnded(attackSourceId);
             contactMembers.Clear();
             m_damagedContactSourceIds.Remove(attackSourceId);
@@ -122,7 +123,7 @@ public sealed class AttackReactiveInteractObjectGroup : MonoBehaviour
                    sourceMember.TryApplyGroupDamage(damageData, attackCenter);
         }
 
-        if (!TryReserveDamageForCurrentContact())
+        if (!TryReserveDamageForCurrentHit())
         {
             return false;
         }
@@ -153,23 +154,23 @@ public sealed class AttackReactiveInteractObjectGroup : MonoBehaviour
         return hasAcceptedDamage;
     }
 
-    /// <summary>同じ攻撃判定が複数のドラム缶へ触れても、1回分のダメージに制限します。</summary>
-    /// <returns>true：今回のダメージを適用できる。false：同じ接触中に適用済み。</returns>
-    private bool TryReserveDamageForCurrentContact()
+    /// <summary>連続攻撃はHitRateの1ヒットごと、単発攻撃は接触ごとに一度だけダメージを許可します。</summary>
+    /// <returns>true：今回のダメージを適用できる。false：同じヒットで適用済み。</returns>
+    private bool TryReserveDamageForCurrentHit()
     {
-        if (m_contactMembersBySource.Count == 0)
+        if (AttackHitTickContext.TryGetCurrent(out int tickId))
         {
+            if (m_lastDamageTickId == tickId) return false;
+            m_lastDamageTickId = tickId;
             return true;
         }
 
+        if (m_contactMembersBySource.Count == 0) return true;
+
         foreach (int attackSourceId in m_contactMembersBySource.Keys)
         {
-            if (m_damagedContactSourceIds.Add(attackSourceId))
-            {
-                return true;
-            }
+            if (m_damagedContactSourceIds.Add(attackSourceId)) return true;
         }
-
         return false;
     }
 
@@ -261,6 +262,7 @@ public sealed class AttackReactiveInteractObjectGroup : MonoBehaviour
 
         m_contactMembersBySource.Clear();
         m_damagedContactSourceIds.Clear();
+        m_lastDamageTickId = 0;
 
         foreach (AttackReactiveInteractObject member in m_registeredMembers)
         {

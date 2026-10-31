@@ -108,6 +108,12 @@ public class PlayerCamera : MonoBehaviour
             m_groundCollisionRadius,
             m_groundCollisionPadding,
             m_groundCollisionOriginHeight);
+
+        m_lockOnCamera.ConfigureCollision(
+            m_groundLayerMask,
+            m_groundCollisionRadius,
+            m_groundCollisionPadding,
+            m_groundCollisionOriginHeight);
     }
 
     /// <summary>通常カメラへの復帰が完了した後に入力を戻します。</summary>
