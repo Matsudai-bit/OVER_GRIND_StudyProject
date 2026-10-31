@@ -5,7 +5,8 @@ using UnityEngine;
 /// ステージ1フェーズ3の連続突進攻撃パラメータのInspectorを管理します。
 /// </summary>
 [CustomEditor(typeof(S1P3BossChargeAttackParameterAsset))]
-public sealed class S1P3BossChargeAttackParameterAssetEditor : Editor
+public sealed class S1P3BossChargeAttackParameterAssetEditor :
+    Editor
 {
     // Inspector上の余白
     private const float SECTION_SPACE = 8.0f;
@@ -48,6 +49,21 @@ public sealed class S1P3BossChargeAttackParameterAssetEditor : Editor
     }
 
     /// <summary>
+    /// 生成したEditorを破棄します。
+    /// </summary>
+    private void OnDisable()
+    {
+        ReleaseEditor(
+            ref m_firstChargeEditor);
+
+        ReleaseEditor(
+            ref m_secondChargeEditor);
+
+        ReleaseEditor(
+            ref m_thirdChargeEditor);
+    }
+
+    /// <summary>
     /// Inspectorを描画します。
     /// </summary>
     public override void OnInspectorGUI()
@@ -56,23 +72,24 @@ public sealed class S1P3BossChargeAttackParameterAssetEditor : Editor
 
         DrawDescription();
 
-        EditorGUILayout.Space(SECTION_SPACE);
+        EditorGUILayout.Space(
+            SECTION_SPACE);
 
         DrawChargeSection(
             1,
             "1回目の突進",
-            "プレイヤーを追尾して突進します。",
+            "Player方向へ回転し、狙いを一定時間固定してから突進します。",
             m_firstChargeParameterAssetProperty,
             ref m_firstChargeEditor,
             ref m_showFirstCharge);
 
         DrawTransitionLabel(
-            "1回目終了 → 2回目へ");
+            "1回目終了 → 2回目");
 
         DrawChargeSection(
             2,
             "2回目の突進",
-            "再度プレイヤーを追尾して突進します。",
+            "再度Player方向へ回転し、狙いを一定時間固定してから突進します。",
             m_secondChargeParameterAssetProperty,
             ref m_secondChargeEditor,
             ref m_showSecondCharge);
@@ -83,12 +100,13 @@ public sealed class S1P3BossChargeAttackParameterAssetEditor : Editor
         DrawChargeSection(
             3,
             "3回目の突進",
-            "選択された固定地点を目標に突進します。",
+            "選択された固定目的地方向へ回転し、狙いを一定時間固定してから突進します。",
             m_thirdChargeParameterAssetProperty,
             ref m_thirdChargeEditor,
             ref m_showThirdCharge);
 
-        EditorGUILayout.Space(SECTION_SPACE);
+        EditorGUILayout.Space(
+            SECTION_SPACE);
 
         DrawWarnings();
 
@@ -102,21 +120,17 @@ public sealed class S1P3BossChargeAttackParameterAssetEditor : Editor
     {
         EditorGUILayout.HelpBox(
             "フェーズ3では3回の突進を連続して実行します。\n\n" +
-            "1回目：プレイヤー追尾 → 突進\n" +
-            "2回目：プレイヤー追尾 → 突進\n" +
-            "3回目：固定地点を選択 → 突進",
+            "各1回の突進は共通して、\n" +
+            "「回転 → 狙い確定 → 突進 → 終了動作」の4段階です。\n\n" +
+            "1回目：Player追尾 → 方向固定 → 突進\n" +
+            "2回目：Player追尾 → 方向固定 → 突進\n" +
+            "3回目：固定目的地方向へ回転 → 方向固定 → 突進",
             MessageType.Info);
     }
 
     /// <summary>
-    /// 1回分の突進パラメータを表示します。
+    /// 1回分の突進パラメータを描画します。
     /// </summary>
-    /// <param name="chargeNumber">突進番号。</param>
-    /// <param name="title">表示タイトル。</param>
-    /// <param name="description">突進内容。</param>
-    /// <param name="property">Parameter Asset。</param>
-    /// <param name="cachedEditor">Parameter Asset用Editor。</param>
-    /// <param name="isExpanded">展開状態。</param>
     private void DrawChargeSection(
         int chargeNumber,
         string title,
@@ -128,10 +142,11 @@ public sealed class S1P3BossChargeAttackParameterAssetEditor : Editor
         EditorGUILayout.BeginVertical(
             EditorStyles.helpBox);
 
-        isExpanded = EditorGUILayout.Foldout(
-            isExpanded,
-            title,
-            true);
+        isExpanded =
+            EditorGUILayout.Foldout(
+                isExpanded,
+                title,
+                true);
 
         if (!isExpanded)
         {
@@ -147,11 +162,21 @@ public sealed class S1P3BossChargeAttackParameterAssetEditor : Editor
 
         EditorGUILayout.Space();
 
+        if (property == null)
+        {
+            EditorGUILayout.HelpBox(
+                $"{chargeNumber}回目のSerializedPropertyを取得できませんでした。",
+                MessageType.Error);
+
+            EditorGUILayout.EndVertical();
+            return;
+        }
+
         EditorGUILayout.PropertyField(
             property,
             new GUIContent(
                 "使用パラメータ",
-                $"{chargeNumber}回目の突進で使用するParameter Assetです。"));
+                $"{chargeNumber}回目の突進で使用するS1BossChargeAttackParameterAssetです。"));
 
         S1BossChargeAttackParameterAsset parameterAsset =
             property.objectReferenceValue as
@@ -159,6 +184,9 @@ public sealed class S1P3BossChargeAttackParameterAssetEditor : Editor
 
         if (parameterAsset == null)
         {
+            ReleaseEditor(
+                ref cachedEditor);
+
             EditorGUILayout.HelpBox(
                 $"{chargeNumber}回目の突進パラメータが設定されていません。",
                 MessageType.Error);
@@ -173,36 +201,38 @@ public sealed class S1P3BossChargeAttackParameterAssetEditor : Editor
 
         EditorGUILayout.Space();
 
-        // BossChargeAttackParameterAssetEditorを
-        // このInspector内へそのまま描画
         Editor.CreateCachedEditor(
             parameterAsset,
             typeof(BossChargeAttackParameterAssetEditor),
             ref cachedEditor);
 
-        cachedEditor.OnInspectorGUI();
+        cachedEditor?.OnInspectorGUI();
 
         EditorGUILayout.EndVertical();
     }
 
     /// <summary>
-    /// 突進間の遷移を表示します。
+    /// 突進間の遷移を描画します。
     /// </summary>
-    /// <param name="description">遷移内容。</param>
     private void DrawTransitionLabel(
         string description)
     {
         GUIStyle arrowStyle =
-            new GUIStyle(EditorStyles.boldLabel)
+            new GUIStyle(
+                EditorStyles.boldLabel)
             {
-                alignment = TextAnchor.MiddleCenter,
-                fontSize = 16
+                alignment =
+                    TextAnchor.MiddleCenter,
+                fontSize =
+                    16
             };
 
         GUIStyle descriptionStyle =
-            new GUIStyle(EditorStyles.miniLabel)
+            new GUIStyle(
+                EditorStyles.miniLabel)
             {
-                alignment = TextAnchor.MiddleCenter
+                alignment =
+                    TextAnchor.MiddleCenter
             };
 
         EditorGUILayout.Space();
@@ -219,9 +249,9 @@ public sealed class S1P3BossChargeAttackParameterAssetEditor : Editor
     }
 
     /// <summary>
-    /// 区切り線を表示します。
+    /// 区切り線を描画します。
     /// </summary>
-    private void DrawSeparator()
+    private static void DrawSeparator()
     {
         Rect rect =
             EditorGUILayout.GetControlRect(
@@ -243,12 +273,12 @@ public sealed class S1P3BossChargeAttackParameterAssetEditor : Editor
     private void DrawWarnings()
     {
         bool hasMissingParameter =
-            m_firstChargeParameterAssetProperty
-                .objectReferenceValue == null ||
-            m_secondChargeParameterAssetProperty
-                .objectReferenceValue == null ||
-            m_thirdChargeParameterAssetProperty
-                .objectReferenceValue == null;
+            m_firstChargeParameterAssetProperty == null ||
+            m_firstChargeParameterAssetProperty.objectReferenceValue == null ||
+            m_secondChargeParameterAssetProperty == null ||
+            m_secondChargeParameterAssetProperty.objectReferenceValue == null ||
+            m_thirdChargeParameterAssetProperty == null ||
+            m_thirdChargeParameterAssetProperty.objectReferenceValue == null;
 
         if (!hasMissingParameter)
         {
@@ -256,8 +286,24 @@ public sealed class S1P3BossChargeAttackParameterAssetEditor : Editor
         }
 
         EditorGUILayout.HelpBox(
-            "連続突進を実行するには、" +
-            "1～3回目すべての突進パラメータを設定してください。",
+            "連続突進を実行するには、1～3回目すべての突進パラメータを設定してください。",
             MessageType.Error);
+    }
+
+    /// <summary>
+    /// キャッシュしたEditorを破棄します。
+    /// </summary>
+    private static void ReleaseEditor(
+        ref Editor cachedEditor)
+    {
+        if (cachedEditor == null)
+        {
+            return;
+        }
+
+        Object.DestroyImmediate(
+            cachedEditor);
+
+        cachedEditor = null;
     }
 }

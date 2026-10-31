@@ -13,11 +13,28 @@ public sealed class PlayerAttackingState : StateBase<PlayerStateMachineComponent
         // ダッシュ中の入力イベントが攻撃終了後に再利用されることを防ぎます。
         Owner.InputReader.DiscardVBoostPendingInput();
 
+        // State開始時に前回のチャージ攻撃フラグが残らないよう解除する。
+        Owner.AnimationPresenter.StopChargeAttackingAnimation();
+
         if (!Owner.Monitor.IsGrounded)
         {
             // 状態開始中は遷移を予約せず、次の更新で終了します。
             return;
         }
+        // Vブースト残量を引き継いだ攻撃だけをチャージ攻撃として扱う。
+        bool isChargeAttacking =
+            Owner.IsBoostSuspended &&
+            Owner.SuspendedBoostGaugeRate > 0.0f;
+
+        if (isChargeAttacking)
+        {
+            Owner.AnimationPresenter.PlayChargeAttackingAnimation();
+        }
+        else
+        {
+            Owner.AnimationPresenter.PlayAttackAnimation();
+        }
+
         m_attack = new PlayerContinuousAttack(Owner, false);
         m_attack.StartAttack();
     }
@@ -64,6 +81,10 @@ public sealed class PlayerAttackingState : StateBase<PlayerStateMachineComponent
     /// <summary>遷移待ちの物理更新でも攻撃判定が残らないようにします。</summary>
     private void StopAttack()
     {
+        // State終了・中断時はチャージ攻撃フラグを必ずOFFに戻す。
+        Owner.AnimationPresenter.StopChargeAttackingAnimation();
+        Owner.AnimationPresenter.StopAttackAnimation();
+
         m_attack?.StopAttack();
         m_attack = null;
         // 攻撃中に発生したチャージ入力は、攻撃終了後へ持ち越しません。

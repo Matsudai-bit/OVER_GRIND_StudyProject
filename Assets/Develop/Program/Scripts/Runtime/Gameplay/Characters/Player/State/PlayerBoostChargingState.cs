@@ -4,9 +4,9 @@ using UnityEngine;
 /// <summary>
 /// プレイヤーのブーストチャージ状態を管理します。
 ///
-    /// チャージ中は現在の移動方向を維持しながら、
-    /// 入力角度で固定速度の直進と左右ドリフトを切り替えます。
-    /// 固定した旋回方向への通常入力と、低倍率の逆入力を別に扱います。
+/// チャージ中は現在の移動方向を維持しながら、
+/// 入力角度で固定速度の直進と左右ドリフトを切り替えます。
+/// 固定した旋回方向への通常入力と、低倍率の逆入力を別に扱います。
 ///
 /// 移動中開始のチャージでは、実際のPlayer本体は回転させず、
 /// ModelTransformのみを移動方向に対して横向きにします。
@@ -84,6 +84,9 @@ public sealed class PlayerBoostChargingState
     /// </summary>
     protected override void OnStartState()
     {
+        // 前回の移動チャージ方向がAnimatorへ残らないよう初期化する。
+        Owner.AnimationPresenter.ResetMoveChargeDirection();
+
         Owner.InputReader.ConsumeVBoostStarted();
 
         m_parameterAsset =
@@ -213,11 +216,16 @@ public sealed class PlayerBoostChargingState
         // チャージ開始時の状態に応じてアニメーションを切り替える
         if (m_startedFromStationary)
         {
+            // 停止チャージでは移動チャージフラグを使用しない。
+            Owner.AnimationPresenter.StopChargeMovingAnimation();
+
             Owner.AnimationPresenter
                 .PlayStationaryBoostChargingAnimation();
         }
         else
         {
+            // 移動チャージStateとしてAnimatorフラグをONにする。
+            Owner.AnimationPresenter.PlayChargeMovingAnimation();
             Owner.AnimationPresenter.PlayWalkAnimation();
         }
     }
@@ -286,6 +294,18 @@ public sealed class PlayerBoostChargingState
             Vector2.ClampMagnitude(
                 Owner.InputReader.MoveInput,
                 1.0f);
+
+        // 移動チャージ中だけ横入力方向をAnimatorへ渡す。
+        // -1：左、0：正面・入力なし、1：右。
+        if (!m_startedFromStationary)
+        {
+            Owner.AnimationPresenter.SetMoveChargeDirection(
+                ClassifyChargeInput(normalizedInput));
+        }
+        else
+        {
+            Owner.AnimationPresenter.ResetMoveChargeDirection();
+        }
 
         // --------------------------------------------------------
         // チャージ率に応じた、現在の曲がりやすさを計算
@@ -911,6 +931,10 @@ public sealed class PlayerBoostChargingState
     /// </summary>
     protected override void OnExitState()
     {
+        // State終了時は移動チャージ状態と方向を必ず初期化する。
+        Owner.AnimationPresenter.StopChargeMovingAnimation();
+        Owner.AnimationPresenter.ResetMoveChargeDirection();
+
         Debug.Log(
             "[PlayerBoostChargingState] チャージ状態終了",
             Owner);
