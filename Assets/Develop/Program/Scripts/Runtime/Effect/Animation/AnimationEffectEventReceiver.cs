@@ -38,6 +38,30 @@ public sealed class AnimationEffectEventReceiver : MonoBehaviour
     }
 
     /// <summary>
+    /// アニメーション終了イベントまたはAnimator State終了時に自動停止対象を停止します。
+    /// </summary>
+    /// <param name="channel">Animation Eventと同じチャンネル番号。</param>
+    public void NotifyAnimationEnded(int channel)
+    {
+        if (TryGetController())
+        {
+            m_effectController.StopOnAnimationEnd(channel);
+        }
+    }
+
+    /// <summary>
+    /// AnimationClipの終了地点に置いたAnimation Eventを受け取ります。
+    /// </summary>
+    /// <param name="animationEvent">Intにチャンネル番号を設定します。</param>
+    public void OnAnimationEffectEnd(AnimationEvent animationEvent)
+    {
+        if (animationEvent != null)
+        {
+            NotifyAnimationEnded(animationEvent.intParameter);
+        }
+    }
+
+    /// <summary>
     /// 親オブジェクトからエフェクト制御クラスを検索します。
     /// </summary>
     private bool TryGetController()

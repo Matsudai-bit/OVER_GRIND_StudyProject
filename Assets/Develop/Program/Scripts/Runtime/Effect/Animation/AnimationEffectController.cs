@@ -45,6 +45,15 @@ public sealed class AnimationEffectController : MonoBehaviour
         }
 
         /// <summary>チャンネルが一致するか確認します。</summary>
+        /// <summary>登録CueのエフェクトID。</summary>
+        public EffectId EffectId => m_cue != null ? m_cue.EffectId : EffectId.NONE;
+
+        /// <summary>登録Cueがアニメーション終了停止対象か。</summary>
+        public bool StopOnAnimationEnd => m_cue != null && m_cue.StopOnAnimationEnd;
+
+        /// <summary>登録Cueの停止方式。</summary>
+        public EffectStopMode StopMode => m_cue != null ? m_cue.StopMode : EffectStopMode.GRACEFUL;
+
         public bool HasChannel(int channel)
         {
             return m_channel == channel;
@@ -70,6 +79,29 @@ public sealed class AnimationEffectController : MonoBehaviour
     }
 
     /// <summary>
+    /// 同一IDの再生が現在も有効か調べます。
+    /// </summary>
+    private bool HasActiveEffectId(EffectId id)
+    {
+        foreach (KeyValuePair<EffectPlaybackKey, List<EffectHandle>> pair in m_activeHandles)
+        {
+            if (pair.Key.EffectId != id)
+            {
+                continue;
+            }
+
+            foreach (EffectHandle handle in pair.Value)
+            {
+                if (handle.IsValid)
+                {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /// <summary>
     /// 指定Cueのエフェクトを再生し、停止用ハンドルを保持します。
     /// </summary>
     /// <param name="cue">再生するエフェクト設定。</param>
@@ -80,6 +112,12 @@ public sealed class AnimationEffectController : MonoBehaviour
         if (cue == null || cue.EffectId == EffectId.NONE || m_effectEmitter == null)
         {
             Debug.LogWarning("[AnimationEffectController] Cue、ID、EffectEmitterを確認してください。", this);
+            return default;
+        }
+
+        // 同一IDの重複禁止はCueやチャンネルが異なる場合にも適用します。
+        if (cue.PreventDuplicatePlayback && HasActiveEffectId(cue.EffectId))
+        {
             return default;
         }
 
@@ -161,6 +199,31 @@ public sealed class AnimationEffectController : MonoBehaviour
                 StopHandles(pair.Value, stopMode);
                 keys.Add(pair.Key);
             }
+        }
+
+        foreach (EffectPlaybackKey key in keys)
+        {
+            m_activeHandles.Remove(key);
+        }
+    }
+
+    /// <summary>
+    /// Animator Stateの終了・中断時に、終了停止が指定されたCueのみ停止します。
+    /// </summary>
+    /// <param name="channel">Animation Eventに登録したチャンネル。</param>
+    public void StopOnAnimationEnd(int channel)
+    {
+        List<EffectPlaybackKey> keys = new List<EffectPlaybackKey>();
+        foreach (KeyValuePair<EffectPlaybackKey, List<EffectHandle>> pair in m_activeHandles)
+        {
+            if (!pair.Key.HasChannel(channel) || !pair.Key.StopOnAnimationEnd)
+            {
+                continue;
+            }
+
+            // Cueに設定された停止方式を使用します。
+            StopHandles(pair.Value, pair.Key.StopMode);
+            keys.Add(pair.Key);
         }
 
         foreach (EffectPlaybackKey key in keys)

@@ -12,6 +12,8 @@ GameObject:
   - component: {fileID: 7419275510104597911}
   - component: {fileID: 5436441779070063126}
   - component: {fileID: 5317174526525264956}
+  - component: {fileID: 1271896138816390010}
+  - component: {fileID: 5876608133062435257}
   m_Layer: 0
   m_Name: JetShutdown_R
   m_TagString: Untagged
@@ -27,7 +29,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2272291729316966983}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: 1, z: -0, w: 0}
+  m_LocalRotation: {x: 0, y: 1, z: 0, w: 0}
   m_LocalPosition: {x: 0.20461076, y: 0.17854315, z: -0.17149134}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -57,7 +59,7 @@ ParticleSystem:
   prewarm: 0
   playOnAwake: 1
   useUnscaledTime: 0
-  autoRandomSeed: 1
+  autoRandomSeed: 0
   startDelay:
     serializedVersion: 2
     minMaxState: 0
@@ -114,7 +116,7 @@ ParticleSystem:
   moveWithTransform: 0
   moveWithCustomTransform: {fileID: 0}
   scalingMode: 1
-  randomSeed: 0
+  randomSeed: 6010
   InitialModule:
     serializedVersion: 3
     enabled: 1
@@ -4880,6 +4882,33 @@ ParentConstraint:
   m_Sources:
   - sourceTransform: {fileID: 0}
     weight: 1
+--- !u!114 &1271896138816390010
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2272291729316966983}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2da0b11e846b27b47838bea466a671dd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EffectAttachmentSlot
+  m_anchorId: 12
+  m_sourceIndex: 1
+--- !u!114 &5876608133062435257
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2272291729316966983}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d5eaf77072ee49242b451fda2459577f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EffectInstance
+  m_rootParticle: {fileID: 7419275510104597911}
 --- !u!1 &3825019420536522419
 GameObject:
   m_ObjectHideFlags: 0
@@ -4932,7 +4961,7 @@ ParticleSystem:
   prewarm: 0
   playOnAwake: 1
   useUnscaledTime: 0
-  autoRandomSeed: 1
+  autoRandomSeed: 0
   startDelay:
     serializedVersion: 2
     minMaxState: 0
@@ -4989,7 +5018,7 @@ ParticleSystem:
   moveWithTransform: 0
   moveWithCustomTransform: {fileID: 0}
   scalingMode: 0
-  randomSeed: 0
+  randomSeed: 6010
   InitialModule:
     serializedVersion: 3
     enabled: 1
@@ -9853,7 +9882,7 @@ ParticleSystem:
   prewarm: 0
   playOnAwake: 1
   useUnscaledTime: 0
-  autoRandomSeed: 1
+  autoRandomSeed: 0
   startDelay:
     serializedVersion: 2
     minMaxState: 0
@@ -9910,7 +9939,7 @@ ParticleSystem:
   moveWithTransform: 0
   moveWithCustomTransform: {fileID: 0}
   scalingMode: 0
-  randomSeed: 0
+  randomSeed: 6010
   InitialModule:
     serializedVersion: 3
     enabled: 1
@@ -14756,7 +14785,7 @@ ParticleSystem:
   prewarm: 0
   playOnAwake: 1
   useUnscaledTime: 0
-  autoRandomSeed: 1
+  autoRandomSeed: 0
   startDelay:
     serializedVersion: 2
     minMaxState: 0
@@ -14813,7 +14842,7 @@ ParticleSystem:
   moveWithTransform: 1
   moveWithCustomTransform: {fileID: 0}
   scalingMode: 1
-  randomSeed: 0
+  randomSeed: 6010
   InitialModule:
     serializedVersion: 3
     enabled: 1
@@ -19677,7 +19706,7 @@ ParticleSystem:
   prewarm: 0
   playOnAwake: 1
   useUnscaledTime: 0
-  autoRandomSeed: 1
+  autoRandomSeed: 0
   startDelay:
     serializedVersion: 2
     minMaxState: 0
@@ -19734,7 +19763,7 @@ ParticleSystem:
   moveWithTransform: 0
   moveWithCustomTransform: {fileID: 0}
   scalingMode: 0
-  randomSeed: 0
+  randomSeed: 6010
   InitialModule:
     serializedVersion: 3
     enabled: 1

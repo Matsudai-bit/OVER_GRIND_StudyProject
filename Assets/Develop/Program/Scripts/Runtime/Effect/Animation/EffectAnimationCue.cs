@@ -22,6 +22,20 @@ public sealed class EffectAnimationCue : ScriptableObject
     [SerializeField, Header("停止イベントの停止方式")]
     private EffectStopMode m_stopMode = EffectStopMode.GRACEFUL;
 
+    // Animator Stateの終了時に停止するかどうかです。
+    [SerializeField, Header("アニメーション終了・中断時に停止")]
+    private bool m_stopOnAnimationEnd = false;
+
+    // 同じEffectIdが既に再生中なら再生要求を無視します。
+    [SerializeField, Header("同じEffectIdの重複再生を防ぐ")]
+    private bool m_preventDuplicatePlayback = false;
+
+    /// <summary>アニメーション終了時に停止するか取得します。</summary>
+    public bool StopOnAnimationEnd => m_stopOnAnimationEnd;
+
+    /// <summary>再生中の同一EffectIdを重複再生させないか取得します。</summary>
+    public bool PreventDuplicatePlayback => m_preventDuplicatePlayback;
+
     /// <summary>再生するエフェクトIDを取得します。</summary>
     public EffectId EffectId => m_effectId;
 
