@@ -12,6 +12,8 @@ GameObject:
   - component: {fileID: 5328874567201676004}
   - component: {fileID: 5876242347935783784}
   - component: {fileID: 8416412494075335317}
+  - component: {fileID: 2097958899697390250}
+  - component: {fileID: 194104440006393648}
   m_Layer: 0
   m_Name: RailSpark_R02
   m_TagString: Untagged
@@ -4881,6 +4883,33 @@ ParentConstraint:
   m_Sources:
   - sourceTransform: {fileID: 0}
     weight: 1
+--- !u!114 &2097958899697390250
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2817699283051133886}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d5eaf77072ee49242b451fda2459577f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EffectInstance
+  m_rootParticle: {fileID: 5328874567201676004}
+--- !u!114 &194104440006393648
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2817699283051133886}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2da0b11e846b27b47838bea466a671dd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EffectAttachmentSlot
+  m_anchorId: 7
+  m_sourceIndex: 1
 --- !u!1 &3611248010785726852
 GameObject:
   m_ObjectHideFlags: 0
@@ -4933,7 +4962,7 @@ ParticleSystem:
   prewarm: 0
   playOnAwake: 1
   useUnscaledTime: 0
-  autoRandomSeed: 1
+  autoRandomSeed: 0
   startDelay:
     serializedVersion: 2
     minMaxState: 0
@@ -4990,7 +5019,7 @@ ParticleSystem:
   moveWithTransform: 1
   moveWithCustomTransform: {fileID: 0}
   scalingMode: 1
-  randomSeed: 0
+  randomSeed: 4699
   InitialModule:
     serializedVersion: 3
     enabled: 1
@@ -9769,7 +9798,7 @@ ParticleSystem:
   prewarm: 0
   playOnAwake: 1
   useUnscaledTime: 0
-  autoRandomSeed: 1
+  autoRandomSeed: 0
   startDelay:
     serializedVersion: 2
     minMaxState: 0
@@ -9826,7 +9855,7 @@ ParticleSystem:
   moveWithTransform: 0
   moveWithCustomTransform: {fileID: 0}
   scalingMode: 0
-  randomSeed: 0
+  randomSeed: 4699
   InitialModule:
     serializedVersion: 3
     enabled: 1
@@ -14732,7 +14761,7 @@ ParticleSystem:
   prewarm: 0
   playOnAwake: 1
   useUnscaledTime: 0
-  autoRandomSeed: 1
+  autoRandomSeed: 0
   startDelay:
     serializedVersion: 2
     minMaxState: 0
@@ -14789,7 +14818,7 @@ ParticleSystem:
   moveWithTransform: 0
   moveWithCustomTransform: {fileID: 0}
   scalingMode: 0
-  randomSeed: 0
+  randomSeed: 4699
   InitialModule:
     serializedVersion: 3
     enabled: 1
@@ -19568,7 +19597,7 @@ ParticleSystem:
   prewarm: 0
   playOnAwake: 1
   useUnscaledTime: 0
-  autoRandomSeed: 1
+  autoRandomSeed: 0
   startDelay:
     serializedVersion: 2
     minMaxState: 0
@@ -19625,7 +19654,7 @@ ParticleSystem:
   moveWithTransform: 1
   moveWithCustomTransform: {fileID: 0}
   scalingMode: 0
-  randomSeed: 0
+  randomSeed: 4700
   InitialModule:
     serializedVersion: 3
     enabled: 1
@@ -24254,7 +24283,7 @@ ParticleSystem:
   prewarm: 0
   playOnAwake: 1
   useUnscaledTime: 0
-  autoRandomSeed: 1
+  autoRandomSeed: 0
   startDelay:
     serializedVersion: 2
     minMaxState: 0
@@ -24311,7 +24340,7 @@ ParticleSystem:
   moveWithTransform: 0
   moveWithCustomTransform: {fileID: 0}
   scalingMode: 0
-  randomSeed: 0
+  randomSeed: 4701
   InitialModule:
     serializedVersion: 3
     enabled: 1
@@ -28900,7 +28929,7 @@ ParticleSystem:
   prewarm: 0
   playOnAwake: 1
   useUnscaledTime: 0
-  autoRandomSeed: 1
+  autoRandomSeed: 0
   startDelay:
     serializedVersion: 2
     minMaxState: 0
@@ -28957,7 +28986,7 @@ ParticleSystem:
   moveWithTransform: 1
   moveWithCustomTransform: {fileID: 0}
   scalingMode: 1
-  randomSeed: 0
+  randomSeed: 4699
   InitialModule:
     serializedVersion: 3
     enabled: 1
@@ -33739,7 +33768,7 @@ ParticleSystem:
   prewarm: 0
   playOnAwake: 1
   useUnscaledTime: 0
-  autoRandomSeed: 1
+  autoRandomSeed: 0
   startDelay:
     serializedVersion: 2
     minMaxState: 0
@@ -33796,7 +33825,7 @@ ParticleSystem:
   moveWithTransform: 0
   moveWithCustomTransform: {fileID: 0}
   scalingMode: 1
-  randomSeed: 0
+  randomSeed: 4699
   InitialModule:
     serializedVersion: 3
     enabled: 1

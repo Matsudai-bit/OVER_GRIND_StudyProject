@@ -22,6 +22,9 @@ public enum EffectId
     PLAYER_ATTACK_NORMAL_I = 51,
     PLAYER_ATTACK_NORMAL_L = 52,
     PLAYER_ATTACK_NORMAL_O = 53,
+    PLAYER_ATTACK_VBOOST_NORMAL_I = 63,
+    PLAYER_ATTACK_VBOOST_NORMAL_L = 64,
+    PLAYER_ATTACK_VBOOST_NORMAL_O = 65,
     PLAYER_MOVE_WALK_L = 54,   // 右足歩行
     PLAYER_BOOST_LOOP = 55,
     PLAYER_SP_VCharge_L_V0 = 56,
@@ -31,6 +34,8 @@ public enum EffectId
     PLAYER_MOVE_VBOOST_I = 60,
     PLAYER_MOVE_VBOOST_L = 61,
     PLAYER_MOVE_VBOOST_O = 62,
+    PLAYER_MOVE_RAILGRIND_L = 66,
+    PLAYER_MOVE_RAILLANDING_O = 67, // レールへの着地
 
 
     // ==============================

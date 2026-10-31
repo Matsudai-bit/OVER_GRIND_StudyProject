@@ -24,11 +24,8 @@ public sealed class PlayerAttackingState : StateBase<PlayerStateMachineComponent
             return;
         }
         // Vブースト残量を引き継いだ攻撃だけをチャージ攻撃として扱う。
-        bool isChargeAttacking =
-            Owner.IsBoostSuspended &&
-            Owner.SuspendedBoostGaugeRate > 0.0f;
 
-        if (isChargeAttacking)
+        if (IsChargeAttacking)
         {
             Owner.AnimationPresenter.PlayChargeAttackingAnimation();
         }
@@ -39,7 +36,8 @@ public sealed class PlayerAttackingState : StateBase<PlayerStateMachineComponent
         m_attack = new PlayerContinuousAttack(Owner, false);
         m_attack.StartAttack();
     }
-
+    bool IsChargeAttacking => Owner.IsBoostSuspended &&
+            Owner.SuspendedBoostGaugeRate > 0.0f;
     /// <summary>入力解除時に攻撃を終了します。</summary>
     /// <param name="deltaTime">描画更新の間隔。</param>
     protected override void OnUpdate(float deltaTime)
@@ -74,8 +72,14 @@ public sealed class PlayerAttackingState : StateBase<PlayerStateMachineComponent
         {
             if (!m_effectHandle_L.IsValid)
             {
-
-                m_effectHandle_L = Owner.EffectEmitter.PlayAttached(EffectId.PLAYER_ATTACK_NORMAL_L);
+                if (IsChargeAttacking)
+                {
+                    m_effectHandle_L = Owner.EffectEmitter.PlayAttached(EffectId.PLAYER_ATTACK_VBOOST_NORMAL_I);
+                }
+                else
+                {
+                    m_effectHandle_L = Owner.EffectEmitter.PlayAttached(EffectId.PLAYER_ATTACK_NORMAL_L);
+                }
             }
         }
     }
