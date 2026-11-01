@@ -65,6 +65,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 5260446927991776623}
+  - component: {fileID: 987654321001234567}
   - component: {fileID: 2496564107683638181}
   - component: {fileID: 5069751796256331156}
   - component: {fileID: 5952939905318482039}
@@ -85,6 +86,8 @@ GameObject:
   - component: {fileID: 6438531801840769121}
   - component: {fileID: 6178159797705417550}
   - component: {fileID: 2209646600572280922}
+  - component: {fileID: 815440822793984749}
+  - component: {fileID: 3061119933383362841}
   m_Layer: 8
   m_Name: Player
   m_TagString: Player
@@ -108,8 +111,23 @@ Transform:
   - {fileID: 530793677067370159}
   - {fileID: 86029869826681732}
   - {fileID: 301451982182821376}
+  - {fileID: 3170326504080665224}
   m_Father: {fileID: 2180805532895616550}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &987654321001234567
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 415096441624393917}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 46a1ea3e051646a7ba536112b7736d81, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerBossTopSlideController
+  m_slideSpeed: 7
+  m_slideAcceleration: 18
 --- !u!54 &2496564107683638181
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -423,8 +441,7 @@ MonoBehaviour:
   m_stateMachineComponent: {fileID: 7831071542829783627}
   m_attackController: {fileID: 8572377566809189294}
   m_splineGrindController: {fileID: 2124101661379444245}
-  m_vGaugeUI: {fileID: 0}
-  m_vSpeedUI: {fileID: 0}
+  m_effectEmitter: {fileID: 8320560094549896535}
   m_vGaugePlaceModel: {fileID: 708830463257709784}
   m_speedPlaceModel: {fileID: 337246176175863197}
   m_playerCamera: {fileID: 7282053601130355310}
@@ -682,6 +699,32 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fef40de9a6e892748aa556e2209afb21, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerStatusProvider
+--- !u!114 &815440822793984749
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 415096441624393917}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 243bb0c21a3d22244b2aebe0706ec5b2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AnimationEffectEventReceiver
+  m_effectController: {fileID: 3061119933383362841}
+--- !u!114 &3061119933383362841
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 415096441624393917}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 42b1e7717f66ddd4bbf925a2d7b8df5f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AnimationEffectController
+  m_effectEmitter: {fileID: 8320560094549896535}
 --- !u!1 &1140236127434773408
 GameObject:
   m_ObjectHideFlags: 0
@@ -741,8 +784,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2118012191811038402}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.49577045, y: 0.49577066, z: -0.50419384, w: 0.5041941}
-  m_LocalPosition: {x: -0.21900345, y: 0.015000105, z: 0.051997915}
+  m_LocalRotation: {x: -0.49577063, y: 0.49577063, z: -0.5041939, w: 0.5041939}
+  m_LocalPosition: {x: -0.21900463, y: 0.015000001, z: 0.051994324}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -860,7 +903,7 @@ Transform:
   m_GameObject: {fileID: 3186272502889636224}
   serializedVersion: 2
   m_LocalRotation: {x: -0.49577045, y: 0.49577066, z: -0.50419384, w: 0.5041941}
-  m_LocalPosition: {x: -0.20799945, y: 0.076, z: 0.07799961}
+  m_LocalPosition: {x: -0.20799945, y: 0.07599991, z: 0.07799961}
   m_LocalScale: {x: 0.13, y: 0.54, z: 0.06}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1164,7 +1207,7 @@ Transform:
   m_GameObject: {fileID: 7001509233001807382}
   serializedVersion: 2
   m_LocalRotation: {x: 0.5041939, y: 0.5041939, z: 0.49577063, w: 0.49577063}
-  m_LocalPosition: {x: 0.21882531, y: -0.003011942, z: 0.057513997}
+  m_LocalPosition: {x: 0.2188158, y: -0.0030120611, z: 0.057510376}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1486,7 +1529,7 @@ Transform:
   m_GameObject: {fileID: 8394686957764197884}
   serializedVersion: 2
   m_LocalRotation: {x: 0.50419396, y: 0.5041939, z: 0.49577066, w: 0.49577063}
-  m_LocalPosition: {x: 0.255, y: 0.076, z: 0.036}
+  m_LocalPosition: {x: 0.25499237, y: 0.07599997, z: 0.036}
   m_LocalScale: {x: 0.13, y: 0.54, z: 0.06}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1909,6 +1952,109 @@ MonoBehaviour:
     NearLimit: 5
     FarLimit: 30
     MaxQualityBoost: 0.2
+--- !u!1 &8908158813110190387
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3170326504080665224}
+  - component: {fileID: 8320560094549896535}
+  - component: {fileID: 1069608767716415352}
+  - component: {fileID: 8044765012088156881}
+  m_Layer: 8
+  m_Name: Effect
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &3170326504080665224
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8908158813110190387}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 5260446927991776623}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &8320560094549896535
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8908158813110190387}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 14cbec239e6b20b4b95d43ba8bc9c265, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EffectEmitter
+  m_effectService: {fileID: 0}
+  m_localController: {fileID: 8044765012088156881}
+  m_anchorRegistry: {fileID: 1069608767716415352}
+  m_playBothWhenRegistered: 0
+--- !u!114 &1069608767716415352
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8908158813110190387}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4a144626ea322ea448155342d61f96b6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EffectAnchorRegistry
+  m_modelRoot: {fileID: 5260446927991776623}
+  m_animator: {fileID: 3539817516368647558}
+  m_entries:
+  - m_id: 7
+    m_target: {fileID: 2455120419258202333}
+    m_mode: 1
+    m_relativePath: SK_Player/DeformationSystem/Root_M/Hip_R/HipPart1_R/HipPart2_R/Knee_R/KneePart1_R/KneePart2_R/Ankle_R/Chain_R
+    m_uniqueName: Chain_R
+    m_humanoidBone: 0
+  - m_id: 11
+    m_target: {fileID: 9017780391906084346}
+    m_mode: 1
+    m_relativePath: SK_Player/DeformationSystem/Root_M/Hip_L/HipPart1_L/HipPart2_L/Knee_L/KneePart1_L/KneePart2_L/Ankle_L/Jet_L
+    m_uniqueName: Jet_L
+    m_humanoidBone: 0
+  - m_id: 8
+    m_target: {fileID: 5662037775429910053}
+    m_mode: 1
+    m_relativePath: SK_Player/DeformationSystem/Root_M/Hip_L/HipPart1_L/HipPart2_L/Knee_L/KneePart1_L/KneePart2_L/Ankle_L/Chain_L
+    m_uniqueName: Chain_L
+    m_humanoidBone: 0
+  - m_id: 12
+    m_target: {fileID: 2490545794336309121}
+    m_mode: 1
+    m_relativePath: SK_Player/DeformationSystem/Root_M/Hip_R/HipPart1_R/HipPart2_R/Knee_R/KneePart1_R/KneePart2_R/Ankle_R/Jet_R
+    m_uniqueName: Jet_R
+    m_humanoidBone: 0
+--- !u!114 &8044765012088156881
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8908158813110190387}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c0b72a682db96e9449c6610af9eed4fc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EffectLocalController
+  m_anchorRegistry: {fileID: 1069608767716415352}
+  m_entries: []
 --- !u!1001 &262406724028549611
 PrefabInstance:
   m_ObjectHideFlags: 0

@@ -1,4 +1,5 @@
 
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -71,6 +72,24 @@ public sealed class PlayerBoostChargingState
     private int m_targetOrbitSide;
     private float m_currentTargetOrbitTurnRate;
 
+    // Vチャージエフェクトの段階ごとの継続時間（今後アセットへ移行する想定）
+    private const float CHARGE_V0_DURATION_SECONDS = 1.0f;
+    private const float CHARGE_V1_DURATION_SECONDS = 2.0f;
+    private const float CHARGE_V2_DURATION_SECONDS = 3.0f;
+
+    // Vチャージ中に発生させたエフェクトを、状態終了時にまとめて停止します。
+    private readonly Dictionary<EffectId, EffectHandle> m_effectMap = new();
+
+    // 段階ごとの継続時間
+    private readonly Dictionary<EffectId, float> m_vUpGradeIntervalTimeMap = new();
+
+    // 現在のエフェクト段階と、その段階の経過時間
+    private EffectId m_currentEffect = EffectId.NONE;
+    private float m_intervalTime;
+
+    // 状態遷移後の遅延コールバックによる誤更新を防止します。
+    private bool m_isChargeEffectActive;
+
     /// <summary>
     /// 現在のチャージ割合を取得します。
     /// </summary>
@@ -84,6 +103,19 @@ public sealed class PlayerBoostChargingState
     /// </summary>
     protected override void OnStartState()
     {
+        // Stateの再入時もID登録が重複しないように初期化します。
+        m_effectMap.Clear();
+        m_vUpGradeIntervalTimeMap.Clear();
+
+        m_vUpGradeIntervalTimeMap.Add(
+            EffectId.PLAYER_SP_VCharge_L_V0, CHARGE_V0_DURATION_SECONDS);
+        m_vUpGradeIntervalTimeMap.Add(
+            EffectId.PLAYER_SP_VCharge_L_V1, CHARGE_V1_DURATION_SECONDS);
+        m_vUpGradeIntervalTimeMap.Add(
+            EffectId.PLAYER_SP_VCharge_L_V2, CHARGE_V2_DURATION_SECONDS);
+        m_currentEffect = EffectId.NONE;
+        m_intervalTime = 0.0f;
+        m_isChargeEffectActive = true;
         // 前回の移動チャージ方向がAnimatorへ残らないよう初期化する。
         Owner.AnimationPresenter.ResetMoveChargeDirection();
 
@@ -228,6 +260,132 @@ public sealed class PlayerBoostChargingState
             Owner.AnimationPresenter.PlayChargeMovingAnimation();
             Owner.AnimationPresenter.PlayWalkAnimation();
         }
+        // 最初のワンショットエフェクトの自然終了を待ってV1へ移行します。
+        m_currentEffect = EffectId.PLAYER_SP_VCharge_L_V0;
+        ApplyNextEffect(m_currentEffect);
+    }
+
+    /// <summary>
+    /// V0の自然終了を受け取り、V1へ進めます。
+    /// </summary>
+    /// <param name="reason">終了理由。</param>
+    private void OnInitialChargeEffectCompleted(EffectCompletionReason reason)
+    {
+        if (!m_isChargeEffectActive ||
+            m_currentEffect != EffectId.PLAYER_SP_VCharge_L_V0 ||
+            reason != EffectCompletionReason.COMPLETED)
+        {
+            return;
+        }
+
+        ApplyNextEffect(EffectId.PLAYER_SP_VCharge_L_V0);
+    }
+
+    /// <summary>
+    /// V1・V2の継続時間を計測し、次のエフェクトへ進めます。
+    /// </summary>
+    /// <param name="deltaTime">経過秒数。</param>
+    private void UpdateChargeEffects(float deltaTime)
+    {
+        if (!m_isChargeEffectActive ||
+            !m_vUpGradeIntervalTimeMap.TryGetValue(
+                m_currentEffect, out float requiredTime))
+        {
+            return;
+        }
+
+        m_intervalTime += deltaTime;
+        if (m_intervalTime >= requiredTime)
+        {
+            ApplyNextEffect(m_currentEffect);
+        }
+    }
+
+
+    EffectId GetEffectForV(int vValue)
+    {
+        switch (vValue)
+        {
+            case 0:
+                return EffectId.PLAYER_SP_VCharge_L_V0;
+
+            case 1:
+                return EffectId.PLAYER_SP_VCharge_L_V1;
+
+            case 2:
+                return EffectId.PLAYER_SP_VCharge_L_V2;
+
+            case 3:
+                return EffectId.PLAYER_SP_VCharge_L_V3;
+
+        }
+        return EffectId.NONE;
+    }
+
+    /// <summary>
+    /// 現在の段階と一致する場合だけ、次のエフェクトを開始します。
+    /// </summary>
+    /// <param name="effectId">遷移前のエフェクトID。</param>
+    private void ApplyNextEffect(EffectId effectId)
+    {
+        if (!m_isChargeEffectActive || m_currentEffect != effectId)
+        {
+            return;
+        }
+
+        EffectId nextEffect;
+        switch (effectId)
+        {
+            case EffectId.PLAYER_SP_VCharge_L_V0:
+                nextEffect = EffectId.PLAYER_SP_VCharge_L_V1;
+                break;
+            case EffectId.PLAYER_SP_VCharge_L_V1:
+                nextEffect = EffectId.PLAYER_SP_VCharge_L_V2;
+                break;
+            case EffectId.PLAYER_SP_VCharge_L_V2:
+                nextEffect = EffectId.PLAYER_SP_VCharge_L_V3;
+                break;
+            default:
+                return;
+        }
+
+        EffectHandle nextHandle = Owner.EffectEmitter.Play(nextEffect);
+        if (!nextHandle.IsValid)
+        {
+            Debug.LogWarning(
+                $"[PlayerBoostChargingState] エフェクト再生失敗: {nextEffect}",
+                Owner);
+            return;
+        }
+
+        // 既存の段階のエフェクトは重ねて再生し、State終了時にまとめて停止します。
+        m_effectMap[nextEffect] = nextHandle;
+        m_currentEffect = nextEffect;
+        m_intervalTime = 0.0f;
+    }
+
+    /// <summary>
+    /// チャージ状態から離れるとき、終了通知を解除してエフェクトを停止します。
+    /// </summary>
+    private void StopChargeEffects()
+    {
+        // 停止中のイベント経由で次の段階へ遷移しないよう先に無効化します。
+        m_isChargeEffectActive = false;
+
+        if (m_effectMap.TryGetValue(
+            EffectId.PLAYER_SP_VCharge_L_V0, out EffectHandle initialHandle))
+        {
+            initialHandle.UnregisterCompletedCallback(OnInitialChargeEffectCompleted);
+        }
+
+        foreach (EffectHandle handle in m_effectMap.Values)
+        {
+            handle.Stop(EffectStopMode.GRACEFUL);
+        }
+
+        m_effectMap.Clear();
+        m_currentEffect = EffectId.NONE;
+        m_intervalTime = 0.0f;
     }
 
     /// <summary>
@@ -235,8 +393,14 @@ public sealed class PlayerBoostChargingState
     /// </summary>
     protected override void OnFixedUpdate()
     {
-        // Updateで遷移するまで、解除時に確定した向きとダッシュ方向を保持します。
-        if (m_isDashRequested) return;
+        // 遷移要求が成立した場合は、移動入力をそれ以上更新しません。
+        if (m_isDashRequested)
+        {
+            return;
+        }
+
+        // StateBaseの更新経路を使用してエフェクト段階を進めます。
+        UpdateChargeEffects(Time.fixedDeltaTime);
 
         // チャージ中の攻撃入力は破棄し、チャージ状態を継続します。
         Owner.InputReader.ConsumeAttackInput();
@@ -931,6 +1095,9 @@ public sealed class PlayerBoostChargingState
     /// </summary>
     protected override void OnExitState()
     {
+        // State終了後にエフェクトの終了通知で次段階へ進まないよう解除します。
+        StopChargeEffects();
+
         // State終了時は移動チャージ状態と方向を必ず初期化する。
         Owner.AnimationPresenter.StopChargeMovingAnimation();
         Owner.AnimationPresenter.ResetMoveChargeDirection();

@@ -52,7 +52,7 @@ ParticleSystem:
   prewarm: 0
   playOnAwake: 1
   useUnscaledTime: 0
-  autoRandomSeed: 1
+  autoRandomSeed: 0
   startDelay:
     serializedVersion: 2
     minMaxState: 0
@@ -109,7 +109,7 @@ ParticleSystem:
   moveWithTransform: 1
   moveWithCustomTransform: {fileID: 0}
   scalingMode: 1
-  randomSeed: 0
+  randomSeed: 1598
   InitialModule:
     serializedVersion: 3
     enabled: 1
@@ -2689,8 +2689,8 @@ ParticleSystem:
     strength:
       serializedVersion: 2
       minMaxState: 3
-      scalar: 0.1
-      minScalar: -0.1
+      scalar: 0.5
+      minScalar: -0.5
       maxCurve:
         serializedVersion: 2
         m_Curve:
@@ -4845,6 +4845,8 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 5445659413655240355}
+  - component: {fileID: 803143565614170988}
+  - component: {fileID: 9218501044734247228}
   - component: {fileID: 2136013669574471596}
   - component: {fileID: 6296543877384451746}
   - component: {fileID: 8979596529075281735}
@@ -4871,6 +4873,33 @@ Transform:
   - {fileID: 6488196368498650841}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 104.442, y: 23.983002, z: -93.776}
+--- !u!114 &803143565614170988
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8286920238517434274}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d5eaf77072ee49242b451fda2459577f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EffectInstance
+  m_rootParticle: {fileID: 2136013669574471596}
+--- !u!114 &9218501044734247228
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8286920238517434274}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2da0b11e846b27b47838bea466a671dd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EffectAttachmentSlot
+  m_anchorId: 7
+  m_sourceIndex: 1
 --- !u!198 &2136013669574471596
 ParticleSystem:
   m_ObjectHideFlags: 0
