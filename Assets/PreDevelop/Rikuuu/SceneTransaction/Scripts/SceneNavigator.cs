@@ -1,5 +1,13 @@
 using UnityEngine;
 
+public enum FadeMode
+{
+    NONE = 0,
+
+    FADE_IN,
+    FADE_OUT
+}
+
 public class SceneNavigator : MonoBehaviour
 {
     // 遷移時に使用するエフェクト

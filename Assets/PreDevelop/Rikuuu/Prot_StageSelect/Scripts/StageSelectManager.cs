@@ -1,8 +1,7 @@
 using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using UnityEngine.UI;
-using static Unity.Burst.Intrinsics.X86.Avx;
+using System.Collections;
 
 [System.Serializable]
 public struct StageInfomation
@@ -30,6 +29,9 @@ public struct StageInfomation
 
     // プレイ可能かどうか
     public bool canPlay;
+
+    // 押下されたときに呼ぶ関数
+    public UnityEngine.Events.UnityEvent onClickAction;
 }
 
 /// <summary>
@@ -152,6 +154,11 @@ public class StageSelectManager : MonoBehaviour
     private int m_snappedIndex = NO_HOVER;
     // 吸着が完了し、既に中心へ到達済みかどうか
     private bool m_isSnapCompleted = false;
+
+    // 遅延秒数
+    private float m_invokeDelay = 1.0f;
+    // 遅延を行っているかどうか
+    private bool m_isWaiting = false;
 
     private void Start()
     {
@@ -288,6 +295,11 @@ public class StageSelectManager : MonoBehaviour
 
             // キーが押されたときの処理を実行する
             m_readyButton.OnClick();
+
+            // 押された時点のインデックスを保持しておく
+            int index = m_hoveredIndex;
+            // キーが押されたときに呼ぶ関数を数秒後に実行する
+            StartCoroutine(InvokeAfterDelay(index, m_invokeDelay));
         }
         // 決定ボタンが離されたら
         if (m_enterActionRef.action.WasReleasedThisFrame())
@@ -455,5 +467,17 @@ public class StageSelectManager : MonoBehaviour
         // ボタンにカーソルが合っていない状態にする
         Debug.Log("OnCursorExitReadyButton");
         m_readyButton.OnCursorExit();
+    }
+
+    private IEnumerator InvokeAfterDelay(int index, float delay)
+    {
+        m_isWaiting = true;
+        yield return new WaitForSeconds(delay);
+
+        if (m_stagePoints[index].onClickAction != null)
+        {
+            m_stagePoints[index].onClickAction.Invoke();
+        }
+        m_isWaiting = false;
     }
 }

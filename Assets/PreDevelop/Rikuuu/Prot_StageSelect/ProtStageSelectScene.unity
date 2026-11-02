@@ -357,6 +357,63 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+--- !u!1 &123954644
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 123954645}
+  - component: {fileID: 123954646}
+  m_Layer: 0
+  m_Name: SceneNavigatorSwicher
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &123954645
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 123954644}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1891933926}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &123954646
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 123954644}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f4ddbfe910c0ec2448e37492f80e839e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SceneNavigatorSwitcher
+  m_sceneNavigator: {fileID: 892203342}
+  m_visitKey: Story
+  m_firstTime:
+    SceneName: ProtStoryScene
+    InEffect: {fileID: 4850721005755377521, guid: e5ee7460be3a26344b0b6ddd753e3700, type: 3}
+    OutEffect: {fileID: 1693598453171396716, guid: 033b5b16a0fec3a449a086f62725c7e1, type: 3}
+  m_afterFirstTime:
+    SceneName: ProtStageSelectScene
+    InEffect: {fileID: 2789103863317319705, guid: 81d4041b12a5c154c9a68ce1803bd324, type: 3}
+    OutEffect: {fileID: 1693598453171396716, guid: 033b5b16a0fec3a449a086f62725c7e1, type: 3}
+  m_markOnExecute: 1
+  m_debugVisitMode: 2
+  m_debugSkipSave: 1
 --- !u!1 &137697047
 GameObject:
   m_ObjectHideFlags: 0
@@ -806,6 +863,45 @@ MonoBehaviour:
     rank: A
     bestTime: 60
     canPlay: 1
+    onClickAction:
+      m_PersistentCalls:
+        m_Calls:
+        - m_Target: {fileID: 892203342}
+          m_TargetAssemblyTypeName: SceneNavigator, Assembly-CSharp
+          m_MethodName: ChangeTransitionInEffect
+          m_Mode: 2
+          m_Arguments:
+            m_ObjectArgument: {fileID: 4850721005755377521, guid: e5ee7460be3a26344b0b6ddd753e3700, type: 3}
+            m_ObjectArgumentAssemblyTypeName: SceneTransitionEffect, Assembly-CSharp
+            m_IntArgument: 0
+            m_FloatArgument: 0
+            m_StringArgument: 
+            m_BoolArgument: 0
+          m_CallState: 2
+        - m_Target: {fileID: 892203342}
+          m_TargetAssemblyTypeName: SceneNavigator, Assembly-CSharp
+          m_MethodName: ChangeTransitionOutEffect
+          m_Mode: 2
+          m_Arguments:
+            m_ObjectArgument: {fileID: 8713407394917058467, guid: 45d4f5741c0df74469a650ff3812b906, type: 3}
+            m_ObjectArgumentAssemblyTypeName: SceneTransitionEffect, Assembly-CSharp
+            m_IntArgument: 0
+            m_FloatArgument: 0
+            m_StringArgument: 
+            m_BoolArgument: 0
+          m_CallState: 2
+        - m_Target: {fileID: 892203342}
+          m_TargetAssemblyTypeName: SceneNavigator, Assembly-CSharp
+          m_MethodName: ChangeScene
+          m_Mode: 5
+          m_Arguments:
+            m_ObjectArgument: {fileID: 0}
+            m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+            m_IntArgument: 0
+            m_FloatArgument: 0
+            m_StringArgument: InGameScene_Stage1
+            m_BoolArgument: 0
+          m_CallState: 2
   - stagePoint: {fileID: 137697049}
     stageNumber: 2
     stageSectorNumber: {fileID: 21300000, guid: bb2b517494d41ab45a3a6914b0d89345, type: 3}
@@ -815,6 +911,9 @@ MonoBehaviour:
     rank: '-'
     bestTime: 0
     canPlay: 1
+    onClickAction:
+      m_PersistentCalls:
+        m_Calls: []
   - stagePoint: {fileID: 1472851161}
     stageNumber: 3
     stageSectorNumber: {fileID: 21300000, guid: 8341baa778ec6ac46bf3b2f40adfb2ae, type: 3}
@@ -824,6 +923,9 @@ MonoBehaviour:
     rank: '-'
     bestTime: 0
     canPlay: 0
+    onClickAction:
+      m_PersistentCalls:
+        m_Calls: []
   m_stageNumber: {fileID: 1805636521}
   m_sectorNumber: {fileID: 742230715}
   m_stageNameJa: {fileID: 1007971602}
@@ -1289,6 +1391,50 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 772912824}
   m_CullTransparentMesh: 1
+--- !u!1 &892203341
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 892203343}
+  - component: {fileID: 892203342}
+  m_Layer: 0
+  m_Name: SceneNavigator
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &892203342
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 892203341}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e58e598f50b5e0f44b379f789a59bf94, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SceneNavigator
+--- !u!4 &892203343
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 892203341}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1891933926}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1007971598
 GameObject:
   m_ObjectHideFlags: 0
@@ -3083,6 +3229,39 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1805636519}
   m_CullTransparentMesh: 1
+--- !u!1 &1891933925
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1891933926}
+  m_Layer: 0
+  m_Name: SceneTransition
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1891933926
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1891933925}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 892203343}
+  - {fileID: 123954645}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1892137706
 GameObject:
   m_ObjectHideFlags: 0
@@ -3493,4 +3672,5 @@ SceneRoots:
   - {fileID: 1492560933}
   - {fileID: 1676603574}
   - {fileID: 565380562}
+  - {fileID: 1891933926}
   - {fileID: 1474266459}

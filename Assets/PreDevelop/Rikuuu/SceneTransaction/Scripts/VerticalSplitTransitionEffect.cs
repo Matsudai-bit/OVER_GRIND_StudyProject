@@ -5,13 +5,7 @@ using UnityEngine.Animations;
 using UnityEngine.Playables;
 using UnityEngine.UI;
 
-public enum FadeMode
-{ 
-    NONE = 0,
 
-    FADE_IN, 
-    FADE_OUT
-}
 
 public class VerticalSplitTransitionEffect : SceneTransitionEffect
 {

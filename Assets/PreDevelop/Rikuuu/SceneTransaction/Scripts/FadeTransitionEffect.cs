@@ -8,6 +8,9 @@ using UnityEngine.UI;
 
 public class FadeTransitionEffect : SceneTransitionEffect
 {
+    // 1フレームで進める時間の上限(重いフレームでアニメが飛ばないようにする)
+    private const float MAX_FRAME_DELTA = 1.0f / 30.0f;
+
     // アニメーションクリップ
     [SerializeField]
     private AnimationClip m_animationClip;
@@ -127,19 +130,31 @@ public class FadeTransitionEffect : SceneTransitionEffect
 
         m_isTransitioning = true;
 
-        // クリップを再生
-        AnimationPlayableUtilities.PlayClip(
+        // クリップを再生(時間は自前で進めるため、手動更新にする)
+        AnimationClipPlayable playable = AnimationPlayableUtilities.PlayClip(
             m_animator,
             m_animationClip,
             out m_graph
         );
-        // グラフの時間もUnscaledにする
-        m_graph.SetTimeUpdateMode(DirectorUpdateMode.UnscaledGameTime);
+        m_graph.SetTimeUpdateMode(DirectorUpdateMode.Manual);
 
-        // クリップの長さ分待つ
-        yield return new WaitForSecondsRealtime(m_animationClip.length);
+        float length = m_animationClip.length;
+        float time = 0.0f;
 
-        // 最終状態を確実に反映する
+        while (time < length)
+        {
+            // 現在時刻のポーズを評価して、パネルに反映する
+            playable.SetTime(time);
+            m_graph.Evaluate();
+            SetCloseRate(m_closeRate);
+
+            yield return null;
+
+            // 重いフレームでも、1フレームで進める量に上限をかける
+            time += Mathf.Min(Time.unscaledDeltaTime, MAX_FRAME_DELTA);
+        }
+
+        // 最終状態を確実に反映
         SetCloseRate(m_finalRate);
         m_graph.Destroy();
 
