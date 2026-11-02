@@ -1142,6 +1142,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 5518052121165032158}
+  - component: {fileID: 9024806259416150327}
   m_Layer: 0
   m_Name: Missile
   m_TagString: Untagged
@@ -1164,6 +1165,25 @@ Transform:
   m_Children: []
   m_Father: {fileID: 7532766335463235378}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &9024806259416150327
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4918335125104268400}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 94c2f330d2d50994189ade21004fe704, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MissilePool
+  m_prefab: {fileID: -7654990865585477179, guid: c5bd51605af8f424090237ad8ae601e1, type: 3}
+  m_poolRoot: {fileID: 5518052121165032158}
+  m_sceneEffectEmitter: {fileID: 0}
+  m_explosionHitboxPool: {fileID: 0}
+  m_initialCount: 4
+  m_maxRetainedCount: 32
+  m_maxActiveCount: 32
 --- !u!1 &5243265394517895867
 GameObject:
   m_ObjectHideFlags: 0
