@@ -10,6 +10,7 @@ public enum S1P2BossAttackType
     MISSILE,
     HEAT_VENT,
        TAIL_SLAM,
-        MOVE_MISSILE
+        MOVE_MISSILE,
+    MOVE
 
 }

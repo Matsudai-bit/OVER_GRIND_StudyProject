@@ -58,7 +58,7 @@ public sealed class PlayerRailJumpingState : StateBase<PlayerStateMachineCompone
         m_landingDelay = parameters.LandingDelay;
         Owner.InputReader.SuppressJumpUntilRelease();
         Owner.InputReader.ConsumeAttackInput();
-        Owner.AnimationPresenter.PlayJumpAnimation();
+        Owner.AnimationPresenter.PlayJumpAnimation( PlayerJumpAnimationType.RAIL);
 
         Vector3 launchVelocity;
         if (m_moveInput.sqrMagnitude > parameters.DirectionDeadZone * parameters.DirectionDeadZone)
@@ -297,6 +297,6 @@ public sealed class PlayerRailJumpingState : StateBase<PlayerStateMachineCompone
         if (m_airAttack == null) return;
         m_airAttack.StopAttack();
         m_airAttack = null;
-        Owner.AnimationPresenter.PlayJumpAnimation();
+        Owner.AnimationPresenter.PlayJumpAnimation(PlayerJumpAnimationType.RAIL);
     }
 }

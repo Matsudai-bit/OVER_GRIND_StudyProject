@@ -15,7 +15,7 @@ GameObject:
   - component: {fileID: 3236225220062810253}
   - component: {fileID: 613718020925736206}
   - component: {fileID: 3606216643542856026}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: DreadOil
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -111,10 +111,10 @@ CapsuleCollider:
   m_LayerOverridePriority: 0
   m_IsTrigger: 1
   m_ProvidesContacts: 0
-  m_Enabled: 0
+  m_Enabled: 1
   serializedVersion: 2
-  m_Radius: 0.5000001
-  m_Height: 2
+  m_Radius: 0.48
+  m_Height: 3.59
   m_Direction: 1
   m_Center: {x: 0.000000059604645, y: 0, z: -0.00000008940697}
 --- !u!114 &3236225220062810253
@@ -143,11 +143,15 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AttackHitbox
   m_hitboxCollider: {fileID: 4897242953268174991}
+  m_attackCenter: {fileID: 0}
   m_targetLayerMask:
     serializedVersion: 2
     m_Bits: 256
   m_defaultDamage: 10
-  m_currentDamage: 0
+  m_currentDamageData:
+    m_damage: 0
+    m_attackIdentifier: {fileID: 0}
+    m_attackPowerType: 0
   m_hasDamageOverride: 0
 --- !u!114 &3606216643542856026
 MonoBehaviour:

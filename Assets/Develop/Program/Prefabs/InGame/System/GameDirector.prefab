@@ -123,7 +123,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 519315738260749188}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -157,6 +157,7 @@ MonoBehaviour:
   m_modeController: {fileID: 5548452651704436227}
   m_gameplaySequenceChangedEvent: {fileID: 11400000, guid: c19d0671df7fde64196577670e2de7ef, type: 2}
   m_playerHealth: {fileID: 0}
+  bossPhaseController: {fileID: 0}
   nextStageSceneName: CreditScene
   stageSelectSceneName: StageSelectScene
 --- !u!1 &847114433165207616
@@ -205,7 +206,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::SaveDataController
   m_defaultSaveData: {fileID: 11400000, guid: 1417d56afb27c7c409bb4e0226b1e72c, type: 2}
   m_saveFileName: savedata.json
-  m_runtimeSaveData: {fileID: 0}
+  m_runtimeSaveData: {fileID: 11400000, guid: 1417d56afb27c7c409bb4e0226b1e72c, type: 2}
   m_saveRequestEvent: {fileID: 11400000, guid: 775283ddd1722f8499be4e3a2468f3b7, type: 2}
   m_saveChangedEvent: {fileID: 11400000, guid: b9da027596e888c4aafb3b52a2b02ff3, type: 2}
 --- !u!1 &2747008211945219762
@@ -366,7 +367,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 734408da4e186084f93f198e02228b1d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameFlowController
-  m_initialState: 1
+  m_initialState: 2
   m_stateChangedEvent: {fileID: 11400000, guid: 3c24164873d50a4479bdb3f6441eb8b1, type: 2}
 --- !u!1 &7706326280041637164
 GameObject:

@@ -3,12 +3,23 @@
 /// </summary>
 public enum BossActionPhase
 {
-    // 予備動作
+    // 予備動作・方向調整
     PREPARATION = 0,
 
+    // 狙い確定
+    TARGET_LOCK = 1,
+
     // 行動本体
-    EXECUTION = 1,
+    EXECUTION = 2,
 
     // 終了動作
-    RECOVERY = 2
+    RECOVERY = 3
+}
+/// <summary>
+/// 突進開始前の旋回方向です。
+/// </summary>
+public enum BossChargeTurnDirection
+{
+    LEFT = -1,
+    RIGHT = 1
 }

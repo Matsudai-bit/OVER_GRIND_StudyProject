@@ -1,22 +1,20 @@
-using UnityEngine;
-
 /// <summary>
 /// ボスの突進攻撃で使用するパラメータを保持します。
 /// </summary>
 public sealed class S1BossChargeAttackParameters
 {
     /// <summary>
-    /// 突進前の準備時間を取得します。
+    /// 狙い確定状態の継続時間を取得します。
     /// </summary>
-    public float PreparationDuration { get; }
+    public float TargetLockDuration { get; }
 
     /// <summary>
-    /// 準備中の回転速度を取得します。
+    /// 目標方向への回転速度を取得します。
     /// </summary>
     public float RotationSpeed { get; }
 
     /// <summary>
-    /// 突進の最高速度を取得します。
+    /// 突進速度を取得します。
     /// </summary>
     public float ChargeSpeed { get; }
 
@@ -26,7 +24,7 @@ public sealed class S1BossChargeAttackParameters
     public float MaxChargeDistance { get; }
 
     /// <summary>
-    /// NavMesh境界との停止余白を取得します。
+    /// 障害物や移動範囲との停止余白を取得します。
     /// </summary>
     public float StopMargin { get; }
 
@@ -36,39 +34,19 @@ public sealed class S1BossChargeAttackParameters
     public float EndDuration { get; }
 
     /// <summary>
-    /// 最高速度へ到達するまでの時間を取得します。
-    /// </summary>
-    public float AccelerationDuration { get; }
-
-    /// <summary>
-    /// 突進加速時のイージングを取得します。
-    /// </summary>
-    public AnimationCurve AccelerationCurve { get; }
-
-    /// <summary>
-    /// 停止地点の何m手前から減速を開始するか取得します。
-    /// </summary>
-    public float DecelerationDistance { get; }
-
-    /// <summary>
-    /// 突進減速時のイージングを取得します。
-    /// </summary>
-    public AnimationCurve DecelerationCurve { get; }
-
-    /// <summary>
-    /// 対象位置を通過してから進む距離を取得します。
-    /// </summary>
-    public float TargetOverrunDistance { get; }
-
-    /// <summary>
     /// 突進攻撃中を示すAnimator Bool名を取得します。
     /// </summary>
     public string AnimationActiveBoolName { get; }
 
     /// <summary>
-    /// 突進攻撃の段階を示すAnimator Int名を取得します。
+    /// 突進攻撃フェーズを示すAnimator Int名を取得します。
     /// </summary>
     public string AnimationPhaseIntName { get; }
+
+    /// <summary>
+    /// 左右旋回方向を示すAnimator Int名を取得します。
+    /// </summary>
+    public string AnimationTurnDirectionIntName { get; }
 
     /// <summary>
     /// 突進攻撃の識別子を取得します。
@@ -79,23 +57,19 @@ public sealed class S1BossChargeAttackParameters
     /// 突進攻撃パラメータを生成します。
     /// </summary>
     public S1BossChargeAttackParameters(
-        float preparationDuration,
+        float targetLockDuration,
         float rotationSpeed,
         float chargeSpeed,
         float maxChargeDistance,
         float stopMargin,
         float endDuration,
-        float accelerationDuration,
-        AnimationCurve accelerationCurve,
-        float decelerationDistance,
-        AnimationCurve decelerationCurve,
-        float targetOverrunDistance,
         string animationActiveBoolName,
         string animationPhaseIntName,
+        string animationTurnDirectionIntName,
         AttackIdentifier attackIdentifier)
     {
-        PreparationDuration =
-            preparationDuration;
+        TargetLockDuration =
+            targetLockDuration;
 
         RotationSpeed =
             rotationSpeed;
@@ -112,26 +86,14 @@ public sealed class S1BossChargeAttackParameters
         EndDuration =
             endDuration;
 
-        AccelerationDuration =
-            accelerationDuration;
-
-        AccelerationCurve =
-            accelerationCurve;
-
-        DecelerationDistance =
-            decelerationDistance;
-
-        DecelerationCurve =
-            decelerationCurve;
-
-        TargetOverrunDistance =
-            targetOverrunDistance;
-
         AnimationActiveBoolName =
             animationActiveBoolName;
 
         AnimationPhaseIntName =
             animationPhaseIntName;
+
+        AnimationTurnDirectionIntName =
+            animationTurnDirectionIntName;
 
         AttackIdentifier =
             attackIdentifier;
