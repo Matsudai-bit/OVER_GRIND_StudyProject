@@ -569,7 +569,7 @@ GameObject:
   m_CorrespondingSourceObject: {fileID: 3771600229125622975, guid: 016b3ff8389d7784dadef11d7d2540ed, type: 3}
   m_PrefabInstance: {fileID: 6115738204006192217}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &1078723560
+--- !u!114 &1078723563
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -580,8 +580,8 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7856d192f5c16c94d966db81bfb8110c, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PauseButtonManager
-  m_hoverDistance: 7
+  m_EditorClassIdentifier: Assembly-CSharp::CursorSwayAnimator
+  m_hoverDistance: 3
   m_hoverDuration: 0.5
 --- !u!1 &1361942347
 GameObject:
@@ -1043,10 +1043,42 @@ PrefabInstance:
       propertyPath: m_saveDataController
       value: 
       objectReference: {fileID: 599088775}
+    - target: {fileID: 247671835902394810, guid: 016b3ff8389d7784dadef11d7d2540ed, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 736610790679151574, guid: 016b3ff8389d7784dadef11d7d2540ed, type: 3}
+      propertyPath: m_defaultTexture
+      value: 
+      objectReference: {fileID: 21300000, guid: ac1a0515238d17f40a61e47ca8b8468c, type: 3}
+    - target: {fileID: 736610790679151574, guid: 016b3ff8389d7784dadef11d7d2540ed, type: 3}
+      propertyPath: m_OnCursorTexture
+      value: 
+      objectReference: {fileID: 21300000, guid: c6fe15f8d2a0b754298a4412a3c4aa4d, type: 3}
     - target: {fileID: 860049018160559856, guid: 016b3ff8389d7784dadef11d7d2540ed, type: 3}
       propertyPath: m_OnCursorTexture
       value: 
       objectReference: {fileID: 21300000, guid: 1b9ef1b599f8c734f9bf17db950e87a7, type: 3}
+    - target: {fileID: 1126550911472874872, guid: 016b3ff8389d7784dadef11d7d2540ed, type: 3}
+      propertyPath: m_Sprite
+      value: 
+      objectReference: {fileID: 21300000, guid: c6fe15f8d2a0b754298a4412a3c4aa4d, type: 3}
+    - target: {fileID: 1595845086939977171, guid: 016b3ff8389d7784dadef11d7d2540ed, type: 3}
+      propertyPath: m_defaultTexture
+      value: 
+      objectReference: {fileID: 21300000, guid: 7818b85dac0291f4b832ea31aa43555b, type: 3}
+    - target: {fileID: 1595845086939977171, guid: 016b3ff8389d7784dadef11d7d2540ed, type: 3}
+      propertyPath: m_OnCursorTexture
+      value: 
+      objectReference: {fileID: 21300000, guid: ce0db0fe3f3381a4a8953cc4088f144c, type: 3}
+    - target: {fileID: 1650415654317951377, guid: 016b3ff8389d7784dadef11d7d2540ed, type: 3}
+      propertyPath: m_defaultTexture
+      value: 
+      objectReference: {fileID: 21300000, guid: 90d6414a4e85c6c4f851043cb47410cb, type: 3}
+    - target: {fileID: 1650415654317951377, guid: 016b3ff8389d7784dadef11d7d2540ed, type: 3}
+      propertyPath: m_OnCursorTexture
+      value: 
+      objectReference: {fileID: 21300000, guid: 745c944810915d743aad7cbf3963ea60, type: 3}
     - target: {fileID: 2273435704440191714, guid: 016b3ff8389d7784dadef11d7d2540ed, type: 3}
       propertyPath: m_handleParameterChange.m_PersistentCalls.m_Calls.Array.data[0].m_Target
       value: 
@@ -1110,7 +1142,7 @@ PrefabInstance:
     - target: {fileID: 3051745278091280041, guid: 016b3ff8389d7784dadef11d7d2540ed, type: 3}
       propertyPath: m_moveAction.m_PersistentCalls.m_Calls.Array.data[0].m_Target
       value: 
-      objectReference: {fileID: 1078723560}
+      objectReference: {fileID: 1078723563}
     - target: {fileID: 3051745278091280041, guid: 016b3ff8389d7784dadef11d7d2540ed, type: 3}
       propertyPath: m_moveAction.m_PersistentCalls.m_Calls.Array.data[0].m_CallState
       value: 2
@@ -1122,7 +1154,7 @@ PrefabInstance:
     - target: {fileID: 3051745278091280041, guid: 016b3ff8389d7784dadef11d7d2540ed, type: 3}
       propertyPath: m_stopMoveAction.m_PersistentCalls.m_Calls.Array.data[0].m_Target
       value: 
-      objectReference: {fileID: 1078723560}
+      objectReference: {fileID: 1078723563}
     - target: {fileID: 3051745278091280041, guid: 016b3ff8389d7784dadef11d7d2540ed, type: 3}
       propertyPath: m_stopMoveAction.m_PersistentCalls.m_Calls.Array.data[0].m_CallState
       value: 2
@@ -1133,11 +1165,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3051745278091280041, guid: 016b3ff8389d7784dadef11d7d2540ed, type: 3}
       propertyPath: m_moveAction.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
-      value: PauseButtonManager, Assembly-CSharp
+      value: CursorSwayAnimator, Assembly-CSharp
       objectReference: {fileID: 0}
     - target: {fileID: 3051745278091280041, guid: 016b3ff8389d7784dadef11d7d2540ed, type: 3}
       propertyPath: m_stopMoveAction.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
-      value: PauseButtonManager, Assembly-CSharp
+      value: CursorSwayAnimator, Assembly-CSharp
       objectReference: {fileID: 0}
     - target: {fileID: 3051745278091280041, guid: 016b3ff8389d7784dadef11d7d2540ed, type: 3}
       propertyPath: m_moveAction.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_ObjectArgumentAssemblyTypeName
@@ -1327,10 +1359,26 @@ PrefabInstance:
       propertyPath: m_OnCursorTexture
       value: 
       objectReference: {fileID: 21300000, guid: d1c83f81ab0672b408508b70d9b4d199, type: 3}
+    - target: {fileID: 4788243039129833422, guid: 016b3ff8389d7784dadef11d7d2540ed, type: 3}
+      propertyPath: m_Sprite
+      value: 
+      objectReference: {fileID: 21300000, guid: 7818b85dac0291f4b832ea31aa43555b, type: 3}
     - target: {fileID: 4939062795165087260, guid: 016b3ff8389d7784dadef11d7d2540ed, type: 3}
       propertyPath: m_OnCursorTexture
       value: 
       objectReference: {fileID: 21300000, guid: 49283fde6847de24d80bda29f2e72681, type: 3}
+    - target: {fileID: 4965002345994829426, guid: 016b3ff8389d7784dadef11d7d2540ed, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 5227053159378436104, guid: 016b3ff8389d7784dadef11d7d2540ed, type: 3}
+      propertyPath: m_defaultTexture
+      value: 
+      objectReference: {fileID: 21300000, guid: 86fe5ed2b4473ab499dbcb0e42786474, type: 3}
+    - target: {fileID: 5227053159378436104, guid: 016b3ff8389d7784dadef11d7d2540ed, type: 3}
+      propertyPath: m_OnCursorTexture
+      value: 
+      objectReference: {fileID: 21300000, guid: 215d1e2fad5182e4ea24e56b8f663775, type: 3}
     - target: {fileID: 5573176646425458608, guid: 016b3ff8389d7784dadef11d7d2540ed, type: 3}
       propertyPath: m_onCursorExitAction.m_PersistentCalls.m_Calls.Array.size
       value: 2
@@ -1371,6 +1419,10 @@ PrefabInstance:
       propertyPath: m_onCursorExitAction.m_PersistentCalls.m_Calls.Array.data[1].m_Arguments.m_ObjectArgumentAssemblyTypeName
       value: UnityEngine.Object, UnityEngine
       objectReference: {fileID: 0}
+    - target: {fileID: 5766667713269023954, guid: 016b3ff8389d7784dadef11d7d2540ed, type: 3}
+      propertyPath: m_Sprite
+      value: 
+      objectReference: {fileID: 21300000, guid: 90d6414a4e85c6c4f851043cb47410cb, type: 3}
     - target: {fileID: 5885068031573856641, guid: 016b3ff8389d7784dadef11d7d2540ed, type: 3}
       propertyPath: m_Pivot.x
       value: 0.5
@@ -1449,6 +1501,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5885068031573856641, guid: 016b3ff8389d7784dadef11d7d2540ed, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5945056948027901893, guid: 016b3ff8389d7784dadef11d7d2540ed, type: 3}
+      propertyPath: m_IsActive
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5961532442828966816, guid: 016b3ff8389d7784dadef11d7d2540ed, type: 3}
@@ -1591,6 +1647,10 @@ PrefabInstance:
       propertyPath: m_onCursorExitAction.m_PersistentCalls.m_Calls.Array.data[1].m_Arguments.m_ObjectArgumentAssemblyTypeName
       value: UnityEngine.Object, UnityEngine
       objectReference: {fileID: 0}
+    - target: {fileID: 7151677928151956827, guid: 016b3ff8389d7784dadef11d7d2540ed, type: 3}
+      propertyPath: m_Sprite
+      value: 
+      objectReference: {fileID: 21300000, guid: 86fe5ed2b4473ab499dbcb0e42786474, type: 3}
     - target: {fileID: 7384355528042390721, guid: 016b3ff8389d7784dadef11d7d2540ed, type: 3}
       propertyPath: m_handleIndexChange.m_PersistentCalls.m_Calls.Array.data[0].m_Target
       value: 
@@ -1643,6 +1703,18 @@ PrefabInstance:
       propertyPath: m_handleParameterChange.m_PersistentCalls.m_Calls.Array.data[0].m_Target
       value: 
       objectReference: {fileID: 1361942351}
+    - target: {fileID: 7645184642790519080, guid: 016b3ff8389d7784dadef11d7d2540ed, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 204
+      objectReference: {fileID: 0}
+    - target: {fileID: 7645184642790519080, guid: 016b3ff8389d7784dadef11d7d2540ed, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 6
+      objectReference: {fileID: 0}
+    - target: {fileID: 7812222455193371469, guid: 016b3ff8389d7784dadef11d7d2540ed, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 8904817556639238976, guid: 016b3ff8389d7784dadef11d7d2540ed, type: 3}
       propertyPath: m_Sprite
       value: 
@@ -1707,7 +1779,7 @@ PrefabInstance:
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 3771600229125622975, guid: 016b3ff8389d7784dadef11d7d2540ed, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 1078723560}
+      addedObject: {fileID: 1078723563}
     - targetCorrespondingSourceObject: {fileID: 6714086039277956144, guid: 016b3ff8389d7784dadef11d7d2540ed, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1843236041}

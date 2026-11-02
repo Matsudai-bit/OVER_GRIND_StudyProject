@@ -49,6 +49,9 @@ public class UserSupportManager : MonoBehaviour
 
     private void OnEnable()
     {
+        m_changePageLeftActionRef?.action.Enable();
+        m_changePageRightActionRef?.action.Enable();
+
         if (m_changePageLeftActionRef == null)
         {
             Debug.LogWarning($"{gameObject.name}: {m_changePageLeftActionRef} ‚ªİ’è‚³‚ê‚Ä‚¢‚Ü‚¹‚ñBInspector‚ÅŠ„‚è“–‚Ä‚Ä‚­‚¾‚³‚¢B", this);

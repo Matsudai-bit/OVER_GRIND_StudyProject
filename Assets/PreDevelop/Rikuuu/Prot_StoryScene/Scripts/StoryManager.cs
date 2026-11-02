@@ -209,6 +209,13 @@ public class StoryManager : MonoBehaviour
     [SerializeField]
     private StoryPage[] m_storyPages;
 
+    [Header("すべてのストーリーページが終了したときに呼ぶ関数")]
+    /// <summary>
+    /// ストーリーページ終了時に呼ぶ関数一覧
+    /// </summary>
+    [SerializeField]
+    private UnityEngine.Events.UnityEvent m_onStoryCompletedAction;
+
     [Header("入力関連")]
     /// <summary>
     /// 決定キーの入力アクション。
@@ -914,6 +921,13 @@ public class StoryManager : MonoBehaviour
             // 何もせず演出を終了する
             Debug.Log("すべてのストーリーページが終了しました");
             m_isTransitioning = false;
+
+            // 関数が設定されている場合
+            if (m_onStoryCompletedAction != null)
+            {
+                m_onStoryCompletedAction.Invoke();
+            }
+
             yield break;
         }
 

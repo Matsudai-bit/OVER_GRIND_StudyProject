@@ -75,6 +75,9 @@ public class ButtonSelector : MonoBehaviour
             m_initialized = true;
         }
 
+        m_navigateActionRef.action.Enable();
+        m_enterActionRef.action.Enable();
+
         // ‰Ÿ‚³‚ê‚Á‚Ï‚È‚µ‚Ì“ü—Í‚ğV‹K“ü—Í‚ÆŒë”»’è‚µ‚È‚¢‚æ‚¤AŒ»İ’l‚Å‰Šú‰»
         m_previousNav = (m_navigateActionRef != null)
             ? m_navigateActionRef.action.ReadValue<Vector2>()
