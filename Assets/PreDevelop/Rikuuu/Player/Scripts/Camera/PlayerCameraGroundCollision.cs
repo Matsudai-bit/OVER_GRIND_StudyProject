@@ -77,6 +77,23 @@ public sealed class PlayerCameraGroundCollision : CinemachineExtension
         }
 
         Vector3 castDirection = castVector / castDistance;
+
+        // カメラの中心線上にある薄い壁用Colliderを優先して検出します。
+        // Cinemachineの予定位置までRayを飛ばし、壁の手前で止めます。
+        if (Physics.Raycast(
+                origin,
+                castDirection,
+                out RaycastHit rayHit,
+                castDistance,
+                m_groundLayerMask,
+                QueryTriggerInteraction.Collide))
+        {
+            float rayCorrectedDistance = Mathf.Max(0.0f, rayHit.distance - m_collisionPadding);
+            Vector3 rayCorrectedPosition = origin + castDirection * rayCorrectedDistance;
+            state.PositionCorrection += rayCorrectedPosition - desiredPosition;
+            return;
+        }
+
         if (!Physics.SphereCast(
                 origin,
                 m_collisionRadius,

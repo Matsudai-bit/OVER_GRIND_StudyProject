@@ -1,4 +1,5 @@
 using UnityEngine;
+using static UnityEngine.UI.GridLayoutGroup;
 
 /// <summary>地上・空中で共通の連続攻撃、速度消費、命中時の滞空を管理します。</summary>
 public sealed class PlayerContinuousAttack
@@ -33,20 +34,30 @@ public sealed class PlayerContinuousAttack
         m_direction = m_isAirAttack
             ? m_owner.Motor.HorizontalDirection
             : m_owner.Motor.FacingDirection;
-        if (m_isAirAttack) m_owner.Motor.AlignFacingToDirection(m_direction);
+        if (m_owner.AttackController.TryGetAssistedAttackDirection(
+                m_owner.transform, m_owner.Motor.FacingDirection, out Vector3 attackDirection))
+        {
+            m_owner.Motor.AlignFacingToDirection(attackDirection);
+            // 空中の移動慣性は維持し、地上では攻撃移動も対象へ向けます。
+            if (!m_isAirAttack) m_direction = attackDirection;
+        }
+        else if (m_isAirAttack)
+        {
+            m_owner.Motor.AlignFacingToDirection(m_direction);
+        }
         m_hitTimer = 0.0f;
         m_airHitStopTimer = 0.0f;
         if (m_isAirAttack)
         {
             m_airAttachment = new PlayerAirAttackAttachment(m_owner);
             m_owner.AttackController.ContinuousAttackHit += m_airAttachment.AttachToTarget;
+            m_owner.AnimationPresenter.PlayAerialAttackingAnimation();
         }
 
         AttackPowerSourceRegistry.Register(
             m_owner.transform,
             GetAttackPowerType());
         m_owner.AttackController.EnableContinuousAttackHitboxes();
-        m_owner.AnimationPresenter.PlayAttackAnimation();
         m_owner.SetSpeedDisplayOverride(m_remainingSpeed);
     }
 
@@ -80,6 +91,7 @@ public sealed class PlayerContinuousAttack
 
             bool hasHit;
             using (AttackPowerContext.Begin(attackPowerType))
+            using (AttackHitTickContext.Begin())
             {
                 hasHit = m_owner.AttackController.ApplyContinuousHitTick();
             }
@@ -104,8 +116,15 @@ public sealed class PlayerContinuousAttack
         }
 
         if (!m_isAirAttack &&
-            m_owner.AttackController.TryGetMaxPenetration(out Vector3 direction, out float distance))
-            m_owner.Motor.ResolvePenetration(direction, distance);
+            m_owner.AttackController.TryGetMaxMovementBlockerPenetration(
+                out Vector3 direction,
+                out float distance))
+        {
+            // 完全に分離させると次の攻撃が届かなくなるため、浅い接触を残します。
+            float correctionDistance = Mathf.Max(
+                0.0f, distance - m_owner.AttackController.AttackContactOverlap);
+            m_owner.Motor.ResolvePenetration(direction, correctionDistance);
+        }
         return true;
     }
 
@@ -150,7 +169,10 @@ public sealed class PlayerContinuousAttack
             m_airAttachment.Detach();
             m_airAttachment = null;
         }
-        m_owner.AnimationPresenter.StopAttackAnimation();
+        if (m_isAirAttack)
+        {
+            m_owner.AnimationPresenter.StopAerialAttackingAnimation();
+        }
         m_owner.AttackController.DisableAttackHitboxes();
         AttackPowerSourceRegistry.Unregister(m_owner.transform);
         m_owner.ClearSpeedDisplayOverride();

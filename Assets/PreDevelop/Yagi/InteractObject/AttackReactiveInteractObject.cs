@@ -49,6 +49,10 @@ public sealed class AttackReactiveInteractObject : MonoBehaviour,
     [Tooltip("最初に吹き飛ぶまでは物理的に動かない状態にします。")]
     private bool m_startAsKinematic = true;
 
+    [SerializeField]
+    [Tooltip("親階層のTransform同期で物理移動が上書きされないよう、物理開始時に親から切り離します。")]
+    private bool m_detachFromParentForPhysics = true;
+
     [SerializeField, Min(0.0f)]
     [Tooltip("底面4点の接地を確定するまでの時間です。")]
     private float m_settleDuration = 0.1f;
@@ -143,6 +147,7 @@ public sealed class AttackReactiveInteractObject : MonoBehaviour,
             return;
         }
 
+        DetachFromParentForPhysics();
         m_rigidbody.isKinematic = m_startAsKinematic;
         ResolveVisualRoot();
 
@@ -152,6 +157,19 @@ public sealed class AttackReactiveInteractObject : MonoBehaviour,
             m_visualBaseLocalRotation = m_visualRoot.localRotation;
             CacheVisualRenderers();
         }
+    }
+
+    /// <summary>
+    /// 物理対象を親階層から切り離し、現在のワールド姿勢を維持します。
+    /// </summary>
+    private void DetachFromParentForPhysics()
+    {
+        if (!m_detachFromParentForPhysics || transform.parent == null)
+        {
+            return;
+        }
+
+        transform.SetParent(null, true);
     }
 
     /// <summary>攻撃判定が接触している間、モデルだけを振動させます。</summary>
@@ -607,6 +625,13 @@ public sealed class AttackReactiveInteractObject : MonoBehaviour,
     /// <summary>未設定時はルート直下の最初の子を見た目として取得します。</summary>
     private void ResolveVisualRoot()
     {
+        // 本体自身を見た目として扱うと、次回のLaunch前に
+        // RestoreVisualTransform() が物理移動後の本体位置を初期位置へ戻してしまう。
+        if (m_visualRoot == transform)
+        {
+            m_visualRoot = null;
+        }
+
         if (m_visualRoot == null && transform.childCount > 0)
         {
             m_visualRoot = transform.GetChild(0);

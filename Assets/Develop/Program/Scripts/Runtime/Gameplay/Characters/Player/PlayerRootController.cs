@@ -8,10 +8,12 @@ using UnityEngine;
 [RequireComponent(typeof(PlayerInputReader))]
 [RequireComponent(typeof(PlayerMonitor))]
 [RequireComponent(typeof(PlayerMotor))]
+[RequireComponent(typeof(PlayerStatusProvider))]
 [RequireComponent(typeof(PlayerAnimationPresenter))]
 [RequireComponent(typeof(PlayerStateMachineComponent))]
 [RequireComponent(typeof(PlayerAttackController))]
 [RequireComponent(typeof(SplineGrindController))]
+[RequireComponent(typeof(Health))]
 public sealed class PlayerRootController : MonoBehaviour
 {
     [SerializeField, Header("Parameter Asset")]
@@ -47,6 +49,10 @@ public sealed class PlayerRootController : MonoBehaviour
     // プレイヤー移動機能
     [SerializeField]
     private PlayerMotor m_motor;
+
+    // プレイヤー状況提供機能
+    [SerializeField]
+    private PlayerStatusProvider m_statusProvider;
 
     // プレイヤーアニメーション表示機能
     [SerializeField]
@@ -92,6 +98,15 @@ public sealed class PlayerRootController : MonoBehaviour
     // 初期化されているか
     private bool m_isInitialized;
 
+    [SerializeField]
+    private Health m_health;
+
+    /// <summary>
+    /// プレイヤー状況提供機能を取得します。
+    /// </summary>
+    public PlayerStatusProvider StatusProvider =>
+        m_statusProvider;
+
     /// <summary>
     /// プレイヤーを初期化します。
     /// </summary>
@@ -121,9 +136,8 @@ public sealed class PlayerRootController : MonoBehaviour
             return;
         }
 
-        m_animationPresenter.Initialize(
-            m_monitor,
-            m_motor);
+   
+
 
         m_stateMachineComponent.Initialize(
     m_inputReader,
@@ -140,10 +154,31 @@ public sealed class PlayerRootController : MonoBehaviour
     m_playerCamera,
     m_modelTransform,
     m_vGaugePlaceModel,
-    m_speedPlaceModel);
+    m_speedPlaceModel,
+    m_statusProvider,
+    m_health);
+        m_statusProvider.Initialize(
+       m_monitor,
+       m_motor,
+       m_stateMachineComponent);
+
+        if (!m_statusProvider.IsInitialized)
+        {
+            m_isInitialized = false;
+            enabled = false;
+         
+            return;
+        }
+
+        m_animationPresenter.Initialize(
+            m_statusProvider);
+        // StateMachine初期化後の状態を即座にStatusへ反映する。
+        // PlayerAnimationPresenterもStatusUpdated経由で初期値を受け取ります。
+        m_statusProvider.RefreshStatus();
 
         m_isInitialized =
             m_motor.IsInitialized &&
+            m_statusProvider.IsInitialized &&
             m_stateMachineComponent.IsInitialized &&
             m_animationPresenter.IsInitialized;
     }
@@ -227,6 +262,12 @@ public sealed class PlayerRootController : MonoBehaviour
         {
             m_motor =
                 GetComponent<PlayerMotor>();
+        }
+
+        if (m_statusProvider == null)
+        {
+            m_statusProvider =
+                GetComponent<PlayerStatusProvider>();
         }
 
         if (m_animationPresenter == null)
@@ -360,6 +401,16 @@ public sealed class PlayerRootController : MonoBehaviour
             Debug.LogError(
                 $"[{nameof(PlayerRootController)}] " +
                 "PlayerMotorが見つかりません。",
+                this);
+
+            isValid = false;
+        }
+
+        if (m_statusProvider == null)
+        {
+            Debug.LogError(
+                $"[{nameof(PlayerRootController)}] " +
+                "PlayerStatusProviderが見つかりません。",
                 this);
 
             isValid = false;
