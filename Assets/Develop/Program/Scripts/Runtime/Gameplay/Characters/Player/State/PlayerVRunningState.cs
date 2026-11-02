@@ -43,6 +43,7 @@ public sealed class PlayerVRunningState
     private bool m_isWaitingForMovingCharge;
 
 
+    EffectHandle m_loopEffect;
     /// <summary>
     /// 状態開始時に呼ばれます。
     /// 中断（ジャンプ・停止など）から復帰した場合は、
@@ -131,6 +132,9 @@ public sealed class PlayerVRunningState
 
         Owner.VGaugePlaceModel.SetGaugeRate(
             Owner.SuspendedBoostGaugeRate);
+
+        Owner.EffectEmitter.Play(EffectId.PLAYER_MOVE_VBOOST_I);
+        m_loopEffect =  Owner.EffectEmitter.Play(EffectId.PLAYER_MOVE_VBOOST_L);
     }
 
 
@@ -225,6 +229,9 @@ public sealed class PlayerVRunningState
     {
         // Vブースト走行アニメーションを停止
         Owner.AnimationPresenter.StopVBoostRunningAnimation();
+
+        m_loopEffect.Stop();
+        Owner.EffectEmitter.Play(EffectId.PLAYER_MOVE_VBOOST_O);
 
         // 中断による終了の場合は、後で再開するため
         // ゲージ表示・演出をリセットしない

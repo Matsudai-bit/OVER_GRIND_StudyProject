@@ -71,13 +71,8 @@ public sealed class PlayerRootController : MonoBehaviour
     [SerializeField]
     private SplineGrindController m_splineGrindController;
 
-    // Vゲージ表示機能
     [SerializeField]
-    private VGaugeUI m_vGaugeUI;
-
-    // 速度表示機能
-    [SerializeField]
-    private VSpeedUI m_vSpeedUI;
+    private EffectEmitter m_effectEmitter;
 
     // Scene内のParameterModelに付いているコンポーネントを設定します。
     [SerializeField, Header("Parameter Model")]
@@ -149,13 +144,12 @@ public sealed class PlayerRootController : MonoBehaviour
     m_movementParameterAsset,
     m_vBoostMovementParameterAsset,
     m_boostChargingParameterAsset,
-    m_vGaugeUI,
-    m_vSpeedUI,
     m_playerCamera,
     m_modelTransform,
     m_vGaugePlaceModel,
     m_speedPlaceModel,
     m_statusProvider,
+    m_effectEmitter,
     m_health);
         m_statusProvider.Initialize(
        m_monitor,
