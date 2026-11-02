@@ -42,6 +42,8 @@ public enum EffectId
     // ボス（100以上）
     // ==============================
 
+    S1_BOSS_MISSILE_EXPLOSION = 102,
+    S1_BOSS_MISSILE_LAUNCH = 103,
     S1P1_BOSS_ATTACK = 100,
     S1P1_BOSS_CHARGE = 101
 }

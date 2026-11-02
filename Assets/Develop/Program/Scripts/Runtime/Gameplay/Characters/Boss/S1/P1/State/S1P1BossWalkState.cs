@@ -131,7 +131,6 @@ public sealed class S1P1BossWalkState :
     /// </summary>
     protected override void OnExitState()
     {
-        StartCoolTimeIfSucceeded();
 
         Owner.Motor?.StopHorizontalMovement();
 
@@ -371,6 +370,8 @@ public sealed class S1P1BossWalkState :
         m_isAnimationStarted = false;
 
         Owner.Motor?.StopHorizontalMovement();
+
+        StartCoolTimeIfSucceeded();
 
         // Animation終了時点で初めて結果を確定する
         StateExecutionStatus result =

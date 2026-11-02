@@ -86,6 +86,7 @@ public sealed class S1P1BossStompState : StateBase<BossController>
                 break;
 
             case AttackEventType.ANIMATION_END:
+                StartCoolTimeIfSucceeded();
                 Owner.SetStateExecutionStatus(
                     StateExecutionStatus.SUCCEEDED);
                 break;
@@ -97,8 +98,8 @@ public sealed class S1P1BossStompState : StateBase<BossController>
     /// </summary>
     protected override void OnExitState()
     {
-        StartCoolTimeIfSucceeded();
 
+        StartCoolTimeIfSucceeded();
 
         if (m_animationEventReceiver != null)
         {
