@@ -38,6 +38,10 @@ public sealed class S1P2BossMoveState :
     // 移動攻撃判定が有効か
     private bool m_isMoveAttackEnabled;
 
+    private EffectHandle m_effectHandle;
+
+    private BossPhaseReferences m_commonReferences;
+
     /// <summary>
     /// 経路移動を開始します。
     /// </summary>
@@ -91,7 +95,9 @@ public sealed class S1P2BossMoveState :
 
             return;
         }
-
+        
+        m_effectHandle = m_commonReferences.EffectEmitter.Play(EffectId.S1P2_BOSS_SMOKE);
+           
         /*
          * MoveState開始時に一度だけ
          * 尻尾攻撃を実行するか判定します。
@@ -156,6 +162,7 @@ public sealed class S1P2BossMoveState :
         {
             return;
         }
+        m_effectHandle.Stop();
 
         m_isTailSlamCompleted =
             true;
@@ -484,6 +491,18 @@ public sealed class S1P2BossMoveState :
             Debug.LogError(
                 $"[{nameof(S1P2BossMoveState)}] " +
                 $"{nameof(S1P2BossReferences)}を" +
+                "取得できませんでした。");
+
+            return false;
+        }
+
+        if (!Owner.PhaseController
+                .TryGetCurrentPhaseComponent(
+                    out m_commonReferences))
+        {
+            Debug.LogError(
+                $"[{nameof(S1P2BossMoveState)}] " +
+                $"{nameof(BossPhaseReferences)}を" +
                 "取得できませんでした。");
 
             return false;
