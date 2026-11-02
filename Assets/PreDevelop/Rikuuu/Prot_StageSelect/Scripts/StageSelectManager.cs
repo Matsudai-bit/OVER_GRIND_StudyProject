@@ -201,11 +201,6 @@ public class StageSelectManager : MonoBehaviour
 
     private void LateUpdate()
     {
-        if (m_enterActionRef.action.WasPressedThisFrame())
-        {
-            Debug.Log("OnClickSubmit");
-        }
-
         // 判定の前にカーソルを吸着させる
         UpdateCursorSnap();
 
@@ -269,7 +264,7 @@ public class StageSelectManager : MonoBehaviour
         // プレイできる場合
         if (m_stagePoints[m_hoveredIndex].canPlay)
         {
-            Debug.Log("OnCursor ReadyButton");
+            // Debug.Log("OnCursor ReadyButton");
 
             // ボタンにカーソルが合っている状態にする
             m_readyButton.OnCursor();
@@ -284,28 +279,40 @@ public class StageSelectManager : MonoBehaviour
         // カーソルが合わさっていなければ何もしない
         if (m_readyButton == null || !m_readyButton.m_isOnCursor || m_enterActionRef == null)
         {
-            Debug.Log("null cursor");
+            // Debug.Log("null cursor");
             return;
         }
 
         // 決定キーが押されたら
         if (m_enterActionRef.action.WasPressedThisFrame())
         {
-            Debug.Log("OnClickSubmit");
-
-            // キーが押されたときの処理を実行する
-            m_readyButton.OnClick();
-
             // 押された時点のインデックスを保持しておく
             int index = m_hoveredIndex;
+
+            // 関数が設定されている場合
+            if (m_stagePoints[index].onClickAction.GetPersistentEventCount() > 0)
+            {
+                // Debug.Log("ready On Click");
+
+                // キーが押されたときの処理を実行する
+                m_readyButton.OnClick();
+            }
+
             // キーが押されたときに呼ぶ関数を数秒後に実行する
             StartCoroutine(InvokeAfterDelay(index, m_invokeDelay));
         }
         // 決定ボタンが離されたら
         if (m_enterActionRef.action.WasReleasedThisFrame())
         {
-            // キーが離されたときの処理を実行する
-            m_readyButton.OnClickExit();
+            // 押された時点のインデックスを保持しておく
+            int index = m_hoveredIndex;
+
+            // 関数が設定されている場合
+            if (m_stagePoints[index].onClickAction.GetPersistentEventCount() > 0)
+            {
+                // キーが離されたときの処理を実行する
+                m_readyButton.OnClickExit();
+            }
         }
     }
 
@@ -465,7 +472,7 @@ public class StageSelectManager : MonoBehaviour
         m_arrowLineImage.enabled = false;
 
         // ボタンにカーソルが合っていない状態にする
-        Debug.Log("OnCursorExitReadyButton");
+        //Debug.Log("OnCursorExitReadyButton");
         m_readyButton.OnCursorExit();
     }
 
@@ -474,7 +481,7 @@ public class StageSelectManager : MonoBehaviour
         m_isWaiting = true;
         yield return new WaitForSeconds(delay);
 
-        if (m_stagePoints[index].onClickAction != null)
+        if (m_stagePoints[index].onClickAction.GetPersistentEventCount() > 0)
         {
             m_stagePoints[index].onClickAction.Invoke();
         }
