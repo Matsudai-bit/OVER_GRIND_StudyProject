@@ -71,4 +71,35 @@ public sealed class S1P2BossMissileStateParameters
         return m_missileParameterAsset != null &&
                m_launchCount > 0;
     }
+
+    /// <summary>
+    /// 発射数だけ変更したパラメータコピーを生成します。
+    /// </summary>
+    /// <param name="launchCount">発射数。</param>
+    /// <returns>生成したパラメータ。</returns>
+    public S1P2BossMissileStateParameters CreateCopyWithLaunchCount(
+        int launchCount)
+    {
+        S1P2BossMissileStateParameters parameters =
+            new();
+
+        parameters.m_missileParameterAsset =
+            m_missileParameterAsset;
+
+        parameters.m_launchCount =
+            Mathf.Max(
+                1,
+                launchCount);
+
+        parameters.m_launchInterval =
+            m_launchInterval;
+
+        parameters.m_missileUpwardDuration =
+            m_missileUpwardDuration;
+
+        parameters.m_idleDuration =
+            m_idleDuration;
+
+        return parameters;
+    }
 }
