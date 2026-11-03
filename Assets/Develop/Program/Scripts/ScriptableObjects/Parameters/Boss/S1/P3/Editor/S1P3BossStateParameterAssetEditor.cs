@@ -157,6 +157,19 @@ public sealed class S1P3BossStateParameterAssetEditor : Editor
             return;
         }
 
+        EditorGUILayout.LabelField(
+    "発射",
+    EditorStyles.boldLabel);
+
+        DrawRelativeProperty(
+            m_dreadAttackProperty,
+            "m_launchCount",
+            "発射数",
+            "1回のドレッド攻撃で発射するオイルの総数です。");
+
+        EditorGUILayout.Space(
+            4.0f);
+
         EditorGUILayout.BeginVertical(
             EditorStyles.helpBox);
 
