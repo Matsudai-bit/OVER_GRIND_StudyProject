@@ -902,7 +902,7 @@ PlayableDirector:
   - key: {fileID: 8264041056139026510, guid: 624c261be50b4a744b903c2acd6aca1a, type: 2}
     value: {fileID: 645027117}
   - key: {fileID: -5315925896785843497, guid: 624c261be50b4a744b903c2acd6aca1a, type: 2}
-    value: {fileID: 0}
+    value: {fileID: 1110780235}
   m_ExposedReferences:
     m_References:
     - 89acc365148b50e4ba767c3ee9e4718e: {fileID: 32687432}
@@ -989,9 +989,13 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
+  m_stopMoveAction:
+    m_PersistentCalls:
+      m_Calls: []
   m_keepSelectionWhenLocked: 0
   m_lockOnStart: 1
   m_isVerticalNavigation: 1
+  m_isLockedCursorAnimation: 0
   m_navigateActionRef: {fileID: -8784545083839296357, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_enterActionRef: {fileID: 392368643174621059, guid: 052faaac586de48259a63d0c4782560b, type: 3}
 --- !u!1 &645027113
@@ -1302,7 +1306,7 @@ GameObject:
   - component: {fileID: 902660709}
   - component: {fileID: 902660708}
   m_Layer: 0
-  m_Name: InputManager
+  m_Name: PauseWindowController
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1330,6 +1334,7 @@ MonoBehaviour:
   m_buttonSelector: {fileID: 564104928}
   m_cursor: {fileID: 1513165650}
   m_cursorInitialPosition: {x: 0, y: 0}
+  m_escapeActionRef: {fileID: 7727032971491509709, guid: 052faaac586de48259a63d0c4782560b, type: 3}
 --- !u!4 &902660709
 Transform:
   m_ObjectHideFlags: 0
@@ -1402,7 +1407,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: d272f0ccd6cd0a04fb38a64b654a3bbd, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 0bd1e6dad5f9cbb4da12e69cacf37eeb, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -1429,6 +1434,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1110780234}
+  - component: {fileID: 1110780235}
   m_Layer: 5
   m_Name: CursorAnchor
   m_TagString: Untagged
@@ -1453,9 +1459,31 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -172.7, y: 66.4}
+  m_AnchoredPosition: {x: -172.7, y: 70}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!95 &1110780235
+Animator:
+  serializedVersion: 7
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1110780233}
+  m_Enabled: 1
+  m_Avatar: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: 71511b26ce6dba44381a10a11b8a3612, type: 2}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_StabilizeFeet: 0
+  m_AnimatePhysics: 0
+  m_WarningMessage: 
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0
 --- !u!1 &1201822280
 GameObject:
   m_ObjectHideFlags: 0
@@ -2037,7 +2065,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -172.7, y: 66.4}
+  m_AnchoredPosition: {x: 5, y: 0}
   m_SizeDelta: {x: 26, y: 22}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1513165652
@@ -2547,7 +2575,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 4b98892512aed994ba1cb3de9ddeb22a, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 12a7c0c04bf6e6046871ab23369471bb, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -2912,7 +2940,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 14cbf7508168e52409f5d7a41ea47eaa, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 32f771b8d8486474c8082e1166256cc2, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
