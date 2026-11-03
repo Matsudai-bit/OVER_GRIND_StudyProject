@@ -22,6 +22,18 @@ public sealed class ManualTextData : ScriptableObject
     [TextArea(2, 8)]
     private string m_secondBody;
 
+    [SerializeField, Header("1行目の追加コマンド（左側・任意）")]
+    private string m_additionalCommandAssetName;
+
+    [SerializeField, Header("2行目の追加コマンド（左側・任意）")]
+    private string m_secondAdditionalCommandAssetName;
+
+    /// <summary>1行目の左側に追加するコマンド名。</summary>
+    public string AdditionalCommandAssetName => m_additionalCommandAssetName;
+
+    /// <summary>2行目の左側に追加するコマンド名。</summary>
+    public string SecondAdditionalCommandAssetName => m_secondAdditionalCommandAssetName;
+
     /// <summary>
     /// 表示するコマンドDataアセット名を取得します。
     /// </summary>
