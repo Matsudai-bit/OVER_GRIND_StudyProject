@@ -97,12 +97,16 @@ public class MapController : MonoBehaviour
     {
         // 有効にする
         m_navigateActionRef?.action.Enable();
+        m_zoomInRef?.action.Enable();
+        m_zoomOutRef?.action.Enable();
     }
 
     private void OnDisable()
     {
-        // 無効にする
-        m_navigateActionRef?.action.Disable();
+        //// 無効にする
+        //m_navigateActionRef?.action.Disable();
+        //m_zoomInRef?.action.Disable();
+        //m_zoomOutRef?.action.Disable();
     }
 
     private void Start()

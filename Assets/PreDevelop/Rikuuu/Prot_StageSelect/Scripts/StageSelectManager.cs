@@ -10,7 +10,7 @@ public struct StageInfomation
     public UnityEngine.UI.Image stagePoint;
 
     // ステージ番号
-    public int stageNumber;
+    public string stageNumber;
     // セクター番号テクスチャ
     public Sprite stageSectorNumber;
     // ハイドイメージコンポーネント
@@ -29,9 +29,14 @@ public struct StageInfomation
 
     // プレイ可能かどうか
     public bool canPlay;
+    // １度クリアしたかどうか
+    public bool isCleared;
 
     // 押下されたときに呼ぶ関数
     public UnityEngine.Events.UnityEvent onClickAction;
+
+    // 半分のサイズで表示するか
+    public bool isHalfSize;
 }
 
 /// <summary>
@@ -127,6 +132,9 @@ public class StageSelectManager : MonoBehaviour
     // 選択不可なボタンテクスチャ
     [SerializeField]
     private Sprite m_unselectableButtonTexture;
+    // クリア済ボタンテクスチャ
+    [SerializeField]
+    private Sprite m_clearedButtonTexture;
 
     [Header("READYボタン")]
     // 準備完了ボタン
@@ -175,8 +183,30 @@ public class StageSelectManager : MonoBehaviour
             // 選択できる場合
             if (m_stagePoints[i].canPlay)
             {
-                // 選択可のアイコンを表示する
-                m_stagePoints[i].stagePoint.sprite = m_selectableButtonexture;
+                // 既にクリア済の場合
+                if (m_stagePoints[i].isCleared)
+                {
+                    // クリア済のアイコンを表示する
+                    m_stagePoints[i].stagePoint.sprite = m_clearedButtonTexture;
+                }
+                else
+                {
+                    // 選択可のアイコンを表示する
+                    m_stagePoints[i].stagePoint.sprite = m_selectableButtonexture;
+                }
+
+                // 画像サイズを整える
+                m_stagePoints[i].stagePoint.SetNativeSize();
+                // 半分のサイズにする場合
+                if(m_stagePoints[i].isHalfSize)
+                {
+                    RectTransform rect = m_stagePoints[i].stagePoint.rectTransform;
+
+                    Vector2 size = rect.rect.size;
+
+                    rect.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, size.x * 0.5f);
+                    rect.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, size.y * 0.5f);
+                }
 
                 // ハイドイメージコンポーネントを非表示にする
                 if (m_stagePoints[i].hideImage)
@@ -232,7 +262,7 @@ public class StageSelectManager : MonoBehaviour
         }
 
         // ステージ番号の表示
-        m_stageNumber.text = "STAGE-" + m_stagePoints[m_hoveredIndex].stageNumber.ToString();
+        m_stageNumber.text = "STAGE-" + m_stagePoints[m_hoveredIndex].stageNumber;
         // セクター番号の表示
         m_sectorNumber.sprite = m_stagePoints[m_hoveredIndex].stageSectorNumber;
 
