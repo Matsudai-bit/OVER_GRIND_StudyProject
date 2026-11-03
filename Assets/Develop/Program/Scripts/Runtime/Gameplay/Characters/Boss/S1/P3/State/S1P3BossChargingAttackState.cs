@@ -489,7 +489,7 @@ public sealed class S1P3BossChargingAttackState :
 
         Owner.AnimationController.SetInteger(
             m_animationPhaseIntID,
-            (int)BossActionPhase.PREPARATION);
+            -1);
 
         Owner.AnimationController.SetInteger(
             m_animationTurnDirectionIntID,

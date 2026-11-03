@@ -39,8 +39,8 @@ public enum EffectAnchorId
     // カスタムアンカー（150以上）
     // ==============================
 
-    CUSTOM_01 = 11,
-    CUSTOM_02 = 12,
-    CUSTOM_03 = 13,
-    CUSTOM_04 = 14
+    CUSTOM_01 = 13,
+    CUSTOM_02 = 14,
+    CUSTOM_03 = 15,
+    CUSTOM_04 = 16
 }

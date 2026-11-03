@@ -74,7 +74,6 @@ public sealed class S1P3BossStateParameterAssetEditor : Editor
 
         serializedObject.ApplyModifiedProperties();
     }
-
     /// <summary>
     /// エネルギー砲状態のパラメータを描画します。
     /// </summary>
@@ -95,39 +94,29 @@ public sealed class S1P3BossStateParameterAssetEditor : Editor
             EditorStyles.helpBox);
 
         EditorGUILayout.HelpBox(
-            "予備動作 → 発射 → 終了動作の3段階でAnimationを制御します。\n" +
-            "直線発射とPlayer追従はどちらも発射状態として扱います。",
+            "エネルギー砲の開始・終了タイミングは" +
+            "AnimationEventで制御します。\n" +
+            "HITBOX_ENABLE：照射開始\n" +
+            "HITBOX_DISABLE：照射終了\n" +
+            "ANIMATION_END：State終了",
             MessageType.Info);
 
-        DrawRelativeProperty(
-            m_energyCannonProperty,
-            "m_preparationDuration",
-            "予備動作時間",
-            "エネルギー砲を発射する前の予備動作時間です。");
+        EditorGUILayout.LabelField(
+            "照射",
+            EditorStyles.boldLabel);
 
         DrawRelativeProperty(
             m_energyCannonProperty,
             "m_straightFireDuration",
-            "直線発射時間",
-            "正面方向へエネルギー砲を放つ時間です。");
-
-        DrawRelativeProperty(
-            m_energyCannonProperty,
-            "m_trackingDuration",
-            "追従時間",
-            "発射後にPlayer方向へ追従する時間です。");
+            "正面照射時間",
+            "HITBOX_ENABLE後、Player追従を開始するまで" +
+            "正面方向を維持する時間です。");
 
         DrawRelativeProperty(
             m_energyCannonProperty,
             "m_trackingSpeed",
             "追従速度",
             "Player方向へ向ける回転速度です。");
-
-        DrawRelativeProperty(
-            m_energyCannonProperty,
-            "m_endDuration",
-            "終了動作時間",
-            "発射終了後のAnimationを再生する時間です。");
 
         EditorGUILayout.Space();
 
@@ -139,7 +128,8 @@ public sealed class S1P3BossStateParameterAssetEditor : Editor
             m_energyCannonProperty,
             "m_animationActiveBoolName",
             "Active Bool",
-            "エネルギー砲攻撃全体が実行中であることを示すAnimator Boolです。");
+            "エネルギー砲攻撃全体が実行中であることを示す" +
+            "Animator Boolです。");
 
         DrawRelativeProperty(
             m_energyCannonProperty,
