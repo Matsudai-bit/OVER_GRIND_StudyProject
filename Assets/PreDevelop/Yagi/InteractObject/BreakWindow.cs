@@ -33,6 +33,7 @@ public sealed class BreakWindow : MonoBehaviour, IDirectionalDamageable, IAttack
     /// <summary>指定した破片だけに物理判定を準備します。</summary>
     private void Awake()
     {
+        // Pキー・直接呼び出しでは窓の前方へ飛ばします。
         m_launchDirection = transform.forward;
         int attackLayer = LayerMask.NameToLayer("InteractObject");
         if (m_breakableRoots == null) return;
@@ -120,7 +121,7 @@ public sealed class BreakWindow : MonoBehaviour, IDirectionalDamageable, IAttack
             foreach (MeshCollider collider in fragment.GetComponents<MeshCollider>())
                 collider.convex = true;
             fragment.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
-            fragment.linearVelocity = -m_launchDirection * m_launchSpeed
+            fragment.linearVelocity = m_launchDirection * m_launchSpeed
                 + Vector3.up * m_upwardSpeed + Random.insideUnitSphere * m_spreadSpeed;
             fragment.angularVelocity = Random.onUnitSphere * m_rotationSpeed;
             Destroy(fragment.gameObject, m_fragmentLifetime);
