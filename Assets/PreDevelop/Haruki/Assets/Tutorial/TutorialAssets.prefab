@@ -180648,6 +180648,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 9083655284800043326}
+  - component: {fileID: 426790001}
   m_Layer: 0
   m_Name: BreakWindow
   m_TagString: Untagged
@@ -180655,6 +180656,30 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
+--- !u!114 &426790001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3433138566613056523}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 426b79c732584c9f8695302a89a927d1, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::BreakWindow
+  m_breakableRoots:
+  - {fileID: 8246292579328789519}
+  - {fileID: 1990922765664946207}
+  m_hideOnBreak:
+  - {fileID: 4043498259479612754}
+  - {fileID: 4112580660153836521}
+  - {fileID: 7104740339985807715}
+  m_launchSpeed: 5
+  m_upwardSpeed: 2
+  m_spreadSpeed: 2
+  m_rotationSpeed: 4
+  m_fragmentLifetime: 8
 --- !u!4 &9083655284800043326
 Transform:
   m_ObjectHideFlags: 0

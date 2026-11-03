@@ -19845,6 +19845,8 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 3481882220749021934}
+  - component: {fileID: 2691567874087960729}
+  - component: {fileID: 4701592210430112832}
   - component: {fileID: 8451364859350296863}
   - component: {fileID: 6175349580872048371}
   - component: {fileID: 897907600775467380}
@@ -19865,7 +19867,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0.25874883, y: 0.15336064, z: -0.9408123, w: 0.15621133}
   m_LocalPosition: {x: -14.015233, y: 0.6452515, z: 0.36955416}
-  m_LocalScale: {x: 0.5, y: 0.5, z: 0.5}
+  m_LocalScale: {x: 0.5, y: 0.49999973, z: 0.49999982}
   m_ConstrainProportionsScale: 1
   m_Children:
   - {fileID: 43838153033489415}
@@ -19874,6 +19876,33 @@ Transform:
   - {fileID: 475844082382185430}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 21.679, y: -28.188, z: -166.65}
+--- !u!114 &2691567874087960729
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8129578620837274570}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2da0b11e846b27b47838bea466a671dd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EffectAttachmentSlot
+  m_anchorId: 7
+  m_sourceIndex: 0
+--- !u!114 &4701592210430112832
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8129578620837274570}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d5eaf77072ee49242b451fda2459577f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EffectInstance
+  m_rootParticle: {fileID: 8451364859350296863}
 --- !u!198 &8451364859350296863
 ParticleSystem:
   m_ObjectHideFlags: 0
@@ -24696,7 +24725,7 @@ ParentConstraint:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 8129578620837274570}
-  m_Enabled: 0
+  m_Enabled: 1
   serializedVersion: 2
   m_Weight: 1
   m_TranslationAtRest: {x: 0.20461076, y: 0, z: 0.000047061156}

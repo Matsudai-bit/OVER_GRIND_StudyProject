@@ -279,7 +279,7 @@ public sealed class S1P2BossHeatVentState :
 
         m_currentState =
             HeatExhaustState.NONE;
-
+        StartCoolTimeIfSucceeded();
         Owner.SetStateExecutionStatus(
             StateExecutionStatus.SUCCEEDED);
     }

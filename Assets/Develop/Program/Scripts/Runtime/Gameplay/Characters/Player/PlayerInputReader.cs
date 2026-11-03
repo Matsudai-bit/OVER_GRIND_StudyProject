@@ -128,6 +128,13 @@ public sealed class PlayerInputReader : MonoBehaviour
     /// </summary>
     public bool IsInputEnabled => m_isInputEnabled;
 
+    /// <summary>Player操作用のAction Mapが有効で、移動入力を受け付けられるか取得します。</summary>
+    public bool IsControlAvailable =>
+        m_isInputEnabled &&
+        m_moveActionReference != null &&
+        m_moveActionReference.action != null &&
+        m_moveActionReference.action.enabled;
+
     /// <summary>
     /// Vブースト入力が押され続けているか取得します。
     /// </summary>

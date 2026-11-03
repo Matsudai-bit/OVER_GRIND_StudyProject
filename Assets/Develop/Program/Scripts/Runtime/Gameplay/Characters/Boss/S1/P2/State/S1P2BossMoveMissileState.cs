@@ -49,6 +49,8 @@ public sealed class S1P2BossMoveMissileState :
     // Animation完了
     private bool m_isAnimationCompleted;
 
+    private EffectHandle m_effectHandle;
+
     /// <summary>
     /// 移動ミサイル攻撃を開始します。
     /// </summary>
@@ -106,6 +108,7 @@ public sealed class S1P2BossMoveMissileState :
 
             return;
         }
+        m_effectHandle = m_commonReferences.EffectEmitter.Play(EffectId.S1P2_BOSS_SMOKE);
 
         /*
          * ミサイルはここでは準備のみ行います。
@@ -234,6 +237,8 @@ public sealed class S1P2BossMoveMissileState :
 
         Owner.Motor?
             .StopHorizontalMovement();
+
+        m_effectHandle.Stop();
 
         TryCompleteState();
     }
@@ -377,7 +382,6 @@ public sealed class S1P2BossMoveMissileState :
 
         TryCompleteState();
     }
-
     /// <summary>
     /// 移動・ミサイル・Animationが
     /// すべて終了した場合にStateを完了します。
@@ -394,10 +398,15 @@ public sealed class S1P2BossMoveMissileState :
         Owner.Motor?
             .StopHorizontalMovement();
 
+        /*
+         * SUCCEEDEDへ変更する前に
+         * 必ずクールタイムを開始します。
+         */
+        StartMissileCoolTime();
+
         Owner.SetStateExecutionStatus(
             StateExecutionStatus.SUCCEEDED);
     }
-
     /// <summary>
     /// 必要な参照とパラメータを取得します。
     /// </summary>
@@ -597,5 +606,34 @@ public sealed class S1P2BossMoveMissileState :
 
         Owner.SetStateExecutionStatus(
             StateExecutionStatus.FAILED);
+    }
+    /// <summary>
+    /// 移動ミサイル攻撃で使用した
+    /// ミサイル攻撃のクールタイムを開始します。
+    /// </summary>
+    private void StartMissileCoolTime()
+    {
+        if (Owner == null ||
+            m_references == null ||
+            m_references.DecisionParameterAsset == null)
+        {
+            return;
+        }
+
+        BossStateCoolTimeManager coolTimeManager =
+            Owner.GetComponent<
+                BossStateCoolTimeManager>();
+
+        if (coolTimeManager == null)
+        {
+            return;
+        }
+
+        coolTimeManager
+            .StartCoolTime<S1P2BossMissileState>(
+                m_references
+                    .DecisionParameterAsset
+                    .Missile
+                    .CoolTime);
     }
 }
