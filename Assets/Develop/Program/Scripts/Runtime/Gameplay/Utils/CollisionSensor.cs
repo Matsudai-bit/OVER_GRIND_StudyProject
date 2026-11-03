@@ -32,6 +32,18 @@ public sealed class CollisionSensor : MonoBehaviour
         CollisionDetected?.Invoke(hitPosition);
     }
 
+    private void OnCollisionEnter(Collision collision)
+    {
+        var hitObject = collision.gameObject;
+        var hitPosition = collision.contacts[0].point;
+        if (!IsTargetLayer(hitObject.layer))
+        {
+            return;
+        }
+
+        CollisionDetected?.Invoke(hitPosition);
+    }
+
     /// <summary>
     /// ëŒè€LayerÇ©ämîFÇµÇ‹Ç∑ÅB
     /// </summary>
