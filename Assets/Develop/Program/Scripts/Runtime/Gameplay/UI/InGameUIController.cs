@@ -18,6 +18,10 @@ public sealed class InGameUIController : MonoBehaviour
     [SerializeField]
     private GameObject m_dialogueRoot;
 
+    // ポーズ表示ルート
+    [SerializeField]
+    private GameObject m_pauseRoot;
+
     // リザルト表示ルート
     [SerializeField]
     private GameObject m_resultRoot;
@@ -98,6 +102,17 @@ public sealed class InGameUIController : MonoBehaviour
     }
 
     /// <summary>
+    /// ポーズUIの表示状態を設定します。
+    /// </summary>
+    /// <param name="isVisible">表示するか。</param>
+    public void SetPauseVisible(bool isVisible)
+    {
+        SetRootActive(
+            m_pauseRoot,
+            isVisible);
+    }
+
+    /// <summary>
     /// リザルトUIの表示状態を設定します。
     /// </summary>
     /// <param name="isVisible">表示するか。</param>
@@ -120,13 +135,14 @@ public sealed class InGameUIController : MonoBehaviour
     }
 
     /// <summary>
-    /// インゲームUIをすべて非表示にします。
+    /// 管理対象のUIをすべて非表示にします。
     /// </summary>
     public void HideAll()
     {
         SetHudVisible(false);
         SetTutorialVisible(false);
         SetDialogueVisible(false);
+        SetPauseVisible(false);
         SetResultVisible(false);
         SetGameOverVisible(false);
     }
@@ -141,17 +157,35 @@ public sealed class InGameUIController : MonoBehaviour
             m_gameFlowStateChangedEvent.RegisterListener(
                 OnGameFlowStateChanged);
         }
+        else
+        {
+            Debug.LogWarning(
+                $"{nameof(GameFlowStateChangedEvent)} が設定されていません。",
+                this);
+        }
 
         if (m_gameplayModeChangedEvent != null)
         {
             m_gameplayModeChangedEvent.RegisterListener(
                 OnGameplayModeChanged);
         }
+        else
+        {
+            Debug.LogWarning(
+                $"{nameof(GameplayModeChangedEvent)} が設定されていません。",
+                this);
+        }
 
         if (m_pauseChangedEvent != null)
         {
             m_pauseChangedEvent.RegisterListener(
                 OnPauseChanged);
+        }
+        else
+        {
+            Debug.LogWarning(
+                $"{nameof(PauseChangedEvent)} が設定されていません。",
+                this);
         }
     }
 
@@ -222,10 +256,10 @@ public sealed class InGameUIController : MonoBehaviour
     /// </summary>
     private void ApplyVisibility()
     {
-        // ポーズ中はインゲームUIを非表示
+        // ポーズ中はポーズUIを表示
         if (m_isPaused)
         {
-            HideAll();
+            ApplyPauseVisibility();
             return;
         }
 
@@ -310,6 +344,16 @@ public sealed class InGameUIController : MonoBehaviour
 
         // QTE中もセリフ表示は許可
         SetDialogueVisible(true);
+    }
+
+    /// <summary>
+    /// ポーズ中のUI表示状態を設定します。
+    /// </summary>
+    private void ApplyPauseVisibility()
+    {
+        HideAll();
+
+        SetPauseVisible(true);
     }
 
     /// <summary>

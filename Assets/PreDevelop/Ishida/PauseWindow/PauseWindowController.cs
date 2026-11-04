@@ -108,6 +108,7 @@ public class PauseWindowController : MonoBehaviour
 
     public void Open()
     {
+        Time.timeScale = 0.0f;
         m_timer = 0;
 
         m_directorFadeOut.Stop();
@@ -155,8 +156,14 @@ public class PauseWindowController : MonoBehaviour
 
         m_isFadeOutPlaying = true;
         m_isPauseActive = false;
-    }
 
+        Time.timeScale = 1.0f;
+    }
+    private void OnDisable()
+    {
+        Time.timeScale = 1.0f;
+
+    }
     private void OnFadeInFinished()
     {
         if (m_cursor != null)

@@ -52,6 +52,7 @@ MonoBehaviour:
   - {fileID: 0}
   - {fileID: 0}
   - {fileID: 0}
+  - {fileID: 0}
 --- !u!1 &356619575698810830
 GameObject:
   m_ObjectHideFlags: 0
@@ -150,16 +151,16 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameDirector
   m_gameProgressElapsedTimer: {fileID: 0}
-  m_gameFlowStateChangedEvent: {fileID: 11400000, guid: 3c24164873d50a4479bdb3f6441eb8b1, type: 2}
   m_gameFlowController: {fileID: 2242521604457839927}
+  m_gameplayModeController: {fileID: 5548452651704436227}
   m_sequenceController: {fileID: 3333782683411042572}
-  m_sequenceAsset: {fileID: 11400000, guid: 115b408f93ab5b4428150b38050da4f6, type: 2}
-  m_modeController: {fileID: 5548452651704436227}
+  m_introSequenceAsset: {fileID: 11400000, guid: 115b408f93ab5b4428150b38050da4f6, type: 2}
+  m_gameFlowStateChangedEvent: {fileID: 11400000, guid: 3c24164873d50a4479bdb3f6441eb8b1, type: 2}
   m_gameplaySequenceChangedEvent: {fileID: 11400000, guid: c19d0671df7fde64196577670e2de7ef, type: 2}
   m_playerHealth: {fileID: 0}
-  bossPhaseController: {fileID: 0}
-  nextStageSceneName: CreditScene
-  stageSelectSceneName: StageSelectScene
+  m_bossPhaseController: {fileID: 0}
+  m_nextStageSceneName: CreditScene
+  m_stageSelectSceneName: StageSelectScene
 --- !u!1 &847114433165207616
 GameObject:
   m_ObjectHideFlags: 0
@@ -321,7 +322,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d08ad1eb40a099842821f6841c686133, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PauseInputReader
-  m_pauseActionReference: {fileID: 0}
+  m_pauseActionReference: {fileID: 2608373035165194785, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_pauseRequestEvent: {fileID: 11400000, guid: ac58557b95b7dca4290f0395fcfe969c, type: 2}
 --- !u!1 &7597259925633240252
 GameObject:
@@ -367,7 +368,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 734408da4e186084f93f198e02228b1d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameFlowController
-  m_initialState: 2
+  m_initialState: 1
   m_stateChangedEvent: {fileID: 11400000, guid: 3c24164873d50a4479bdb3f6441eb8b1, type: 2}
 --- !u!1 &7706326280041637164
 GameObject:
