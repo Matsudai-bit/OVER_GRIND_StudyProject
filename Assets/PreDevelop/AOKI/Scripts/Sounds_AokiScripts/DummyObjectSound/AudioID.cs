@@ -6,4 +6,8 @@ public enum AudioID
     Hayate,
     K,
     ki,
+    missileLoad,
+    missileFire,
+    misileLoop,
+    exprosionPower,
 }

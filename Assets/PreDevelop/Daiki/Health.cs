@@ -2,7 +2,7 @@ using System;
 using UnityEngine;
 
 /// <summary>
-/// オブジェクトのHPを管理します。
+/// オブジェクトのHPを管理し、被弾・死亡時に CameraShakeManager 経由でカメラ振動を実行します。
 /// </summary>
 [DisallowMultipleComponent]
 public sealed class Health : MonoBehaviour, IDamageable
@@ -19,7 +19,14 @@ public sealed class Health : MonoBehaviour, IDamageable
     private int m_currentHealth;
 
     [SerializeField, Header("HPパラメータ")]
-    HealthValueParameterAsset m_healthValueParameterAsset;
+    private HealthValueParameterAsset m_healthValueParameterAsset;
+
+    [Header("Camera Shake Settings")]
+    [SerializeField, Header("被弾時の振動プリセット")]
+    private ShakePreset m_damageShakePreset;
+
+    [SerializeField, Header("死亡時の振動プリセット")]
+    private ShakePreset m_deathShakePreset;
 
     // 初期化が完了しているか
     private bool m_isInitialized;
@@ -70,6 +77,12 @@ public sealed class Health : MonoBehaviour, IDamageable
         if (damage <= 0 || IsDead)
         {
             return;
+        }
+
+        // 被弾時のカメラ振動を実行
+        if (CameraShakeManager.Instance != null && m_damageShakePreset != null)
+        {
+            CameraShakeManager.Instance.Play(m_damageShakePreset, transform.position);
         }
 
         SetCurrentHealth(m_currentHealth - damage);
@@ -195,6 +208,12 @@ public sealed class Health : MonoBehaviour, IDamageable
 
         if (wasAlive && IsDead)
         {
+            // 死亡時のカメラ振動を実行
+            if (CameraShakeManager.Instance != null && m_deathShakePreset != null)
+            {
+                CameraShakeManager.Instance.Play(m_deathShakePreset, transform.position);
+            }
+
             Died?.Invoke();
         }
     }
@@ -208,12 +227,11 @@ public sealed class Health : MonoBehaviour, IDamageable
             m_currentHealth,
             m_maxHealth);
     }
-  
+
 #if UNITY_EDITOR
     private void OnValidate()
     {
         m_maxHealth = Mathf.Max(1, m_maxHealth);
     }
-
 #endif
 }

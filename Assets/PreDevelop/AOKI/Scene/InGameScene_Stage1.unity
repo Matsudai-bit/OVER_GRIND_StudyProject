@@ -1381,6 +1381,7 @@ Transform:
   - {fileID: 322356130}
   - {fileID: 1641650835}
   - {fileID: 67616462}
+  - {fileID: 632460556}
   m_Father: {fileID: 7398227328028915147}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &76745701
@@ -1399,17 +1400,6 @@ MonoBehaviour:
   m_missileParent: {fileID: 36909177}
   m_launchSites:
   - {fileID: 43650700}
-  - {fileID: 1300844847}
-  - {fileID: 175624889}
-  - {fileID: 1443433296}
-  - {fileID: 627243839}
-  - {fileID: 892768705}
-  - {fileID: 640910726}
-  - {fileID: 1426194841}
-  - {fileID: 977918760}
-  - {fileID: 338085289}
-  - {fileID: 1499813090}
-  - {fileID: 799539600}
 --- !u!114 &76745702
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8022,7 +8012,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 463604555}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 16ea573c8425a1e47af23b60f3bfd8ff, type: 3}
   m_Name: 
@@ -10414,7 +10404,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 632460555}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -10424,7 +10414,7 @@ Transform:
   - {fileID: 216007203}
   - {fileID: 1382610158}
   - {fileID: 1553454420}
-  m_Father: {fileID: 7398227328028915147}
+  m_Father: {fileID: 76745700}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!137 &637469065 stripped
 SkinnedMeshRenderer:
@@ -20199,6 +20189,14 @@ PrefabInstance:
       propertyPath: AutoEnableInputs
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 1405796748971180126, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
+      propertyPath: m_deathShakePreset
+      value: 
+      objectReference: {fileID: 11400000, guid: 12db2e24858af3548b9c25c1eca77da9, type: 2}
+    - target: {fileID: 1405796748971180126, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
+      propertyPath: m_damageShakePreset
+      value: 
+      objectReference: {fileID: 11400000, guid: 06fd4aca34db432468d6748fef9623ea, type: 2}
     - target: {fileID: 1812006397312950562, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
       propertyPath: m_Enabled
       value: 1
@@ -26065,6 +26063,50 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1446832424}
   m_Mesh: {fileID: 0}
+--- !u!1 &1448187519
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1448187521}
+  - component: {fileID: 1448187520}
+  m_Layer: 0
+  m_Name: CameraManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1448187520
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1448187519}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4af38c447308b744bb845d466d35d487, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CameraShakeManager
+--- !u!4 &1448187521
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1448187519}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -94.37289, y: 0.98372, z: 53.77035}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1454723174 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 0982d513f78fb25499494fd24e700a69, type: 3}
@@ -27615,7 +27657,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1558546822}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 6e911bd683dba2945b7b5669d969bf22, type: 3}
   m_Name: 
@@ -43840,6 +43882,8 @@ MonoBehaviour:
   m_maxHealth: 100
   m_currentHealth: 0
   m_healthValueParameterAsset: {fileID: 0}
+  m_damageShakePreset: {fileID: 0}
+  m_deathShakePreset: {fileID: 0}
 --- !u!4 &2714766117133717401
 Transform:
   m_ObjectHideFlags: 0
@@ -48014,7 +48058,7 @@ MonoBehaviour:
   m_motor: {fileID: 0}
   m_attackHitboxRegistry: {fileID: 0}
   m_bossNavigation: {fileID: 0}
-  m_currentStatus: 1
+  m_currentStatus: 2
   m_attackDamageController: {fileID: 0}
 --- !u!4 &5284158110194002364
 Transform:
@@ -49399,12 +49443,21 @@ MonoBehaviour:
   - rid: 6739893442097447817
   - rid: 6739893442097447818
   - rid: 7476095671791518357
+  - rid: 2319239504863952971
   m_OriginalGraph: {fileID: -4560753241107861451, guid: 364c430831fbf0b4c968da46a47a4dfd, type: 2}
   m_IsInitialised: 0
   m_IsStarted: 0
   references:
     version: 2
     RefIds:
+    - rid: 2319239504863952971
+      type: {class: 'BlackboardVariable`1[[S1BossStateID, Assembly-CSharp]]', ns: Unity.Behavior, asm: Unity.Behavior}
+      data:
+        GUID:
+          m_Value0: 5891142197556504092
+          m_Value1: 10062726550999683483
+        Name: S1BossStateID
+        m_Value: 19
     - rid: 6739893442097447814
       type: {class: 'BlackboardVariable`1[[UnityEngine.GameObject, UnityEngine.CoreModule]]', ns: Unity.Behavior, asm: Unity.Behavior}
       data:
@@ -51437,7 +51490,6 @@ Transform:
   - {fileID: 1253318807802028452}
   - {fileID: 294545610}
   - {fileID: 76745700}
-  - {fileID: 632460556}
   - {fileID: 910318875}
   m_Father: {fileID: 2371253577344894681}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -54784,6 +54836,8 @@ MonoBehaviour:
   m_maxHealth: 10
   m_currentHealth: 0
   m_healthValueParameterAsset: {fileID: 0}
+  m_damageShakePreset: {fileID: 0}
+  m_deathShakePreset: {fileID: 0}
 --- !u!4 &9171824793739822550
 Transform:
   m_ObjectHideFlags: 0
@@ -54827,3 +54881,4 @@ SceneRoots:
   - {fileID: 1558546824}
   - {fileID: 1838682862}
   - {fileID: 463604557}
+  - {fileID: 1448187521}
