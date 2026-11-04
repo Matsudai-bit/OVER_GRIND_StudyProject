@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -54,6 +55,15 @@ public sealed class S1P2BossReferences :
     [SerializeField]
     private GameplaySequenceAsset
         m_destructionSequenceAsset;
+    // 崩壊時にミサイルを当てるボス自身の地点
+    [SerializeField, Header("崩壊ミサイル対象")]
+    private List<Transform> m_collapseMissileTargets =
+        new();
+    /// <summary>
+    /// 崩壊時の自己攻撃ミサイル対象地点を取得します。
+    /// </summary>
+    public IReadOnlyList<Transform> CollapseMissileTargets =>
+        m_collapseMissileTargets;
 
     /// <summary>
     /// State実行パラメータを取得します。
