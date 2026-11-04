@@ -53,6 +53,8 @@ public class PauseWindowController : MonoBehaviour
 
         SetUIActive(false);
         m_buttonSelector.LockCursor();
+
+        Open();
     }
 
     void Update()
