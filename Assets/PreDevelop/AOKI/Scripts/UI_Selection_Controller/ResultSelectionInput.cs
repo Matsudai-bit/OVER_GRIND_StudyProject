@@ -87,6 +87,12 @@ public class ResultSelectionInput : MonoBehaviour
         {
             PlayEntranceAnimation();
         }
+        else
+        {
+            // フェードイン演出がない場合は、開始時に直接初期状態を適用する
+            OnSelectStageSelect();
+            OnDeselectNextStage();
+        }
     }
 
     /// <summary>
@@ -183,7 +189,9 @@ public class ResultSelectionInput : MonoBehaviour
 
         entranceSequence.OnComplete(() =>
         {
-            m_isEntrancePlaying = false;
+            m_isEntrancePlaying = false; // フェードイン完了フラグを下ろす
+            OnSelectStageSelect(); // Stage Selectのアニメーションを開始
+            OnDeselectNextStage(); // Next Stageを非選択状態にする
         });
     }
 
