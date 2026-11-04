@@ -9,4 +9,6 @@ public abstract class SceneTransitionEffect : MonoBehaviour, ISceneTransitionEff
      abstract public bool IsTransitioning();
 
     abstract public void StartTransition(Action onComplete);
+
+
 }

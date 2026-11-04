@@ -207,11 +207,9 @@ public sealed class S1P3BossChargingAttackState :
     /// <summary>
     /// 現在の突進完了を処理します。
     /// </summary>
-    /// <summary>
-    /// 現在の突進完了を処理します。
-    /// </summary>
     private void CompleteCurrentCharge()
     {
+
         m_currentAnimationTurnDirection =
             null;
 
@@ -223,12 +221,6 @@ public sealed class S1P3BossChargingAttackState :
             Owner.AnimationController?.SetBool(
                 m_animationActiveBoolID,
                 false);
-
-            /*
-             * SUCCEEDEDへ変更する前に、
-             * 必ずクールタイムを開始します。
-             */
-            StartCoolTime();
 
             Owner.SetStateExecutionStatus(
                 StateExecutionStatus.SUCCEEDED);
@@ -497,7 +489,7 @@ public sealed class S1P3BossChargingAttackState :
 
         Owner.AnimationController.SetInteger(
             m_animationPhaseIntID,
-            -1);
+            (int)BossActionPhase.PREPARATION);
 
         Owner.AnimationController.SetInteger(
             m_animationTurnDirectionIntID,
@@ -557,6 +549,7 @@ public sealed class S1P3BossChargingAttackState :
     /// </summary>
     protected override void OnExitState()
     {
+        StartCoolTimeIfSucceeded();
 
         ReleaseChargeExecutor();
 
@@ -610,14 +603,18 @@ public sealed class S1P3BossChargingAttackState :
         m_chargeExecutor =
             null;
     }
+
     /// <summary>
-    /// 連続突進攻撃のクールタイムを開始します。
+    /// 正常終了した行動のクールタイムを開始します。
     /// </summary>
-    private void StartCoolTime()
+    private void StartCoolTimeIfSucceeded()
     {
         if (Owner == null ||
+            Owner.GetStateExecutionStatus() !=
+                StateExecutionStatus.SUCCEEDED ||
             m_references == null ||
-            m_references.DecisionParameterAsset == null)
+            m_references.DecisionParameterAsset ==
+                null)
         {
             return;
         }

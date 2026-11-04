@@ -335,15 +335,6 @@ public sealed class PlayerMotor : MonoBehaviour
     public void EndRailMotion(Vector3 exitVelocity)
     {
         if (!m_isInitialized || !m_isRailMotionActive) return;
-        // 斜めレールで付いた前後の傾きを離脱時に戻し、水平の向きだけ維持します。
-        Vector3 horizontalForward = Vector3.ProjectOnPlane(
-            m_playerRigidbody.rotation * Vector3.forward, Vector3.up);
-        if (horizontalForward.sqrMagnitude > DIRECTION_SQR_THRESHOLD)
-        {
-            m_playerRigidbody.rotation = Quaternion.LookRotation(
-                horizontalForward.normalized, Vector3.up);
-        }
-
         m_playerRigidbody.isKinematic = m_previousIsKinematic;
         m_playerRigidbody.collisionDetectionMode = m_previousCollisionDetection;
         m_isRailMotionActive = false;

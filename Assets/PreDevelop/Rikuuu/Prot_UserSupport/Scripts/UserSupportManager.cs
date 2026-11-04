@@ -37,6 +37,9 @@ public class UserSupportManager : MonoBehaviour
     [SerializeField]
     private GameObject[] m_optionItems;
 
+    // 選択されているボタン番号
+    private int m_selectedIndex = 0;
+
     [Header("入力判定関連")]
     // ページ切り替えキーが押される判定
     [SerializeField]
@@ -46,9 +49,6 @@ public class UserSupportManager : MonoBehaviour
 
     private void OnEnable()
     {
-        m_changePageLeftActionRef?.action.Enable();
-        m_changePageRightActionRef?.action.Enable();
-
         if (m_changePageLeftActionRef == null)
         {
             Debug.LogWarning($"{gameObject.name}: {m_changePageLeftActionRef} が設定されていません。Inspectorで割り当ててください。", this);

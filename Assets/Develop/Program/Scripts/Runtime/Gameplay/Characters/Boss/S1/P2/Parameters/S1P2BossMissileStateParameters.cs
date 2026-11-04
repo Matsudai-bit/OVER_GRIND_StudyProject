@@ -11,12 +11,8 @@ public sealed class S1P2BossMissileStateParameters
     [SerializeField, Header("ミサイル本体")]
     private MissileParameterAsset m_missileParameterAsset;
 
-    // 1回の攻撃で発射するミサイル数
-    [SerializeField, Header("発射"), Min(1)]
-    private int m_launchCount = 6;
-
     // ミサイルを順番に発射する間隔
-    [SerializeField, Min(0.0f)]
+    [SerializeField, Header("発射"), Min(0.0f)]
     private float m_launchInterval = 0.5f;
 
     // 発射直後に上方向へ進む時間
@@ -27,19 +23,15 @@ public sealed class S1P2BossMissileStateParameters
     [SerializeField, Header("攻撃終了"), Min(0.0f)]
     private float m_idleDuration = 3.0f;
 
+    // LaunchSitesを何周発射するか
+    [SerializeField, Header("連続発射"), Min(1)]
+    private int m_volleyCount = 2;
+
     /// <summary>
     /// ミサイル本体のパラメータを取得します。
     /// </summary>
     public MissileParameterAsset MissileParameterAsset =>
         m_missileParameterAsset;
-
-    /// <summary>
-    /// 1回の攻撃で発射するミサイル数を取得します。
-    /// </summary>
-    public int LaunchCount =>
-        Mathf.Max(
-            1,
-            m_launchCount);
 
     /// <summary>
     /// 発射間隔を取得します。
@@ -60,6 +52,14 @@ public sealed class S1P2BossMissileStateParameters
         m_idleDuration;
 
     /// <summary>
+    /// LaunchSitesを周回して発射する回数を取得します。
+    /// </summary>
+    public int VolleyCount =>
+        Mathf.Max(
+            1,
+            m_volleyCount);
+
+    /// <summary>
     /// 必要なパラメータが設定されているか確認します。
     /// </summary>
     /// <returns>
@@ -68,38 +68,6 @@ public sealed class S1P2BossMissileStateParameters
     /// </returns>
     public bool HasRequiredParameters()
     {
-        return m_missileParameterAsset != null &&
-               m_launchCount > 0;
-    }
-
-    /// <summary>
-    /// 発射数だけ変更したパラメータコピーを生成します。
-    /// </summary>
-    /// <param name="launchCount">発射数。</param>
-    /// <returns>生成したパラメータ。</returns>
-    public S1P2BossMissileStateParameters CreateCopyWithLaunchCount(
-        int launchCount)
-    {
-        S1P2BossMissileStateParameters parameters =
-            new();
-
-        parameters.m_missileParameterAsset =
-            m_missileParameterAsset;
-
-        parameters.m_launchCount =
-            Mathf.Max(
-                1,
-                launchCount);
-
-        parameters.m_launchInterval =
-            m_launchInterval;
-
-        parameters.m_missileUpwardDuration =
-            m_missileUpwardDuration;
-
-        parameters.m_idleDuration =
-            m_idleDuration;
-
-        return parameters;
+        return m_missileParameterAsset != null;
     }
 }

@@ -26,10 +26,6 @@ public sealed class BossPhaseReferences : MonoBehaviour
     [SerializeField, Header("プレイヤーの座標")]
     private Transform m_playerTransform;
 
-    // エフェクト制御器
-    [SerializeField, Header("エフェクト制御器")]
-    private EffectEmitter m_effectEmitter;
-
 
     /// <summary>
     /// フェーズで使用する地面Colliderを取得します。
@@ -49,8 +45,6 @@ public sealed class BossPhaseReferences : MonoBehaviour
     /// </summary>
     public BossNavMeshFootprint NavMeshFootprint => m_bossNavMeshFootprint;
 
-
-    public EffectEmitter EffectEmitter => m_effectEmitter;
 
     /// <summary>
     /// 必須参照が設定されているか確認します。

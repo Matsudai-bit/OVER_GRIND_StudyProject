@@ -24541,7 +24541,7 @@ GameObject:
   - component: {fileID: 9021426402707702287}
   - component: {fileID: 4818257637414744955}
   - component: {fileID: 7740832449580050433}
-  - component: {fileID: 2724615356420179846}
+  - component: {fileID: 749643249618804300}
   m_Layer: 0
   m_Name: Missile_Launch
   m_TagString: Untagged
@@ -24557,8 +24557,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3764520625368991429}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalRotation: {x: -0.42261827, y: 0, z: 0, w: 0.9063079}
+  m_LocalPosition: {x: 11.228999, y: 29.141, z: -0.51399964}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 1
   m_Children:
@@ -24570,7 +24570,7 @@ Transform:
   - {fileID: 2852160633866596819}
   - {fileID: 5160819825294138592}
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: -50, y: 0, z: 0}
 --- !u!198 &4818257637414744955
 ParticleSystem:
   m_ObjectHideFlags: 0
@@ -29386,19 +29386,33 @@ ParticleSystemRenderer:
   m_MeshWeighting1: 1
   m_MeshWeighting2: 1
   m_MeshWeighting3: 1
---- !u!114 &2724615356420179846
-MonoBehaviour:
+--- !u!1773428102 &749643249618804300
+ParentConstraint:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3764520625368991429}
   m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d5eaf77072ee49242b451fda2459577f, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::EffectInstance
-  m_rootParticle: {fileID: 4818257637414744955}
+  serializedVersion: 2
+  m_Weight: 1
+  m_TranslationAtRest: {x: 11.228999, y: 29.141, z: -0.51399964}
+  m_RotationAtRest: {x: -49.999992, y: 0, z: 0}
+  m_TranslationOffsets:
+  - {x: 0.708168, y: -1.1672497, z: -1.5503702}
+  m_RotationOffsets:
+  - {x: -0.8159201, y: -90.01999, z: -178.59637}
+  m_AffectTranslationX: 1
+  m_AffectTranslationY: 1
+  m_AffectTranslationZ: 1
+  m_AffectRotationX: 1
+  m_AffectRotationY: 1
+  m_AffectRotationZ: 1
+  m_Active: 1
+  m_IsLocked: 0
+  m_Sources:
+  - sourceTransform: {fileID: 0}
+    weight: 1
 --- !u!1 &5906488397437602302
 GameObject:
   m_ObjectHideFlags: 0

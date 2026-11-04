@@ -7,10 +7,6 @@ using UnityEngine;
 [Serializable]
 public sealed class S1P3BossDreadAttackStateParameters
 {
-    // 1回の攻撃で発射するオイル数
-    [SerializeField, Header("発射"), Min(1)]
-    private int m_launchCount = 12;
-
     // オイルの上昇時間
     [SerializeField, Header("オイル飛行"), Min(0.0f)]
     private float m_ascentDuration = 0.5f;
@@ -42,7 +38,6 @@ public sealed class S1P3BossDreadAttackStateParameters
     // 全オイル着弾後から状態終了までの時間
     [SerializeField, Header("状態終了"), Min(0.0f)]
     private float m_finishDelay = 2.0f;
-
     // 着弾予告の最小サイズ
     [SerializeField, Header("着弾予告"), Min(0.0f)]
     private float m_targetDecalMinScale = 0.3f;
@@ -66,15 +61,6 @@ public sealed class S1P3BossDreadAttackStateParameters
     // 着弾痕を表示する時間
     [SerializeField, Header("着弾痕"), Min(0.0f)]
     private float m_oilDecalDuration = 5.0f;
-
-    /// <summary>
-    /// 1回の攻撃で発射するオイル数を取得します。
-    /// </summary>
-    public int LaunchCount =>
-        Mathf.Max(
-            1,
-            m_launchCount);
-
     /// <summary>
     /// 上昇時間を取得します。
     /// </summary>

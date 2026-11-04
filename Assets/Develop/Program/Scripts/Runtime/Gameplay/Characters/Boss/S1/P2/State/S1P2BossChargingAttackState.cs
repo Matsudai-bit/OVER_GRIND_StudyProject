@@ -155,7 +155,7 @@ public sealed class S1P2BossChargingAttackState :
         {
             return;
         }
-        StartCoolTimeIfSucceeded();
+
         Owner.SetStateExecutionStatus(
             StateExecutionStatus.SUCCEEDED);
     }

@@ -12,12 +12,6 @@ public sealed class QTESequenceRunner :
     [SerializeField, Header("QTE Timeline")]
     private PlayableDirector m_playableDirector;
 
-    [SerializeField, Header("QTEルート")]
-    private GameObject m_qteRoot;
-
-    [SerializeField]
-    private GameObject Actor;
-
     /// <summary>
     /// PlayableDirectorのイベントを購読します。
     /// </summary>
@@ -30,8 +24,6 @@ public sealed class QTESequenceRunner :
 
         m_playableDirector.stopped +=
             HandlePlayableDirectorStopped;
-
-        m_qteRoot.gameObject.SetActive(false);
     }
 
     /// <summary>
@@ -70,9 +62,7 @@ public sealed class QTESequenceRunner :
         // 常にTimeline先頭から開始する
         m_playableDirector.time =
             0.0;
-        Actor.gameObject.SetActive(false);
 
-        m_qteRoot.gameObject.SetActive(true);
         m_playableDirector.Play();
 
         return true;
@@ -105,9 +95,6 @@ public sealed class QTESequenceRunner :
         {
             return;
         }
-        Actor.gameObject.SetActive(true);
-
-        m_qteRoot.gameObject.SetActive(false);
 
         CompleteSequence();
     }

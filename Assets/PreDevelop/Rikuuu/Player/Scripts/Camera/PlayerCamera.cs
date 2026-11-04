@@ -6,8 +6,6 @@ public class PlayerCamera : MonoBehaviour
 {
     private const float MIN_TARGET_DISTANCE = 0.0001f;
     private const float DEFAULT_CAMERA_SENSITIVITY = 1.0f;
-    // 設定値0.5を従来の感度倍率1.0に対応させます。
-    private const float DYNAMIC_SENSITIVITY_SCALE = 2.0f;
     private const float DEFAULT_CHARGE_DIRECTION_INFLUENCE = 1.0f;
     private const float DEFAULT_CHARGE_VERTICAL_ANGLE = 8.0f;
     private const float DEFAULT_CHARGE_VERTICAL_TURN_SPEED = 120.0f;
@@ -20,10 +18,6 @@ public class PlayerCamera : MonoBehaviour
 
     [SerializeField] private CinemachineCamera m_cinemachineCamera;
     [SerializeField] private CinemachineInputAxisController m_inputAxisController;
-
-    [SerializeField]
-    [Tooltip("Playerの動的パラメータを受け取るController。未設定時は従来の感度を使用します。")]
-    private PlayerDynamicParameterController m_dynamicParameterController;
 
 
 
@@ -79,10 +73,6 @@ public class PlayerCamera : MonoBehaviour
     private CinemachineOrbitalFollow m_orbitalFollow;
     private PlayerLockOnCamera m_lockOnCamera;
     private PlayerCameraGroundCollision m_groundCollision;
-    private float m_baseSensitivityX = DEFAULT_CAMERA_SENSITIVITY;
-    private float m_baseSensitivityY = DEFAULT_CAMERA_SENSITIVITY;
-    private bool m_reverseY;
-    private float m_dynamicCameraSensitivity = 0.5f;
     private bool m_isDriftOverrideActive;
     private float m_overrideStartAngle;
     private float m_overrideTargetAngle;
@@ -92,18 +82,6 @@ public class PlayerCamera : MonoBehaviour
 
     /// <summary>ドリフト方向へのカメラ制御が有効かを取得します。</summary>
     public bool IsDriftOverrideActive => m_isDriftOverrideActive;
-
-    /// <summary>動的パラメータControllerの変更通知を購読します。</summary>
-    private void OnEnable()
-    {
-        if (m_dynamicParameterController == null)
-        {
-            return;
-        }
-
-        m_dynamicParameterController.CameraSensitivityChanged += ApplyCameraSensitivity;
-        ApplyCameraSensitivity(m_dynamicParameterController.CameraSensitivity);
-    }
 
     /// <summary>既存カメラと専用ロックオン制御を接続します。</summary>
     private void Awake()
@@ -377,16 +355,8 @@ public class PlayerCamera : MonoBehaviour
     /// <summary>互換APIとして通常カメラへ復帰します。</summary>
     public void EndTargetLock(float duration) => EndTargetFocus();
 
-    /// <summary>無効化時に通知購読とロックオンを解除します。</summary>
-    private void OnDisable()
-    {
-        if (m_dynamicParameterController != null)
-        {
-            m_dynamicParameterController.CameraSensitivityChanged -= ApplyCameraSensitivity;
-        }
-
-        EndTargetFocus();
-    }
+    /// <summary>無効化時にロックオンを解除します。</summary>
+    private void OnDisable() => EndTargetFocus();
 
 
 
@@ -428,45 +398,19 @@ public class PlayerCamera : MonoBehaviour
             m_chargeCameraVerticalTurnSpeed = m_parameter.m_chargeCameraVerticalTurnSpeed;
         }
 
-        m_baseSensitivityX = sensitivityX;
-        m_baseSensitivityY = sensitivityY;
-        m_reverseY = reverseY;
-        ApplyCameraSensitivity(m_dynamicCameraSensitivity);
-
-    }
-
-    /// <summary>
-    /// 動的なカメラ感度倍率を入力ゲインへ適用します。
-    /// </summary>
-    /// <param name="sensitivity">0.1～1.0のカメラ感度倍率。</param>
-    public void ApplyCameraSensitivity(float sensitivity)
-    {
-        m_dynamicCameraSensitivity = Mathf.Clamp(sensitivity, 0.1f, 1.0f);
-        float sensitivityMultiplier = m_dynamicParameterController != null
-            ? m_dynamicCameraSensitivity * DYNAMIC_SENSITIVITY_SCALE
-            : DEFAULT_CAMERA_SENSITIVITY;
-
-        if (m_inputAxisController == null)
-        {
-            return;
-        }
-
-        foreach (var controller in m_inputAxisController.Controllers)
+        foreach(var controller in m_inputAxisController.Controllers)
         {
             // X軸カメラ感度の設定
-            if (controller.Name == "Look Orbit X")
+            if(controller.Name == "Look Orbit X")
             {
-                controller.Input.Gain =
-                    m_baseSensitivityX * sensitivityMultiplier * 100.0f;
+                controller.Input.Gain = sensitivityX * 100.0f;
             }
-
             // Y軸カメラ感度の設定
-            if (controller.Name == "Look Orbit Y")
+            if(controller.Name == "Look Orbit Y")
             {
-                float sign = m_reverseY ? -1.0f : 1.0f;
-                controller.Input.Gain = AXIS_Y_DIRECTION * sign *
-                    m_baseSensitivityY * sensitivityMultiplier *
-                    100.0f * AXIS_Y_GAIN_SCALE;
+                // カメラ反転にチェックがついているかを調べる
+                float sign = reverseY ? -1.0f : 1.0f;
+                controller.Input.Gain = AXIS_Y_DIRECTION * sign * sensitivityY * 100.0f * AXIS_Y_GAIN_SCALE;
             }
         }
     }

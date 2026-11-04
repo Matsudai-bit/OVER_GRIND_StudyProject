@@ -4,7 +4,7 @@ Shader "Hidden/CustomHeightFog"
     {
         _FogColor ("Fog Base Color", Color) = (0.5, 0.55, 0.6, 1)
         _FogDensity ("Overall Density", Range(0, 0.05)) = 0.003
-        _MaxFogOpacity ("Max Fog Opacity", Range(0, 1)) = 0.85
+        _MaxFogOpacity ("Max Fog Opacity", Range(0, 1)) = 0.85 // ★追加：フォグの最大濃度の制限（1未満にすると完全に塗りつぶされなくなる）
         _FogStartDist ("Start Distance", Float) = 5.0
 
         _FogHeight ("Fog Base Height (Y)", Float) = 0.0
@@ -46,7 +46,7 @@ Shader "Hidden/CustomHeightFog"
             CBUFFER_START(UnityPerMaterial)
                 float4 _FogColor;
                 float _FogDensity;
-                float _MaxFogOpacity;
+                float _MaxFogOpacity; // ★追加
                 float _FogStartDist;
                 float _FogHeight;
                 float _FogHeightFalloff;
@@ -82,18 +82,17 @@ Shader "Hidden/CustomHeightFog"
                 float dist = length(ray);
                 float3 viewDir = ray / max(dist, 0.0001);
 
-                // 3. 開始距離（Start Distance）を考慮した実効距離の計算
-                float effectiveDist = max(0.0, dist - _FogStartDist);
+                // 3. 距離によるフォグ係数の計算
+                float distFactor = saturate((dist - _FogStartDist) * _FogDensity);
 
                 // 4. 指数関数的ハイトフォグの計算 (Exponential Height Fog)
                 float heightDiff = worldPos.y - _FogHeight;
                 float heightFactor = exp(-heightDiff * _FogHeightFalloff);
                 
-                // effectiveDist を用いることで、Start Distance 手前ではフォグが 0 になる
-                float fogFactor = 1.0 - exp(-effectiveDist * _FogDensity * heightFactor);
+                float fogFactor = 1.0 - exp(-dist * _FogDensity * heightFactor);
                 fogFactor = saturate(fogFactor);
 
-                // 最大不透明度（上限）の適用
+                // ★ここで最大不透明度（上限）を掛けることで、遠景が完全にベタ塗りされるのを防ぐ
                 fogFactor *= _MaxFogOpacity;
 
                 // 5. ディレクショナル・イン・スキャッタリング（太陽光の方向による輝き）
