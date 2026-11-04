@@ -225,14 +225,18 @@ public sealed class BreakWindow : MonoBehaviour,
         }
 
         Physics.SyncTransforms();
+        // 命中位置やパーツごとの乱数に依存せず、同じ面には同じ初速を与えます。
+        Vector3 launchVelocity = m_launchDirection.normalized * m_launchSpeed
+            + Vector3.up * m_upwardSpeed + Random.insideUnitSphere * m_spreadSpeed;
         foreach (Rigidbody fragment in m_fragments)
         {
             if (fragment == null) continue;
             fragment.isKinematic = false;
             fragment.useGravity = true;
+            fragment.linearDamping = 0f;
+            fragment.maxLinearVelocity = Mathf.Max(fragment.maxLinearVelocity, launchVelocity.magnitude);
             fragment.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
-            fragment.linearVelocity = m_launchDirection * m_launchSpeed
-                + Vector3.up * m_upwardSpeed + Random.insideUnitSphere * m_spreadSpeed;
+            fragment.linearVelocity = launchVelocity;
             fragment.angularVelocity = Random.onUnitSphere * m_rotationSpeed;
             fragment.WakeUp();
             Destroy(fragment.gameObject, m_fragmentLifetime);
