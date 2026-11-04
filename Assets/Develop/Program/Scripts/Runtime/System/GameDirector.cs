@@ -24,8 +24,10 @@ public sealed class GameDirector : MonoBehaviour
     private GameplaySequenceController m_sequenceController;
 
     // イントロシーケンス
-    [SerializeField, Header("イントロシーケンス")]
+    [SerializeField, Header("イントロシーケンス_ボス")]
     private GameplaySequenceAsset m_introSequenceAsset_BossSpawn;
+    [SerializeField, Header("イントロシーケンス_プレイヤー")]
+
     private GameplaySequenceAsset m_introSequenceAsset_PlayerSpawn;
 
     // ゲーム進行状態変更イベント
