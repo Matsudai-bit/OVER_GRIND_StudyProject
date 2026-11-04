@@ -49,6 +49,8 @@ public sealed class S1P2BossMoveMissileState :
     // Animation完了
     private bool m_isAnimationCompleted;
 
+    private EffectHandle m_effectHandle;
+
     /// <summary>
     /// 移動ミサイル攻撃を開始します。
     /// </summary>
@@ -106,6 +108,7 @@ public sealed class S1P2BossMoveMissileState :
 
             return;
         }
+        m_effectHandle = m_commonReferences.EffectEmitter.Play(EffectId.S1P2_BOSS_SMOKE);
 
         /*
          * ミサイルはここでは準備のみ行います。
@@ -234,6 +237,8 @@ public sealed class S1P2BossMoveMissileState :
 
         Owner.Motor?
             .StopHorizontalMovement();
+
+        m_effectHandle.Stop();
 
         TryCompleteState();
     }
@@ -393,6 +398,8 @@ public sealed class S1P2BossMoveMissileState :
 
         Owner.Motor?
             .StopHorizontalMovement();
+
+   
 
         Owner.SetStateExecutionStatus(
             StateExecutionStatus.SUCCEEDED);
