@@ -46,6 +46,8 @@ public class InputManager : MonoBehaviour
 
         SetUIActive(false);
         m_buttonSelector.LockCursor();
+
+        Open();
     }
 
     void Update()
