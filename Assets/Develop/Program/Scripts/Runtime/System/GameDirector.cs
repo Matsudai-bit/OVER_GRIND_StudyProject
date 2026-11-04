@@ -63,32 +63,13 @@ public sealed class GameDirector : MonoBehaviour
 
     private void Start()
     {
+        // GameFlowの初期化はGameFlowController側で行う
         Cursor.visible = false;
-
-        StartGameplay();
     }
 
     private void OnDisable()
     {
         UnregisterEvents();
-    }
-
-    /// <summary>
-    /// ゲーム進行を開始します。
-    /// </summary>
-    private void StartGameplay()
-    {
-        if (m_gameFlowController == null)
-        {
-            Debug.LogError(
-                $"{nameof(GameFlowController)} が設定されていません。",
-                this);
-
-            return;
-        }
-
-        m_gameFlowController.ChangeState(
-            GameFlowStateType.INTRO);
     }
 
     /// <summary>
@@ -247,7 +228,7 @@ public sealed class GameDirector : MonoBehaviour
             return;
         }
 
-        // 完了時のみゲームプレイを開始
+        // イントロ完了時のみゲームプレイを開始
         if (eventData.EventType !=
             GameplaySequenceEventType.FINISHED)
         {

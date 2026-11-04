@@ -435,61 +435,6 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
---- !u!1 &1344841958991289011
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 3538043795599611429}
-  - component: {fileID: 7511312371932538808}
-  m_Layer: 0
-  m_Name: PauseWindowController
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &3538043795599611429
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1344841958991289011}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -960, y: -540.0755, z: 0}
-  m_LocalScale: {x: 2.4150944, y: 2.4150944, z: 2.4150944}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 5240707625899801080}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &7511312371932538808
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1344841958991289011}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b78602819bc2f0b489d9a26c4b8ae6b8, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::InputManager
-  m_directorFadeIn: {fileID: 5662285610054518251}
-  m_directorFadeOut: {fileID: 6843520124917305221}
-  m_detailText: {fileID: 8433943321445475413}
-  m_container: {fileID: 7384771471825625500}
-  m_background: {fileID: 6778711490105024492}
-  m_selectButton: {fileID: 4351919674778105333}
-  m_mechPanel: {fileID: 765944322163816914}
-  m_buttonSelector: {fileID: 5796921797870151283}
-  m_cursor: {fileID: 4498534567266325439}
-  m_cursorInitialPosition: {x: 0, y: 0}
-  m_escapeActionRef: {fileID: 7727032971491509709, guid: 052faaac586de48259a63d0c4782560b, type: 3}
 --- !u!1 &1547246890156340895
 GameObject:
   m_ObjectHideFlags: 0
@@ -871,7 +816,7 @@ PlayableDirector:
   m_PlayableAsset: {fileID: 11400000, guid: 624c261be50b4a744b903c2acd6aca1a, type: 2}
   m_InitialState: 0
   m_WrapMode: 0
-  m_DirectorUpdateMode: 1
+  m_DirectorUpdateMode: 2
   m_InitialTime: 0
   m_SceneBindings:
   - key: {fileID: 330191405433200805, guid: 310b2a8a695eebb40ac23db175778a74, type: 2}
@@ -1354,7 +1299,7 @@ PlayableDirector:
   m_PlayableAsset: {fileID: 11400000, guid: 624c261be50b4a744b903c2acd6aca1a, type: 2}
   m_InitialState: 1
   m_WrapMode: 0
-  m_DirectorUpdateMode: 1
+  m_DirectorUpdateMode: 2
   m_InitialTime: 0
   m_SceneBindings:
   - key: {fileID: -3329832726247557690, guid: 624c261be50b4a744b903c2acd6aca1a, type: 2}
@@ -1435,6 +1380,7 @@ GameObject:
   m_Component:
   - component: {fileID: 5240707625899801080}
   - component: {fileID: 3795247560183745952}
+  - component: {fileID: 2577110426514181136}
   m_Layer: 5
   m_Name: PauseUIRoot
   m_TagString: Untagged
@@ -1451,8 +1397,8 @@ RectTransform:
   m_GameObject: {fileID: 5735555449805865336}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
+  m_LocalScale: {x: 0.42, y: 0.42, z: 0.42}
+  m_ConstrainProportionsScale: 1
   m_Children:
   - {fileID: 988919722762355621}
   - {fileID: 9162915563782524982}
@@ -1465,7 +1411,6 @@ RectTransform:
   - {fileID: 8769154046006381728}
   - {fileID: 7318888675407583500}
   - {fileID: 7285052998086434111}
-  - {fileID: 3538043795599611429}
   - {fileID: 1788309321752414623}
   - {fileID: 2313732075419892389}
   m_Father: {fileID: 0}
@@ -1487,6 +1432,29 @@ CanvasGroup:
   m_Interactable: 1
   m_BlocksRaycasts: 1
   m_IgnoreParentGroups: 0
+--- !u!114 &2577110426514181136
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5735555449805865336}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b78602819bc2f0b489d9a26c4b8ae6b8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::InputManager
+  m_directorFadeIn: {fileID: 5662285610054518251}
+  m_directorFadeOut: {fileID: 6843520124917305221}
+  m_detailText: {fileID: 8433943321445475413}
+  m_container: {fileID: 7384771471825625500}
+  m_background: {fileID: 6778711490105024492}
+  m_selectButton: {fileID: 4351919674778105333}
+  m_mechPanel: {fileID: 765944322163816914}
+  m_buttonSelector: {fileID: 5796921797870151283}
+  m_cursor: {fileID: 4498534567266325439}
+  m_cursorInitialPosition: {x: 0, y: 0}
+  m_escapeActionRef: {fileID: 7727032971491509709, guid: 052faaac586de48259a63d0c4782560b, type: 3}
 --- !u!1 &5768068751971995660
 GameObject:
   m_ObjectHideFlags: 0
@@ -1647,7 +1615,7 @@ CanvasGroup:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6778711490105024492}
   m_Enabled: 1
-  m_Alpha: 1
+  m_Alpha: 0
   m_Interactable: 1
   m_BlocksRaycasts: 1
   m_IgnoreParentGroups: 0
