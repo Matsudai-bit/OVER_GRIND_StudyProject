@@ -105,24 +105,24 @@ MonoBehaviour:
   active: 1
   shadows:
     m_OverrideState: 1
-    m_Value: {x: 0.7737609, y: 0.9478924, z: 1, w: 0.054174498}
+    m_Value: {x: 0.7421561, y: 0.9795066, z: 1, w: 0.20684624}
   midtones:
     m_OverrideState: 1
-    m_Value: {x: 0.9582553, y: 0.9008524, z: 1, w: 0.049059696}
+    m_Value: {x: 0.9582553, y: 0.9008524, z: 1, w: 0.14176661}
   highlights:
     m_OverrideState: 1
     m_Value: {x: 1, y: 0.97714955, z: 0.8601815, w: 0}
   shadowsStart:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0
   shadowsEnd:
-    m_OverrideState: 0
-    m_Value: 0.3
+    m_OverrideState: 1
+    m_Value: 0.23
   highlightsStart:
-    m_OverrideState: 0
-    m_Value: 0.55
+    m_OverrideState: 1
+    m_Value: 0.3
   highlightsEnd:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 1
 --- !u!114 &11400000
 MonoBehaviour:
@@ -145,6 +145,33 @@ MonoBehaviour:
   - {fileID: 4349635992065785658}
   - {fileID: 2952523852358583772}
   - {fileID: -1175998801408365075}
+  - {fileID: 4078279234076989287}
+  - {fileID: 284914161391688318}
+--- !u!114 &284914161391688318
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ccf1aba9553839d41ae37dd52e9ebcce, type: 3}
+  m_Name: MotionBlur
+  m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.MotionBlur
+  active: 0
+  mode:
+    m_OverrideState: 1
+    m_Value: 1
+  quality:
+    m_OverrideState: 1
+    m_Value: 2
+  intensity:
+    m_OverrideState: 1
+    m_Value: 0.358
+  clamp:
+    m_OverrideState: 0
+    m_Value: 0.05
 --- !u!114 &2952523852358583772
 MonoBehaviour:
   m_ObjectHideFlags: 3
@@ -173,6 +200,28 @@ MonoBehaviour:
   rounded:
     m_OverrideState: 0
     m_Value: 0
+--- !u!114 &4078279234076989287
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5485954d14dfb9a4c8ead8edb0ded5b1, type: 3}
+  m_Name: LiftGammaGain
+  m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.LiftGammaGain
+  active: 1
+  lift:
+    m_OverrideState: 1
+    m_Value: {x: 1, y: 1, z: 1, w: 0}
+  gamma:
+    m_OverrideState: 1
+    m_Value: {x: 0.9095644, y: 0.94798654, z: 1, w: 0}
+  gain:
+    m_OverrideState: 1
+    m_Value: {x: 1, y: 0.97824335, z: 0.9645283, w: 0.10905124}
 --- !u!114 &4349635992065785658
 MonoBehaviour:
   m_ObjectHideFlags: 3
@@ -255,7 +304,7 @@ MonoBehaviour:
   active: 1
   intensity:
     m_OverrideState: 1
-    m_Value: 0.033
+    m_Value: 0.061
 --- !u!114 &6189450044443703667
 MonoBehaviour:
   m_ObjectHideFlags: 3
@@ -302,7 +351,7 @@ MonoBehaviour:
   active: 1
   postExposure:
     m_OverrideState: 1
-    m_Value: 0.78
+    m_Value: 1
   contrast:
     m_OverrideState: 1
     m_Value: 4
@@ -314,4 +363,4 @@ MonoBehaviour:
     m_Value: 0
   saturation:
     m_OverrideState: 1
-    m_Value: -2
+    m_Value: -9
