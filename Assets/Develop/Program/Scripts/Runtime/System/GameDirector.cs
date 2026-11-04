@@ -24,8 +24,11 @@ public sealed class GameDirector : MonoBehaviour
     private GameplaySequenceController m_sequenceController;
 
     // イントロシーケンス
-    [SerializeField, Header("イントロシーケンス")]
-    private GameplaySequenceAsset m_introSequenceAsset;
+    [SerializeField, Header("イントロシーケンス_ボス")]
+    private GameplaySequenceAsset m_introSequenceAsset_BossSpawn;
+    [SerializeField, Header("イントロシーケンス_プレイヤー")]
+
+    private GameplaySequenceAsset m_introSequenceAsset_PlayerSpawn;
 
     // ゲーム進行状態変更イベント
     [SerializeField, Header("イベント")]
@@ -197,7 +200,7 @@ public sealed class GameDirector : MonoBehaviour
             return;
         }
 
-        if (m_introSequenceAsset == null)
+        if (m_introSequenceAsset_PlayerSpawn == null)
         {
             Debug.LogWarning(
                 "イントロシーケンスが設定されていません。",
@@ -207,10 +210,42 @@ public sealed class GameDirector : MonoBehaviour
         }
 
         if (!m_sequenceController.StartSequence(
-            m_introSequenceAsset))
+            m_introSequenceAsset_PlayerSpawn))
         {
             Debug.LogWarning(
-                $"{m_introSequenceAsset.name} の開始に失敗しました。",
+                $"{m_introSequenceAsset_PlayerSpawn.name} の開始に失敗しました。",
+                this);
+        }
+    }
+
+    /// <summary>
+    /// イントロシーケンスを開始します。
+    /// </summary>
+    private void StartIntroBossSequence()
+    {
+        if (m_sequenceController == null)
+        {
+            Debug.LogWarning(
+                $"{nameof(GameplaySequenceController)} が設定されていません。",
+                this);
+
+            return;
+        }
+
+        if (m_introSequenceAsset_BossSpawn == null)
+        {
+            Debug.LogWarning(
+                "イントロシーケンスが設定されていません。",
+                this);
+
+            return;
+        }
+
+        if (!m_sequenceController.StartSequence(
+            m_introSequenceAsset_BossSpawn))
+        {
+            Debug.LogWarning(
+                $"{m_introSequenceAsset_BossSpawn.name} の開始に失敗しました。",
                 this);
         }
     }
@@ -223,7 +258,18 @@ public sealed class GameDirector : MonoBehaviour
         GameplaySequenceChangedEventData eventData)
     {
         // イントロシーケンス以外は対象外
-        if (eventData.Sequence != m_introSequenceAsset)
+        if (eventData.Sequence == m_introSequenceAsset_PlayerSpawn)
+        {
+            // 完了時のみゲームプレイを開始
+            if (eventData.EventType ==
+                GameplaySequenceEventType.FINISHED)
+            {
+                StartIntroBossSequence();
+            }
+        }
+
+        // イントロシーケンス以外は対象外
+        if (eventData.Sequence != m_introSequenceAsset_BossSpawn)
         {
             return;
         }
