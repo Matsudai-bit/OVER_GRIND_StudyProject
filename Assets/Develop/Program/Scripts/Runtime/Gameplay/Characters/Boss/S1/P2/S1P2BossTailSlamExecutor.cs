@@ -1,4 +1,5 @@
 using UnityEngine;
+using static UnityEngine.UI.GridLayoutGroup;
 
 /// <summary>
 /// S1P2ボスの尻尾叩きつけ攻撃を実行します。
@@ -291,6 +292,14 @@ public sealed class S1P2BossTailSlamExecutor
                 m_tailSlamReference.ImpactEffect,
                 contactPosition,
                 m_owner.transform.rotation);
+        }
+
+        // 隆起エフェクト
+        if (m_owner.PhaseController
+                .TryGetCurrentPhaseComponent(
+                    out BossPhaseReferences commonReferences))
+        {
+            commonReferences.EffectEmitter.PlayAt(EffectId.BOSS_UPLIFT, contactPosition, new Quaternion());
         }
 
         /*
