@@ -48,6 +48,8 @@ public class ContainerController : MonoBehaviour
     [SerializeField]
     private InputActionReference m_backActionRef;
 
+    public bool IsLeft => m_choseState == ChoseState.LEFT;
+
     private void OnEnable()
     {
         if (m_backActionRef == null)
