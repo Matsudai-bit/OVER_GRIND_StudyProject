@@ -104,6 +104,7 @@ public sealed class ManualDataReceiver : MonoBehaviour
 
         ApplyCommandSprite(commandAssetName);
         ApplySecondRow(secondCommandAssetName, secondBody);
+        ApplyAdditionalCommands();
     }
 
     /// <summary>
@@ -124,6 +125,7 @@ public sealed class ManualDataReceiver : MonoBehaviour
 
         ApplyCommandSprite(commandAssetName);
         ApplyCommandSprite(m_secondCommandImage, secondCommandAssetName);
+        ApplyAdditionalCommands();
     }
 
     /// <summary>
@@ -174,6 +176,27 @@ public sealed class ManualDataReceiver : MonoBehaviour
     /// <summary>
     /// 規定名の子UIから表示先コンポーネントを取得します。
     /// </summary>
+    private void ApplyAdditionalCommands()
+    {
+        ManualTextData data = m_manualData.GetManual(m_manualIndex);
+        if (data == null) return;
+        ApplyAdditionalCommand("AdditionalCommandImage", "PlusSign", data.AdditionalCommandAssetName);
+        ApplyAdditionalCommand("AdditionalCommandImage_2", "PlusSign_2", data.SecondAdditionalCommandAssetName);
+    }
+
+    /// <summary>指定行の追加画像と＋を更新します。未設定なら両方を非表示にします。</summary>
+    private void ApplyAdditionalCommand(string imageName, string plusName, string commandName)
+    {
+        Transform imageTransform = transform.Find(imageName);
+        Transform plusTransform = transform.Find(plusName);
+        Image image = imageTransform == null ? null : imageTransform.GetComponent<Image>();
+        ApplyCommandSprite(image, commandName);
+        bool visible = image != null && image.sprite != null;
+        if (imageTransform != null) imageTransform.gameObject.SetActive(visible);
+        if (plusTransform != null) plusTransform.gameObject.SetActive(visible);
+    }
+
+    /// <summary>規定名の子UIから表示先コンポーネントを取得します。</summary>
     private void CacheChildUi()
     {
         Transform commandImageTransform = transform.Find(COMMAND_IMAGE_OBJECT_NAME);

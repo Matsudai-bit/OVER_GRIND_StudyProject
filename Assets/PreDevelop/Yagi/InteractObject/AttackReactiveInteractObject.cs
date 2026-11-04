@@ -394,6 +394,7 @@ public sealed class AttackReactiveInteractObject : MonoBehaviour,
 
             if (hit.collider == null ||
                 hit.collider.attachedRigidbody == m_rigidbody ||
+                Physics.GetIgnoreCollision(m_boxCollider, hit.collider) ||
                 IsColliderFromSameGroup(hit.collider))
             {
                 continue;
@@ -518,9 +519,9 @@ public sealed class AttackReactiveInteractObject : MonoBehaviour,
 
         if (m_isRecoveringFromLaunch)
         {
-            // 着地済みの最初の一撃を接地確定タイマーやFixedUpdate順序で捨てないよう、
-            // 同じ呼び出し内で復帰を確定してからダメージを適用します。
-            if (!HasSupportedGroundContact()) return false;
+            // 吹き飛び直後は床に接したまま動くことがあるため、接地だけで固定しません。
+            // 再命中でも通常の着地処理と同じ速度条件を確認し、飛行中の勢いを維持します。
+            if (!HasSupportedGroundContact() || !HasSlowedDownForNextAttack()) return false;
             LockForNextAttack();
         }
 

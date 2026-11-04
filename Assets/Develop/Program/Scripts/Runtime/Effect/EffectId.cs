@@ -42,9 +42,16 @@ public enum EffectId
     // ボス（100以上）
     // ==============================
 
+    BOSS_UPLIFT = 105, // 隆起エフェクト
+
     S1_BOSS_MISSILE_EXPLOSION = 102,
     S1_BOSS_MISSILE_LAUNCH = 103,
     S1P1_BOSS_ATTACK = 100,
     S1P1_BOSS_CHARGE = 101,
-    S1P2_BOSS_SMOKE = 104
+    S1P2_BOSS_SMOKE = 104,
+    S1P3_BOSS_STAN_SMOKE = 106,
+    S1P3_BOSS_OIL_LAUNCH = 107,
+    S1P3_BOSS_OIL_LOOP = 108,
+    S1P3_BOSS_MOVE_LOOP = 109,
+    S1P3_BOSS_MOVE_SMOKE = 110,
 }

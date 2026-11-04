@@ -11,6 +11,12 @@ public sealed class AttackReactiveInteractObjectGroup : MonoBehaviour
     [Tooltip("同じ壁として一斉に反応させるドラム缶です。")]
     private List<AttackReactiveInteractObject> m_members = new();
 
+    [SerializeField]
+    [Tooltip("登録メンバー同士の物理衝突を無視します。初回の吹き飛びで攻撃共有が終了した後も維持します。")]
+    private bool m_ignoreMemberCollisions;
+
+    private readonly List<(Collider first, Collider second)> m_ignoredColliderPairs = new();
+
     private readonly List<AttackReactiveInteractObject> m_registeredMembers = new();
     private readonly Dictionary<int, HashSet<AttackReactiveInteractObject>>
         m_contactMembersBySource = new();
@@ -28,12 +34,70 @@ public sealed class AttackReactiveInteractObjectGroup : MonoBehaviour
     private void OnEnable()
     {
         RegisterMembers();
+        IgnoreMemberCollisions();
     }
 
     /// <summary>無効化時に共有接触を解除し、メンバー登録を外します。</summary>
     private void OnDisable()
     {
+        RestoreMemberCollisions();
         ReleaseMembers();
+    }
+
+    /// <summary>各メンバーのRigidbodyに属するCollider間の衝突を無効化します。</summary>
+    private void IgnoreMemberCollisions()
+    {
+        if (!m_ignoreMemberCollisions) return;
+
+        // 攻撃共有の解散で登録リストが空になっても、物理衝突の設定は独立して保持します。
+        List<Collider[]> memberColliders = new();
+        HashSet<AttackReactiveInteractObject> collectedMembers = new();
+        foreach (AttackReactiveInteractObject member in m_members)
+        {
+            if (member == null || !collectedMembers.Add(member)) continue;
+            Rigidbody body = member.GetComponent<Rigidbody>();
+            if (body == null) continue;
+
+            List<Collider> colliders = new();
+            foreach (Collider collider in member.GetComponentsInChildren<Collider>(true))
+            {
+                if (!collider.isTrigger && collider.attachedRigidbody == body)
+                {
+                    colliders.Add(collider);
+                }
+            }
+            memberColliders.Add(colliders.ToArray());
+        }
+
+        for (int firstIndex = 0; firstIndex < memberColliders.Count; firstIndex++)
+        {
+            for (int secondIndex = firstIndex + 1; secondIndex < memberColliders.Count; secondIndex++)
+            {
+                foreach (Collider first in memberColliders[firstIndex])
+                {
+                    foreach (Collider second in memberColliders[secondIndex])
+                    {
+                        // 他の処理ですでに無視している組み合わせは復元対象にしません。
+                        if (Physics.GetIgnoreCollision(first, second)) continue;
+                        Physics.IgnoreCollision(first, second, true);
+                        m_ignoredColliderPairs.Add((first, second));
+                    }
+                }
+            }
+        }
+    }
+
+    /// <summary>このグループが無効化したCollider間の衝突だけを元に戻します。</summary>
+    private void RestoreMemberCollisions()
+    {
+        foreach (var pair in m_ignoredColliderPairs)
+        {
+            if (pair.first != null && pair.second != null)
+            {
+                Physics.IgnoreCollision(pair.first, pair.second, false);
+            }
+        }
+        m_ignoredColliderPairs.Clear();
     }
 
     /// <summary>メンバーの攻撃接触開始をグループ全体へ共有します。</summary>

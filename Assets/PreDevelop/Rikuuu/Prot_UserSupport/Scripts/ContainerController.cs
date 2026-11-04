@@ -100,11 +100,15 @@ public class ContainerController : MonoBehaviour
         foreach (var selector in m_buttonSelectorL)
         {
             selector.enabled = true;
+
             selector.UnLockCursor();
+            selector.UnLockCursorAnimation();
         }
         foreach (var selector in m_buttonSelectorR)
         {
+            selector.LockCursorAnimation();
             selector.LockCursor();
+
             selector.enabled = false;
         }
     }
@@ -122,13 +126,17 @@ public class ContainerController : MonoBehaviour
         // カーソルを固定・解除する
         foreach (var selector in m_buttonSelectorL)
         {
+            selector.LockCursorAnimation();
             selector.LockCursor();
+
             selector.enabled = false;
         }
         foreach (var selector in m_buttonSelectorR)
         {
             selector.enabled = true;
+
             selector.UnLockCursor();
+            selector.UnLockCursorAnimation();
         }
     }
 }

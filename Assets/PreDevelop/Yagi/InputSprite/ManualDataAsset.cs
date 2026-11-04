@@ -12,6 +12,13 @@ public sealed class ManualDataAsset : ScriptableObject
     [SerializeField, Header("Manual一覧")]
     private List<ManualTextData> m_manuals = new();
 
+    /// <summary>指定番号のデータを取得します。</summary>
+    /// <returns>登録済みデータ。範囲外または未設定ならnull。</returns>
+    public ManualTextData GetManual(int index)
+    {
+        return index >= 0 && index < m_manuals.Count ? m_manuals[index] : null;
+    }
+
     /// <summary>
     /// 指定した番号のManual内容を取得します。
     /// </summary>
