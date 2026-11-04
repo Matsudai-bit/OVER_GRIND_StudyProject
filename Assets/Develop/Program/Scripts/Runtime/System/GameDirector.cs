@@ -1,119 +1,390 @@
-using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-public class GameDirector : MonoBehaviour
+/// <summary>
+/// ゲーム全体の進行を統括します。
+/// </summary>
+[DisallowMultipleComponent]
+public sealed class GameDirector : MonoBehaviour
 {
-    [SerializeField]
+    // ゲーム経過時間Timer
+    [SerializeField, Header("ゲーム進行")]
     private ElapsedTimer m_gameProgressElapsedTimer;
 
+    // ゲーム進行状態管理
     [SerializeField]
+    private GameFlowController m_gameFlowController;
+
+    // ゲームプレイモード管理
+    [SerializeField]
+    private GameplayModeController m_gameplayModeController;
+
+    // シーケンス管理
+    [SerializeField]
+    private GameplaySequenceController m_sequenceController;
+
+    // イントロシーケンス
+    [SerializeField, Header("イントロシーケンス")]
+    private GameplaySequenceAsset m_introSequenceAsset;
+
+    // ゲーム進行状態変更イベント
+    [SerializeField, Header("イベント")]
     private GameFlowStateChangedEvent m_gameFlowStateChangedEvent;
-    [SerializeField]
-    GameFlowController m_gameFlowController;
-    [SerializeField]
-    GameplaySequenceController m_sequenceController;
-    [SerializeField]
-    GameplaySequenceAsset m_sequenceAsset;
-    [SerializeField]
-    GameplayModeController m_modeController;
-    [SerializeField]
-    GameplaySequenceChangedEvent m_gameplaySequenceChangedEvent;
-    [SerializeField]
-    Health m_playerHealth;
 
+    // シーケンス状態変更イベント
     [SerializeField]
-    BossPhaseController bossPhaseController;
+    private GameplaySequenceChangedEvent m_gameplaySequenceChangedEvent;
 
-    [Header("遷移関連")]
-    [SerializeField, Header("次のステージボタンを押した時の遷移先")]
-    string nextStageSceneName;
-    [SerializeField, Header("ステージ選択画面シーン名")]
-    string stageSelectSceneName;
+    // プレイヤーHP
+    [SerializeField, Header("ゲームオブジェクト")]
+    private Health m_playerHealth;
 
-    bool start = false;
+    // ボスフェーズ管理
+    [SerializeField]
+    private BossPhaseController m_bossPhaseController;
+
+    // 次のステージシーン名
+    [SerializeField, Header("遷移関連")]
+    private string m_nextStageSceneName;
+
+    // ステージ選択画面シーン名
+    [SerializeField]
+    private string m_stageSelectSceneName;
 
     private void Awake()
     {
         Application.targetFrameRate = 60;
-        if (!m_gameFlowStateChangedEvent)
-        {
-            Debug.LogError(typeof(GameFlowStateChangedEvent).Name+"が設定されていません");
-        }
-
-        m_gameFlowStateChangedEvent.RegisterListener((flowStateID) =>
-        {
-            if (flowStateID.CurrentState == GameFlowStateType.INTRO) 
-            {
-                Debug.Log("シーケンス依頼");
-                m_gameplaySequenceChangedEvent.RegisterListener((data) => {
-                    if (data.EventType == GameplaySequenceEventType.FINISHED && data.Sequence == m_sequenceAsset) 
-                    { 
-                        m_gameFlowController.EnterPlaying(); 
-                        m_modeController.ActivateGameplay();
-                        m_gameProgressElapsedTimer.StartTimer();
-                    } 
-                });
-                m_sequenceController.StartSequence(m_sequenceAsset);
-                
-            }
-        });
-
-        m_playerHealth.HealthChanged += OnChangePlayerHealth;
     }
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
+
+    private void OnEnable()
     {
-        start = false;
+        RegisterEvents();
+    }
+
+    private void Start()
+    {
         Cursor.visible = false;
 
-        bossPhaseController.PhaseCompletionRequested += (phaseID) =>
+        StartGameplay();
+    }
+
+    private void OnDisable()
+    {
+        UnregisterEvents();
+    }
+
+    /// <summary>
+    /// ゲーム進行を開始します。
+    /// </summary>
+    private void StartGameplay()
+    {
+        if (m_gameFlowController == null)
         {
-            if (phaseID == BossPhaseID.PHASE_3)
-            {
-                m_gameFlowController.ChangeState(GameFlowStateType.ENDING);
-                m_gameFlowController.ChangeState(GameFlowStateType.RESULT);
+            Debug.LogError(
+                $"{nameof(GameFlowController)} が設定されていません。",
+                this);
 
-            }
-        };
- 
+            return;
+        }
 
+        m_gameFlowController.ChangeState(
+            GameFlowStateType.INTRO);
     }
-    void Update()
+
+    /// <summary>
+    /// 必要なイベントを登録します。
+    /// </summary>
+    private void RegisterEvents()
     {
-        //if (!start)
-        //{
-        //StartGameplay();
-        //    start = true;
-        //}
+        if (m_gameFlowStateChangedEvent != null)
+        {
+            m_gameFlowStateChangedEvent.RegisterListener(
+                OnGameFlowStateChanged);
+        }
+        else
+        {
+            Debug.LogWarning(
+                $"{nameof(GameFlowStateChangedEvent)} が設定されていません。",
+                this);
+        }
 
+        if (m_gameplaySequenceChangedEvent != null)
+        {
+            m_gameplaySequenceChangedEvent.RegisterListener(
+                OnGameplaySequenceChanged);
+        }
+        else
+        {
+            Debug.LogWarning(
+                $"{nameof(GameplaySequenceChangedEvent)} が設定されていません。",
+                this);
+        }
+
+        if (m_playerHealth != null)
+        {
+            m_playerHealth.HealthChanged +=
+                OnPlayerHealthChanged;
+        }
+        else
+        {
+            Debug.LogWarning(
+                $"{nameof(Health)} が設定されていません。",
+                this);
+        }
+
+        if (m_bossPhaseController != null)
+        {
+            m_bossPhaseController.PhaseCompletionRequested +=
+                OnBossPhaseCompletionRequested;
+        }
+        else
+        {
+            Debug.LogWarning(
+                $"{nameof(BossPhaseController)} が設定されていません。",
+                this);
+        }
     }
 
-    void StartGameplay()
+    /// <summary>
+    /// 登録したイベントを解除します。
+    /// </summary>
+    private void UnregisterEvents()
     {
+        if (m_gameFlowStateChangedEvent != null)
+        {
+            m_gameFlowStateChangedEvent.UnregisterListener(
+                OnGameFlowStateChanged);
+        }
 
-        m_gameFlowController.ChangeState(GameFlowStateType.INTRO);
+        if (m_gameplaySequenceChangedEvent != null)
+        {
+            m_gameplaySequenceChangedEvent.UnregisterListener(
+                OnGameplaySequenceChanged);
+        }
+
+        if (m_playerHealth != null)
+        {
+            m_playerHealth.HealthChanged -=
+                OnPlayerHealthChanged;
+        }
+
+        if (m_bossPhaseController != null)
+        {
+            m_bossPhaseController.PhaseCompletionRequested -=
+                OnBossPhaseCompletionRequested;
+        }
     }
 
+    /// <summary>
+    /// ゲーム進行状態変更を受け取ります。
+    /// </summary>
+    /// <param name="eventData">ゲーム進行状態変更情報。</param>
+    private void OnGameFlowStateChanged(
+        GameFlowStateChangedEventData eventData)
+    {
+        switch (eventData.CurrentState)
+        {
+            case GameFlowStateType.INTRO:
+                StartIntroSequence();
+                break;
+
+            case GameFlowStateType.ENDING:
+                StopGameProgressTimer();
+                break;
+
+            case GameFlowStateType.RESULT:
+                StopGameProgressTimer();
+                break;
+
+            case GameFlowStateType.GAME_OVER:
+                StopGameProgressTimer();
+                break;
+        }
+    }
+
+    /// <summary>
+    /// イントロシーケンスを開始します。
+    /// </summary>
+    private void StartIntroSequence()
+    {
+        if (m_sequenceController == null)
+        {
+            Debug.LogWarning(
+                $"{nameof(GameplaySequenceController)} が設定されていません。",
+                this);
+
+            return;
+        }
+
+        if (m_introSequenceAsset == null)
+        {
+            Debug.LogWarning(
+                "イントロシーケンスが設定されていません。",
+                this);
+
+            return;
+        }
+
+        if (!m_sequenceController.StartSequence(
+            m_introSequenceAsset))
+        {
+            Debug.LogWarning(
+                $"{m_introSequenceAsset.name} の開始に失敗しました。",
+                this);
+        }
+    }
+
+    /// <summary>
+    /// シーケンス状態変更を受け取ります。
+    /// </summary>
+    /// <param name="eventData">シーケンス状態変更情報。</param>
+    private void OnGameplaySequenceChanged(
+        GameplaySequenceChangedEventData eventData)
+    {
+        // イントロシーケンス以外は対象外
+        if (eventData.Sequence != m_introSequenceAsset)
+        {
+            return;
+        }
+
+        // 完了時のみゲームプレイを開始
+        if (eventData.EventType !=
+            GameplaySequenceEventType.FINISHED)
+        {
+            return;
+        }
+
+        StartPlaying();
+    }
+
+    /// <summary>
+    /// 通常ゲームプレイを開始します。
+    /// </summary>
+    private void StartPlaying()
+    {
+        if (m_gameFlowController != null)
+        {
+            m_gameFlowController.EnterPlaying();
+        }
+
+        if (m_gameplayModeController != null)
+        {
+            m_gameplayModeController.ActivateGameplay();
+        }
+
+        if (m_gameProgressElapsedTimer != null)
+        {
+            m_gameProgressElapsedTimer.StartTimer();
+        }
+    }
+
+    /// <summary>
+    /// ボスフェーズ完了要求を受け取ります。
+    /// </summary>
+    /// <param name="phaseID">完了したボスフェーズ。</param>
+    private void OnBossPhaseCompletionRequested(
+        BossPhaseID phaseID)
+    {
+        if (phaseID != BossPhaseID.PHASE_3)
+        {
+            return;
+        }
+
+        if (m_gameFlowController == null)
+        {
+            return;
+        }
+
+        m_gameFlowController.ChangeState(
+            GameFlowStateType.ENDING);
+
+        m_gameFlowController.ChangeState(
+            GameFlowStateType.RESULT);
+    }
+
+    /// <summary>
+    /// プレイヤーHP変更を受け取ります。
+    /// </summary>
+    /// <param name="currentHealth">現在のHP。</param>
+    /// <param name="previousHealth">変更前のHP。</param>
+    private void OnPlayerHealthChanged(
+        int currentHealth,
+        int previousHealth)
+    {
+        if (currentHealth > 0)
+        {
+            return;
+        }
+
+        if (m_gameFlowController == null)
+        {
+            return;
+        }
+
+        m_gameFlowController.ChangeState(
+            GameFlowStateType.GAME_OVER);
+    }
+
+    /// <summary>
+    /// ゲーム経過時間の計測を停止します。
+    /// </summary>
+    private void StopGameProgressTimer()
+    {
+        if (m_gameProgressElapsedTimer == null)
+        {
+            return;
+        }
+
+        m_gameProgressElapsedTimer.StopTimer();
+    }
+
+    /// <summary>
+    /// 次のステージへ遷移します。
+    /// </summary>
     public void LoadNextStage()
     {
-        SceneManager.LoadScene(nextStageSceneName);
+        if (string.IsNullOrEmpty(
+            m_nextStageSceneName))
+        {
+            Debug.LogWarning(
+                "次のステージシーン名が設定されていません。",
+                this);
+
+            return;
+        }
+
+        SceneManager.LoadScene(
+            m_nextStageSceneName);
     }
+
+    /// <summary>
+    /// ステージ選択画面へ遷移します。
+    /// </summary>
     public void LoadStageSelect()
     {
-        SceneManager.LoadScene(stageSelectSceneName);
+        if (string.IsNullOrEmpty(
+            m_stageSelectSceneName))
+        {
+            Debug.LogWarning(
+                "ステージ選択画面シーン名が設定されていません。",
+                this);
+
+            return;
+        }
+
+        SceneManager.LoadScene(
+            m_stageSelectSceneName);
     }
+
+    /// <summary>
+    /// 現在のステージを再読み込みします。
+    /// </summary>
     public void LoadRestartScene()
     {
-        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
-    }
+        Scene currentScene =
+            SceneManager.GetActiveScene();
 
-
-    void OnChangePlayerHealth(int hp, int hp1)
-    {
-        if (0 >= hp)
-        {
-            m_gameFlowController.ChangeState(GameFlowStateType.GAME_OVER);
-        }
+        SceneManager.LoadScene(
+            currentScene.name);
     }
 }
