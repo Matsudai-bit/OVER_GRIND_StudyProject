@@ -76,15 +76,20 @@ public class MapController : MonoBehaviour
     // 画像の初期Scale（Inspectorで設定された値）
     private Vector3 m_baseScale = Vector3.one;
 
+
     // カーソルの基準位置（地図座標が(0,0)のときの表示位置）
     private Vector2 m_cursorHomePosition;
     // カーソルの地図上の座標（画像の中心からのオフセット、画像の等倍(Scale=1)でのローカル座標）
     private Vector2 m_cursorMapPosition = Vector2.zero;
 
+    // マップの移動・拡縮がロックされているか
+    private bool m_isLocking = false;
+
     // スティック入力によるカーソルの見た目上のずれ
     private Vector2 m_cursorTiltOffset = Vector2.zero;
     // 外部(吸着処理)から参照するための公開プロパティ
     public Vector2 CursorTilt => m_cursorTiltOffset;
+
 
     // 吸着先のマーカー（nullなら吸着していない）
     private RectTransform m_snapTarget;
@@ -130,6 +135,12 @@ public class MapController : MonoBehaviour
     private void Update()
     {
         Vector2 move = m_navigateActionRef?.action.ReadValue<Vector2>() ?? Vector2.zero;
+        // ロック中の場合
+        if(m_isLocking)
+        {
+            // 動かさない
+            move = Vector2.zero;
+        }
 
         // 傾きオフセットを更新する
         bool tiltChanged = UpdateCursorTilt(move);
@@ -148,12 +159,11 @@ public class MapController : MonoBehaviour
             ApplyCursorAndImagePosition();
         }
 
-        // (ズーム処理は今まで通り)
-        if (m_zoomInRef != null && m_zoomInRef.action.IsPressed())
+        if (m_zoomInRef != null && !m_isLocking && m_zoomInRef.action.IsPressed())
         {
             Zoom(ZOOM_SPEED);
         }
-        if (m_zoomOutRef != null && m_zoomOutRef.action.IsPressed())
+        if (m_zoomOutRef != null && !m_isLocking && m_zoomOutRef.action.IsPressed())
         {
             Zoom(-ZOOM_SPEED);
         }
@@ -399,5 +409,11 @@ public class MapController : MonoBehaviour
         m_cursorMapPosition = ClampCursorMapPosition(m_cursorMapPosition);
 
         ApplyCursorAndImagePosition();
+    }
+
+    // マップを動かさないようにする
+    public void LockMap()
+    {
+        m_isLocking = true;
     }
 }

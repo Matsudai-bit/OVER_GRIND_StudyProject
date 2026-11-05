@@ -295,7 +295,6 @@ public class StageSelectManager : MonoBehaviour
         if (m_stagePoints[m_hoveredIndex].canPlay)
         {
             // Debug.Log("OnCursor ReadyButton");
-
             // ボタンにカーソルが合っている状態にする
             m_readyButton.OnCursor();
         }
@@ -323,9 +322,11 @@ public class StageSelectManager : MonoBehaviour
             if (m_stagePoints[index].onClickAction.GetPersistentEventCount() > 0)
             {
                 // Debug.Log("ready On Click");
-
                 // キーが押されたときの処理を実行する
                 m_readyButton.OnClick();
+
+                // マップをロックする
+                m_mapController.LockMap();
             }
 
             // キーが押されたときに呼ぶ関数を数秒後に実行する
