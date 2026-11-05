@@ -128,10 +128,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LeftSlideInScroller
   m_playOnStart: 1
   m_startDelay: 0.5
-  m_enableTestInput: 0
   m_slideTarget: {fileID: 6419285285362926829}
+  m_direction: 1
   m_slideDuration: 0.5
   m_slideOffsetDistance: 200
+  m_startAlpha: 0
+  m_targetAlpha: 1
   m_easeCurve:
     serializedVersion: 2
     m_Curve:
@@ -156,6 +158,8 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+  m_useDotweenEase: 0
+  m_dotweenEase: 9
 --- !u!1 &547351137492037557
 GameObject:
   m_ObjectHideFlags: 0
@@ -301,7 +305,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 314, y: 181.7}
+  m_AnchoredPosition: {x: 314, y: 181.70001}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1750546963170637570
@@ -428,37 +432,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5cecdb0f3bfa034ebd78336c4a70a15, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Blinker_UI
-  m_slideOnStart: 1
-  m_slideDelay: 0
-  m_slideDuration: 0
-  m_slideOffsetDistance: 200
-  m_easeCurve:
-    serializedVersion: 2
-    m_Curve:
-    - serializedVersion: 3
-      time: 0
-      value: 0
-      inSlope: 0
-      outSlope: 0
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0
-      outWeight: 0
-    - serializedVersion: 3
-      time: 1
-      value: 1
-      inSlope: 0
-      outSlope: 0
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0
-      outWeight: 0
-    m_PreInfinity: 2
-    m_PostInfinity: 2
-    m_RotationOrder: 4
-  m_slideTarget: {fileID: 3892422669587646490}
   m_blinkOnStart: 1
-  m_startBlinkAfterSlide: 1
   m_blinkDelay: 0
   m_blinkType: 1
   m_speed: 5
@@ -572,10 +546,10 @@ RectTransform:
   - {fileID: 7620859828010770263}
   - {fileID: 685041793266686237}
   - {fileID: 3110061661733004319}
-  - {fileID: 4939692976307198304}
-  - {fileID: 8175079508068596847}
   - {fileID: 5564887314932697954}
   - {fileID: 6419285285362926829}
+  - {fileID: 4939692976307198304}
+  - {fileID: 8175079508068596847}
   - {fileID: 67827353426690577}
   - {fileID: 8910691203264037527}
   m_Father: {fileID: 4455513114936894449}
@@ -755,16 +729,22 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cfd18e9cafa76604a8f5884d9b7f17c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ResultTimePresenter
-  m_view: {fileID: 120164604852282773}
+  m_view: {fileID: 0}
   m_model: {fileID: 4657622117157306563}
   m_playOnStart: 1
   m_useCountUp: 1
+  m_countUpMode: 0
   m_countUpDuration: 5
+  m_speedPerSecond: 10
+  m_minDuration: 0.5
+  m_maxDuration: 3
   m_delay: 2.5
-  m_countUpEase: 18
-  m_blinkTargetImage: {fileID: 0}
-  m_blinkRedColor: {r: 1, g: 0.2, b: 0.2, a: 1}
-  m_blinkDuration: 0.4
+  m_fastPhaseDuration: 0.15
+  m_slowPhaseRemainingSeconds: 1.5
+  m_slowPhaseEase: 18
+  m_usePunchOnComplete: 1
+  m_punchStrength: 0.12
+  m_punchDuration: 0.35
 --- !u!1 &3435836963210385070
 GameObject:
   m_ObjectHideFlags: 0
@@ -996,24 +976,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 183141140eaa5a346b279d98ed87a9d4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ResultTimeView
-  m_numberSprites:
-  - {fileID: 21300000, guid: 6060aca6487557c46a83191e256f2bc8, type: 3}
-  - {fileID: 21300000, guid: c8bc683be4c51d94a9c1008c3cc388ed, type: 3}
-  - {fileID: 21300000, guid: 7be7e50965bde1d47a1ae5e2594ab38b, type: 3}
-  - {fileID: 21300000, guid: 1850b9bd365aa14468f4faea657ba946, type: 3}
-  - {fileID: 21300000, guid: ee9638b3cbc65ae4d9f690502e6c9bfc, type: 3}
-  - {fileID: 21300000, guid: bdf7b86479d7104418664c0d8925ece0, type: 3}
-  - {fileID: 21300000, guid: 71957b8d0606616478241a80f688b648, type: 3}
-  - {fileID: 21300000, guid: b1ec15f0e857fd64b985efb40c76076d, type: 3}
-  - {fileID: 21300000, guid: 4e88751ee02e32a41911c8de7890be9d, type: 3}
-  - {fileID: 21300000, guid: 24dfbaa04b0c8014d94de334c1b286eb, type: 3}
-  m_min10Image: {fileID: 2489647741716762292}
-  m_min1Image: {fileID: 4886135619214747549}
-  m_sec10Image: {fileID: 7326140141292596369}
-  m_sec1Image: {fileID: 8571170022861804391}
-  m_ms10Image: {fileID: 5696777929776324619}
-  m_ms1Image: {fileID: 4495123143769236701}
-  m_autoPreserveAspect: 1
+  m_timeText: {fileID: 0}
 --- !u!114 &4793984368186066522
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1353,10 +1316,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LeftSlideInScroller
   m_playOnStart: 1
   m_startDelay: 0.5
-  m_enableTestInput: 0
   m_slideTarget: {fileID: 5564887314932697954}
+  m_direction: 1
   m_slideDuration: 0.5
   m_slideOffsetDistance: 200
+  m_startAlpha: 0
+  m_targetAlpha: 1
   m_easeCurve:
     serializedVersion: 2
     m_Curve:
@@ -1381,6 +1346,8 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+  m_useDotweenEase: 0
+  m_dotweenEase: 9
 --- !u!1 &4591304759961065401
 GameObject:
   m_ObjectHideFlags: 0
@@ -1432,10 +1399,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::RightSlideInScroller
   m_playOnStart: 1
   m_startDelay: 0
-  m_enableTestInput: 0
   m_slideTarget: {fileID: 0}
+  m_direction: 1
   m_slideDuration: 0.5
   m_slideOffsetDistance: 600
+  m_startAlpha: 0
+  m_targetAlpha: 1
   m_easeCurve:
     serializedVersion: 2
     m_Curve:
@@ -1460,6 +1429,8 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+  m_useDotweenEase: 0
+  m_dotweenEase: 9
 --- !u!1 &4693819676888034437
 GameObject:
   m_ObjectHideFlags: 0
@@ -1591,10 +1562,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::RightSlideInScroller
   m_playOnStart: 1
   m_startDelay: 0
-  m_enableTestInput: 0
   m_slideTarget: {fileID: 0}
+  m_direction: 1
   m_slideDuration: 0.5
   m_slideOffsetDistance: 500
+  m_startAlpha: 0
+  m_targetAlpha: 1
   m_easeCurve:
     serializedVersion: 2
     m_Curve:
@@ -1619,6 +1592,8 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+  m_useDotweenEase: 0
+  m_dotweenEase: 9
 --- !u!1 &5174388985251941357
 GameObject:
   m_ObjectHideFlags: 0
@@ -2169,9 +2144,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1582954658661979716}
   - component: {fileID: 8996782873137747052}
-  - component: {fileID: 120164604852282773}
   - component: {fileID: 7010031702302808064}
-  - component: {fileID: 1281497932754334517}
   m_Layer: 0
   m_Name: Result_Scene_UI_Controller
   m_TagString: Untagged
@@ -2224,42 +2197,6 @@ MonoBehaviour:
   m_loopDuration: 0.8
   m_loopSlideAmount: 10
   m_loopScaleAmount: {x: 1.05, y: 1.2}
-  m_onNextStageButton:
-    m_PersistentCalls:
-      m_Calls: []
-  m_onReturnStageSelectButton:
-    m_PersistentCalls:
-      m_Calls: []
---- !u!114 &120164604852282773
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7269559830895589620}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 183141140eaa5a346b279d98ed87a9d4, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ResultTimeView
-  m_numberSprites:
-  - {fileID: 21300000, guid: 6060aca6487557c46a83191e256f2bc8, type: 3}
-  - {fileID: 21300000, guid: c8bc683be4c51d94a9c1008c3cc388ed, type: 3}
-  - {fileID: 21300000, guid: 7be7e50965bde1d47a1ae5e2594ab38b, type: 3}
-  - {fileID: 21300000, guid: 1850b9bd365aa14468f4faea657ba946, type: 3}
-  - {fileID: 21300000, guid: ee9638b3cbc65ae4d9f690502e6c9bfc, type: 3}
-  - {fileID: 21300000, guid: bdf7b86479d7104418664c0d8925ece0, type: 3}
-  - {fileID: 21300000, guid: 71957b8d0606616478241a80f688b648, type: 3}
-  - {fileID: 21300000, guid: b1ec15f0e857fd64b985efb40c76076d, type: 3}
-  - {fileID: 21300000, guid: 4e88751ee02e32a41911c8de7890be9d, type: 3}
-  - {fileID: 21300000, guid: 24dfbaa04b0c8014d94de334c1b286eb, type: 3}
-  m_min10Image: {fileID: 3899297224954497666}
-  m_min1Image: {fileID: 8437161188256772896}
-  m_sec10Image: {fileID: 1681369166660073395}
-  m_sec1Image: {fileID: 8814806763514449603}
-  m_ms10Image: {fileID: 4826980681228792000}
-  m_ms1Image: {fileID: 2732247100235677782}
-  m_autoPreserveAspect: 1
 --- !u!114 &7010031702302808064
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2290,26 +2227,6 @@ MonoBehaviour:
   m_DefaultActionMap: UI
   m_SplitScreenIndex: -1
   m_Camera: {fileID: 0}
---- !u!114 &1281497932754334517
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7269559830895589620}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3e8280a0eab4ec846863d04abdb140a7, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::RandomTextEffect
-  m_targetObject: {fileID: 3698098668205206263}
-  m_decodeMode: 0
-  m_delay: 0.5
-  m_totalDuration: 0.8
-  m_shuffleInterval: 0.03
-  m_usePunchScale: 1
-  m_randomChars: ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#$%&@*
-  m_playOnStart: 1
 --- !u!1 &7653019784755202891
 GameObject:
   m_ObjectHideFlags: 0
@@ -2474,6 +2391,8 @@ MonoBehaviour:
   m_delay: 0.5
   m_slideDuration: 0.5
   m_slideOffsetDistance: 200
+  m_startAlpha: 0
+  m_targetAlpha: 1
   m_easeCurve:
     serializedVersion: 2
     m_Curve:
@@ -2498,8 +2417,11 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+  m_useDotweenEase: 1
+  m_dotweenEase: 9
   m_enableTestInput: 0
   m_slideTarget: {fileID: 67827353426690577}
+  m_canvasGroup: {fileID: 0}
 --- !u!1 &8408189777483337870
 GameObject:
   m_ObjectHideFlags: 0
