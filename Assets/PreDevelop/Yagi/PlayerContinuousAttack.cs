@@ -30,7 +30,7 @@ public sealed class PlayerContinuousAttack
     {
         m_remainingSpeed = m_owner.Motor.HorizontalSpeed;
         m_initialSpeed = Mathf.Max(m_remainingSpeed, SPEED_EPSILON);
-        // 空中ではジャンプの慣性方向を引き継ぎ、元の体の向きへ速度を曲げません。
+        // 対象がいない場合、空中ではジャンプの慣性方向を引き継ぎます。
         m_direction = m_isAirAttack
             ? m_owner.Motor.HorizontalDirection
             : m_owner.Motor.FacingDirection;
@@ -38,8 +38,11 @@ public sealed class PlayerContinuousAttack
                 m_owner.transform, m_owner.Motor.FacingDirection, out Vector3 attackDirection))
         {
             m_owner.Motor.AlignFacingToDirection(attackDirection);
-            // 空中の移動慣性は維持し、地上では攻撃移動も対象へ向けます。
-            if (!m_isAirAttack) m_direction = attackDirection;
+            m_direction = attackDirection;
+            // 入力を離して減速中でも進行方向を補正し、水平速度の大きさと垂直速度は維持します。
+            Vector3 velocity = attackDirection * m_remainingSpeed;
+            velocity.y = m_owner.Motor.VerticalVelocity;
+            m_owner.Motor.SetWorldVelocity(velocity);
         }
         else if (m_isAirAttack)
         {
