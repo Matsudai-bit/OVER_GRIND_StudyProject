@@ -17,11 +17,11 @@ public class PlayerAttackController : MonoBehaviour
     private PlayerAttackTargetChecker m_attackTargetChecker = new();
 
     /// <summary>‹ß‹——£‚Ì³–Ê‘ÎÛ‚Ö‚ÌUŒ‚•ûŒü‚ğæ“¾‚µ‚Ü‚·B</summary>
-    public bool TryGetAssistedAttackDirection(Transform owner, Vector3 forward, out Vector3 direction)
+    public bool TryGetAssistedAttackDirection(Transform owner, Vector3 forward, out Vector3 direction, bool isAirAttack = false)
     {
         direction = Vector3.zero;
         return m_attackTargetChecker != null &&
-            m_attackTargetChecker.TryGetDirection(owner, forward, out direction);
+            m_attackTargetChecker.TryGetDirection(owner, forward, out direction, isAirAttack);
     }
 
     [SerializeField, Header("Parameter Asset")]

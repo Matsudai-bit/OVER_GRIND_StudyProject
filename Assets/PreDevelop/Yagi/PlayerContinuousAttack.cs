@@ -35,7 +35,7 @@ public sealed class PlayerContinuousAttack
             ? m_owner.Motor.HorizontalDirection
             : m_owner.Motor.FacingDirection;
         if (m_owner.AttackController.TryGetAssistedAttackDirection(
-                m_owner.transform, m_owner.Motor.FacingDirection, out Vector3 attackDirection))
+                m_owner.transform, m_owner.Motor.FacingDirection, out Vector3 attackDirection, m_isAirAttack))
         {
             m_owner.Motor.AlignFacingToDirection(attackDirection);
             m_direction = attackDirection;

@@ -17,15 +17,17 @@ public sealed class PlayerAttackTargetChecker
     /// <param name="owner">攻撃するPlayerのルート。</param>
     /// <param name="forward">攻撃開始前の正面方向。</param>
     /// <param name="direction">選択した対象への水平な方向。</param>
+    /// <param name="isAirAttack">true：空中攻撃設定。false：地上攻撃設定。</param>
     /// <returns>true：対象あり。false：対象なし、設定なし、または検索方向・半径が無効。</returns>
-    public bool TryGetDirection(Transform owner, Vector3 forward, out Vector3 direction)
+    public bool TryGetDirection(Transform owner, Vector3 forward, out Vector3 direction, bool isAirAttack = false)
     {
         direction = Vector3.zero;
         if (owner == null || m_parameterAsset == null || m_targets == null)
             return false;
 
-        float searchRadius = m_parameterAsset.SearchRadius;
-        float searchAngle = m_parameterAsset.SearchAngle;
+        float searchRadius = m_parameterAsset.GetSearchRadius(isAirAttack);
+        float searchAngle = m_parameterAsset.GetSearchAngle(isAirAttack);
+        bool useColliderDistance = m_parameterAsset.GetUseColliderDistance(isAirAttack);
         forward = Vector3.ProjectOnPlane(forward, Vector3.up).normalized;
         if (forward.sqrMagnitude < DIRECTION_SQR_THRESHOLD || searchRadius <= 0.0f)
             return false;
@@ -41,7 +43,7 @@ public sealed class PlayerAttackTargetChecker
 
             Vector3 targetOffset = target.position - origin;
             float distance = targetOffset.sqrMagnitude;
-            if (m_parameterAsset.UseColliderDistance)
+            if (useColliderDistance)
             {
                 // 大きい弱点は中心が遠くても表面に近ければ対象にします。
                 // 子階層の別部位は検索せず、登録された部位自身だけを判定します。
