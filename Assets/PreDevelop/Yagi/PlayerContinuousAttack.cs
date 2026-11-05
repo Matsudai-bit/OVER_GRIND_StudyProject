@@ -34,7 +34,17 @@ public sealed class PlayerContinuousAttack
         m_direction = m_isAirAttack
             ? m_owner.Motor.HorizontalDirection
             : m_owner.Motor.FacingDirection;
-        if (m_isAirAttack) m_owner.Motor.AlignFacingToDirection(m_direction);
+        if (m_owner.AttackController.TryGetAssistedAttackDirection(
+                m_owner.transform, m_owner.Motor.FacingDirection, out Vector3 attackDirection))
+        {
+            m_owner.Motor.AlignFacingToDirection(attackDirection);
+            // 空中の移動慣性は維持し、地上では攻撃移動も対象へ向けます。
+            if (!m_isAirAttack) m_direction = attackDirection;
+        }
+        else if (m_isAirAttack)
+        {
+            m_owner.Motor.AlignFacingToDirection(m_direction);
+        }
         m_hitTimer = 0.0f;
         m_airHitStopTimer = 0.0f;
         if (m_isAirAttack)
@@ -81,6 +91,7 @@ public sealed class PlayerContinuousAttack
 
             bool hasHit;
             using (AttackPowerContext.Begin(attackPowerType))
+            using (AttackHitTickContext.Begin())
             {
                 hasHit = m_owner.AttackController.ApplyContinuousHitTick();
             }
@@ -105,8 +116,15 @@ public sealed class PlayerContinuousAttack
         }
 
         if (!m_isAirAttack &&
-            m_owner.AttackController.TryGetMaxPenetration(out Vector3 direction, out float distance))
-            m_owner.Motor.ResolvePenetration(direction, distance);
+            m_owner.AttackController.TryGetMaxMovementBlockerPenetration(
+                out Vector3 direction,
+                out float distance))
+        {
+            // 完全に分離させると次の攻撃が届かなくなるため、浅い接触を残します。
+            float correctionDistance = Mathf.Max(
+                0.0f, distance - m_owner.AttackController.AttackContactOverlap);
+            m_owner.Motor.ResolvePenetration(direction, correctionDistance);
+        }
         return true;
     }
 

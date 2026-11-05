@@ -40,6 +40,9 @@ public sealed class S1P1BossMissileState :
     // AnimationEvent受信
     private AnimationEventReceiver m_animationEventReceiver;
 
+    // ミサイル本体の共通プール
+    private MissilePool m_missilePool;
+
     /// <summary>
     /// ミサイル攻撃を開始します。
     /// </summary>
@@ -106,6 +109,7 @@ public sealed class S1P1BossMissileState :
         m_playerTransform = null;
         m_animationEventReceiver = null;
         m_attackIdentifier = null;
+        m_missilePool = null;
     }
 
     /// <summary>
@@ -154,20 +158,32 @@ public sealed class S1P1BossMissileState :
                 continue;
             }
 
-            S1MissileController missile =
-                UnityEngine.Object.Instantiate(
-                    m_missileReferences.MissilePrefab,
+            // 既存のMissileParentに設置したプールから取得します。
+            if (m_missilePool == null ||
+                !m_missilePool.TrySpawn(
                     launchSite.position,
                     launchSite.rotation,
-                    m_missileReferences.MissileParent);
+                    out PooledMissile pooledMissile))
+            {
+                Debug.LogWarning(
+                    "ミサイルプールから取得できませんでした。");
+                return false;
+            }
 
-            missile.Initialize(
-                m_parameters.MissileParameterAsset,
-                m_playerTransform,
-                m_parameters.MissileUpwardDuration,
-                m_attackIdentifier);
-
-            missile.Launch();
+            if (!pooledMissile.TryGetComponent(
+                    out S1MissileController missile) ||
+                !missile.Initialize(
+                    m_parameters.MissileParameterAsset,
+                    m_playerTransform,
+                    m_parameters.MissileUpwardDuration,
+                    m_attackIdentifier,
+                    m_missilePool.SceneEffectEmitter,
+                    m_missilePool.ExplosionHitboxPool) ||
+                !missile.Launch())
+            {
+                m_missilePool.Release(pooledMissile);
+                return false;
+            }
 
             return true;
         }
@@ -281,9 +297,27 @@ public sealed class S1P1BossMissileState :
         m_missileReferences =
             m_references.MissileReferences;
 
+        // Prefabの生成はMissilePoolへ移管したため、
+        // 旧MissilePrefabへの依存は残しません。
         if (m_missileReferences == null ||
-            !m_missileReferences.HasRequiredReferences())
+            m_missileReferences.MissileParent == null ||
+            m_missileReferences.LaunchSites == null ||
+            m_missileReferences.LaunchSites.Count == 0)
         {
+            return false;
+        }
+
+        // S1BossMissileReferencesの既存MissileParentを流用します。
+        // MissilePoolは、このGameObjectに配置してください。
+        m_missilePool = m_missileReferences.MissileParent != null
+            ? m_missileReferences.MissileParent.GetComponent<MissilePool>()
+            : null;
+
+        if (m_missilePool == null ||
+            m_missilePool.SceneEffectEmitter == null ||
+            m_missilePool.ExplosionHitboxPool == null)
+        {
+            Debug.LogError("[S1P1BossMissileState] MissilePoolまたは共有サービスが未設定です。");
             return false;
         }
 

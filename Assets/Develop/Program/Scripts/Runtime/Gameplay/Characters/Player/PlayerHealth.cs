@@ -10,6 +10,7 @@ public sealed class PlayerHealth : MonoBehaviour, IDirectionalDamageable
     // ‹¤’ÊHP
     private Health m_health;
     private PlayerStateMachineComponent m_stateMachine;
+    private PlayerInputReader m_inputReader;
 
     [SerializeField]
     private Hurtbox m_hurtbox;
@@ -24,6 +25,7 @@ public sealed class PlayerHealth : MonoBehaviour, IDirectionalDamageable
     {
         m_health = GetComponent<Health>();
         m_stateMachine = GetComponent<PlayerStateMachineComponent>();
+        m_inputReader = GetComponent<PlayerInputReader>();
 
     }
 
@@ -96,6 +98,7 @@ public sealed class PlayerHealth : MonoBehaviour, IDirectionalDamageable
             !m_health.IsInitialized ||
             m_health.IsDead ||
             (m_hurtbox != null && !m_hurtbox.CanReceiveDamage) ||
+            (m_inputReader != null && !m_inputReader.IsControlAvailable) ||
             (m_stateMachine != null && m_stateMachine.IsInvincible))
         {
             return false;

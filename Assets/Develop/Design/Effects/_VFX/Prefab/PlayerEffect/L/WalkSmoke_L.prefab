@@ -52,7 +52,7 @@ ParticleSystem:
   prewarm: 0
   playOnAwake: 1
   useUnscaledTime: 0
-  autoRandomSeed: 1
+  autoRandomSeed: 0
   startDelay:
     serializedVersion: 2
     minMaxState: 0
@@ -109,7 +109,7 @@ ParticleSystem:
   moveWithTransform: 1
   moveWithCustomTransform: {fileID: 0}
   scalingMode: 1
-  randomSeed: 0
+  randomSeed: 1779
   InitialModule:
     serializedVersion: 3
     enabled: 1
@@ -2689,8 +2689,8 @@ ParticleSystem:
     strength:
       serializedVersion: 2
       minMaxState: 3
-      scalar: 0.1
-      minScalar: -0.1
+      scalar: 0.5
+      minScalar: -0.5
       maxCurve:
         serializedVersion: 2
         m_Curve:
@@ -4845,6 +4845,8 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2022623415582727596}
+  - component: {fileID: 7590430895116261713}
+  - component: {fileID: 2258010751048305255}
   - component: {fileID: 8004078564429625458}
   - component: {fileID: 1246642382078432860}
   - component: {fileID: 8645097317448785489}
@@ -4871,6 +4873,33 @@ Transform:
   - {fileID: 8206032720124932659}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 88.987, z: 0}
+--- !u!114 &7590430895116261713
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4770077739623457671}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d5eaf77072ee49242b451fda2459577f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EffectInstance
+  m_rootParticle: {fileID: 8004078564429625458}
+--- !u!114 &2258010751048305255
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4770077739623457671}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2da0b11e846b27b47838bea466a671dd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EffectAttachmentSlot
+  m_anchorId: 8
+  m_sourceIndex: 1
 --- !u!198 &8004078564429625458
 ParticleSystem:
   m_ObjectHideFlags: 0
