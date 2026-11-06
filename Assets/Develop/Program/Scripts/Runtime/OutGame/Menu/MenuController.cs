@@ -8,6 +8,8 @@ public class MenuController : MonoBehaviour
     private MenuOpenContext m_menuOpenContext;
     [SerializeField]
     private UserSupportManager userSupportManager;
+    [SerializeField]
+    private SaveDataController m_saveDataController;
     private void Awake()
     {
         InputSystem.onActionChange += (obj, change) => {
@@ -38,5 +40,10 @@ public class MenuController : MonoBehaviour
     {
         Debug.Log("ƒƒjƒ…[‚ğ•Â‚¶‚Ü‚·");
         m_uIOverlayScene.RequestClose();
+    }
+
+    public void Save()
+    {
+        m_saveDataController.SaveIfDirty();
     }
 }
