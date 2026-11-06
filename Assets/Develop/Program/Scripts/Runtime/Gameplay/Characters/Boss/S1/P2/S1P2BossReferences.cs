@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -40,6 +41,30 @@ public sealed class S1P2BossReferences :
     [SerializeField, Header("ミサイル実行制御")]
     private S1P2BossMissileExecutor m_missileExecutor;
 
+    // 崩壊Sequence開始要求
+    [SerializeField, Header("崩壊Sequence")]
+    private GameplaySequenceRequestEvent
+        m_sequenceRequestEvent;
+
+    // Sequence状態変更通知
+    [SerializeField]
+    private GameplaySequenceChangedEvent
+        m_sequenceChangedEvent;
+
+    // フェーズ2崩壊Sequence
+    [SerializeField]
+    private GameplaySequenceAsset
+        m_destructionSequenceAsset;
+    // 崩壊時にミサイルを当てるボス自身の地点
+    [SerializeField, Header("崩壊ミサイル対象")]
+    private List<Transform> m_collapseMissileTargets =
+        new();
+    /// <summary>
+    /// 崩壊時の自己攻撃ミサイル対象地点を取得します。
+    /// </summary>
+    public IReadOnlyList<Transform> CollapseMissileTargets =>
+        m_collapseMissileTargets;
+
     /// <summary>
     /// State実行パラメータを取得します。
     /// </summary>
@@ -80,6 +105,24 @@ public sealed class S1P2BossReferences :
     /// </summary>
     public S1P2BossMissileExecutor MissileExecutor =>
         m_missileExecutor;
+
+    /// <summary>
+    /// Sequence開始要求イベントを取得します。
+    /// </summary>
+    public GameplaySequenceRequestEvent SequenceRequestEvent =>
+        m_sequenceRequestEvent;
+
+    /// <summary>
+    /// Sequence変更イベントを取得します。
+    /// </summary>
+    public GameplaySequenceChangedEvent SequenceChangedEvent =>
+        m_sequenceChangedEvent;
+
+    /// <summary>
+    /// フェーズ2崩壊Sequenceを取得します。
+    /// </summary>
+    public GameplaySequenceAsset DestructionSequenceAsset =>
+        m_destructionSequenceAsset;
 
     /// <summary>
     /// フェーズで使用するパラメータを生成します。

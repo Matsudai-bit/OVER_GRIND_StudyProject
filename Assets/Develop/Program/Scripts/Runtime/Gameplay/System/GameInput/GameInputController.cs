@@ -298,6 +298,9 @@ public sealed class GameInputController : MonoBehaviour
             case GameFlowStateType.RESULT:
                 enableUI = true;
                 break;
+            case GameFlowStateType.GAME_OVER:
+                enableUI = true;
+                break;
 
             case GameFlowStateType.INTRO:
             case GameFlowStateType.ENDING:

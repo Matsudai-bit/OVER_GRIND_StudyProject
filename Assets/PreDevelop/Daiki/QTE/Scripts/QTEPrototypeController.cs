@@ -1,3 +1,5 @@
+using NUnit.Framework;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Playables;
@@ -31,8 +33,8 @@ public sealed class QTEPrototypeController : MonoBehaviour
     [SerializeField]
     private GameObject m_qteDrawer;
 
-    [SerializeField, Header("QTEループ設定"), Min(0.0f)]
-    private double m_loopStartTime = 2.0;
+    [SerializeField, Header("QTEループ設定")]
+    private List<double> m_loopStartTime = new ();
 
     [SerializeField, Header("右ヒットボックス")]
     private AttackHitbox m_rightHitbox;
@@ -187,14 +189,14 @@ public sealed class QTEPrototypeController : MonoBehaviour
     /// <summary>
     /// QTE演出の先頭へTimelineを戻します。
     /// </summary>
-    public void LoopQTESequence()
+    public void LoopQTESequence(int a)
     {
         if (m_playableDirector == null)
         {
             return;
         }
 
-        m_playableDirector.time = m_loopStartTime;
+        m_playableDirector.time = m_loopStartTime[a];
         m_playableDirector.Evaluate();
     }
 
