@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -234,6 +235,8 @@ public class ButtonSelector : MonoBehaviour
             ResetCursorPosition();
         }
     }
+
+    public bool IsLockCursor => m_isLockCursor;
 
     // カーソルのロックを解除する
     public void UnLockCursor()
