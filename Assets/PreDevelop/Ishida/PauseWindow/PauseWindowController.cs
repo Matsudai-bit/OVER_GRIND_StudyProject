@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.Playables;
 
 /// <summary>
@@ -8,6 +9,14 @@ using UnityEngine.Playables;
 [RequireComponent(typeof(UIWindow))]
 public sealed class PauseWindowController : MonoBehaviour
 {
+    // ポーズ入力
+    [SerializeField, Header("ポーズ入力")]
+    private InputActionReference m_pauseActionReference;
+    // ポーズ要求イベント
+    [SerializeField, Header("ポーズ要求イベント")]
+    private PauseRequestEvent m_pauseRequestEvent;
+    [SerializeField, Header("メニューコンテキスト")]
+    private MenuOpenContext menuContext;
     // 管理対象ウィンドウ
     [SerializeField, Header("ウィンドウ")]
     private UIWindow m_window;
@@ -52,11 +61,52 @@ public sealed class PauseWindowController : MonoBehaviour
     [SerializeField]
     private Vector2 m_cursorInitialPosition;
 
+    bool m_initialized = false;
+
+    public void SettOptionMenu()
+    {
+        menuContext.SetOpenTarget( MenuOpenTargetType.OPTIONS);
+    }
+
+    public void SettManualMenu()
+    {
+        menuContext.SetOpenTarget(MenuOpenTargetType.MANUAL);
+    }
+
     private void Awake()
+    {
+        if (!m_initialized)
+        {
+            Initialize();
+        }
+    }
+    // 呼び出される関数
+    private void OnPause(InputAction.CallbackContext context)
+    {
+        if (context.performed && !m_buttonSelector.IsLockCursor)
+        {
+            m_pauseRequestEvent.RaiseResume();
+
+        }
+    }
+
+    private void OnEnable()
+    {
+        m_fadeOutDirector.stopped += OnFadeOutFinished;
+    }
+
+    private void OnDisable()
+    {
+        Time.timeScale = 1.0f;
+        m_fadeOutDirector.stopped -= OnFadeOutFinished;
+    }
+
+    private void Initialize()
     {
         InitializeReferences();
         InitializeDirectors();
         InitializeUI();
+        m_initialized = true;
     }
 
     /// <summary>
@@ -64,9 +114,14 @@ public sealed class PauseWindowController : MonoBehaviour
     /// </summary>
     public void OnWindowOpened()
     {
+        if (!m_initialized)
+        {
+            Initialize();
+        }
         PrepareCursor();
 
         SetUIActive(true);
+        Time.timeScale = 0.0f;
     }
 
     /// <summary>
@@ -86,12 +141,12 @@ public sealed class PauseWindowController : MonoBehaviour
     /// </summary>
     public void OnFadeInFinished()
     {
-        PreserveCursorPosition();
+        //PreserveCursorPosition();
 
-        if (m_fadeInDirector != null)
-        {
-            m_fadeInDirector.Pause();
-        }
+        //if (m_fadeInDirector != null)
+        //{
+        //    m_fadeInDirector.Pause();
+        //}
 
         if (m_buttonSelector != null)
         {
@@ -103,6 +158,8 @@ public sealed class PauseWindowController : MonoBehaviour
         {
             m_window.NotifyShowCompleted();
         }
+
+        m_pauseActionReference.action.performed += OnPause;
     }
 
     /// <summary>
@@ -149,7 +206,7 @@ public sealed class PauseWindowController : MonoBehaviour
     /// <summary>
     /// FadeOut Timelineの終了時に呼び出します。
     /// </summary>
-    public void OnFadeOutFinished()
+    public void OnFadeOutFinished(PlayableDirector director)
     {
         SetCursorInteraction(false);
 
@@ -163,6 +220,9 @@ public sealed class PauseWindowController : MonoBehaviour
         {
             m_window.NotifyHideCompleted();
         }
+
+        m_pauseActionReference.action.performed -= OnPause;
+
     }
 
     /// <summary>
@@ -177,6 +237,7 @@ public sealed class PauseWindowController : MonoBehaviour
             m_buttonSelector.LockCursor();
             m_buttonSelector.LockCursorAnimation();
         }
+        Time.timeScale = 1.0f;
     }
 
     /// <summary>

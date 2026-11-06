@@ -1,8 +1,13 @@
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
 public class MenuController : MonoBehaviour
 {
+    [SerializeField]
+    private MenuOpenContext m_menuOpenContext;
+    [SerializeField]
+    private UserSupportManager userSupportManager;
     private void Awake()
     {
         InputSystem.onActionChange += (obj, change) => {
@@ -15,6 +20,16 @@ public class MenuController : MonoBehaviour
                 }
             }
         };
+    }
+
+    private void Start()
+    {
+
+    }
+
+    public void StartMenu()
+    {
+        userSupportManager.Initialize(m_menuOpenContext.ConsumeOpenTarget());
     }
 
     [SerializeField]
