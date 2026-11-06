@@ -2,12 +2,13 @@ using UnityEngine;
 
 /// <summary>
 /// ステージ1フェーズ3のエネルギー砲攻撃を実行します。
+/// AnimationEventに合わせて照射開始・終了を制御します。
 /// </summary>
 public sealed class S1P3BossEnergyCannonState :
     StateBase<BossController>
 {
     /// <summary>
-    /// エネルギー砲攻撃の進行状態です。
+    /// エネルギー砲攻撃の実行状態です。
     /// </summary>
     private enum EnergyCannonExecutionState
     {
@@ -15,65 +16,105 @@ public sealed class S1P3BossEnergyCannonState :
         PREPARATION,
         STRAIGHT_FIRE,
         TRACKING,
+        ENDING,
         FINISHED
     }
 
-    // フェーズ3全体の参照
+    // フェーズ3固有参照
     private S1P3BossReferences m_references;
 
-    // エネルギー砲状態固有の参照
+    // ボス共通参照
+    private BossPhaseReferences m_commonReferences;
+
+    // エネルギー砲固有参照
     private S1P3EnergyCannonStateReferences m_stateReferences;
 
-    // エネルギー砲状態パラメータ
+    // エネルギー砲パラメータ
     private S1P3BossEnergyCannonStateParameters m_parameters;
 
     // 攻撃ID
     private AttackIdentifier m_attackIdentifier;
 
-    // Animator Trigger ID
-    private int m_animationTriggerId;
+    // 攻撃中Animator Bool ID
+    private int m_animationActiveBoolID;
+
+    // 攻撃フェーズAnimator Int ID
+    private int m_animationPhaseIntID;
+
+    // Animation設定を初期化済みか
+    private bool m_isAnimationInitialized;
+
+    // AnimationEvent受信
+    private AnimationEventReceiver m_animationEventReceiver;
 
     // 現在の進行状態
     private EnergyCannonExecutionState m_executionState;
-
-    // 現在状態の経過時間
-    private float m_elapsedTime;
-    private BossPhaseReferences m_commonReferences;
 
     /// <summary>
     /// エネルギー砲攻撃を開始します。
     /// </summary>
     protected override void OnStartState()
     {
-        m_elapsedTime = 0.0f;
-        m_executionState =
-            EnergyCannonExecutionState.NONE;
+        ResetRuntimeState();
 
         if (!TryGetReferences())
         {
-            Owner.SetStateExecutionStatus(
-                StateExecutionStatus.FAILED);
+            SetFailed();
 
             return;
         }
 
-        if (!ApplyAttackSetting())
+        if (!TryGetAttackSetting())
         {
             Debug.LogError(
-                "エネルギー砲攻撃の設定に失敗しました。");
+                $"[{nameof(S1P3BossEnergyCannonState)}] " +
+                "エネルギー砲の攻撃設定を取得できませんでした。");
 
-            Owner.SetStateExecutionStatus(
-                StateExecutionStatus.FAILED);
+            SetFailed();
 
             return;
         }
 
-        // 攻撃中はボス本体を停止する
-        Owner.Motor?.StopHorizontalMovement();
+        if (!InitializeAnimationParameters())
+        {
+            Debug.LogError(
+                $"[{nameof(S1P3BossEnergyCannonState)}] " +
+                "Animation設定を初期化できませんでした。");
 
-        // 開始時点では攻撃判定を無効化する
-        Owner.AttackHitboxRegistry?.DisableHitboxes(
-            m_attackIdentifier);
+            SetFailed();
+
+            return;
+        }
+
+        if (!RegisterAnimationEvent())
+        {
+            Debug.LogError(
+                $"[{nameof(S1P3BossEnergyCannonState)}] " +
+                "AnimationEventを購読できませんでした。");
+
+            SetFailed();
+
+            return;
+        }
+
+        // 攻撃中はボス本体を停止させます。
+        Owner.Motor?
+            .StopHorizontalMovement();
+
+        // 前回の攻撃判定が残らないよう初期状態では無効化します。
+        Owner.AttackHitboxRegistry?
+            .DisableHitboxes(
+                m_attackIdentifier);
+
+        /*
+         * Animation開始前にPhaseを設定します。
+         * HITBOX_ENABLEが来るまでは予備動作状態です。
+         */
+        SetAnimationPhase(
+            BossActionPhase.PREPARATION);
+
+        SetAnimationActive(
+            true);
 
         m_executionState =
             EnergyCannonExecutionState.PREPARATION;
@@ -85,33 +126,27 @@ public sealed class S1P3BossEnergyCannonState :
     /// <summary>
     /// エネルギー砲攻撃を更新します。
     /// </summary>
-    /// <param name="deltaTime">前フレームからの経過時間。</param>
+    /// <param name="deltaTime">
+    /// 前フレームからの経過時間。
+    /// </param>
     protected override void OnUpdate(
         float deltaTime)
     {
-        if (Owner.GetStateExecutionStatus() !=
-            StateExecutionStatus.RUNNING)
+        if (Owner == null ||
+            Owner.GetStateExecutionStatus() !=
+                StateExecutionStatus.RUNNING)
         {
             return;
         }
 
-        switch (m_executionState)
+        if (m_executionState !=
+            EnergyCannonExecutionState.TRACKING)
         {
-            case EnergyCannonExecutionState.PREPARATION:
-                UpdatePreparation(
-                    deltaTime);
-                break;
-
-            case EnergyCannonExecutionState.STRAIGHT_FIRE:
-                UpdateStraightFire(
-                    deltaTime);
-                break;
-
-            case EnergyCannonExecutionState.TRACKING:
-                UpdateTracking(
-                    deltaTime);
-                break;
+            return;
         }
+
+        TrackPlayer(
+            deltaTime);
     }
 
     /// <summary>
@@ -119,94 +154,124 @@ public sealed class S1P3BossEnergyCannonState :
     /// </summary>
     protected override void OnExitState()
     {
-        StartCoolTimeIfSucceeded();
+        UnregisterAnimationEvent();
+
+        Owner?.Motor?
+            .StopHorizontalMovement();
 
         if (m_attackIdentifier != null)
         {
-            Owner.AttackHitboxRegistry?.DisableHitboxes(
-                m_attackIdentifier);
+            Owner?.AttackHitboxRegistry?
+                .DisableHitboxes(
+                    m_attackIdentifier);
         }
 
-        if (Owner.GetStateExecutionStatus() ==
-            StateExecutionStatus.RUNNING)
+        ResetAnimationParameters();
+
+        if (Owner != null &&
+            Owner.GetStateExecutionStatus() ==
+                StateExecutionStatus.RUNNING)
         {
             Owner.SetStateExecutionStatus(
                 StateExecutionStatus.FAILED);
         }
 
-        m_executionState =
-            EnergyCannonExecutionState.NONE;
+        ResetRuntimeState();
 
-        m_elapsedTime = 0.0f;
+        m_references =
+            null;
 
-        m_references = null;
-        m_stateReferences = null;
-        m_parameters = null;
-        m_attackIdentifier = null;
+        m_commonReferences =
+            null;
+
+        m_stateReferences =
+            null;
+
+        m_parameters =
+            null;
+
+        m_attackIdentifier =
+            null;
+
+        m_animationEventReceiver =
+            null;
     }
 
     /// <summary>
-    /// 予備動作を更新します。
+    /// エネルギー砲AnimationEventを処理します。
     /// </summary>
-    /// <param name="deltaTime">前フレームからの経過時間。</param>
-    private void UpdatePreparation(
-        float deltaTime)
+    /// <param name="attackEventData">
+    /// 攻撃イベント情報。
+    /// </param>
+    private void HandleAttackEvent(
+        AttackEventData attackEventData)
     {
-        m_elapsedTime +=
-            deltaTime;
-
-        if (m_elapsedTime <
-            m_parameters.PreparationDuration)
+        if (attackEventData == null ||
+            Owner == null ||
+            Owner.GetStateExecutionStatus() !=
+                StateExecutionStatus.RUNNING)
         {
             return;
         }
 
-        StartStraightFire();
+        switch (attackEventData.AttackEventType)
+        {
+            case AttackEventType.HITBOX_ENABLE:
+                StartEnergyCannon();
+                break;
+
+            case AttackEventType.IMPACT_START:
+                StartTracking();
+                break;
+
+            case AttackEventType.HITBOX_DISABLE:
+                StopEnergyCannon();
+                break;
+
+            case AttackEventType.ANIMATION_END:
+                FinishAttack();
+                break;
+        }
     }
 
     /// <summary>
-    /// 直線発射を開始します。
+    /// AnimationEventを起点に
+    /// エネルギー砲の照射を開始します。
     /// </summary>
-    private void StartStraightFire()
+    private void StartEnergyCannon()
     {
-        m_elapsedTime = 0.0f;
+        if (m_executionState !=
+            EnergyCannonExecutionState.PREPARATION)
+        {
+            return;
+        }
 
-        // 発射開始時点のPlayer方向へ向ける
-        //AimAtPlayer(); // 最初は正面方向に撃つので一旦無効　にする
+        SetAnimationPhase(
+            BossActionPhase.EXECUTION);
 
-        // エネルギー砲の攻撃判定を有効化する
         Owner.EnableAttackHitboxes(
             m_attackIdentifier);
 
+        /*
+         * IMPACT_STARTが来るまでは
+         * CannonPivotを回転させず正面へ照射します。
+         */
         m_executionState =
             EnergyCannonExecutionState.STRAIGHT_FIRE;
     }
 
-    /// <summary>
-    /// 直線発射状態を更新します。
-    /// </summary>
-    /// <param name="deltaTime">前フレームからの経過時間。</param>
-    private void UpdateStraightFire(
-        float deltaTime)
-    {
-        m_elapsedTime +=
-            deltaTime;
-
-        if (m_elapsedTime <
-            m_parameters.StraightFireDuration)
-        {
-            return;
-        }
-
-        StartTracking();
-    }
 
     /// <summary>
-    /// Player追従を開始します。
+    /// AnimationEventを起点に
+    /// Player追従状態を開始します。
     /// </summary>
     private void StartTracking()
     {
-        m_elapsedTime = 0.0f;
+        if (m_executionState !=
+            EnergyCannonExecutionState.STRAIGHT_FIRE)
+        {
+            return;
+        }
 
         m_executionState =
             EnergyCannonExecutionState.TRACKING;
@@ -215,62 +280,56 @@ public sealed class S1P3BossEnergyCannonState :
     /// <summary>
     /// Player追従状態を更新します。
     /// </summary>
-    /// <param name="deltaTime">前フレームからの経過時間。</param>
+    /// <param name="deltaTime">
+    /// 前フレームからの経過時間。
+    /// </param>
     private void UpdateTracking(
         float deltaTime)
     {
         TrackPlayer(
             deltaTime);
+    }
 
-        m_elapsedTime +=
-            deltaTime;
-
-        if (m_elapsedTime <
-            m_parameters.TrackingDuration)
+    /// <summary>
+    /// AnimationEventを起点に
+    /// エネルギー砲の照射を終了します。
+    /// </summary>
+    private void StopEnergyCannon()
+    {
+        if (m_executionState !=
+                EnergyCannonExecutionState.STRAIGHT_FIRE &&
+            m_executionState !=
+                EnergyCannonExecutionState.TRACKING)
         {
             return;
         }
 
-        FinishAttack();
-    }
+        Owner.AttackHitboxRegistry?
+            .DisableHitboxes(
+                m_attackIdentifier);
 
-    /// <summary>
-    /// 発射開始時点のPlayer方向へエネルギー砲を向けます。
-    /// </summary>
-    private void AimAtPlayer()
-    {
-        //Transform cannonPivot =
-        //    m_stateReferences.CannonPivot;
+        SetAnimationPhase(
+            BossActionPhase.RECOVERY);
 
-        //Transform playerTransform =
-        //    m_commonReferences.PlayerTransform;
-
-        //Vector3 direction =
-        //    playerTransform.position -
-        //    cannonPivot.position;
-
-        //// 左右方向のみ追従する
-        //direction.y = 0.0f;
-
-        //if (direction.sqrMagnitude <=
-        //    Mathf.Epsilon)
-        //{
-        //    return;
-        //}
-
-        //cannonPivot.rotation =
-        //    Quaternion.LookRotation(
-        //        direction.normalized,
-        //        Vector3.up);
+        m_executionState =
+            EnergyCannonExecutionState.ENDING;
     }
 
     /// <summary>
     /// エネルギー砲をPlayer方向へ追従させます。
     /// </summary>
-    /// <param name="deltaTime">前フレームからの経過時間。</param>
+    /// <param name="deltaTime">
+    /// 前フレームからの経過時間。
+    /// </param>
     private void TrackPlayer(
         float deltaTime)
     {
+        if (m_stateReferences?.CannonPivot == null ||
+            m_commonReferences?.PlayerTransform == null)
+        {
+            return;
+        }
+
         Transform cannonPivot =
             m_stateReferences.CannonPivot;
 
@@ -281,8 +340,9 @@ public sealed class S1P3BossEnergyCannonState :
             playerTransform.position -
             cannonPivot.position;
 
-        // 上下には追従しない
-        direction.y = 0.0f;
+        // 水平方向のみ追従します。
+        direction.y =
+            0.0f;
 
         if (direction.sqrMagnitude <=
             Mathf.Epsilon)
@@ -304,7 +364,7 @@ public sealed class S1P3BossEnergyCannonState :
     }
 
     /// <summary>
-    /// エネルギー砲攻撃を正常終了します。
+    /// Animation終了時にエネルギー砲攻撃を完了します。
     /// </summary>
     private void FinishAttack()
     {
@@ -314,11 +374,40 @@ public sealed class S1P3BossEnergyCannonState :
             return;
         }
 
+        /*
+         * HITBOX_DISABLEを取りこぼした場合でも
+         * Animation終了時には必ず攻撃判定を停止します。
+         */
+        Owner.AttackHitboxRegistry?
+            .DisableHitboxes(
+                m_attackIdentifier);
+
         m_executionState =
             EnergyCannonExecutionState.FINISHED;
 
-        Owner.AttackHitboxRegistry?.DisableHitboxes(
-            m_attackIdentifier);
+        if (!Owner.PhaseController
+                .TryGetCurrentPhaseComponent(
+                    out S1P3BossStateTransitionRequest transitionRequest))
+        {
+            Debug.LogError(
+                $"[{nameof(S1P3BossEnergyCannonState)}] " +
+                $"{nameof(S1P3BossStateTransitionRequest)}が" +
+                "設定されていません。");
+
+            Owner.SetStateExecutionStatus(
+                StateExecutionStatus.FAILED);
+
+            return;
+        }
+
+        /*
+         * SUCCEEDEDにすると次の行動判定が開始される可能性があるため、
+         * 必ず先にクールタイムを登録します。
+         */
+        StartCoolTime();
+
+        // エネルギー砲正常終了後はスタンへ遷移させます。
+        transitionRequest.RequestStunned();
 
         Owner.SetStateExecutionStatus(
             StateExecutionStatus.SUCCEEDED);
@@ -328,16 +417,14 @@ public sealed class S1P3BossEnergyCannonState :
     /// 必要な参照を取得します。
     /// </summary>
     /// <returns>
-    /// true：取得しました。
+    /// true：取得できました。
     /// false：取得できませんでした。
     /// </returns>
     private bool TryGetReferences()
     {
-        if (Owner.PhaseController == null)
+        if (Owner == null ||
+            Owner.PhaseController == null)
         {
-            Debug.LogError(
-                "PhaseControllerが設定されていません。");
-
             return false;
         }
 
@@ -351,6 +438,7 @@ public sealed class S1P3BossEnergyCannonState :
 
             return false;
         }
+
         if (!Owner.PhaseController
                 .TryGetCurrentPhaseComponent(
                     out m_commonReferences))
@@ -363,7 +451,8 @@ public sealed class S1P3BossEnergyCannonState :
         }
 
         m_stateReferences =
-            m_references.EnergyCannonStateReferences;
+            m_references
+                .EnergyCannonStateReferences;
 
         if (m_stateReferences == null)
         {
@@ -374,28 +463,32 @@ public sealed class S1P3BossEnergyCannonState :
             return false;
         }
 
+        if (m_references.StateParameterAsset ==
+            null)
+        {
+            return false;
+        }
+
         m_parameters =
-            m_references.StateParameterAsset.EnergyCannon;
+            m_references
+                .StateParameterAsset
+                .EnergyCannon;
 
         if (m_parameters == null)
         {
-            Debug.LogError(
-                $"{nameof(S1P3BossEnergyCannonStateParameters)}が" +
-                "設定されていません。");
-
             return false;
         }
 
         if (m_stateReferences.CannonPivot == null)
         {
             Debug.LogError(
-                "エネルギー砲のCannonPivotが" +
-                "設定されていません。");
+                "CannonPivotが設定されていません。");
 
             return false;
         }
 
-        if (m_commonReferences.PlayerTransform == null)
+        if (m_commonReferences.PlayerTransform ==
+            null)
         {
             Debug.LogError(
                 "PlayerTransformが設定されていません。");
@@ -407,45 +500,18 @@ public sealed class S1P3BossEnergyCannonState :
     }
 
     /// <summary>
-    /// 正常終了した行動のクールタイムを開始します。
-    /// </summary>
-    private void StartCoolTimeIfSucceeded()
-    {
-        if (Owner == null ||
-            Owner.GetStateExecutionStatus() !=
-            StateExecutionStatus.SUCCEEDED ||
-            m_references == null ||
-            m_references.DecisionParameterAsset == null)
-        {
-            return;
-        }
-
-        BossStateCoolTimeManager coolTimeManager =
-            Owner.GetComponent<BossStateCoolTimeManager>();
-
-        if (coolTimeManager == null)
-        {
-            return;
-        }
-
-        coolTimeManager.StartCoolTime<S1P3BossEnergyCannonState>(
-            m_references.DecisionParameterAsset
-                .EnergyCannon
-                .CoolTime);
-    }
-
-    /// <summary>
-    /// エネルギー砲の攻撃設定を取得して適用します。
+    /// エネルギー砲の攻撃設定を取得します。
     /// </summary>
     /// <returns>
-    /// true：設定しました。
-    /// false：設定できませんでした。
+    /// true：取得できました。
+    /// false：取得できませんでした。
     /// </returns>
-    private bool ApplyAttackSetting()
+    private bool TryGetAttackSetting()
     {
         S1P3BossAttackSettings attackSettings =
             Owner.GetComponentInChildren<
-                S1P3BossAttackSettings>(true);
+                S1P3BossAttackSettings>(
+                    true);
 
         if (attackSettings == null)
         {
@@ -459,49 +525,221 @@ public sealed class S1P3BossEnergyCannonState :
         if (!attackSettings.TryGetAttackSetting(
                 S1P3BossAttackType.ENERGY_CANNON,
                 out m_attackIdentifier,
-                out string animationTriggerName))
+                out _))
         {
-            Debug.LogError(
-                $"{S1P3BossAttackType.ENERGY_CANNON}の" +
-                "攻撃設定がありません。");
-
             return false;
         }
 
-        if (m_attackIdentifier == null)
-        {
-            Debug.LogError(
-                "エネルギー砲のAttack IDが" +
-                "設定されていません。");
+        return m_attackIdentifier != null;
+    }
 
+    /// <summary>
+    /// Animatorパラメータを初期化します。
+    /// </summary>
+    /// <returns>
+    /// true：初期化できました。
+    /// false：初期化できませんでした。
+    /// </returns>
+    private bool InitializeAnimationParameters()
+    {
+        m_isAnimationInitialized =
+            false;
+
+        if (Owner.AnimationController == null ||
+            m_parameters == null ||
+            string.IsNullOrEmpty(
+                m_parameters.AnimationActiveBoolName) ||
+            string.IsNullOrEmpty(
+                m_parameters.AnimationPhaseIntName))
+        {
             return false;
         }
 
-        if (string.IsNullOrEmpty(
-                animationTriggerName))
-        {
-            Debug.LogError(
-                "エネルギー砲のAnimator Triggerが" +
-                "設定されていません。");
-
-            return false;
-        }
-
-        if (Owner.AnimationController == null)
-        {
-            Debug.LogError(
-                "AnimationControllerが設定されていません。");
-
-            return false;
-        }
-
-        m_animationTriggerId =
+        m_animationActiveBoolID =
             Animator.StringToHash(
-                animationTriggerName);
+                m_parameters
+                    .AnimationActiveBoolName);
 
-        Owner.AnimationController.SetTrigger(
-            m_animationTriggerId);
+        m_animationPhaseIntID =
+            Animator.StringToHash(
+                m_parameters
+                    .AnimationPhaseIntName);
+
+        m_isAnimationInitialized =
+            true;
 
         return true;
+    }
+
+    /// <summary>
+    /// AnimationEventを購読します。
+    /// </summary>
+    /// <returns>
+    /// true：購読できました。
+    /// false：購読できませんでした。
+    /// </returns>
+    private bool RegisterAnimationEvent()
+    {
+        if (Owner?.AnimationController == null)
+        {
+            return false;
+        }
+
+        m_animationEventReceiver =
+            Owner.AnimationController
+                .CurrentAnimationEventReceiver;
+
+        if (m_animationEventReceiver == null)
+        {
+            return false;
+        }
+
+        m_animationEventReceiver.AttackEventReceived +=
+            HandleAttackEvent;
+
+        return true;
+    }
+
+    /// <summary>
+    /// AnimationEventの購読を解除します。
+    /// </summary>
+    private void UnregisterAnimationEvent()
+    {
+        if (m_animationEventReceiver == null)
+        {
+            return;
+        }
+
+        m_animationEventReceiver.AttackEventReceived -=
+            HandleAttackEvent;
+    }
+
+    /// <summary>
+    /// Animatorへ攻撃中フラグを設定します。
+    /// </summary>
+    /// <param name="isActive">
+    /// 攻撃中か。
+    /// </param>
+    private void SetAnimationActive(
+        bool isActive)
+    {
+        if (!m_isAnimationInitialized ||
+            Owner?.AnimationController == null)
+        {
+            return;
+        }
+
+        Owner.AnimationController.SetBool(
+            m_animationActiveBoolID,
+            isActive);
+    }
+
+    /// <summary>
+    /// Animatorへ攻撃フェーズを設定します。
+    /// </summary>
+    /// <param name="phase">
+    /// 攻撃フェーズ。
+    /// </param>
+    private void SetAnimationPhase(
+        BossActionPhase phase)
+    {
+        if (!m_isAnimationInitialized ||
+            Owner?.AnimationController == null)
+        {
+            return;
+        }
+
+        Owner.AnimationController.SetInteger(
+            m_animationPhaseIntID,
+            (int)phase);
+    }
+
+    /// <summary>
+    /// Animatorパラメータを初期状態へ戻します。
+    /// </summary>
+    private void ResetAnimationParameters()
+    {
+        if (!m_isAnimationInitialized ||
+            Owner?.AnimationController == null)
+        {
+            return;
+        }
+
+        Owner.AnimationController.SetInteger(
+            m_animationPhaseIntID,
+            (int)BossActionPhase.PREPARATION);
+
+        Owner.AnimationController.SetBool(
+            m_animationActiveBoolID,
+            false);
+
+        m_isAnimationInitialized =
+            false;
+    }
+
+    /// <summary>
+    /// Runtime状態を初期化します。
+    /// </summary>
+    private void ResetRuntimeState()
+    {
+ 
+        m_executionState =
+            EnergyCannonExecutionState.NONE;
+    }
+
+    /// <summary>
+    /// エネルギー砲のクールタイムを開始します。
+    /// </summary>
+    private void StartCoolTime()
+    {
+        if (Owner == null ||
+            m_references == null ||
+            m_references.DecisionParameterAsset ==
+                null)
+        {
+            return;
+        }
+
+        BossStateCoolTimeManager coolTimeManager =
+            Owner.GetComponent<
+                BossStateCoolTimeManager>();
+
+        if (coolTimeManager == null)
+        {
+            return;
+        }
+
+        coolTimeManager
+            .StartCoolTime<
+                S1P3BossEnergyCannonState>(
+                m_references
+                    .DecisionParameterAsset
+                    .EnergyCannon
+                    .CoolTime);
+    }
+
+    /// <summary>
+    /// Stateを失敗終了します。
+    /// </summary>
+    private void SetFailed()
+    {
+        if (m_attackIdentifier != null)
+        {
+            Owner?.AttackHitboxRegistry?
+                .DisableHitboxes(
+                    m_attackIdentifier);
+        }
+
+        UnregisterAnimationEvent();
+
+        ResetAnimationParameters();
+
+        if (Owner == null)
+        {
+            return;
+        }
+
+        Owner.SetStateExecutionStatus(
+            StateExecutionStatus.FAILED);
     }
 }

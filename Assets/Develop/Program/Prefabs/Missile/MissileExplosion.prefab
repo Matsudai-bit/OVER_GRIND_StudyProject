@@ -10,9 +10,9 @@ GameObject:
   m_Component:
   - component: {fileID: 9051313180031541077}
   - component: {fileID: 2115303497874861014}
-  - component: {fileID: -6129706040690407230}
   - component: {fileID: 7964350303079313589}
   - component: {fileID: 7337865976173879896}
+  - component: {fileID: 823243850758086357}
   m_Layer: 7
   m_Name: MissileExplosion
   m_TagString: Untagged
@@ -55,21 +55,8 @@ SphereCollider:
   m_ProvidesContacts: 0
   m_Enabled: 0
   serializedVersion: 3
-  m_Radius: 1.26
+  m_Radius: 1.89
   m_Center: {x: 0, y: 0, z: 0}
---- !u!114 &-6129706040690407230
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2755565108841255944}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3be8141375251be4899e177fcc9237d5, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::EffectLifetime
-  m_lifetime: 3
 --- !u!114 &7964350303079313589
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -83,11 +70,15 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AttackHitbox
   m_hitboxCollider: {fileID: 2115303497874861014}
+  m_attackCenter: {fileID: 0}
   m_targetLayerMask:
     serializedVersion: 2
     m_Bits: 256
   m_defaultDamage: 10
-  m_currentDamage: 0
+  m_currentDamageData:
+    m_damage: 0
+    m_attackIdentifier: {fileID: 0}
+    m_attackPowerType: 0
   m_hasDamageOverride: 0
 --- !u!114 &7337865976173879896
 MonoBehaviour:
@@ -111,6 +102,19 @@ MonoBehaviour:
   m_guardColor: {r: 0.15, g: 0.5, b: 1, a: 1}
   m_interactionColor: {r: 1, g: 0.85, b: 0.15, a: 1}
   m_otherColor: {r: 1, g: 1, b: 1, a: 1}
+--- !u!114 &823243850758086357
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2755565108841255944}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c13dd95a6bdc7124bb383386456bbc9b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ExplosionHitboxInstance
+  m_hitbox: {fileID: 7964350303079313589}
 --- !u!1 &7412065701807105128
 GameObject:
   m_ObjectHideFlags: 0
@@ -128,7 +132,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &5028651779421511696
 Transform:
   m_ObjectHideFlags: 0
@@ -139,7 +143,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 2.52, y: 2.52, z: 2.52}
+  m_LocalScale: {x: 2.2, y: 2.2, z: 2.2}
   m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 9051313180031541077}

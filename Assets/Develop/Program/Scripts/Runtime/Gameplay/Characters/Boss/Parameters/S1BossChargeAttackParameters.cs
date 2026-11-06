@@ -4,12 +4,12 @@
 public sealed class S1BossChargeAttackParameters
 {
     /// <summary>
-    /// 突進前の準備時間を取得します。
+    /// 狙い確定状態の継続時間を取得します。
     /// </summary>
-    public float PreparationDuration { get; }
+    public float TargetLockDuration { get; }
 
     /// <summary>
-    /// 準備中の回転速度を取得します。
+    /// 目標方向への回転速度を取得します。
     /// </summary>
     public float RotationSpeed { get; }
 
@@ -34,19 +34,19 @@ public sealed class S1BossChargeAttackParameters
     public float EndDuration { get; }
 
     /// <summary>
-    /// 準備アニメーションのBool名を取得します。
+    /// 突進攻撃中を示すAnimator Bool名を取得します。
     /// </summary>
-    public string PreparationAnimationBoolName { get; }
+    public string AnimationActiveBoolName { get; }
 
     /// <summary>
-    /// 突進アニメーションのBool名を取得します。
+    /// 突進攻撃フェーズを示すAnimator Int名を取得します。
     /// </summary>
-    public string ChargeAnimationBoolName { get; }
+    public string AnimationPhaseIntName { get; }
 
     /// <summary>
-    /// 終了アニメーションのBool名を取得します。
+    /// 左右旋回方向を示すAnimator Int名を取得します。
     /// </summary>
-    public string EndAnimationBoolName { get; }
+    public string AnimationTurnDirectionIntName { get; }
 
     /// <summary>
     /// 突進攻撃の識別子を取得します。
@@ -57,33 +57,45 @@ public sealed class S1BossChargeAttackParameters
     /// 突進攻撃パラメータを生成します。
     /// </summary>
     public S1BossChargeAttackParameters(
-        float preparationDuration,
+        float targetLockDuration,
         float rotationSpeed,
         float chargeSpeed,
         float maxChargeDistance,
         float stopMargin,
         float endDuration,
-        string preparationAnimationBoolName,
-        string chargeAnimationBoolName,
-        string endAnimationBoolName,
+        string animationActiveBoolName,
+        string animationPhaseIntName,
+        string animationTurnDirectionIntName,
         AttackIdentifier attackIdentifier)
     {
-        PreparationDuration = preparationDuration;
-        RotationSpeed = rotationSpeed;
-        ChargeSpeed = chargeSpeed;
-        MaxChargeDistance = maxChargeDistance;
-        StopMargin = stopMargin;
-        EndDuration = endDuration;
+        TargetLockDuration =
+            targetLockDuration;
 
-        PreparationAnimationBoolName =
-            preparationAnimationBoolName;
+        RotationSpeed =
+            rotationSpeed;
 
-        ChargeAnimationBoolName =
-            chargeAnimationBoolName;
+        ChargeSpeed =
+            chargeSpeed;
 
-        EndAnimationBoolName =
-            endAnimationBoolName;
+        MaxChargeDistance =
+            maxChargeDistance;
 
-        AttackIdentifier = attackIdentifier;
+        StopMargin =
+            stopMargin;
+
+        EndDuration =
+            endDuration;
+
+        AnimationActiveBoolName =
+            animationActiveBoolName;
+
+        AnimationPhaseIntName =
+            animationPhaseIntName;
+
+        AnimationTurnDirectionIntName =
+            animationTurnDirectionIntName;
+
+        AttackIdentifier =
+            attackIdentifier;
     }
 }

@@ -25,8 +25,8 @@ public class TimerUiModel : MonoBehaviour
     /// <param name="deltaTime">加算する時間（秒）。</param>
     public void AddTime(float deltaTime)
     {
-        CurrentTime += deltaTime;
-        OnTimeChanged?.Invoke(CurrentTime);
+        //CurrentTime += deltaTime;
+        //OnTimeChanged?.Invoke(CurrentTime);
     }
 
     /// <summary>
@@ -35,6 +35,6 @@ public class TimerUiModel : MonoBehaviour
     private void FixedUpdate()
     {
         // 毎フレーム時間を進める
-        AddTime(Time.fixedDeltaTime);
+        ////AddTime(Time.fixedDeltaTime);
     }
 }

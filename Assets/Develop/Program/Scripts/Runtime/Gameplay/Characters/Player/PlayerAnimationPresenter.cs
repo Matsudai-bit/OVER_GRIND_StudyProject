@@ -1,7 +1,9 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// プレイヤーの状態をAnimatorへ反映します。
+/// プレイヤー状況をAnimatorへ反映します。
+/// 常時同期する基本状態と、Stateから明示的に設定する状態を仲介します。
 /// </summary>
 [DisallowMultipleComponent]
 public sealed class PlayerAnimationPresenter : MonoBehaviour
@@ -9,295 +11,647 @@ public sealed class PlayerAnimationPresenter : MonoBehaviour
     [SerializeField, Header("Parameter Asset")]
     private PlayerAnimationPresenterParameterAsset m_parameterAsset;
 
-    // ゼロ除算を防ぐための最小速度
-    private const float MIN_MAX_MOVE_SPEED = 0.0001f;
-
-    // Animatorパラメーター名
-    private const string MOVE_SPEED_PARAMETER_NAME = "MoveSpeed";
-    private const string IS_GROUNDED_PARAMETER_NAME = "IsGrounded";
-    private const string JUMP_PARAMETER_NAME = "Jump";
-    private const string ATTACK_PARAMETER_NAME = "Attack";
-    private const string WALK_PARAMETER_NAME = "Walk";
-    private const string HIT_PARAMETER_NAME = "Hit";
-    private const string V_RUNNING_PARAMETER_NAME = "VRunning";
-    private const string STATIONARY_BOOST_CHARGING_PARAMETER_NAME =  "StationaryBoostCharging";
-    private const string RAIL_GRIND_PARAMETER_NAME =  "RailGrind";
-
-
-    // Animatorパラメーターのハッシュ値
-    private static readonly int MOVE_SPEED_HASH =
-        Animator.StringToHash(MOVE_SPEED_PARAMETER_NAME);
-
-    private static readonly int IS_GROUNDED_HASH =
-        Animator.StringToHash(IS_GROUNDED_PARAMETER_NAME);
-
-    private static readonly int JUMP_HASH =
-        Animator.StringToHash(JUMP_PARAMETER_NAME);
-
-    private static readonly int ATTACK_HASH =
-        Animator.StringToHash(ATTACK_PARAMETER_NAME);
-
-    private static readonly int HIT_HASH =
-        Animator.StringToHash(HIT_PARAMETER_NAME);    
-
-    private static readonly int WALK_HASH =
-        Animator.StringToHash(WALK_PARAMETER_NAME);
-    private static readonly int V_RUNNING_HASH =
-        Animator.StringToHash(V_RUNNING_PARAMETER_NAME);
-    private static readonly int STATIONARY_BOOST_CHARGING_HASH =
-        Animator.StringToHash(STATIONARY_BOOST_CHARGING_PARAMETER_NAME);
-    private static readonly int RAIL_GRIND_HASH =
-        Animator.StringToHash(RAIL_GRIND_PARAMETER_NAME);
-
-    // プレイヤーのAnimator
-    [SerializeField]
+    [SerializeField, Header("Animator")]
     private Animator m_animator;
 
-    // 移動速度パラメーターの補間時間
     [SerializeField, Min(0.0f)]
     private float m_moveSpeedDampTime = 0.1f;
 
-    // プレイヤー監視機能
-    private PlayerMonitor m_monitor;
+    // 0除算を防ぐための最低移動速度
+    private const float MIN_MAX_MOVE_SPEED = 0.0001f;
 
-    // プレイヤー移動機能
-    private PlayerMotor m_motor;
+    // 移動チャージ方向
+    private const int MOVE_CHARGE_DIRECTION_LEFT = -1;
+    private const int MOVE_CHARGE_DIRECTION_NEUTRAL = 0;
+    private const int MOVE_CHARGE_DIRECTION_RIGHT = 1;
 
-    // Animatorパラメーターの存在状態
-    private bool m_hasMoveSpeedParameter;
-    private bool m_hasGroundedParameter;
-    private bool m_hasJumpParameter;
-    private bool m_hasAttackParameter;
-    private bool m_hasHitParameter;
-    private bool m_hasWalkParameter;
-    // Vブースト走行パラメーターが存在するか
-    private bool m_hasVRunningParameter;
-    // その場Vブーストチャージパラメーターが存在するか
-    private bool m_hasStationaryBoostChargingParameter;
-    // レールグラインドパラメーターが存在するか
-    private bool m_hasRailGrindParameter;
+    /// <summary>
+    /// Animatorパラメータの定義です。
+    /// </summary>
+    private readonly struct AnimatorParameterDefinition
+    {
+        /// <summary>
+        /// Animatorパラメータ定義を生成します。
+        /// </summary>
+        public AnimatorParameterDefinition(
+            string name,
+            AnimatorControllerParameterType type)
+        {
+            Name = name;
+            Hash = Animator.StringToHash(name);
+            Type = type;
+        }
 
-    // 初期化されているか
+        /// <summary>
+        /// Animator上のパラメータ名を取得します。
+        /// </summary>
+        public string Name { get; }
+
+        /// <summary>
+        /// AnimatorパラメータのHashを取得します。
+        /// </summary>
+        public int Hash { get; }
+
+        /// <summary>
+        /// Animatorパラメータの型を取得します。
+        /// </summary>
+        public AnimatorControllerParameterType Type { get; }
+    }
+
+    /// <summary>
+    /// PlayerAnimationPresenterが使用するAnimatorパラメータをまとめます。
+    /// 新しいパラメータを追加する場合は、ここへ定義を追加してください。
+    /// </summary>
+    private static class AnimatorParameters
+    {
+        // ------------------------------------------------------------
+        // 常時同期パラメータ
+        // ------------------------------------------------------------
+
+        public static readonly AnimatorParameterDefinition MoveSpeed =
+            new(
+                "MoveSpeed",
+                AnimatorControllerParameterType.Float); 
+        public static readonly AnimatorParameterDefinition VerticalSpeed =
+            new(
+                "VerticalSpeed",
+                AnimatorControllerParameterType.Float);
+        public static readonly AnimatorParameterDefinition HorizonalSpeed =
+                   new(
+                       "HorizonalSpeed",
+                       AnimatorControllerParameterType.Float);
+
+
+        public static readonly AnimatorParameterDefinition IsGrounded =
+            new(
+                "IsGrounded",
+                AnimatorControllerParameterType.Bool);    
+        public static readonly AnimatorParameterDefinition HealthValue =
+            new(
+                "HealthValue",
+                AnimatorControllerParameterType.Int);
+
+
+
+        // ------------------------------------------------------------
+        // Stateから明示的に設定するパラメータ
+        // ------------------------------------------------------------
+
+        public static readonly AnimatorParameterDefinition JumpStart =
+            new(
+                "JumpStart",
+                AnimatorControllerParameterType.Trigger);
+
+        public static readonly AnimatorParameterDefinition IsJumping =
+            new(
+                "IsJumping",
+                AnimatorControllerParameterType.Bool);
+
+        public static readonly AnimatorParameterDefinition JumpType =
+            new(
+                "JumpType",
+                AnimatorControllerParameterType.Int);
+
+        public static readonly AnimatorParameterDefinition AttackStart =
+            new(
+                "AttackStart",
+                AnimatorControllerParameterType.Trigger);
+
+        public static readonly AnimatorParameterDefinition IsAttacking =
+            new(
+                "IsAttacking",
+                AnimatorControllerParameterType.Bool);
+
+        public static readonly AnimatorParameterDefinition WalkStart =
+            new(
+                "WalkStart",
+                AnimatorControllerParameterType.Trigger);
+
+        public static readonly AnimatorParameterDefinition IsWalking =
+            new(
+                "IsWalking",
+                AnimatorControllerParameterType.Bool);
+
+        public static readonly AnimatorParameterDefinition VRunStart =
+            new(
+                "VRunStart",
+                AnimatorControllerParameterType.Trigger);
+        public static readonly AnimatorParameterDefinition IsVRunning =
+            new(
+                "IsVRunning",
+                AnimatorControllerParameterType.Bool);
+
+        public static readonly AnimatorParameterDefinition StationaryChargeStart =
+            new(
+                "StationaryChargeStart",
+                AnimatorControllerParameterType.Trigger);
+
+        public static readonly AnimatorParameterDefinition IsStationaryCharging =
+            new(
+                "IsStationaryCharging",
+                AnimatorControllerParameterType.Bool);
+
+        public static readonly AnimatorParameterDefinition IsRailGrinding =
+            new(
+                "IsRailGrinding",
+                AnimatorControllerParameterType.Bool);
+        public static readonly AnimatorParameterDefinition RailGrindStart =
+            new(
+                "RailGrindStart",
+                AnimatorControllerParameterType.Trigger);
+
+        public static readonly AnimatorParameterDefinition MoveChargeStart =
+            new(
+                "MoveChargeStart",
+                AnimatorControllerParameterType.Trigger);
+
+        public static readonly AnimatorParameterDefinition IsMoveCharging =
+            new(
+                "IsMoveCharging",
+                AnimatorControllerParameterType.Bool);
+
+        public static readonly AnimatorParameterDefinition IsChargeAttacking=
+            new(
+                "IsChargeAttacking",
+                AnimatorControllerParameterType.Bool);
+        public static readonly AnimatorParameterDefinition ChargeAttackStart =
+          new(
+              "ChargeAttackStart",
+              AnimatorControllerParameterType.Trigger);
+        public static readonly AnimatorParameterDefinition IsAerialAttacking =
+       new(
+           "IsAerialAttacking",
+           AnimatorControllerParameterType.Bool);
+        public static readonly AnimatorParameterDefinition AerialAttackStart =
+          new(
+              "AerialAttackStart",
+              AnimatorControllerParameterType.Trigger);
+
+        public static readonly AnimatorParameterDefinition MoveChargeDirection =
+            new(
+                "MoveChargeDirection",
+                AnimatorControllerParameterType.Int);
+
+        public static readonly AnimatorParameterDefinition HitStart =
+        new(
+            "HitStart",
+            AnimatorControllerParameterType.Trigger);
+
+        public static readonly AnimatorParameterDefinition IsHitting =
+            new(
+                "IsHitting",
+                AnimatorControllerParameterType.Bool);
+        public static readonly AnimatorParameterDefinition HitType =
+    new(
+        "HitType",
+        AnimatorControllerParameterType.Int);
+
+        /// <summary>
+        /// Presenterが使用する全Animatorパラメータです。
+        /// </summary>
+        public static readonly AnimatorParameterDefinition[] All =
+        {
+            MoveSpeed,
+            VerticalSpeed,
+            HorizonalSpeed,
+            IsGrounded,
+            JumpStart,
+            IsJumping,
+            JumpType,
+            AttackStart,
+            IsAttacking,
+            WalkStart,
+            IsWalking,
+            VRunStart,
+            IsVRunning,
+            StationaryChargeStart,
+            IsStationaryCharging,
+            IsRailGrinding,
+            RailGrindStart,
+            MoveChargeStart,
+            IsMoveCharging,
+            IsChargeAttacking,
+            ChargeAttackStart,
+            MoveChargeDirection,
+            AerialAttackStart,
+            IsAerialAttacking,
+            HitStart,
+            IsHitting,
+            HitType,
+            HealthValue
+
+        };
+    }
+
+    // Animatorに存在するパラメータ型をHash単位で保持する
+    private readonly Dictionary<int, AnimatorControllerParameterType>
+        m_animatorParameterTypes = new();
+
+    // プレイヤー状況提供機能
+    private PlayerStatusProvider m_statusProvider;
+
+    // 初期化済みか
     private bool m_isInitialized;
 
     /// <summary>
-    /// 初期化されているかを取得します。
+    /// 初期化済みかどうかを取得します。
     /// </summary>
-    /// <returns>
-    /// true：初期化されています。
-    /// false：初期化されていません。
-    /// </returns>
-    public bool IsInitialized => m_isInitialized;
+    public bool IsInitialized =>
+        m_isInitialized;
 
     /// <summary>
     /// アニメーション表示機能を初期化します。
     /// </summary>
-    /// <param name="monitor">プレイヤー監視機能。</param>
-    /// <param name="motor">プレイヤー移動機能。</param>
+    /// <param name="statusProvider">プレイヤー状況提供機能。</param>
     public void Initialize(
-        PlayerMonitor monitor,
-        PlayerMotor motor)
+        PlayerStatusProvider statusProvider)
     {
         if (m_parameterAsset != null)
         {
-            m_moveSpeedDampTime = m_parameterAsset.MoveSpeedDampTime;
+            m_moveSpeedDampTime =
+                m_parameterAsset.MoveSpeedDampTime;
         }
 
         ResolveAnimatorReference();
 
-        if (!ValidateReferences(monitor, motor))
+        if (!ValidateReferences(
+                statusProvider))
         {
             m_isInitialized = false;
             return;
         }
 
-        m_monitor = monitor;
-        m_motor = motor;
+        UnsubscribeStatusEvents();
+
+        m_statusProvider =
+            statusProvider;
 
         CacheAnimatorParameters();
 
         m_isInitialized = true;
 
-        // 初期状態を即座にAnimatorへ反映
-        RefreshAnimationImmediately();
+        SubscribeStatusEvents();
+
+        RefreshAutomaticParameters(
+            m_statusProvider.CurrentStatus,
+            true);
     }
 
+    // ============================================================
+    // State制御パラメータ
+    // ============================================================
+
+  
+
     /// <summary>
-    /// ジャンプアニメーションを要求します。
+    /// 指定したジャンプ種別でジャンプアニメーションを開始します。
     /// </summary>
-    public void PlayJumpAnimation()
+    /// <param name="jumpType">ジャンプアニメーション種別。</param>
+    public void PlayJumpAnimation(
+        PlayerJumpAnimationType jumpType)
     {
-        if (!CanControlAnimator() || !m_hasJumpParameter)
-        {
-            return;
-        }
+        // Any State遷移後に継続状態を正しく参照できるよう、
+        // Boolと種別を先に設定してからTriggerを発行する。
+        SetBool(
+            AnimatorParameters.IsJumping,
+            true);
 
-        m_animator.SetBool(JUMP_HASH, true);
+        SetInt(
+            AnimatorParameters.JumpType,
+            (int)jumpType);
+
+        ResetTrigger(
+            AnimatorParameters.JumpStart);
+
+        SetTrigger(
+            AnimatorParameters.JumpStart);
     }
+
     /// <summary>
-    /// ジャンプアニメーションを要求します。
+    /// ジャンプアニメーションを停止します。
     /// </summary>
     public void StopJumpAnimation()
     {
-        if (!CanControlAnimator() || !m_hasJumpParameter)
-        {
-            return;
-        }
+        SetBool(
+            AnimatorParameters.IsJumping,
+            false);
 
-        m_animator.SetBool(JUMP_HASH, false);
+        // State終了直前の未消費Triggerが次の状態で発火しないよう解除する。
+        ResetTrigger(
+            AnimatorParameters.JumpStart);
     }
 
     /// <summary>
-    /// 攻撃アニメーションを要求します。
+    /// 攻撃アニメーションを開始します。
     /// </summary>
     public void PlayAttackAnimation()
     {
-        if (!CanControlAnimator() || !m_hasAttackParameter)
-        {
-            return;
-        }
+        // 継続状態を先に有効化してから開始要求を発行する。
+        SetBool(
+            AnimatorParameters.IsAttacking,
+            true);
 
-        m_animator.SetBool(ATTACK_HASH,true);
+        ResetTrigger(
+            AnimatorParameters.AttackStart);
+
+        SetTrigger(
+            AnimatorParameters.AttackStart);
     }
+
     /// <summary>
-    /// 攻撃アニメーション停止を要求します。
+    /// 攻撃アニメーションを停止します。
     /// </summary>
     public void StopAttackAnimation()
     {
-        if (!CanControlAnimator() || !m_hasAttackParameter)
-        {
-            return;
-        }
+        SetBool(
+            AnimatorParameters.IsAttacking,
+            false);
 
-        m_animator.SetBool(ATTACK_HASH, false);
+        // 未消費の開始要求が残ったまま次Stateへ遷移することを防ぐ。
+        ResetTrigger(
+            AnimatorParameters.AttackStart);
     }
 
     /// <summary>
     /// 被弾アニメーションを要求します。
     /// </summary>
-    public void PlayHitAnimation()
+    public void PlayHitAnimation(int type)
     {
-        if (!CanControlAnimator() || !m_hasHitParameter)
-        {
-            return;
-        }
+        SetTrigger(
+            AnimatorParameters.HitStart);
+        SetBool(
+            AnimatorParameters.IsHitting,
+            true);
+        SetInt(AnimatorParameters.HitType, type);
+    }
+    /// <summary>
+    /// 被弾アニメーションを要求します。
+    /// </summary>
+    public void StopHitAnimation()
+    {
+        ResetTrigger(
+            AnimatorParameters.HitStart);
+        SetBool(
+            AnimatorParameters.IsHitting,
+            false);
+        SetInt(AnimatorParameters.HitType, -1);
 
-        m_animator.SetTrigger(HIT_HASH);
     }
 
     /// <summary>
-    /// 歩くアニメーションを要求します。
+    /// 歩行アニメーションを開始します。
     /// </summary>
     public void PlayWalkAnimation()
     {
-        if (!CanControlAnimator() || !m_hasWalkParameter)
-        {
-            return;
-        }
-
-        m_animator.SetBool(WALK_HASH, true);
-    }
-    /// <summary>
-    /// レールグラインドアニメーションを要求します。
-    /// </summary>
-    public void PlayRailGrindAnimation()
-    {
-        if (!CanControlAnimator() ||
-            !m_hasRailGrindParameter)
-        {
-            return;
-        }
-
-        m_animator.SetBool(
-            RAIL_GRIND_HASH,
+        // 継続状態を先に有効化してから開始要求を発行する。
+        SetBool(
+            AnimatorParameters.IsWalking,
             true);
+
+        ResetTrigger(
+            AnimatorParameters.WalkStart);
+
+        SetTrigger(
+            AnimatorParameters.WalkStart);
     }
 
     /// <summary>
-    /// レールグラインドアニメーションの停止を要求します。
-    /// </summary>
-    public void StopRailGrindAnimation()
-    {
-        if (!CanControlAnimator() ||
-            !m_hasRailGrindParameter)
-        {
-            return;
-        }
-
-        m_animator.SetBool(
-            RAIL_GRIND_HASH,
-            false);
-    }
-    /// <summary>
-    /// 歩くアニメーション停止を要求します。
+    /// 歩行アニメーションを停止します。
     /// </summary>
     public void StopWalkAnimation()
     {
-        if (!CanControlAnimator() || !m_hasWalkParameter)
-        {
-            return;
-        }
+        SetBool(
+            AnimatorParameters.IsWalking,
+            false);
 
-        m_animator.SetBool(WALK_HASH, false);
+        // Any Stateからの開始要求が残らないように解除する。
+        ResetTrigger(
+            AnimatorParameters.WalkStart);
     }
+
     /// <summary>
-    /// Vブースト走行アニメーションを要求します。
+    /// レールグラインドアニメーションを開始します。
+    /// </summary>
+    public void PlayRailGrindAnimation()
+    {
+
+        SetTrigger(
+            AnimatorParameters.RailGrindStart);
+        SetBool(
+            AnimatorParameters.IsRailGrinding,
+            true);
+    }
+
+    /// <summary>
+    /// レールグラインドアニメーションを停止します。
+    /// </summary>
+    public void StopRailGrindAnimation()
+    {
+        ResetTrigger(
+    AnimatorParameters.RailGrindStart);
+        SetBool(
+            AnimatorParameters.IsRailGrinding,
+            false);
+    }
+
+    /// <summary>
+    /// Vブースト走行アニメーションを開始します。
     /// </summary>
     public void PlayVBoostRunningAnimation()
     {
-        if (!CanControlAnimator() || !m_hasVRunningParameter)
-        {
-            return;
-        }
-
-        m_animator.SetBool(
-            V_RUNNING_HASH,
-            true);
-    }
-    /// <summary>
-    /// その場Vブーストチャージアニメーションを要求します。
-    /// </summary>
-    public void PlayStationaryBoostChargingAnimation()
-    {
-        if (!CanControlAnimator() ||
-            !m_hasStationaryBoostChargingParameter)
-        {
-            return;
-        }
-
-        m_animator.SetBool(
-            STATIONARY_BOOST_CHARGING_HASH,
+        SetTrigger(
+    AnimatorParameters.VRunStart);
+        SetBool(
+            AnimatorParameters.IsVRunning,
             true);
     }
 
     /// <summary>
-    /// その場Vブーストチャージアニメーションの停止を要求します。
-    /// </summary>
-    public void StopStationaryBoostChargingAnimation()
-    {
-        if (!CanControlAnimator() ||
-            !m_hasStationaryBoostChargingParameter)
-        {
-            return;
-        }
-
-        m_animator.SetBool(
-            STATIONARY_BOOST_CHARGING_HASH,
-            false);
-    }
-    /// <summary>
-    /// Vブースト走行アニメーションの停止を要求します。
+    /// Vブースト走行アニメーションを停止します。
     /// </summary>
     public void StopVBoostRunningAnimation()
     {
-        if (!CanControlAnimator() || !m_hasVRunningParameter)
+        ResetTrigger(
+        AnimatorParameters.VRunStart);
+
+        SetBool(
+            AnimatorParameters.IsVRunning,
+            false);
+    }
+
+    /// <summary>
+    /// 停止Vブーストチャージアニメーションを開始します。
+    /// </summary>
+    public void PlayStationaryBoostChargingAnimation()
+    {
+        // 継続状態を先に有効化してから開始要求を発行する。
+        SetBool(
+            AnimatorParameters.IsStationaryCharging,
+            true);
+
+
+
+        SetTrigger(
+            AnimatorParameters.StationaryChargeStart);
+    }
+
+    /// <summary>
+    /// 停止Vブーストチャージアニメーションを停止します。
+    /// </summary>
+    public void StopStationaryBoostChargingAnimation()
+    {
+        SetBool(
+            AnimatorParameters.IsStationaryCharging,
+            false);
+
+        ResetTrigger(
+            AnimatorParameters.StationaryChargeStart);
+    }
+
+    /// <summary>
+    /// 移動チャージアニメーション状態を開始します。
+    /// </summary>
+    public void PlayChargeMovingAnimation()
+    {
+        if (m_statusProvider != null)
         {
-            return;
+            m_statusProvider.SetStateCondition(
+                PlayerConditionFlags.CHARGE_MOVING,
+                true);
         }
 
-        m_animator.SetBool(
-            V_RUNNING_HASH,
+        // 継続状態を先に有効化してから開始要求を発行する。
+        SetBool(
+            AnimatorParameters.IsMoveCharging,
+            true);
+
+        ResetTrigger(
+            AnimatorParameters.MoveChargeStart);
+
+        SetTrigger(
+            AnimatorParameters.MoveChargeStart);
+    }
+
+    /// <summary>
+    /// 移動チャージアニメーション状態を停止します。
+    /// </summary>
+    public void StopChargeMovingAnimation()
+    {
+        if (m_statusProvider != null)
+        {
+            m_statusProvider.SetStateCondition(
+                PlayerConditionFlags.CHARGE_MOVING,
+                false);
+        }
+
+        SetBool(
+            AnimatorParameters.IsMoveCharging,
             false);
+
+        ResetTrigger(
+            AnimatorParameters.MoveChargeStart);
+
+        ResetMoveChargeDirection();
+    }
+
+    /// <summary>
+    /// 移動チャージ中の左右方向をAnimatorへ設定します。
+    /// -1：左、0：正面・入力なし、1：右。
+    /// </summary>
+    /// <param name="direction">移動チャージ方向。</param>
+    public void SetMoveChargeDirection(
+        int direction)
+    {
+        int clampedDirection =
+            Mathf.Clamp(
+                direction,
+                MOVE_CHARGE_DIRECTION_LEFT,
+                MOVE_CHARGE_DIRECTION_RIGHT);
+
+        SetInt(
+            AnimatorParameters.MoveChargeDirection,
+            clampedDirection);
+    }
+
+    /// <summary>
+    /// 移動チャージ方向をニュートラルへ戻します。
+    /// </summary>
+    public void ResetMoveChargeDirection()
+    {
+        SetMoveChargeDirection(
+            MOVE_CHARGE_DIRECTION_NEUTRAL);
+    }
+
+    /// <summary>
+    /// チャージ攻撃アニメーション状態を開始します。
+    /// </summary>
+    public void PlayChargeAttackingAnimation()
+    {
+        if (m_statusProvider != null)
+        {
+            m_statusProvider.SetStateCondition(
+                PlayerConditionFlags.CHARGE_ATTACKING,
+                true);
+        }
+
+        SetBool(
+            AnimatorParameters.IsChargeAttacking,
+            true);
+        SetTrigger(
+       AnimatorParameters.ChargeAttackStart);
+    }
+
+    /// <summary>
+    /// チャージ攻撃アニメーション状態を停止します。
+    /// </summary>
+    public void StopChargeAttackingAnimation()
+    {
+        if (m_statusProvider != null)
+        {
+            m_statusProvider.SetStateCondition(
+                PlayerConditionFlags.CHARGE_ATTACKING,
+                false);
+        }
+
+        SetBool(
+            AnimatorParameters.IsChargeAttacking,
+            false);
+    }
+    /// <summary>
+    /// チャージ攻撃アニメーション状態を開始します。
+    /// </summary>
+    public void PlayAerialAttackingAnimation()
+    {
+        if (m_statusProvider != null)
+        {
+            m_statusProvider.SetStateCondition(
+                PlayerConditionFlags.ATTACKING,
+                true);
+        }
+
+        SetBool(
+            AnimatorParameters.IsAerialAttacking,
+            true);
+        SetTrigger(
+       AnimatorParameters.AerialAttackStart);
+    }
+    /// <summary>
+    /// チャージ攻撃アニメーション状態を開始します。
+    /// </summary>
+    public void StopAerialAttackingAnimation()
+    {
+        if (m_statusProvider != null)
+        {
+            m_statusProvider.SetStateCondition(
+                PlayerConditionFlags.ATTACKING,
+                false);
+        }
+
+        SetBool(
+            AnimatorParameters.IsAerialAttacking,
+            false);
+        ResetTrigger(
+       AnimatorParameters.AerialAttackStart);
     }
 
     /// <summary>
@@ -305,235 +659,326 @@ public sealed class PlayerAnimationPresenter : MonoBehaviour
     /// </summary>
     public void ResetActionTriggers()
     {
-        if (!CanControlAnimator())
-        {
-            return;
-        }
+        ResetTrigger(
+            AnimatorParameters.HitStart);
 
-        if (m_hasAttackParameter)
-        {
-            m_animator.ResetTrigger(ATTACK_HASH);
-        }
+        ResetTrigger(
+            AnimatorParameters.JumpStart);
 
-        if (m_hasHitParameter)
-        {
-            m_animator.ResetTrigger(HIT_HASH);
-        }
+        ResetTrigger(
+            AnimatorParameters.AttackStart);
+
+        ResetTrigger(
+            AnimatorParameters.WalkStart);
+
+        ResetTrigger(
+            AnimatorParameters.StationaryChargeStart);
+
+        ResetTrigger(
+            AnimatorParameters.MoveChargeStart);
+    }
+
+    // ============================================================
+    // 常時同期パラメータ
+    // ============================================================
+
+    /// <summary>
+    /// PlayerStatusProvider更新時に基本Animatorパラメータを同期します。
+    /// </summary>
+    /// <param name="status">最新のプレイヤー状況。</param>
+    private void HandleStatusUpdated(
+        PlayerStatusSnapshot status)
+    {
+        RefreshAutomaticParameters(
+            status,
+            false);
     }
 
     /// <summary>
-    /// 移動状態をAnimatorへ反映します。
+    /// Stateに依存せず常に同期するAnimatorパラメータを反映します。
     /// </summary>
-    private void LateUpdate()
+    /// <param name="status">反映するプレイヤー状況。</param>
+    /// <param name="immediate">補間を使用せず即時反映する場合はtrue。</param>
+    private void RefreshAutomaticParameters(
+        PlayerStatusSnapshot status,
+        bool immediate)
     {
         if (!CanControlAnimator())
         {
             return;
         }
 
-        UpdateLocomotionParameters();
-    }
+        float maxMoveSpeed =
+            Mathf.Max(
+                status.MaxMoveSpeed,
+                MIN_MAX_MOVE_SPEED);
 
-    /// <summary>
-    /// 移動と接地状態をAnimatorへ反映します。
-    /// </summary>
-    private void UpdateLocomotionParameters()
-    {
-        if (m_hasMoveSpeedParameter)
+        float normalizedMoveSpeed =
+            Mathf.Clamp01(
+                status.HorizontalSpeed /
+                maxMoveSpeed);
+
+        if (immediate)
         {
-            float normalizedMoveSpeed =
-                CalculateNormalizedMoveSpeed();
-
-            m_animator.SetFloat(
-                MOVE_SPEED_HASH,
+            SetFloat(
+                AnimatorParameters.MoveSpeed,
+                normalizedMoveSpeed);
+        }
+        else
+        {
+            SetFloat(
+                AnimatorParameters.MoveSpeed,
                 normalizedMoveSpeed,
                 m_moveSpeedDampTime,
                 Time.deltaTime);
         }
 
-        if (m_hasGroundedParameter)
-        {
-            m_animator.SetBool(
-                IS_GROUNDED_HASH,
-                m_monitor.IsGrounded);
-        }
+        SetFloat(
+    AnimatorParameters.VerticalSpeed,
+    status.VerticalSpeed);
+        SetFloat(
+    AnimatorParameters.HorizonalSpeed,
+    status.HorizontalSpeed);
+        SetInt(
+AnimatorParameters.HealthValue,
+status.HealthValue);
+
+        SetBool(
+            AnimatorParameters.IsGrounded,
+            status.HasCondition(
+                PlayerConditionFlags.GROUNDED));
     }
 
-    /// <summary>
-    /// 現在状態を補間なしでAnimatorへ反映します。
-    /// </summary>
-    private void RefreshAnimationImmediately()
-    {
-        if (!CanControlAnimator())
-        {
-            return;
-        }
-
-        if (m_hasMoveSpeedParameter)
-        {
-            m_animator.SetFloat(
-                MOVE_SPEED_HASH,
-                CalculateNormalizedMoveSpeed());
-        }
-
-        if (m_hasGroundedParameter)
-        {
-            m_animator.SetBool(
-                IS_GROUNDED_HASH,
-                m_monitor.IsGrounded);
-        }
-    }
+    // ============================================================
+    // Animatorパラメータ共通操作
+    // ============================================================
 
     /// <summary>
-    /// 現在の移動速度を0から1へ正規化します。
-    /// </summary>
-    /// <returns>正規化された移動速度。</returns>
-    private float CalculateNormalizedMoveSpeed()
-    {
-        float maxMoveSpeed = Mathf.Max(
-            m_motor.MaxMoveSpeed,
-            MIN_MAX_MOVE_SPEED);
-
-        return Mathf.Clamp01(
-            m_monitor.HorizontalSpeed / maxMoveSpeed);
-    }
-
-    /// <summary>
-    /// Animatorパラメーターの存在状態を保存します。
+    /// Animatorパラメータ情報をキャッシュします。
     /// </summary>
     private void CacheAnimatorParameters()
     {
-        m_hasMoveSpeedParameter = HasAnimatorParameter(
-            MOVE_SPEED_HASH,
-            AnimatorControllerParameterType.Float);
+        m_animatorParameterTypes.Clear();
 
-        m_hasGroundedParameter = HasAnimatorParameter(
-            IS_GROUNDED_HASH,
-            AnimatorControllerParameterType.Bool);
-
-        m_hasJumpParameter = HasAnimatorParameter(
-            JUMP_HASH,
-            AnimatorControllerParameterType.Bool);
-
-        m_hasAttackParameter = HasAnimatorParameter(
-            ATTACK_HASH,
-            AnimatorControllerParameterType.Bool);
-
-        m_hasHitParameter = HasAnimatorParameter(
-            HIT_HASH,
-            AnimatorControllerParameterType.Trigger);
-
-        m_hasWalkParameter = HasAnimatorParameter(
-            WALK_HASH,
-            AnimatorControllerParameterType.Bool);
-        m_hasVRunningParameter = HasAnimatorParameter(
-            V_RUNNING_HASH,
-            AnimatorControllerParameterType.Bool);
-        m_hasStationaryBoostChargingParameter = HasAnimatorParameter(
-            STATIONARY_BOOST_CHARGING_HASH,
-            AnimatorControllerParameterType.Bool);
-        m_hasRailGrindParameter = HasAnimatorParameter(
-            RAIL_GRIND_HASH,
-            AnimatorControllerParameterType.Bool);
+        foreach (AnimatorControllerParameter parameter
+                 in m_animator.parameters)
+        {
+            m_animatorParameterTypes[
+                parameter.nameHash] =
+                parameter.type;
+        }
 
         LogMissingParameters();
     }
 
     /// <summary>
-    /// 指定したAnimatorパラメーターが存在するか確認します。
+    /// 指定したAnimatorパラメータが正しい型で存在するか確認します。
     /// </summary>
-    /// <param name="parameterHash">パラメーターのハッシュ値。</param>
-    /// <param name="parameterType">パラメーターの種類。</param>
-    /// <returns>
-    /// true：指定したパラメーターが存在します。
-    /// false：指定したパラメーターが存在しません。
-    /// </returns>
     private bool HasAnimatorParameter(
-        int parameterHash,
-        AnimatorControllerParameterType parameterType)
+        AnimatorParameterDefinition definition)
     {
-        foreach (AnimatorControllerParameter parameter
-                 in m_animator.parameters)
-        {
-            if (parameter.nameHash == parameterHash &&
-                parameter.type == parameterType)
-            {
-                return true;
-            }
-        }
-
-        return false;
+        return m_animatorParameterTypes.TryGetValue(
+                   definition.Hash,
+                   out AnimatorControllerParameterType type) &&
+               type == definition.Type;
     }
 
     /// <summary>
-    /// 未設定のAnimatorパラメーターを警告します。
+    /// Boolパラメータを安全に設定します。
     /// </summary>
-    private void LogMissingParameters()
+    private void SetBool(
+        AnimatorParameterDefinition definition,
+        bool value)
     {
-        LogMissingParameter(
-            m_hasMoveSpeedParameter,
-            MOVE_SPEED_PARAMETER_NAME,
-            AnimatorControllerParameterType.Float);
-
-        //LogMissingParameter(
-        //    m_hasGroundedParameter,
-        //    IS_GROUNDED_PARAMETER_NAME,
-        //    AnimatorControllerParameterType.Bool);
-
-        LogMissingParameter(
-            m_hasJumpParameter,
-            JUMP_PARAMETER_NAME,
-            AnimatorControllerParameterType.Bool);
-
-        LogMissingParameter(
-            m_hasAttackParameter,
-            ATTACK_PARAMETER_NAME,
-            AnimatorControllerParameterType.Trigger);
-
-        //LogMissingParameter(
-        //    m_hasHitParameter,
-        //    HIT_PARAMETER_NAME,
-        //    AnimatorControllerParameterType.Trigger);
-
-        LogMissingParameter(
-            m_hasVRunningParameter,
-            V_RUNNING_PARAMETER_NAME,
-            AnimatorControllerParameterType.Bool);
-        LogMissingParameter(
-            m_hasStationaryBoostChargingParameter,
-            STATIONARY_BOOST_CHARGING_PARAMETER_NAME,
-            AnimatorControllerParameterType.Bool);
-        LogMissingParameter(
-            m_hasRailGrindParameter,
-            RAIL_GRIND_PARAMETER_NAME,
-            AnimatorControllerParameterType.Bool);
-    }
-
-    /// <summary>
-    /// Animatorパラメーター不足時に警告を出力します。
-    /// </summary>
-    /// <param name="hasParameter">パラメーターが存在するか。</param>
-    /// <param name="parameterName">パラメーター名。</param>
-    /// <param name="parameterType">パラメーターの種類。</param>
-    private void LogMissingParameter(
-        bool hasParameter,
-        string parameterName,
-        AnimatorControllerParameterType parameterType)
-    {
-        if (hasParameter)
+        if (!CanControlAnimator() ||
+            !HasAnimatorParameter(definition))
         {
             return;
         }
 
-        Debug.LogWarning(
-            $"[{nameof(PlayerAnimationPresenter)}] " +
-            $"Animatorに{parameterType}型の" +
-            $"「{parameterName}」パラメーターがありません。",
-            this);
+        m_animator.SetBool(
+            definition.Hash,
+            value);
     }
 
     /// <summary>
-    /// Animator参照を取得します。
+    /// Floatパラメータを補間なしで安全に設定します。
+    /// </summary>
+    private void SetFloat(
+        AnimatorParameterDefinition definition,
+        float value)
+    {
+        if (!CanControlAnimator() ||
+            !HasAnimatorParameter(definition))
+        {
+            return;
+        }
+
+        m_animator.SetFloat(
+            definition.Hash,
+            value);
+    }
+
+    /// <summary>
+    /// Floatパラメータを補間付きで安全に設定します。
+    /// </summary>
+    private void SetFloat(
+        AnimatorParameterDefinition definition,
+        float value,
+        float dampTime,
+        float deltaTime)
+    {
+        if (!CanControlAnimator() ||
+            !HasAnimatorParameter(definition))
+        {
+            return;
+        }
+
+        m_animator.SetFloat(
+            definition.Hash,
+            value,
+            Mathf.Max(
+                dampTime,
+                0.0f),
+            Mathf.Max(
+                deltaTime,
+                0.0f));
+    }
+
+    /// <summary>
+    /// Intパラメータを安全に設定します。
+    /// </summary>
+    private void SetInt(
+        AnimatorParameterDefinition definition,
+        int value)
+    {
+        if (!CanControlAnimator() ||
+            !HasAnimatorParameter(definition))
+        {
+            return;
+        }
+
+        m_animator.SetInteger(
+            definition.Hash,
+            value);
+    }
+
+    /// <summary>
+    /// Triggerパラメータを安全に設定します。
+    /// </summary>
+    private void SetTrigger(
+        AnimatorParameterDefinition definition)
+    {
+        if (!CanControlAnimator() ||
+            !HasAnimatorParameter(definition))
+        {
+            return;
+        }
+
+        m_animator.SetTrigger(
+            definition.Hash);
+    }
+
+    /// <summary>
+    /// Triggerパラメータを安全にリセットします。
+    /// </summary>
+    private void ResetTrigger(
+        AnimatorParameterDefinition definition)
+    {
+        if (!CanControlAnimator() ||
+            !HasAnimatorParameter(definition))
+        {
+            return;
+        }
+
+        m_animator.ResetTrigger(
+            definition.Hash);
+    }
+
+    /// <summary>
+    /// Presenterが使用するAnimatorパラメータの不足を警告します。
+    /// </summary>
+    private void LogMissingParameters()
+    {
+        foreach (AnimatorParameterDefinition definition
+                 in AnimatorParameters.All)
+        {
+            if (HasAnimatorParameter(
+                    definition))
+            {
+                continue;
+            }
+
+            Debug.LogWarning(
+                $"[{nameof(PlayerAnimationPresenter)}] " +
+                $"Animatorに{definition.Type}型の" +
+                $"「{definition.Name}」パラメータがありません。",
+                this);
+        }
+    }
+
+    // ============================================================
+    // PlayerStatusProvider購読
+    // ============================================================
+
+    /// <summary>
+    /// プレイヤー状況更新イベントを購読します。
+    /// </summary>
+    private void SubscribeStatusEvents()
+    {
+        if (m_statusProvider == null)
+        {
+            return;
+        }
+
+        m_statusProvider.StatusUpdated -=
+            HandleStatusUpdated;
+
+        m_statusProvider.StatusUpdated +=
+            HandleStatusUpdated;
+    }
+
+    /// <summary>
+    /// プレイヤー状況更新イベントの購読を解除します。
+    /// </summary>
+    private void UnsubscribeStatusEvents()
+    {
+        if (m_statusProvider == null)
+        {
+            return;
+        }
+
+        m_statusProvider.StatusUpdated -=
+            HandleStatusUpdated;
+    }
+
+    /// <summary>
+    /// 再有効化時にプレイヤー状況更新イベントを購読します。
+    /// </summary>
+    private void OnEnable()
+    {
+        if (!m_isInitialized)
+        {
+            return;
+        }
+
+        SubscribeStatusEvents();
+    }
+
+    /// <summary>
+    /// 無効化時にプレイヤー状況更新イベントの購読を解除します。
+    /// </summary>
+    private void OnDisable()
+    {
+        UnsubscribeStatusEvents();
+    }
+
+    // ============================================================
+    // 初期化
+    // ============================================================
+
+    /// <summary>
+    /// Animator参照を自動取得します。
     /// </summary>
     private void ResolveAnimatorReference()
     {
@@ -542,21 +987,15 @@ public sealed class PlayerAnimationPresenter : MonoBehaviour
             return;
         }
 
-        m_animator = GetComponentInChildren<Animator>();
+        m_animator =
+            GetComponentInChildren<Animator>();
     }
 
     /// <summary>
     /// 初期化に必要な参照を確認します。
     /// </summary>
-    /// <param name="monitor">プレイヤー監視機能。</param>
-    /// <param name="motor">プレイヤー移動機能。</param>
-    /// <returns>
-    /// true：必要な参照があります。
-    /// false：必要な参照が不足しています。
-    /// </returns>
     private bool ValidateReferences(
-        PlayerMonitor monitor,
-        PlayerMotor motor)
+        PlayerStatusProvider statusProvider)
     {
         bool isValid = true;
 
@@ -579,21 +1018,20 @@ public sealed class PlayerAnimationPresenter : MonoBehaviour
             isValid = false;
         }
 
-        if (monitor == null)
+        if (statusProvider == null)
         {
             Debug.LogError(
                 $"[{nameof(PlayerAnimationPresenter)}] " +
-                "PlayerMonitorが指定されていません。",
+                $"{nameof(PlayerStatusProvider)}が指定されていません。",
                 this);
 
             isValid = false;
         }
-
-        if (motor == null)
+        else if (!statusProvider.IsInitialized)
         {
             Debug.LogError(
                 $"[{nameof(PlayerAnimationPresenter)}] " +
-                "PlayerMotorが指定されていません。",
+                $"{nameof(PlayerStatusProvider)}が初期化されていません。",
                 this);
 
             isValid = false;
@@ -605,10 +1043,6 @@ public sealed class PlayerAnimationPresenter : MonoBehaviour
     /// <summary>
     /// Animatorを操作可能か確認します。
     /// </summary>
-    /// <returns>
-    /// true：Animatorを操作できます。
-    /// false：Animatorを操作できません。
-    /// </returns>
     private bool CanControlAnimator()
     {
         return m_isInitialized &&

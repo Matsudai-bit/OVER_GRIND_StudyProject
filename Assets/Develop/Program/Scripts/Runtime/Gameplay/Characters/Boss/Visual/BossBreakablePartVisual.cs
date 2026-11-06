@@ -6,11 +6,21 @@ using UnityEngine;
 /// ボス破壊可能部位の見た目を制御します。
 /// </summary>
 [DisallowMultipleComponent]
-public sealed class BossBreakablePartVisual : MonoBehaviour
+public sealed class BossBreakablePartVisual :
+    MonoBehaviour
 {
+    [Header("破壊時表示")]
+
+    // 破壊時に適用する見た目処理
+    [SerializeField]
+    private BossBreakablePartBrokenVisualAction
+        m_brokenVisualActions =
+            BossBreakablePartBrokenVisualAction.DISABLE_NORMAL_MESH |
+            BossBreakablePartBrokenVisualAction.ENABLE_BROKEN_MESH;
+
     [Header("メッシュ参照")]
 
-    // メッシュ参照管理
+    // メッシュ参照管理 
     [SerializeField]
     private MeshReferenceRegistry m_meshReferenceRegistry;
 
@@ -22,15 +32,21 @@ public sealed class BossBreakablePartVisual : MonoBehaviour
     [SerializeField]
     private string m_brokenMeshId;
 
+    [Header("Material")]
+
     // Emissiveを操作するMaterial Slot
-    [SerializeField, Header("Material")]
-    [Min(0)]
+    [SerializeField, Min(0)]
     private int m_materialSlotIndex;
 
     // Emissive強度のShader Property名
     [SerializeField]
     private string m_emissivePropertyName =
         "_EmissiveIntencity";
+
+    // 破壊後に設定するEmissive値
+    [SerializeField, Min(0.0f)]
+    private float m_brokenEmissiveValue =
+        0.0f;
 
     // 被弾演出パラメータ
     [SerializeField, Header("被弾演出")]
@@ -44,7 +60,8 @@ public sealed class BossBreakablePartVisual : MonoBehaviour
     private Renderer m_brokenRenderer;
 
     // Emissive操作用
-    private MaterialPropertyBlock m_materialPropertyBlock;
+    private MaterialPropertyBlock
+        m_materialPropertyBlock;
 
     // Shader Property ID
     private int m_emissivePropertyID;
@@ -69,17 +86,10 @@ public sealed class BossBreakablePartVisual : MonoBehaviour
     private void Awake()
     {
         InitializeMeshReferences();
+
         InitializeEmissive();
 
-        if (m_normalRenderer != null)
-        {
-            m_normalRenderer.gameObject.SetActive(true);
-        }
-
-        if (m_brokenRenderer != null)
-        {
-            m_brokenRenderer.gameObject.SetActive(false);
-        }
+        InitializeVisualState();
     }
 
     /// <summary>
@@ -89,14 +99,16 @@ public sealed class BossBreakablePartVisual : MonoBehaviour
     {
         if (m_feedbackCoroutine != null)
         {
-            StopCoroutine(m_feedbackCoroutine);
+            StopCoroutine(
+                m_feedbackCoroutine);
 
-            m_feedbackCoroutine = null;
+            m_feedbackCoroutine =
+                null;
         }
 
         /*
-         * 上昇途中でも一度基準値へ戻すことで、
-         * 必ず「最初から上げる」挙動にする。
+         * 再被弾時は一度通常値へ戻し、
+         * 最初から被弾演出を再生します。
          */
         RestoreEmissive();
 
@@ -106,20 +118,37 @@ public sealed class BossBreakablePartVisual : MonoBehaviour
     }
 
     /// <summary>
-    /// 破壊後の見た目へ切り替えます。
+    /// 設定されている破壊時表現を適用します。
     /// </summary>
     public void SetBrokenVisual()
     {
+        /*
+         * 被弾演出中の場合は停止して、
+         * 一度通常のEmissive値へ戻します。
+         */
         StopDamageFeedback();
 
-        if (m_normalRenderer != null)
+        if (HasBrokenVisualAction(
+                BossBreakablePartBrokenVisualAction
+                    .APPLY_BROKEN_EMISSIVE))
         {
-            m_normalRenderer.gameObject.SetActive(false);
+            ApplyBrokenEmissive();
         }
 
-        if (m_brokenRenderer != null)
+        if (HasBrokenVisualAction(
+                BossBreakablePartBrokenVisualAction
+                    .DISABLE_NORMAL_MESH))
         {
-            m_brokenRenderer.gameObject.SetActive(true);
+            SetNormalMeshActive(
+                false);
+        }
+
+        if (HasBrokenVisualAction(
+                BossBreakablePartBrokenVisualAction
+                    .ENABLE_BROKEN_MESH))
+        {
+            SetBrokenMeshActive(
+                true);
         }
     }
 
@@ -130,9 +159,11 @@ public sealed class BossBreakablePartVisual : MonoBehaviour
     {
         if (m_feedbackCoroutine != null)
         {
-            StopCoroutine(m_feedbackCoroutine);
+            StopCoroutine(
+                m_feedbackCoroutine);
 
-            m_feedbackCoroutine = null;
+            m_feedbackCoroutine =
+                null;
         }
 
         RestoreEmissive();
@@ -147,7 +178,37 @@ public sealed class BossBreakablePartVisual : MonoBehaviour
         {
             Debug.LogError(
                 $"[{nameof(BossBreakablePartVisual)}] " +
-                "MeshReferenceRegistryが設定されていません。",
+                $"{nameof(MeshReferenceRegistry)}が設定されていません。",
+                this);
+
+            return;
+        }
+
+        InitializeNormalRenderer();
+
+        /*
+         * 破壊メッシュを使用する設定の場合のみ取得します。
+         * Emissive変更だけの場合は破壊メッシュを必要としません。
+         */
+        if (HasBrokenVisualAction(
+                BossBreakablePartBrokenVisualAction
+                    .ENABLE_BROKEN_MESH))
+        {
+            InitializeBrokenRenderer();
+        }
+    }
+
+    /// <summary>
+    /// 通常Rendererを取得します。
+    /// </summary>
+    private void InitializeNormalRenderer()
+    {
+        if (string.IsNullOrEmpty(
+                m_normalMeshId))
+        {
+            Debug.LogError(
+                $"[{nameof(BossBreakablePartVisual)}] " +
+                "通常メッシュIDが設定されていません。",
                 this);
 
             return;
@@ -162,6 +223,24 @@ public sealed class BossBreakablePartVisual : MonoBehaviour
                 $"通常メッシュID「{m_normalMeshId}」が見つかりません。",
                 this);
         }
+    }
+
+    /// <summary>
+    /// 破壊後Rendererを取得します。
+    /// </summary>
+    private void InitializeBrokenRenderer()
+    {
+        if (string.IsNullOrEmpty(
+                m_brokenMeshId))
+        {
+            Debug.LogError(
+                $"[{nameof(BossBreakablePartVisual)}] " +
+                "破壊メッシュを使用する設定ですが、" +
+                "破壊メッシュIDが設定されていません。",
+                this);
+
+            return;
+        }
 
         if (!m_meshReferenceRegistry.TryGetRenderer(
                 m_brokenMeshId,
@@ -175,11 +254,31 @@ public sealed class BossBreakablePartVisual : MonoBehaviour
     }
 
     /// <summary>
+    /// 初期表示状態を設定します。
+    /// </summary>
+    private void InitializeVisualState()
+    {
+        SetNormalMeshActive(
+            true);
+
+        /*
+         * 破壊メッシュを使用する場合は
+         * 初期状態では非表示にします。
+         */
+        if (m_brokenRenderer != null)
+        {
+            SetBrokenMeshActive(
+                false);
+        }
+    }
+
+    /// <summary>
     /// Emissive操作に必要な情報を初期化します。
     /// </summary>
     private void InitializeEmissive()
     {
-        m_canControlEmissive = false;
+        m_canControlEmissive =
+            false;
 
         if (m_normalRenderer == null ||
             string.IsNullOrEmpty(
@@ -192,9 +291,11 @@ public sealed class BossBreakablePartVisual : MonoBehaviour
             m_normalRenderer.sharedMaterials;
 
         if (m_materialSlotIndex < 0 ||
-            m_materialSlotIndex >= materials.Length)
+            m_materialSlotIndex >=
+                materials.Length)
         {
             Debug.LogError(
+                $"[{nameof(BossBreakablePartVisual)}] " +
                 $"Material Slot Index " +
                 $"{m_materialSlotIndex} が範囲外です。",
                 this);
@@ -203,11 +304,13 @@ public sealed class BossBreakablePartVisual : MonoBehaviour
         }
 
         Material targetMaterial =
-            materials[m_materialSlotIndex];
+            materials[
+                m_materialSlotIndex];
 
         if (targetMaterial == null)
         {
             Debug.LogError(
+                $"[{nameof(BossBreakablePartVisual)}] " +
                 "対象Materialが設定されていません。",
                 this);
 
@@ -222,6 +325,7 @@ public sealed class BossBreakablePartVisual : MonoBehaviour
                 m_emissivePropertyID))
         {
             Debug.LogError(
+                $"[{nameof(BossBreakablePartVisual)}] " +
                 $"Materialに " +
                 $"{m_emissivePropertyName} " +
                 "が存在しません。",
@@ -237,7 +341,8 @@ public sealed class BossBreakablePartVisual : MonoBehaviour
         m_materialPropertyBlock =
             new MaterialPropertyBlock();
 
-        m_canControlEmissive = true;
+        m_canControlEmissive =
+            true;
     }
 
     /// <summary>
@@ -250,7 +355,8 @@ public sealed class BossBreakablePartVisual : MonoBehaviour
         {
             FeedbackCompleted?.Invoke();
 
-            m_feedbackCoroutine = null;
+            m_feedbackCoroutine =
+                null;
 
             yield break;
         }
@@ -275,18 +381,15 @@ public sealed class BossBreakablePartVisual : MonoBehaviour
 
         RestoreEmissive();
 
-        m_feedbackCoroutine = null;
+        m_feedbackCoroutine =
+            null;
 
         FeedbackCompleted?.Invoke();
     }
 
     /// <summary>
-    /// Emissive値を指定時間で補間します。
+    /// Emissive値を指定時間で変更します。
     /// </summary>
-    /// <param name="startValue">開始値。</param>
-    /// <param name="endValue">終了値。</param>
-    /// <param name="duration">補間時間。</param>
-    /// <param name="curve">イージングカーブ。</param>
     private IEnumerator ChangeEmissiveCoroutine(
         float startValue,
         float endValue,
@@ -295,24 +398,30 @@ public sealed class BossBreakablePartVisual : MonoBehaviour
     {
         if (duration <= 0.0f)
         {
-            SetEmissive(endValue);
+            SetEmissive(
+                endValue);
 
             yield break;
         }
 
-        float elapsedTime = 0.0f;
+        float elapsedTime =
+            0.0f;
 
-        while (elapsedTime < duration)
+        while (elapsedTime <
+               duration)
         {
-            elapsedTime += Time.deltaTime;
+            elapsedTime +=
+                Time.deltaTime;
 
             float normalizedTime =
                 Mathf.Clamp01(
-                    elapsedTime / duration);
+                    elapsedTime /
+                    duration);
 
             float curveValue =
                 curve != null
-                    ? curve.Evaluate(normalizedTime)
+                    ? curve.Evaluate(
+                        normalizedTime)
                     : normalizedTime;
 
             float emissive =
@@ -321,19 +430,41 @@ public sealed class BossBreakablePartVisual : MonoBehaviour
                     endValue,
                     curveValue);
 
-            SetEmissive(emissive);
+            SetEmissive(
+                emissive);
 
             yield return null;
         }
 
-        SetEmissive(endValue);
+        SetEmissive(
+            endValue);
+    }
+
+    /// <summary>
+    /// 破壊時のEmissive値を適用します。
+    /// </summary>
+    private void ApplyBrokenEmissive()
+    {
+        if (!m_canControlEmissive)
+        {
+            Debug.LogWarning(
+                $"[{nameof(BossBreakablePartVisual)}] " +
+                "破壊時Emissiveが設定されていますが、" +
+                "Emissiveを操作できません。",
+                this);
+
+            return;
+        }
+
+        SetEmissive(
+            m_brokenEmissiveValue);
     }
 
     /// <summary>
     /// Emissive値を設定します。
     /// </summary>
-    /// <param name="value">設定値。</param>
-    private void SetEmissive(float value)
+    private void SetEmissive(
+        float value)
     {
         if (!m_canControlEmissive ||
             m_normalRenderer == null)
@@ -366,5 +497,46 @@ public sealed class BossBreakablePartVisual : MonoBehaviour
 
         SetEmissive(
             m_initialEmissiveValue);
+    }
+
+    /// <summary>
+    /// 通常メッシュの有効状態を設定します。
+    /// </summary>
+    private void SetNormalMeshActive(
+        bool isActive)
+    {
+        if (m_normalRenderer == null)
+        {
+            return;
+        }
+
+        m_normalRenderer.gameObject.SetActive(
+            isActive);
+    }
+
+    /// <summary>
+    /// 破壊メッシュの有効状態を設定します。
+    /// </summary>
+    private void SetBrokenMeshActive(
+        bool isActive)
+    {
+        if (m_brokenRenderer == null)
+        {
+            return;
+        }
+
+        m_brokenRenderer.gameObject.SetActive(
+            isActive);
+    }
+
+    /// <summary>
+    /// 指定した破壊時表現が有効か確認します。
+    /// </summary>
+    private bool HasBrokenVisualAction(
+        BossBreakablePartBrokenVisualAction action)
+    {
+        return
+            (m_brokenVisualActions & action) ==
+            action;
     }
 }

@@ -14,6 +14,7 @@ public sealed class PlayerGrindingState
     private readonly float m_speed;
 
     private bool m_hasStarted;
+    private Collider m_disabledPlayerCollider;
 
     /// <summary>
     /// 通常の接触検出からグラインドを開始します。
@@ -76,6 +77,12 @@ public sealed class PlayerGrindingState
     {
         if (!m_hasStarted)
         {
+            if (m_rail != null && !m_rail.ForcesEscape &&
+                Owner.gameObject.TryGetComponent(out Collider collider) && collider.enabled)
+            {
+                m_disabledPlayerCollider = collider;
+                collider.enabled = false;
+            }
             if (m_isResuming)
             {
                 Owner.GrindController.StartGrindAt(
@@ -101,17 +108,22 @@ public sealed class PlayerGrindingState
             return;
         }
 
+        RestorePlayerCollider();
+
         if (Owner.GrindController.IsCollisionExiting)
         {
+       
             Owner.RequestRailStateChange<
                 PlayerRailExitingState>();
-
+          
             return;
         }
 
         if (Owner.InputReader.IsAttackHeld)
         {
+
             Owner.RequestRailStateChange<PlayerRailExitingState>(true);
+
             return;
         }
 
@@ -123,7 +135,16 @@ public sealed class PlayerGrindingState
     /// </summary>
     protected override void OnExitState()
     {
+        RestorePlayerCollider();
         Owner.AnimationPresenter
             .StopRailGrindAnimation();
+    }
+
+    /// <summary>レール搭乗中に無効化したPlayerのColliderを復元します。</summary>
+    private void RestorePlayerCollider()
+    {
+        if (m_disabledPlayerCollider == null) return;
+        m_disabledPlayerCollider.enabled = true;
+        m_disabledPlayerCollider = null;
     }
 }

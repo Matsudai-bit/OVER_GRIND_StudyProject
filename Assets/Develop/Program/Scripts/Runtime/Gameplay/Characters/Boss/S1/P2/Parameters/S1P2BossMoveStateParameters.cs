@@ -78,6 +78,26 @@ public sealed class S1P2BossMoveStateParameters
     [SerializeField, Min(0.0f)]
     private float m_arrivalDistance = 3.0f;
 
+    // 移動中に尻尾叩きつけ攻撃を許可するか
+    [SerializeField, Header("移動中追加攻撃")]
+    private bool m_enableTailSlam = true;
+
+    // 接触攻撃判定を有効化する最低速度
+    [SerializeField, Header("移動中攻撃"), Min(0.0f)]
+    private float m_attackEnableSpeed = 20.0f;
+
+    /// <summary>
+    /// 接触攻撃判定を有効化する最低速度を取得します。
+    /// </summary>
+    public float AttackEnableSpeed =>
+        m_attackEnableSpeed;
+
+    /// <summary>
+    /// 移動中の尻尾叩きつけ攻撃が有効か取得します。
+    /// </summary>
+    public bool EnableTailSlam =>
+        m_enableTailSlam;
+
     /// <summary>
     /// 最小経路地点数を取得します。
     /// </summary>

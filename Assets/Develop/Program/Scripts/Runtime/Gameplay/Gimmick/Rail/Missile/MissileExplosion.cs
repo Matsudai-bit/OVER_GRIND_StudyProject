@@ -1,50 +1,30 @@
 using UnityEngine;
 
 /// <summary>
-/// ミサイルの爆発処理を管理します。
+/// ミサイル爆発時に、独立したプールへ攻撃判定を要求します。
 /// </summary>
 [DisallowMultipleComponent]
 public sealed class MissileExplosion : MonoBehaviour
 {
-    [SerializeField, Header("爆発")]
-    private GameObject m_explosionPrefab;
+    // 爆発Hitboxの共有プール
+    private ExplosionHitboxPool m_hitboxPool;
 
-    /// <summary>
-    /// 現在位置に爆発オブジェクトを生成します。
-    /// </summary>
-    /// <param name="parent">爆発を生成する親Transform。</param>
-    /// <param name="attackIdentifier">爆発に引き継ぐ攻撃ID。</param>
-    public void Explode(
-        Transform parent,
-        AttackIdentifier attackIdentifier = null)
+    /// <summary>爆発の攻撃判定プールを指定します。</summary>
+    public void SetHitboxPool(ExplosionHitboxPool hitboxPool)
     {
-        if (m_explosionPrefab == null)
-        {
-            Debug.LogError(
-                "爆発Prefabが設定されていません。",
-                this);
+        m_hitboxPool = hitboxPool;
+    }
 
-            return;
+    /// <summary>爆発位置へ一時的な攻撃判定を生成します。</summary>
+    /// <returns>true：生成成功。false：プール不足またはID不正。</returns>
+    public bool Explode(Vector3 position, AttackIdentifier attackIdentifier)
+    {
+        if (m_hitboxPool == null)
+        {
+            Debug.LogError("[MissileExplosion] ExplosionHitboxPoolがありません。", this);
+            return false;
         }
 
-
-
-        var explosion = Instantiate(
-            m_explosionPrefab,
-            transform.position,
-            Quaternion.identity,
-            parent);
-
-        if (!explosion.TryGetComponent(out AttackHitbox hitbox))
-        {
-            Debug.LogError("ヒットボックスがアタッチされていません");
-        }
-        AttackDamageData damageData = new AttackDamageData(
-            hitbox.CurrentDamage,
-            attackIdentifier);
-
-        hitbox.EnableHitbox(damageData);
-
-        Destroy(gameObject);
+        return m_hitboxPool.TryActivate(position, attackIdentifier);
     }
 }

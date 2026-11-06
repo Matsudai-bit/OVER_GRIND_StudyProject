@@ -1,4 +1,5 @@
 using UnityEngine;
+using static UnityEngine.UI.GridLayoutGroup;
 
 /// <summary>地上・空中で共通の連続攻撃、速度消費、命中時の滞空を管理します。</summary>
 public sealed class PlayerContinuousAttack
@@ -33,16 +34,30 @@ public sealed class PlayerContinuousAttack
         m_direction = m_isAirAttack
             ? m_owner.Motor.HorizontalDirection
             : m_owner.Motor.FacingDirection;
-        if (m_isAirAttack) m_owner.Motor.AlignFacingToDirection(m_direction);
+        if (m_owner.AttackController.TryGetAssistedAttackDirection(
+                m_owner.transform, m_owner.Motor.FacingDirection, out Vector3 attackDirection))
+        {
+            m_owner.Motor.AlignFacingToDirection(attackDirection);
+            // 空中の移動慣性は維持し、地上では攻撃移動も対象へ向けます。
+            if (!m_isAirAttack) m_direction = attackDirection;
+        }
+        else if (m_isAirAttack)
+        {
+            m_owner.Motor.AlignFacingToDirection(m_direction);
+        }
         m_hitTimer = 0.0f;
         m_airHitStopTimer = 0.0f;
         if (m_isAirAttack)
         {
             m_airAttachment = new PlayerAirAttackAttachment(m_owner);
             m_owner.AttackController.ContinuousAttackHit += m_airAttachment.AttachToTarget;
+            m_owner.AnimationPresenter.PlayAerialAttackingAnimation();
         }
+
+        AttackPowerSourceRegistry.Register(
+            m_owner.transform,
+            GetAttackPowerType());
         m_owner.AttackController.EnableContinuousAttackHitboxes();
-        m_owner.AnimationPresenter.PlayAttackAnimation();
         m_owner.SetSpeedDisplayOverride(m_remainingSpeed);
     }
 
@@ -54,6 +69,10 @@ public sealed class PlayerContinuousAttack
         if (!m_owner.InputReader.IsAttackHeld) return false;
         m_remainingSpeed = Mathf.Max(0.0f, m_remainingSpeed - SPEED_DECAY_PER_SECOND * deltaTime);
         if (m_remainingSpeed <= SPEED_EPSILON) return false;
+
+        AttackPowerSourceRegistry.Register(
+            m_owner.transform,
+            GetAttackPowerType());
 
         if (!m_isAirAttack) UpdateMovement(deltaTime);
         m_owner.SetSpeedDisplayOverride(m_remainingSpeed);
@@ -68,7 +87,16 @@ public sealed class PlayerContinuousAttack
         while (m_hitTimer >= interval)
         {
             m_hitTimer -= interval;
-            if (m_owner.AttackController.ApplyContinuousHitTick() && m_isAirAttack)
+            AttackPowerType attackPowerType = GetAttackPowerType();
+
+            bool hasHit;
+            using (AttackPowerContext.Begin(attackPowerType))
+            using (AttackHitTickContext.Begin())
+            {
+                hasHit = m_owner.AttackController.ApplyContinuousHitTick();
+            }
+
+            if (hasHit && m_isAirAttack)
                 m_airHitStopTimer = m_owner.AttackController.AirHitStopDuration;
         }
 
@@ -88,14 +116,33 @@ public sealed class PlayerContinuousAttack
         }
 
         if (!m_isAirAttack &&
-            m_owner.AttackController.TryGetMaxPenetration(out Vector3 direction, out float distance))
-            m_owner.Motor.ResolvePenetration(direction, distance);
+            m_owner.AttackController.TryGetMaxMovementBlockerPenetration(
+                out Vector3 direction,
+                out float distance))
+        {
+            // 完全に分離させると次の攻撃が届かなくなるため、浅い接触を残します。
+            float correctionDistance = Mathf.Max(
+                0.0f, distance - m_owner.AttackController.AttackContactOverlap);
+            m_owner.Motor.ResolvePenetration(direction, correctionDistance);
+        }
         return true;
     }
 
     /// <summary>地上攻撃と同じ入力減速・命中減速を適用します。</summary>
     private void UpdateMovement(float deltaTime)
     {
+        // インタラクト対象への命中中は前進を止め、脚のTriggerが内部へ進入することを防ぎます。
+        if (AttackMovementBlockRegistry.IsBlocked(m_owner.transform))
+        {
+            m_owner.Motor.MoveAtFixedWorldDirection(
+                m_direction,
+                0.0f,
+                0.0f,
+                deltaTime,
+                applyObstacleAvoidance: false);
+            return;
+        }
+
         if (!m_owner.InputReader.HasMoveInput)
         {
             PlayerMoveParameters normal = m_owner.MovementParameterAsset.CreateMoveParameters();
@@ -122,9 +169,22 @@ public sealed class PlayerContinuousAttack
             m_airAttachment.Detach();
             m_airAttachment = null;
         }
-        m_owner.AnimationPresenter.StopAttackAnimation();
+        if (m_isAirAttack)
+        {
+            m_owner.AnimationPresenter.StopAerialAttackingAnimation();
+        }
         m_owner.AttackController.DisableAttackHitboxes();
+        AttackPowerSourceRegistry.Unregister(m_owner.transform);
         m_owner.ClearSpeedDisplayOverride();
         m_airHitStopTimer = 0.0f;
+    }
+
+    /// <summary>現在の攻撃条件から威力種別を取得します。</summary>
+    /// <returns>地上でブースト残量がある場合はCHARGED、それ以外はNORMAL。</returns>
+    private AttackPowerType GetAttackPowerType()
+    {
+        return !m_isAirAttack && m_owner.SuspendedBoostGaugeRate > 0.0f
+            ? AttackPowerType.CHARGED
+            : AttackPowerType.NORMAL;
     }
 }
