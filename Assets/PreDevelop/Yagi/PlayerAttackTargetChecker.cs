@@ -13,6 +13,9 @@ public sealed class PlayerAttackTargetChecker
     [SerializeField, Tooltip("弱点など、攻撃を向けたいオブジェクトを必要な数だけ登録します。各Transformの位置を狙います。")]
     private Transform[] m_targets = Array.Empty<Transform>();
 
+    /// <summary>現在の検索設定で許可する空中攻撃の傾きを取得します。</summary>
+    public float AirMaxPitch => m_parameterAsset != null ? m_parameterAsset.AirMaxPitch : 0f;
+
     /// <summary>登録対象のうち検索範囲内で最も近い位置への水平な攻撃方向を取得します。</summary>
     /// <param name="owner">攻撃するPlayerのルート。</param>
     /// <param name="forward">攻撃開始前の正面方向。</param>
@@ -21,7 +24,16 @@ public sealed class PlayerAttackTargetChecker
     /// <returns>true：対象あり。false：対象なし、設定なし、または検索方向・半径が無効。</returns>
     public bool TryGetDirection(Transform owner, Vector3 forward, out Vector3 direction, bool isAirAttack = false)
     {
+        return TryGetTarget(owner, forward, isAirAttack, out direction, out _, out _);
+    }
+
+    /// <summary>同じ検索結果から水平進行方向と姿勢補正用の対象を取得します。</summary>
+    public bool TryGetTarget(Transform owner, Vector3 forward, bool isAirAttack, out Vector3 direction,
+        out Transform selectedTarget, out Collider selectedCollider)
+    {
         direction = Vector3.zero;
+        selectedTarget = null;
+        selectedCollider = null;
         if (owner == null || m_parameterAsset == null || m_targets == null)
             return false;
 
@@ -43,6 +55,7 @@ public sealed class PlayerAttackTargetChecker
 
             Vector3 targetOffset = target.position - origin;
             float distance = targetOffset.sqrMagnitude;
+            Collider closestCollider = null;
             if (useColliderDistance)
             {
                 // 大きい弱点は中心が遠くても表面に近ければ対象にします。
@@ -55,19 +68,27 @@ public sealed class PlayerAttackTargetChecker
                     {
                         if (!targetCollider.enabled) continue;
                         float surfaceDistance = (targetCollider.ClosestPoint(origin) - origin).sqrMagnitude;
-                        distance = Mathf.Min(distance, surfaceDistance);
+                        if (surfaceDistance >= distance) continue;
+                        distance = surfaceDistance;
+                        closestCollider = targetCollider;
                     }
                 }
             }
             if (distance > searchRadiusSquared || distance >= nearestDistance) continue;
 
             Vector3 offset = Vector3.ProjectOnPlane(targetOffset, Vector3.up);
-            if (offset.sqrMagnitude < DIRECTION_SQR_THRESHOLD ||
-                Vector3.Angle(forward, offset) > searchAngle * 0.5f)
+            if (offset.sqrMagnitude < DIRECTION_SQR_THRESHOLD)
+            {
+                if (!isAirAttack || targetOffset.sqrMagnitude < DIRECTION_SQR_THRESHOLD) continue;
+                offset = forward;
+            }
+            if (Vector3.Angle(forward, offset) > searchAngle * 0.5f)
                 continue;
 
             nearestDistance = distance;
             direction = offset.normalized;
+            selectedTarget = target;
+            selectedCollider = closestCollider;
         }
         return direction.sqrMagnitude > 0.0f;
     }

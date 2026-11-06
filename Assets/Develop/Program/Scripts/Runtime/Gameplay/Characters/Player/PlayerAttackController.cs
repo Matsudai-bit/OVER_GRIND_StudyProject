@@ -24,6 +24,20 @@ public class PlayerAttackController : MonoBehaviour
             m_attackTargetChecker.TryGetDirection(owner, forward, out direction, isAirAttack);
     }
 
+    /// <summary>‹ó’†UŒ‚‚É‹–‰Â‚·‚éÅ‘åŒX‚«Šp‚ğæ“¾‚µ‚Ü‚·B</summary>
+    public float AirMaxPitch => m_attackTargetChecker?.AirMaxPitch ?? 0f;
+
+    /// <summary>is•ûŒü‚Æ‘«‚Ìp¨•â³‚Å‹¤—L‚·‚éUŒ‚‘ÎÛ‚ğæ“¾‚µ‚Ü‚·B</summary>
+    public bool TryGetAssistedAttackTarget(Transform owner, Vector3 forward, bool isAirAttack,
+        out Vector3 direction, out Transform target, out Collider surface)
+    {
+        direction = Vector3.zero;
+        target = null;
+        surface = null;
+        return m_attackTargetChecker != null &&
+            m_attackTargetChecker.TryGetTarget(owner, forward, isAirAttack, out direction, out target, out surface);
+    }
+
     [SerializeField, Header("Parameter Asset")]
     private PlayerAttackControllerParameterAsset m_parameterAsset;
 

@@ -24,6 +24,12 @@ public sealed class PlayerAttackAssistParameterAsset : ScriptableObject
     [SerializeField, InspectorName("Collider距離を使用"), Tooltip("対象自身の有効なCollider表面までの距離で検索します。")]
     private bool m_airUseColliderDistance = true;
 
+    [SerializeField, InspectorName("足を向ける最大補正角度"), Range(0f, 180f)]
+    private float m_airMaxPitch = 90f;
+
+    /// <summary>空中攻撃のアニメーションに加える傾きの上限（度）。</summary>
+    public float AirMaxPitch => Mathf.Clamp(m_airMaxPitch, 0f, 180f);
+
     /// <summary>攻撃種別に対応する検索半径を取得します。</summary>
     /// <param name="isAirAttack">true：空中攻撃。false：地上攻撃。</param>
     /// <returns>対象を検索する半径（m）。</returns>

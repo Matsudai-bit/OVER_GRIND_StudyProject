@@ -14,6 +14,7 @@ public sealed class PlayerContinuousAttack
     private float m_airHitStopTimer;
     private Vector3 m_direction;
     private PlayerAirAttackAttachment m_airAttachment;
+    private PlayerAirAttackPose m_airPose;
 
     /// <summary>Gets whether an air attack hit stop is still active.</summary>
     public bool IsAirHitStopping => m_isAirAttack && m_airHitStopTimer > 0.0f;
@@ -34,8 +35,8 @@ public sealed class PlayerContinuousAttack
         m_direction = m_isAirAttack
             ? m_owner.Motor.HorizontalDirection
             : m_owner.Motor.FacingDirection;
-        if (m_owner.AttackController.TryGetAssistedAttackDirection(
-                m_owner.transform, m_owner.Motor.FacingDirection, out Vector3 attackDirection, m_isAirAttack))
+        if (m_owner.AttackController.TryGetAssistedAttackTarget(m_owner.transform, m_owner.Motor.FacingDirection,
+                m_isAirAttack, out Vector3 attackDirection, out Transform target, out Collider surface))
         {
             m_owner.Motor.AlignFacingToDirection(attackDirection);
             m_direction = attackDirection;
@@ -43,6 +44,8 @@ public sealed class PlayerContinuousAttack
             Vector3 velocity = attackDirection * m_remainingSpeed;
             velocity.y = m_owner.Motor.VerticalVelocity;
             m_owner.Motor.SetWorldVelocity(velocity);
+            if (m_isAirAttack && m_owner.TryGetComponent(out m_airPose))
+                m_airPose.BeginAim(target, surface, m_owner.AttackController.AirMaxPitch);
         }
         else if (m_isAirAttack)
         {
@@ -72,6 +75,14 @@ public sealed class PlayerContinuousAttack
         if (!m_owner.InputReader.IsAttackHeld) return false;
         m_remainingSpeed = Mathf.Max(0.0f, m_remainingSpeed - SPEED_DECAY_PER_SECOND * deltaTime);
         if (m_remainingSpeed <= SPEED_EPSILON) return false;
+
+        if (m_airPose != null)
+        {
+            if (m_owner.Monitor.IsGrounded && m_owner.Motor.VerticalVelocity <= 0f && m_owner.Monitor.HasGroundSupport())
+                m_airPose.RestorePose();
+            else
+                m_airPose.UpdateAim();
+        }
 
         AttackPowerSourceRegistry.Register(
             m_owner.transform,
@@ -166,6 +177,7 @@ public sealed class PlayerContinuousAttack
     /// <summary>攻撃判定とアニメーション、速度表示の上書きを終了します。</summary>
     public void StopAttack()
     {
+        if (m_airPose != null) m_airPose.RestorePose();
         if (m_airAttachment != null)
         {
             m_owner.AttackController.ContinuousAttackHit -= m_airAttachment.AttachToTarget;
