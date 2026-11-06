@@ -417,10 +417,20 @@ public sealed class StageSelectManager : MonoBehaviour
         StageInfomation stageInfo =
             m_stagePoints[index];
 
-        stageInfo.stagePoint.sprite =
-            stageInfo.canPlay
-                ? m_clearedButtonTexture
-                : m_selectableButtonTexture;
+        if (!stageInfo.canPlay)
+        {
+            stageInfo.stagePoint.sprite = m_unselectableButtonTexture;
+        }
+        else if (!stageInfo.isCleared)
+        {
+            stageInfo.stagePoint.sprite = m_selectableButtonTexture;
+        }
+        else
+        {
+            stageInfo.stagePoint.sprite = m_clearedButtonTexture;
+
+        }
+
 
         ApplyStagePointSize(
             stageInfo.stagePoint,
