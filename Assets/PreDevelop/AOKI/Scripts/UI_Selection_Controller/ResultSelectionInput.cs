@@ -190,6 +190,7 @@ public class ResultSelectionInput : MonoBehaviour
         entranceSequence.OnComplete(() =>
         {
             m_isEntrancePlaying = false; // フェードイン完了フラグを下ろす
+
             OnSelectStageSelect(); // Stage Selectのアニメーションを開始
             OnDeselectNextStage(); // Next Stageを非選択状態にする
         });

@@ -17,6 +17,9 @@ public sealed class S1P3BossStateParameterAsset : ScriptableObject
     [SerializeField, Header("突進")]
     private S1P3BossChargeAttackParameterAsset m_chargeParameterAsset;
 
+    [SerializeField, Header("スタン")]
+    private S1P3BossStunnedStateParameters m_stunned = new();
+
     /// <summary>
     /// エネルギー砲状態のパラメータを取得します。
     /// </summary>
@@ -35,6 +38,12 @@ public sealed class S1P3BossStateParameterAsset : ScriptableObject
     public S1P3BossChargeAttackParameterAsset ChargeParameterAsset =>
         m_chargeParameterAsset;
 
+    /// <summary>
+    /// スタン状態のパラメータを取得します。
+    /// </summary>
+    public S1P3BossStunnedStateParameters Stunned =>
+        m_stunned;
+
 
 
     /// <summary>
@@ -48,6 +57,7 @@ public sealed class S1P3BossStateParameterAsset : ScriptableObject
     {
         return m_energyCannon != null &&
                m_dreadAttack != null &&
-               m_chargeParameterAsset != null;
+               m_chargeParameterAsset != null &&
+               m_stunned != null;
     }
 }

@@ -201,4 +201,61 @@ public sealed class BossMotor : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// 通常移動速度に倍率を掛けて前方へ移動します。
+    /// </summary>
+    /// <param name="speedRate">
+    /// 通常移動速度に対する倍率。0.0～1.0。
+    /// </param>
+    public void MoveForwardWithSpeedRate(
+        float speedRate)
+    {
+        if (m_rigidbody == null)
+        {
+            return;
+        }
+
+        Vector3 direction =
+            transform.forward;
+
+        direction.y = 0.0f;
+
+        if (direction.sqrMagnitude <=
+            Mathf.Epsilon)
+        {
+            return;
+        }
+
+        direction.Normalize();
+
+        float speed =
+            m_moveSpeed *
+            Mathf.Clamp01(speedRate);
+
+        Vector3 horizontalVelocity =
+            direction * speed;
+
+        m_rigidbody.linearVelocity =
+            new Vector3(
+                horizontalVelocity.x,
+                m_rigidbody.linearVelocity.y,
+                horizontalVelocity.z);
+    }
+
+    /// <summary>
+    /// 指定回転へ物理的に移動します。
+    /// </summary>
+    /// <param name="rotation">適用する回転。</param>
+    public void MoveRotation(
+        Quaternion rotation)
+    {
+        if (m_rigidbody == null)
+        {
+            return;
+        }
+
+        m_rigidbody.MoveRotation(
+            rotation);
+    }
+
 }

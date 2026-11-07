@@ -38,10 +38,17 @@ public sealed class PlayerHitState : StateBase<PlayerStateMachineComponent>
         Owner.VGaugePlaceModel.SetGaugeRate(0.0f);
 
         Owner.InputReader.DiscardInput();
-        Owner.AnimationPresenter.PlayHitAnimation();
+        int type = 0;
+        if (m_horizontalSpeed >= 1.0f)
+        {
+            type = 1;
+        }
+
+            Owner.AnimationPresenter.PlayHitAnimation(type);
         Owner.Motor.ApplyKnockback(m_attackCenter, m_horizontalSpeed, m_liftSpeed);
         // 倍率0でも被弾・無敵・復帰待機は発生させ、吹き飛びだけを省略します。
         m_isRecovering = m_horizontalSpeed <= 0.0f && m_liftSpeed <= 0.0f;
+        Owner.Motor.AlignFacingToDirection((m_attackCenter - Owner.transform.position).normalized);
     }
 
     /// <summary>被弾中の入力を破棄し、復帰後への先行入力を防ぎます。</summary>
@@ -80,5 +87,7 @@ public sealed class PlayerHitState : StateBase<PlayerStateMachineComponent>
     {
         Owner.InputReader.DiscardInput();
         Owner.EndHitReaction();
+        Owner.AnimationPresenter.StopHitAnimation();
+
     }
 }
