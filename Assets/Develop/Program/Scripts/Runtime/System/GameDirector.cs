@@ -46,6 +46,14 @@ public sealed class GameDirector : MonoBehaviour
     [SerializeField]
     private BossPhaseController m_bossPhaseController;
 
+    // ステージシーン開始Context
+    [SerializeField, Header("チェックポイント")]
+    private StageSceneContext m_stageSceneContext;
+
+    // チェックポイント管理
+    [SerializeField]
+    private StageCheckpointController m_stageCheckpointController;
+
     // 次のステージシーン名
     [SerializeField, Header("遷移関連")]
     private string m_nextStageSceneName;
@@ -169,7 +177,7 @@ public sealed class GameDirector : MonoBehaviour
         switch (eventData.CurrentState)
         {
             case GameFlowStateType.INTRO:
-                StartIntroSequence();
+                HandleStageEntry();
                 break;
 
             case GameFlowStateType.ENDING:
@@ -184,6 +192,76 @@ public sealed class GameDirector : MonoBehaviour
                 StopGameProgressTimer();
                 break;
         }
+    }
+
+    /// <summary>
+    /// ステージシーンの開始方法に応じて初期処理を行います。
+    /// </summary>
+    private void HandleStageEntry()
+    {
+        StageSceneRequest request =
+            m_stageSceneContext != null
+                ? m_stageSceneContext.ConsumeRequest()
+                : StageSceneRequest.NewGame;
+
+        switch (request.EntryType)
+        {
+            case StageEntryType.NEW_GAME:
+                StartIntroSequence();
+                break;
+
+            case StageEntryType.RESTART:
+                StartRestart();
+                break;
+
+            case StageEntryType.CHECKPOINT:
+                StartFromCheckpoint(
+                    request.CheckpointSnapshot);
+                break;
+        }
+    }
+
+    /// <summary>
+    /// ステージ最初からのリスタートを開始します。
+    /// </summary>
+    private void StartRestart()
+    {
+        // Scene再読み込み後の初期状態を使用し、
+        // 登場シーケンスのみ飛ばしてゲームプレイへ入る
+        StartPlaying();
+    }
+
+    /// <summary>
+    /// チェックポイント状態を復元してゲームプレイを開始します。
+    /// </summary>
+    /// <param name="snapshot">
+    /// 復元するチェックポイント。
+    /// </param>
+    private void StartFromCheckpoint(
+        StageCheckpointSnapshot snapshot)
+    {
+        if (m_stageCheckpointController == null
+            || snapshot == null)
+        {
+            Debug.LogWarning(
+                "チェックポイントを復元できないため、"
+                + "ステージ最初から開始します。",
+                this);
+
+            StartRestart();
+
+            return;
+        }
+
+        if (!m_stageCheckpointController.RestoreCheckpoint(
+            snapshot))
+        {
+            Debug.LogWarning(
+                "一部のチェックポイント状態を復元できませんでした。",
+                this);
+        }
+
+        StartPlaying();
     }
 
     /// <summary>
@@ -281,6 +359,10 @@ public sealed class GameDirector : MonoBehaviour
             return;
         }
 
+        // 初回プレイ開始時のフェーズをチェックポイントとして記録
+        m_stageCheckpointController?
+            .CaptureCurrentPhaseCheckpoint();
+
         StartPlaying();
     }
 
@@ -366,6 +448,97 @@ public sealed class GameDirector : MonoBehaviour
     }
 
     /// <summary>
+    /// ステージ最初からリスタートします。
+    /// UI Buttonから呼び出すことを想定しています。
+    /// </summary>
+    public void RestartInGame()
+    {
+        if (m_stageSceneContext == null)
+        {
+            Debug.LogWarning(
+                $"{nameof(StageSceneContext)} が設定されていません。",
+                this);
+
+            return;
+        }
+
+        // 次Sceneではイントロを飛ばして最初から開始
+        m_stageSceneContext.SetRestart();
+
+    }
+
+    /// <summary>
+    /// 最新のチェックポイントから再開します。
+    /// UI Buttonから呼び出すことを想定しています。
+    /// </summary>
+    public void RestartFromCheckpoint()
+    {
+        if (m_stageSceneContext == null)
+        {
+            Debug.LogWarning(
+                $"{nameof(StageSceneContext)} が設定されていません。",
+                this);
+
+            return;
+        }
+
+        if (m_stageCheckpointController == null)
+        {
+            Debug.LogWarning(
+                $"{nameof(StageCheckpointController)} が設定されていません。",
+                this);
+
+            return;
+        }
+
+        if (!m_stageCheckpointController.TryGetCurrentSnapshot(
+            out StageCheckpointSnapshot snapshot))
+        {
+            Debug.LogWarning(
+                "再開できるチェックポイントがありません。",
+                this);
+
+            return;
+        }
+
+        if (!m_stageSceneContext.SetCheckpoint(
+            snapshot))
+        {
+            Debug.LogWarning(
+                "チェックポイントContextの設定に失敗しました。",
+                this);
+
+            return;
+        }
+
+    }
+
+    /// <summary>
+    /// 現在のインゲームSceneを再読み込みします。
+    /// </summary>
+    public void ReloadInGameScene()
+    {
+        // Pause等でTimeScaleが0のままSceneを跨がないよう戻す
+        Time.timeScale = 1.0f;
+
+        Scene currentScene =
+            SceneManager.GetActiveScene();
+
+        if (!currentScene.IsValid()
+            || string.IsNullOrEmpty(currentScene.name))
+        {
+            Debug.LogWarning(
+                "現在のSceneを取得できませんでした。",
+                this);
+
+            return;
+        }
+
+        SceneManager.LoadScene(
+            currentScene.name);
+    }
+
+    /// <summary>
     /// 次のステージへ遷移します。
     /// </summary>
     public void LoadNextStage()
@@ -379,6 +552,8 @@ public sealed class GameDirector : MonoBehaviour
 
             return;
         }
+
+        m_stageSceneContext?.SetNewGame();
 
         SceneManager.LoadScene(
             m_nextStageSceneName);
@@ -399,19 +574,17 @@ public sealed class GameDirector : MonoBehaviour
             return;
         }
 
+        m_stageSceneContext?.Clear();
+
         SceneManager.LoadScene(
             m_stageSelectSceneName);
     }
 
     /// <summary>
-    /// 現在のステージを再読み込みします。
+    /// 現在のステージを最初からリスタートします。
     /// </summary>
     public void LoadRestartScene()
     {
-        Scene currentScene =
-            SceneManager.GetActiveScene();
-
-        SceneManager.LoadScene(
-            currentScene.name);
+        RestartInGame();
     }
 }
