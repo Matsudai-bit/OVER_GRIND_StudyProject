@@ -7,9 +7,28 @@ using UnityEngine.SceneManagement;
 [DisallowMultipleComponent]
 public sealed class GameDirector : MonoBehaviour
 {
+    [SerializeField]
+    private SaveDataController m_saveDataController;
+    [SerializeField]
+    private ResultTimeModel m_resultTimeModel;
+    [SerializeField]
+    private ResultRankModel m_resultRankModel;
+    [SerializeField]
+    private ResultRetryModel m_resultRetryModel;
+    [SerializeField]
+    private ResultStageModel m_resultStageModel;
+
     // ゲーム経過時間Timer
     [SerializeField, Header("ゲーム進行")]
     private ElapsedTimer m_gameProgressElapsedTimer;
+
+    // ステージ制限時間管理
+    [SerializeField]
+    private StageTimeLimitController m_stageTimeLimitController;
+
+    // ステージ固有設定
+    [SerializeField]
+    private StageSettingsAsset m_stageSettings;
 
     // ゲーム進行状態管理
     [SerializeField]
@@ -65,6 +84,8 @@ public sealed class GameDirector : MonoBehaviour
     private void Awake()
     {
         Application.targetFrameRate = 60;
+
+        ConfigureStage();
     }
 
     private void OnEnable()
@@ -81,6 +102,44 @@ public sealed class GameDirector : MonoBehaviour
     private void OnDisable()
     {
         UnregisterEvents();
+    }
+
+    /// <summary>
+    /// ステージ固有設定を各Runtimeシステムへ適用します。
+    /// </summary>
+    private void ConfigureStage()
+    {
+        if (m_stageSettings == null)
+        {
+            Debug.LogError(
+                $"{nameof(StageSettingsAsset)} が設定されていません。",
+                this);
+
+            return;
+        }
+
+        if (m_stageTimeLimitController == null)
+        {
+            Debug.LogError(
+                $"{nameof(StageTimeLimitController)} が設定されていません。",
+                this);
+
+            return;
+        }
+
+        if (m_stageSceneContext != null)
+        {
+            m_stageSceneContext.SetStageName(
+                m_stageSettings.StageName);
+        }
+
+        if (!m_stageTimeLimitController.Configure(
+            m_stageSettings.TimeLimitSeconds))
+        {
+            Debug.LogError(
+                "ステージ制限時間の設定に失敗しました。",
+                this);
+        }
     }
 
     /// <summary>
@@ -124,6 +183,12 @@ public sealed class GameDirector : MonoBehaviour
                 this);
         }
 
+        if (m_stageTimeLimitController != null)
+        {
+            m_stageTimeLimitController.TimeExpired +=
+                OnStageTimeExpired;
+        }
+
         if (m_bossPhaseController != null)
         {
             m_bossPhaseController.PhaseCompletionRequested +=
@@ -160,6 +225,12 @@ public sealed class GameDirector : MonoBehaviour
                 OnPlayerHealthChanged;
         }
 
+        if (m_stageTimeLimitController != null)
+        {
+            m_stageTimeLimitController.TimeExpired -=
+                OnStageTimeExpired;
+        }
+
         if (m_bossPhaseController != null)
         {
             m_bossPhaseController.PhaseCompletionRequested -=
@@ -186,6 +257,7 @@ public sealed class GameDirector : MonoBehaviour
 
             case GameFlowStateType.RESULT:
                 StopGameProgressTimer();
+                ApplyResultContextData();
                 break;
 
             case GameFlowStateType.GAME_OVER:
@@ -204,6 +276,9 @@ public sealed class GameDirector : MonoBehaviour
                 ? m_stageSceneContext.ConsumeRequest()
                 : StageSceneRequest.NewGame;
 
+        ApplyCarriedElapsedTime(
+            request.CarriedElapsedSeconds);
+
         switch (request.EntryType)
         {
             case StageEntryType.NEW_GAME:
@@ -219,6 +294,32 @@ public sealed class GameDirector : MonoBehaviour
                     request.CheckpointSnapshot);
                 break;
         }
+    }
+
+    /// <summary>
+    /// Scene遷移Contextから累計経過時間を復元します。
+    /// </summary>
+    /// <param name="elapsedSeconds">
+    /// 復元する累計経過時間。
+    /// </param>
+    private void ApplyCarriedElapsedTime(
+        double elapsedSeconds)
+    {
+        if (m_gameProgressElapsedTimer == null)
+        {
+            return;
+        }
+
+        /*
+         * NEW_GAME / RESTARTは0秒、
+         * CHECKPOINTは死亡時点までの累計時間が渡される。
+         *
+         * この時点ではElapsedTimerは停止中なので、
+         * StageTimeLimitController側では
+         * 制限時間の消費として扱われない。
+         */
+        m_gameProgressElapsedTimer.SetElapsedTime(
+            elapsedSeconds);
     }
 
     /// <summary>
@@ -371,6 +472,7 @@ public sealed class GameDirector : MonoBehaviour
     /// </summary>
     private void StartPlaying()
     {
+        Debug.Log("ゲーム開始");
         if (m_gameFlowController != null)
         {
             m_gameFlowController.EnterPlaying();
@@ -435,6 +537,59 @@ public sealed class GameDirector : MonoBehaviour
     }
 
     /// <summary>
+    /// ステージ制限時間切れを処理します。
+    /// </summary>
+    private void OnStageTimeExpired()
+    {
+        if (m_gameFlowController == null)
+        {
+            return;
+        }
+
+        m_gameFlowController.ChangeState(
+            GameFlowStateType.GAME_OVER);
+    }
+
+    /// <summary>
+    /// 現在の累計経過時間を取得します。
+    /// </summary>
+    /// <returns>累計経過時間。</returns>
+    private double GetCurrentElapsedSeconds()
+    {
+        return m_gameProgressElapsedTimer != null
+            ? m_gameProgressElapsedTimer.ElapsedSeconds
+            : 0.0;
+    }
+
+    /// <summary>
+    /// StageSceneContextの実行情報をリザルト表示Modelへ反映します。
+    /// </summary>
+    private void ApplyResultContextData()
+    {
+        if (m_stageSceneContext == null)
+        {
+            Debug.LogWarning(
+                $"{nameof(StageSceneContext)} が設定されていません。",
+                this);
+
+            return;
+        }
+
+        if (m_resultRetryModel != null)
+        {
+            m_resultRetryModel.SetRetryCount(
+                m_stageSceneContext);
+        }
+
+        if (m_resultStageModel != null)
+        {
+            m_resultStageModel.SetStageData(
+                1,
+                m_stageSceneContext);
+        }
+    }
+
+    /// <summary>
     /// ゲーム経過時間の計測を停止します。
     /// </summary>
     private void StopGameProgressTimer()
@@ -445,6 +600,8 @@ public sealed class GameDirector : MonoBehaviour
         }
 
         m_gameProgressElapsedTimer.StopTimer();
+        m_resultTimeModel.SetTimeData(m_saveDataController.CurrentData, m_gameProgressElapsedTimer, 1);
+        m_resultRankModel.EvaluateRank(m_resultTimeModel, m_stageSettings);
     }
 
     /// <summary>
@@ -462,7 +619,8 @@ public sealed class GameDirector : MonoBehaviour
             return;
         }
 
-        // 次Sceneではイントロを飛ばして最初から開始
+        // リスタート時は累計プレイ時間も0秒へ戻し、
+        // イントロを飛ばしてステージ最初から開始
         m_stageSceneContext.SetRestart();
 
     }
@@ -502,7 +660,8 @@ public sealed class GameDirector : MonoBehaviour
         }
 
         if (!m_stageSceneContext.SetCheckpoint(
-            snapshot))
+            snapshot,
+            GetCurrentElapsedSeconds()))
         {
             Debug.LogWarning(
                 "チェックポイントContextの設定に失敗しました。",
