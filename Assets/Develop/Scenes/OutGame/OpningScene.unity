@@ -257,6 +257,7 @@ GameObject:
   - component: {fileID: 283390191}
   - component: {fileID: 283390190}
   - component: {fileID: 283390189}
+  - component: {fileID: 283390192}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -338,6 +339,50 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &283390192
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 283390188}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a79441f348de89743a2939f4d699eac1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.UniversalAdditionalCameraData
+  m_RenderShadows: 1
+  m_RequiresDepthTextureOption: 2
+  m_RequiresOpaqueTextureOption: 2
+  m_CameraType: 0
+  m_Cameras: []
+  m_RendererIndex: -1
+  m_VolumeLayerMask:
+    serializedVersion: 2
+    m_Bits: 1
+  m_VolumeTrigger: {fileID: 0}
+  m_VolumeFrameworkUpdateModeOption: 2
+  m_RenderPostProcessing: 0
+  m_Antialiasing: 0
+  m_AntialiasingQuality: 2
+  m_StopNaN: 0
+  m_Dithering: 0
+  m_ClearDepth: 1
+  m_AllowXRRendering: 1
+  m_AllowHDROutput: 1
+  m_UseScreenCoordOverride: 0
+  m_ScreenSizeOverride: {x: 0, y: 0, z: 0, w: 0}
+  m_ScreenCoordScaleBias: {x: 0, y: 0, z: 0, w: 0}
+  m_RequiresDepthTexture: 0
+  m_RequiresColorTexture: 0
+  m_TaaSettings:
+    m_Quality: 3
+    m_FrameInfluence: 0.1
+    m_JitterScale: 1
+    m_MipBias: 0
+    m_VarianceClampScale: 0.9
+    m_ContrastAdaptiveSharpening: 0
+  m_Version: 2
 --- !u!1001 &706618244
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -426,6 +471,46 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 6414940817200754729, guid: c880ea2c083c9494498cccd04a629ead, type: 3}
+      propertyPath: m_VideoClip
+      value: 
+      objectReference: {fileID: 32900000, guid: 1c31cae316a4fac4098e889fcb78b2eb, type: 3}
+    - target: {fileID: 6414940817200754729, guid: c880ea2c083c9494498cccd04a629ead, type: 3}
+      propertyPath: m_AudioOutputMode
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 6414940817200754729, guid: c880ea2c083c9494498cccd04a629ead, type: 3}
+      propertyPath: m_ControlledAudioTrackCount
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6414940817200754729, guid: c880ea2c083c9494498cccd04a629ead, type: 3}
+      propertyPath: m_DirectAudioMutes.Array.size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6414940817200754729, guid: c880ea2c083c9494498cccd04a629ead, type: 3}
+      propertyPath: m_DirectAudioVolumes.Array.size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6414940817200754729, guid: c880ea2c083c9494498cccd04a629ead, type: 3}
+      propertyPath: m_EnabledAudioTracks.Array.size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6414940817200754729, guid: c880ea2c083c9494498cccd04a629ead, type: 3}
+      propertyPath: m_TargetAudioSources.Array.size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6414940817200754729, guid: c880ea2c083c9494498cccd04a629ead, type: 3}
+      propertyPath: 'm_DirectAudioVolumes.Array.data[0]'
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6414940817200754729, guid: c880ea2c083c9494498cccd04a629ead, type: 3}
+      propertyPath: 'm_EnabledAudioTracks.Array.data[0]'
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7327116334407435157, guid: c880ea2c083c9494498cccd04a629ead, type: 3}
+      propertyPath: m_storyPages.Array.data[6].m_storyVideo
+      value: 
+      objectReference: {fileID: 32900000, guid: 1c31cae316a4fac4098e889fcb78b2eb, type: 3}
     - target: {fileID: 7794565587640643258, guid: c880ea2c083c9494498cccd04a629ead, type: 3}
       propertyPath: m_Name
       value: StoryCanvas

@@ -147,6 +147,15 @@ public sealed class Health : MonoBehaviour, IDamageable
     }
 
     /// <summary>
+    /// 現在のHPを指定した値へ設定します。
+    /// </summary>
+    /// <param name="health">設定するHP。</param>
+    public void SetHealth(int health)
+    {
+        SetCurrentHealth(health);
+    }
+
+    /// <summary>
     /// HPを最大まで回復します。
     /// </summary>
     public void RestoreHealth()

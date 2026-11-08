@@ -3,6 +3,7 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using UnityEngine.Video;
 
 /// <summary>
 /// ローディングシーンのコントローラー
@@ -12,21 +13,20 @@ public class LoadingSceneController : MonoBehaviour
     [Header("シーン遷移時の最小ロード時間")]
     [SerializeField] private float m_minLoadTime = 0.5f;
 
-    [SerializeField] private GameObject m_loadingUI;
-    [SerializeField] private Slider m_slider;
-
+    [SerializeField] private VideoPlayer m_videoPlayer;
+    [SerializeField] private UIAlphaLoop m_uIAlphaLoop;
     [SerializeField] public string sceneName ;
-
-    [SerializeField] private GameObject m_text;
 
     private float m_angle;
     // ロード開始時間を記録する変数
     private float m_loadStartTime;
 
+    float m_progress=0.0f;
+
     void Start()
     {
-        m_angle = 0.0f;
-        m_loadingUI.SetActive(true);
+        //m_angle = 0.0f;
+        //m_loadingUI.SetActive(true);
 
 
         // 次のシーン名を取得
@@ -36,19 +36,20 @@ public class LoadingSceneController : MonoBehaviour
 
     void Update()
     {
-   
+        //m_uIAlphaLoop.SetSpeed(0.1f + m_progress * 3.0f);
+        //m_videoPlayer.playbackSpeed = 0.1f + m_progress * 3.0f;
 
-        m_angle += 100.0f * Time.deltaTime;
+        //m_angle += 100.0f * Time.deltaTime;
 
-        if (m_angle >= 360.0f)
-        {
-            m_angle = m_angle - 360.0f;
-        }
+        //if (m_angle >= 360.0f)
+        //{
+        //    m_angle = m_angle - 360.0f;
+        //}
 
-        // サイン波でテキストを上下に動かす
-        m_text.GetComponent<RectTransform>().anchoredPosition = new Vector2(
-            m_text.GetComponent<RectTransform>().anchoredPosition.x,
-            10.0f * Mathf.Sin(Mathf.Deg2Rad * m_angle));
+        //// サイン波でテキストを上下に動かす
+        //m_text.GetComponent<RectTransform>().anchoredPosition = new Vector2(
+        //    m_text.GetComponent<RectTransform>().anchoredPosition.x,
+        //    10.0f * Mathf.Sin(Mathf.Deg2Rad * m_angle));
 
     }
 
@@ -97,15 +98,14 @@ public class LoadingSceneController : MonoBehaviour
             // 3. スライダー値の決定
             // 最小待機時間内は、時間進捗を優先してスムーズに動かす
             // ロードが遅れている場合は、ロード進捗を最低限の値とする
-            float finalProgress = Mathf.Min(loadProgress, timeProgress);
+            m_progress = Mathf.Min(loadProgress, timeProgress);
 
-            m_slider.value = finalProgress;
 
             yield return null;
         }
 
         // ループ終了後、確実に 1.0f に設定
-        m_slider.value = 1.0f;
+        m_progress = 1.0f;
 
         // ----------------------------------------------------
         // 4. シーン遷移を許可

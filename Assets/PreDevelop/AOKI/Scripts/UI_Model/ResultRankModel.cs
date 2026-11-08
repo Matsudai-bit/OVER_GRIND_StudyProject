@@ -6,6 +6,7 @@ using UnityEngine;
 /// </summary>
 public enum RankType
 {
+    S_PLUS,
     S,
     A,
     B,
@@ -13,50 +14,176 @@ public enum RankType
 }
 
 /// <summary>
-/// リザルト画面のランク判定・データを管理する仮 Model です。
+/// リザルト画面のランクデータを管理します。
+/// ランク判定自体はStageSettingsAssetへ委譲します。
 /// </summary>
 public class ResultRankModel : MonoBehaviour
 {
+    /// <summary>
+    /// ランクが変更されたときに通知します。
+    /// </summary>
     public event Action<RankType> OnRankChanged;
 
-    /// <summary>決定されたランク</summary>
-    public RankType CurrentRank { get; private set; } = RankType.B;
+    /// <summary>
+    /// 決定されたランクを取得します。
+    /// </summary>
+    public RankType CurrentRank { get; private set; } =
+        RankType.B;
 
     /// <summary>
-    /// クリアタイムとリトライ数をもとにランクを仮計算・決定します。
+    /// ResultTimeModelのクリアタイムを使用して、
+    /// StageSettingsAssetへランク判定を要求します。
     /// </summary>
-    /// <param name="clearTime">クリアタイム（秒）</param>
-    /// <param name="retryCount">リトライ回数</param>
-    public RankType CalculateRank(float clearTime, int retryCount = 0)
+    /// <param name="timeModel">
+    /// 今回のクリアタイムを保持するResultTimeModel。
+    /// </param>
+    /// <param name="stageSettings">
+    /// ランク評価基準を保持するStageSettingsAsset。
+    /// </param>
+    /// <returns>
+    /// true：ランクを設定しました。
+    /// false：判定または変換に失敗しました。
+    /// </returns>
+    public bool EvaluateRank(
+        IResultTimeModel timeModel,
+        StageSettingsAsset stageSettings)
     {
-        // 仮のランク判定ロジック
-        if (clearTime <= 10f && retryCount == 0)
+        if (timeModel == null)
         {
-            CurrentRank = RankType.S;
-        }
-        else if (clearTime <= 20f && retryCount <= 2)
-        {
-            CurrentRank = RankType.A;
-        }
-        else if (clearTime <= 40f)
-        {
-            CurrentRank = RankType.B;
-        }
-        else
-        {
-            CurrentRank = RankType.C;
+            Debug.LogWarning(
+                $"{nameof(IResultTimeModel)} が設定されていません。",
+                this);
+
+            return false;
         }
 
-        OnRankChanged?.Invoke(CurrentRank);
-        return CurrentRank;
+        return EvaluateRank(
+            timeModel.ClearTime,
+            stageSettings);
     }
 
     /// <summary>
-    /// 外部から直接ランクを設定したい場合
+    /// クリアタイムを使用して、
+    /// StageSettingsAssetへランク判定を要求します。
     /// </summary>
-    public void SetRankDirect(RankType rank)
+    /// <param name="clearTime">
+    /// 今回のクリアタイム（秒）。
+    /// </param>
+    /// <param name="stageSettings">
+    /// ランク評価基準を保持するStageSettingsAsset。
+    /// </param>
+    /// <returns>
+    /// true：ランクを設定しました。
+    /// false：判定または変換に失敗しました。
+    /// </returns>
+    public bool EvaluateRank(
+        float clearTime,
+        StageSettingsAsset stageSettings)
     {
-        CurrentRank = rank;
-        OnRankChanged?.Invoke(CurrentRank);
+        if (stageSettings == null)
+        {
+            Debug.LogWarning(
+                $"{nameof(StageSettingsAsset)} が設定されていません。",
+                this);
+
+            return false;
+        }
+
+        StageRank stageRank =
+            stageSettings.EvaluateRank(
+                clearTime);
+
+        if (!TryConvertRank(
+            stageRank,
+            out RankType rank))
+        {
+            Debug.LogWarning(
+                $"ランク判定結果を変換できませんでした。"
+                + $" StageRank: {stageRank}",
+                this);
+
+            return false;
+        }
+
+        SetRankDirect(
+            rank);
+
+        return true;
+    }
+
+    /// <summary>
+    /// 外部から直接ランクを設定します。
+    /// </summary>
+    /// <param name="rank">設定するランク。</param>
+    public void SetRankDirect(
+        RankType rank)
+    {
+        if (CurrentRank == rank)
+        {
+            return;
+        }
+
+        CurrentRank =
+            rank;
+
+        OnRankChanged?.Invoke(
+            CurrentRank);
+    }
+
+    /// <summary>
+    /// StageRankをリザルト表示用RankTypeへ変換します。
+    /// </summary>
+    /// <param name="stageRank">
+    /// StageSettingsAssetが返したランク。
+    /// </param>
+    /// <param name="rank">
+    /// 変換後のリザルト用ランク。
+    /// </param>
+    /// <returns>
+    /// true：変換できました。
+    /// false：対応するランクがありません。
+    /// </returns>
+    private static bool TryConvertRank(
+        StageRank stageRank,
+        out RankType rank)
+    {
+        switch (stageRank)
+        {
+            case StageRank.S_PLUS:
+                rank =
+                    RankType.S_PLUS;
+
+                return true;
+
+            case StageRank.S:
+                rank =
+                    RankType.S;
+
+                return true;
+
+            case StageRank.A:
+                rank =
+                    RankType.A;
+
+                return true;
+
+            case StageRank.B:
+                rank =
+                    RankType.B;
+
+                return true;
+
+            case StageRank.C:
+                rank =
+                    RankType.C;
+
+                return true;
+
+            default:
+                rank =
+                    default;
+
+                return false;
+        }
     }
 }

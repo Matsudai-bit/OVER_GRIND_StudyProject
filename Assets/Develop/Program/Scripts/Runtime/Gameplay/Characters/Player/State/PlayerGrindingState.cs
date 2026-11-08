@@ -6,34 +6,44 @@ using UnityEngine;
 public sealed class PlayerGrindingState
     : StateBase<PlayerStateMachineComponent>
 {
+    // 搭乗中のレール
     private SplineRailInfo m_rail;
 
+    // レールジャンプからの復帰か
     private readonly bool m_isResuming;
+
+    // 復帰時のレール上位置
     private readonly float m_positionT;
+
+    // 復帰時の進行方向
     private readonly int m_direction;
+
+    // 復帰時の移動速度
     private readonly float m_speed;
 
+    // グラインド開始済みか
     private bool m_hasStarted;
-    private Collider m_disabledPlayerCollider;
 
     /// <summary>
-    /// 通常の接触検出からグラインドを開始します。
+    /// 通常のレール検出からグラインドを開始します。
     /// </summary>
     public PlayerGrindingState()
     {
     }
 
     /// <summary>
-    /// 搭乗先のレールを保持します。
+    /// 搭乗するレールを指定してグラインドを開始します。
     /// </summary>
     /// <param name="rail">搭乗するレール。</param>
-    public PlayerGrindingState(SplineRailInfo rail)
+    public PlayerGrindingState(
+        SplineRailInfo rail)
     {
         m_rail = rail;
     }
 
     /// <summary>
-    /// 無入力ジャンプの着地点・方向・速度を引き継ぎます。
+    /// レールジャンプの着地点・方向・速度を引き継いで
+    /// グラインドを再開します。
     /// </summary>
     /// <param name="rail">搭乗するレール。</param>
     /// <param name="positionT">レール上の位置。</param>
@@ -71,18 +81,16 @@ public sealed class PlayerGrindingState
     }
 
     /// <summary>
-    /// 物理更新ごとに滑走し、終了・衝突を判定します。
+    /// 物理更新ごとにグラインド移動を更新し、
+    /// 終了状態に応じて次のStateへ遷移します。
     /// </summary>
     protected override void OnFixedUpdate()
     {
         if (!m_hasStarted)
         {
-            if (m_rail != null && !m_rail.ForcesEscape &&
-                Owner.gameObject.TryGetComponent(out Collider collider) && collider.enabled)
-            {
-                m_disabledPlayerCollider = collider;
-                collider.enabled = false;
-            }
+            // Player Colliderは常に有効のまま維持する。
+            // グラインド中の物理干渉は
+            // PlayerMotor.BeginRailMotion() のKinematic制御で抑制する。
             if (m_isResuming)
             {
                 Owner.GrindController.StartGrindAt(
@@ -108,43 +116,38 @@ public sealed class PlayerGrindingState
             return;
         }
 
-        RestorePlayerCollider();
-
+        // 障害物との衝突によるレール離脱
         if (Owner.GrindController.IsCollisionExiting)
         {
-       
             Owner.RequestRailStateChange<
                 PlayerRailExitingState>();
-          
+
             return;
         }
 
+        // 攻撃入力を維持した状態でレールを抜けた場合
         if (Owner.InputReader.IsAttackHeld)
         {
-
-            Owner.RequestRailStateChange<PlayerRailExitingState>(true);
+            Owner.RequestRailStateChange<
+                PlayerRailExitingState>(
+                true);
 
             return;
         }
 
-        Owner.RequestRailStateChange<PlayerIdlingState>();
+        // 通常のレール終了
+   // 通常のレール終了
+Owner.RequestRailStateChange<
+    PlayerRailExitingState>();
     }
 
     /// <summary>
-    /// グラインド状態終了時にアニメーションを停止します。
+    /// グラインドState終了時に
+    /// グラインドアニメーションを停止します。
     /// </summary>
     protected override void OnExitState()
     {
-        RestorePlayerCollider();
         Owner.AnimationPresenter
             .StopRailGrindAnimation();
-    }
-
-    /// <summary>レール搭乗中に無効化したPlayerのColliderを復元します。</summary>
-    private void RestorePlayerCollider()
-    {
-        if (m_disabledPlayerCollider == null) return;
-        m_disabledPlayerCollider.enabled = true;
-        m_disabledPlayerCollider = null;
     }
 }

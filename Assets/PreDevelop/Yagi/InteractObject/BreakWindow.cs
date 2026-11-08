@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.InputSystem;
 
 /// <summary>攻撃命中で指定ガラスを非表示にし、ガラス片を飛散させます。</summary>
@@ -9,6 +10,8 @@ public sealed class BreakWindow : MonoBehaviour,
     IAttackContactReceiver,
     IAttackContactDamageReceiver
 {
+    [SerializeField, Header("イベント")]
+    private UnityEvent m_destroyedEvent;
     [SerializeField, Header("Damage")]
     [Min(1)]
     private int m_requiredDamage = 100;
@@ -237,6 +240,7 @@ public sealed class BreakWindow : MonoBehaviour,
             fragment.WakeUp();
             Destroy(fragment.gameObject, m_fragmentLifetime);
         }
+        m_destroyedEvent?.Invoke();
     }
 
     /// <summary>無効化時に揺れと接触状態を解除します。</summary>

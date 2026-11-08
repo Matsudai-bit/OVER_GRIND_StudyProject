@@ -1,5 +1,4 @@
 using UnityEngine;
-using static UnityEngine.UI.GridLayoutGroup;
 
 /// <summary>地上・空中で共通の連続攻撃、速度消費、命中時の滞空を管理します。</summary>
 public sealed class PlayerContinuousAttack
@@ -142,36 +141,107 @@ public sealed class PlayerContinuousAttack
         return true;
     }
 
-    /// <summary>地上攻撃と同じ入力減速・命中減速を適用します。</summary>
-    private void UpdateMovement(float deltaTime)
+    /// <summary>
+    /// 攻撃中の移動を更新します。
+    /// 空中攻撃では垂直速度へ干渉しない空中専用Motor APIを使用します。
+    /// </summary>
+    /// <param name="deltaTime">
+    /// 物理更新時間。
+    /// </param>
+    private void UpdateMovement(
+        float deltaTime)
     {
-        // インタラクト対象への命中中は前進を止め、脚のTriggerが内部へ進入することを防ぎます。
-        if (AttackMovementBlockRegistry.IsBlocked(m_owner.transform))
+        PlayerMoveParameters normalParameters =
+            m_owner.MovementParameterAsset
+                .CreateMoveParameters();
+
+        float decelerationMultiplier =
+            Mathf.Max(
+                m_owner.MovementParameterAsset
+                    .AttackDecelerationMultiplier,
+                1.0f);
+
+        PlayerMoveParameters attackParameters =
+            new PlayerMoveParameters(
+                normalParameters.MaxMoveSpeed,
+                normalParameters.TimeToMaxSpeed,
+                normalParameters.TimeToStop *
+                    decelerationMultiplier,
+                normalParameters.RotationSpeed);
+
+        // インタラクト対象への命中中は前進を止める
+        if (AttackMovementBlockRegistry.IsBlocked(
+                m_owner.transform))
         {
-            m_owner.Motor.MoveAtFixedWorldDirection(
-                m_direction,
-                0.0f,
-                0.0f,
-                deltaTime,
-                applyObstacleAvoidance: false);
+            if (m_isAirAttack)
+            {
+                m_owner.Motor.MoveAirAtFixedWorldDirection(
+                    m_direction,
+                    0.0f,
+                    0.0f,
+                    deltaTime);
+            }
+            else
+            {
+                m_owner.Motor.MoveAtFixedWorldDirection(
+                    m_direction,
+                    0.0f,
+                    0.0f,
+                    deltaTime,
+                    applyObstacleAvoidance: false);
+            }
+
             return;
         }
 
         if (!m_owner.InputReader.HasMoveInput)
         {
-            PlayerMoveParameters normal = m_owner.MovementParameterAsset.CreateMoveParameters();
-            float multiplier = Mathf.Max(m_owner.MovementParameterAsset.AttackDecelerationMultiplier, 1.0f);
-            var attack = new PlayerMoveParameters(normal.MaxMoveSpeed, normal.TimeToMaxSpeed,
-                normal.TimeToStop * multiplier, normal.RotationSpeed);
-            m_owner.Motor.Decelerate(attack, deltaTime);
+            if (m_isAirAttack)
+            {
+                // 空中ではXZだけを減速し、現在のY速度を維持する
+                m_owner.Motor.DecelerateAirHorizontal(
+                    attackParameters,
+                    deltaTime);
+            }
+            else
+            {
+                m_owner.Motor.Decelerate(
+                    attackParameters,
+                    deltaTime);
+            }
+
             return;
         }
 
-        float speed = m_remainingSpeed;
+        float speed =
+            m_remainingSpeed;
+
         if (m_owner.AttackController.IsHittingAnyTarget())
-            speed *= m_owner.MovementParameterAsset.AttackHitMovementSpeedMultiplier;
-        m_owner.Motor.MoveAtFixedWorldDirection(m_direction, speed, 0.0f, deltaTime,
-            applyObstacleAvoidance: false);
+        {
+            speed *=
+                m_owner.MovementParameterAsset
+                    .AttackHitMovementSpeedMultiplier;
+        }
+
+        if (m_isAirAttack)
+        {
+            // 空中攻撃ではGround判定や斜面補正を通さず、
+            // レール離脱・ジャンプ由来のY速度をそのまま維持する
+            m_owner.Motor.MoveAirAtFixedWorldDirection(
+                m_direction,
+                speed,
+                0.0f,
+                deltaTime);
+        }
+        else
+        {
+            m_owner.Motor.MoveAtFixedWorldDirection(
+                m_direction,
+                speed,
+                0.0f,
+                deltaTime,
+                applyObstacleAvoidance: false);
+        }
     }
 
     /// <summary>攻撃判定とアニメーション、速度表示の上書きを終了します。</summary>

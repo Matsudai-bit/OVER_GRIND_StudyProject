@@ -480,6 +480,7 @@ public sealed class AttackReactiveInteractObject : MonoBehaviour,
         {
             m_group = null;
         }
+        m_rigidbody.isKinematic = false;
     }
 
     /// <summary>指定Colliderが同一壁グループのドラム缶か確認します。</summary>
@@ -605,7 +606,7 @@ public sealed class AttackReactiveInteractObject : MonoBehaviour,
     {
         m_rigidbody.linearVelocity = Vector3.zero;
         m_rigidbody.angularVelocity = Vector3.zero;
-        m_rigidbody.isKinematic = true;
+        //m_rigidbody.isKinematic = true;
         m_accumulatedDamage = 0;
         m_isRecoveringFromLaunch = false;
         m_settleTimer = 0.0f;
