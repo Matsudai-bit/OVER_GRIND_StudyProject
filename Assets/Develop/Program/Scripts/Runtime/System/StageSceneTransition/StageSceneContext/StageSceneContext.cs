@@ -2,17 +2,18 @@
 using UnityEngine;
 
 /// <summary>
-/// ステージシーンをどの状態から開始するかと、
-/// ステージ実行中に引き継ぐ一時情報を保持します。
+/// ステージSceneの開始方法とScene間で引き継ぐ一時情報を保持します。
 /// </summary>
 [CreateAssetMenu(
     fileName = "StageSceneContext",
     menuName = "Game/Context/Stage Scene Context")]
 public sealed class StageSceneContext : ScriptableObject
 {
+    private const int DEFAULT_STAGE_NUMBER = 0;
+    private const int MIN_STAGE_NUMBER = 1;
     private const int MIN_RETRY_COUNT = 0;
 
-    // 次回ステージシーンの開始方法
+    // 次回ステージSceneの開始方法
     [NonSerialized]
     private StageEntryType m_entryType =
         StageEntryType.NEW_GAME;
@@ -25,6 +26,11 @@ public sealed class StageSceneContext : ScriptableObject
     // Scene再読み込み後も引き継ぐ累計経過時間
     [NonSerialized]
     private double m_carriedElapsedSeconds;
+
+    // 現在プレイしているステージ番号
+    [NonSerialized]
+    private int m_stageNumber =
+        DEFAULT_STAGE_NUMBER;
 
     // 現在プレイしているステージ名
     [NonSerialized]
@@ -55,6 +61,12 @@ public sealed class StageSceneContext : ScriptableObject
         m_carriedElapsedSeconds;
 
     /// <summary>
+    /// 現在プレイしているステージ番号を取得します。
+    /// </summary>
+    public int StageNumber =>
+        m_stageNumber;
+
+    /// <summary>
     /// 現在プレイしているステージ名を取得します。
     /// </summary>
     public string StageName =>
@@ -67,12 +79,19 @@ public sealed class StageSceneContext : ScriptableObject
         m_retryCount;
 
     /// <summary>
-    /// 現在プレイしているステージ名を設定します。
+    /// 現在プレイするステージ情報を設定します。
     /// </summary>
-    /// <param name="stageName">設定するステージ名。</param>
-    public void SetStageName(
+    /// <param name="stageNumber">ステージ番号。</param>
+    /// <param name="stageName">ステージ表示名。</param>
+    public void SetStage(
+        int stageNumber,
         string stageName)
     {
+        m_stageNumber =
+            Mathf.Max(
+                MIN_STAGE_NUMBER,
+                stageNumber);
+
         m_stageName =
             stageName ?? string.Empty;
     }
@@ -91,7 +110,6 @@ public sealed class StageSceneContext : ScriptableObject
 
     /// <summary>
     /// ステージ最初からのリスタートを設定します。
-    /// 累計経過時間は0秒からやり直し、リトライ回数を1加算します。
     /// </summary>
     public void SetRestart()
     {
@@ -109,14 +127,12 @@ public sealed class StageSceneContext : ScriptableObject
 
     /// <summary>
     /// チェックポイントからの復帰を設定します。
-    /// 累計経過時間は死亡時点までの値を引き継ぎ、
-    /// リトライ回数を1加算します。
     /// </summary>
     /// <param name="snapshot">
     /// 復帰に使用するスナップショット。
     /// </param>
     /// <param name="elapsedSeconds">
-    /// 死亡・再開時点までの累計経過時間。
+    /// 再開時点までの累計経過時間。
     /// </param>
     /// <returns>
     /// true：設定しました。
@@ -150,7 +166,6 @@ public sealed class StageSceneContext : ScriptableObject
 
     /// <summary>
     /// チェックポイントからの復帰を設定します。
-    /// 累計経過時間を引き継がない互換用オーバーロードです。
     /// </summary>
     /// <param name="snapshot">
     /// 復帰に使用するスナップショット。
@@ -169,7 +184,7 @@ public sealed class StageSceneContext : ScriptableObject
 
     /// <summary>
     /// 現在の開始要求を取得します。
-    /// 開始要求のみ消費し、ステージ名とリトライ回数は保持します。
+    /// ステージ情報とリトライ回数は保持します。
     /// </summary>
     /// <returns>今回のステージ開始要求。</returns>
     public StageSceneRequest ConsumeRequest()
@@ -183,10 +198,7 @@ public sealed class StageSceneContext : ScriptableObject
                 snapshot,
                 m_carriedElapsedSeconds);
 
-        /*
-         * StageName / RetryCountは結果表示まで必要なので、
-         * SetNewGame()ではなく開始要求だけを初期化する。
-         */
+        // 次回開始要求だけを消費する
         ResetEntryRequest();
 
         return request;
@@ -198,6 +210,9 @@ public sealed class StageSceneContext : ScriptableObject
     public void Clear()
     {
         ResetEntryRequest();
+
+        m_stageNumber =
+            DEFAULT_STAGE_NUMBER;
 
         m_stageName =
             string.Empty;
@@ -219,7 +234,6 @@ public sealed class StageSceneContext : ScriptableObject
 
     /// <summary>
     /// 次回Scene開始要求だけを初期化します。
-    /// ステージ実行情報は変更しません。
     /// </summary>
     private void ResetEntryRequest()
     {

@@ -16,6 +16,7 @@ public class TimerUiModel : MonoBehaviour
 
     private void Awake()
     {
+        if (m_timer)
         m_timer.RemainingTimeChanged += (seconds) => { OnTimeChanged?.Invoke((float)(seconds)); };
     }
 

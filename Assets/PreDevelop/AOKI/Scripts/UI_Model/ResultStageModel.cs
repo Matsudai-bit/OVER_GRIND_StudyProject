@@ -34,7 +34,6 @@ public class ResultStageModel :
 
     /// <summary>
     /// ステージ情報が変更された際に発生するイベントです。
-    /// 第一引数：ステージ番号、第二引数：ステージ名。
     /// </summary>
     public event Action<int, string> OnStageChanged;
 
@@ -75,20 +74,16 @@ public class ResultStageModel :
     }
 
     /// <summary>
-    /// StageSceneContextからステージ名を取得して設定します。
+    /// StageSceneContextからステージ情報を取得して設定します。
     /// </summary>
-    /// <param name="stageIndex">
-    /// 現在のステージ番号。
-    /// </param>
     /// <param name="stageSceneContext">
-    /// ステージ名を保持しているContext。
+    /// ステージ情報を保持しているContext。
     /// </param>
     /// <returns>
     /// true：設定しました。
     /// false：Contextが設定されていません。
     /// </returns>
     public bool SetStageData(
-        int stageIndex,
         StageSceneContext stageSceneContext)
     {
         if (stageSceneContext == null)
@@ -97,14 +92,14 @@ public class ResultStageModel :
         }
 
         SetStageData(
-            stageIndex,
+            stageSceneContext.StageNumber,
             stageSceneContext.StageName);
 
         return true;
     }
 
     /// <summary>
-    /// ステージ情報を設定し、変更イベントを発行します。
+    /// ステージ情報を設定します。
     /// </summary>
     /// <param name="stageIndex">ステージ番号。</param>
     /// <param name="stageName">ステージ名。</param>

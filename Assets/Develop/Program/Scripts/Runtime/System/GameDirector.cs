@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 /// <summary>
 /// ゲーム全体の進行を統括します。
@@ -7,14 +6,23 @@ using UnityEngine.SceneManagement;
 [DisallowMultipleComponent]
 public sealed class GameDirector : MonoBehaviour
 {
-    [SerializeField]
+    // セーブデータ管理
+    [SerializeField, Header("リザルト")]
     private SaveDataController m_saveDataController;
+
+    // リザルトタイム
     [SerializeField]
     private ResultTimeModel m_resultTimeModel;
+
+    // リザルトランク
     [SerializeField]
     private ResultRankModel m_resultRankModel;
+
+    // リザルトリトライ回数
     [SerializeField]
     private ResultRetryModel m_resultRetryModel;
+
+    // リザルトステージ情報
     [SerializeField]
     private ResultStageModel m_resultStageModel;
 
@@ -26,7 +34,7 @@ public sealed class GameDirector : MonoBehaviour
     [SerializeField]
     private StageTimeLimitController m_stageTimeLimitController;
 
-    // ステージ固有設定
+    // 現在のステージ固有設定
     [SerializeField]
     private StageSettingsAsset m_stageSettings;
 
@@ -45,8 +53,8 @@ public sealed class GameDirector : MonoBehaviour
     // イントロシーケンス
     [SerializeField, Header("イントロシーケンス_ボス")]
     private GameplaySequenceAsset m_introSequenceAsset_BossSpawn;
-    [SerializeField, Header("イントロシーケンス_プレイヤー")]
 
+    [SerializeField, Header("イントロシーケンス_プレイヤー")]
     private GameplaySequenceAsset m_introSequenceAsset_PlayerSpawn;
 
     // ゲーム進行状態変更イベント
@@ -73,13 +81,14 @@ public sealed class GameDirector : MonoBehaviour
     [SerializeField]
     private StageCheckpointController m_stageCheckpointController;
 
-    // 次のステージシーン名
+    // ステージScene遷移管理
     [SerializeField, Header("遷移関連")]
-    private string m_nextStageSceneName;
+    private StageSceneTransitionController
+        m_stageSceneTransitionController;
 
-    // ステージ選択画面シーン名
+    // 次のステージ定義
     [SerializeField]
-    private string m_stageSelectSceneName;
+    private StageDefinitionAsset m_nextStageDefinition;
 
     private void Awake()
     {
@@ -105,7 +114,7 @@ public sealed class GameDirector : MonoBehaviour
     }
 
     /// <summary>
-    /// ステージ固有設定を各Runtimeシステムへ適用します。
+    /// ステージ固有設定をRuntimeシステムへ適用します。
     /// </summary>
     private void ConfigureStage()
     {
@@ -120,17 +129,11 @@ public sealed class GameDirector : MonoBehaviour
 
         if (m_stageTimeLimitController == null)
         {
-            Debug.LogError(
+            Debug.LogWarning(
                 $"{nameof(StageTimeLimitController)} が設定されていません。",
                 this);
 
             return;
-        }
-
-        if (m_stageSceneContext != null)
-        {
-            m_stageSceneContext.SetStageName(
-                m_stageSettings.StageName);
         }
 
         if (!m_stageTimeLimitController.Configure(
@@ -256,8 +259,7 @@ public sealed class GameDirector : MonoBehaviour
                 break;
 
             case GameFlowStateType.RESULT:
-                StopGameProgressTimer();
-                ApplyResultContextData();
+                HandleResultStarted();
                 break;
 
             case GameFlowStateType.GAME_OVER:
@@ -267,7 +269,7 @@ public sealed class GameDirector : MonoBehaviour
     }
 
     /// <summary>
-    /// ステージシーンの開始方法に応じて初期処理を行います。
+    /// ステージSceneの開始方法に応じて初期処理を行います。
     /// </summary>
     private void HandleStageEntry()
     {
@@ -310,14 +312,6 @@ public sealed class GameDirector : MonoBehaviour
             return;
         }
 
-        /*
-         * NEW_GAME / RESTARTは0秒、
-         * CHECKPOINTは死亡時点までの累計時間が渡される。
-         *
-         * この時点ではElapsedTimerは停止中なので、
-         * StageTimeLimitController側では
-         * 制限時間の消費として扱われない。
-         */
         m_gameProgressElapsedTimer.SetElapsedTime(
             elapsedSeconds);
     }
@@ -327,8 +321,6 @@ public sealed class GameDirector : MonoBehaviour
     /// </summary>
     private void StartRestart()
     {
-        // Scene再読み込み後の初期状態を使用し、
-        // 登場シーケンスのみ飛ばしてゲームプレイへ入る
         StartPlaying();
     }
 
@@ -366,7 +358,7 @@ public sealed class GameDirector : MonoBehaviour
     }
 
     /// <summary>
-    /// イントロシーケンスを開始します。
+    /// プレイヤー登場シーケンスを開始します。
     /// </summary>
     private void StartIntroSequence()
     {
@@ -382,7 +374,7 @@ public sealed class GameDirector : MonoBehaviour
         if (m_introSequenceAsset_PlayerSpawn == null)
         {
             Debug.LogWarning(
-                "イントロシーケンスが設定されていません。",
+                "プレイヤー登場シーケンスが設定されていません。",
                 this);
 
             return;
@@ -392,13 +384,14 @@ public sealed class GameDirector : MonoBehaviour
             m_introSequenceAsset_PlayerSpawn))
         {
             Debug.LogWarning(
-                $"{m_introSequenceAsset_PlayerSpawn.name} の開始に失敗しました。",
+                $"{m_introSequenceAsset_PlayerSpawn.name} "
+                + "の開始に失敗しました。",
                 this);
         }
     }
 
     /// <summary>
-    /// イントロシーケンスを開始します。
+    /// ボス登場シーケンスを開始します。
     /// </summary>
     private void StartIntroBossSequence()
     {
@@ -414,7 +407,7 @@ public sealed class GameDirector : MonoBehaviour
         if (m_introSequenceAsset_BossSpawn == null)
         {
             Debug.LogWarning(
-                "イントロシーケンスが設定されていません。",
+                "ボス登場シーケンスが設定されていません。",
                 this);
 
             return;
@@ -424,7 +417,8 @@ public sealed class GameDirector : MonoBehaviour
             m_introSequenceAsset_BossSpawn))
         {
             Debug.LogWarning(
-                $"{m_introSequenceAsset_BossSpawn.name} の開始に失敗しました。",
+                $"{m_introSequenceAsset_BossSpawn.name} "
+                + "の開始に失敗しました。",
                 this);
         }
     }
@@ -436,10 +430,9 @@ public sealed class GameDirector : MonoBehaviour
     private void OnGameplaySequenceChanged(
         GameplaySequenceChangedEventData eventData)
     {
-        // イントロシーケンス以外は対象外
-        if (eventData.Sequence == m_introSequenceAsset_PlayerSpawn)
+        if (eventData.Sequence ==
+            m_introSequenceAsset_PlayerSpawn)
         {
-            // 完了時のみゲームプレイを開始
             if (eventData.EventType ==
                 GameplaySequenceEventType.FINISHED)
             {
@@ -447,13 +440,12 @@ public sealed class GameDirector : MonoBehaviour
             }
         }
 
-        // イントロシーケンス以外は対象外
-        if (eventData.Sequence != m_introSequenceAsset_BossSpawn)
+        if (eventData.Sequence !=
+            m_introSequenceAsset_BossSpawn)
         {
             return;
         }
 
-        // イントロ完了時のみゲームプレイを開始
         if (eventData.EventType !=
             GameplaySequenceEventType.FINISHED)
         {
@@ -472,7 +464,6 @@ public sealed class GameDirector : MonoBehaviour
     /// </summary>
     private void StartPlaying()
     {
-        Debug.Log("ゲーム開始");
         if (m_gameFlowController != null)
         {
             m_gameFlowController.EnterPlaying();
@@ -562,16 +553,117 @@ public sealed class GameDirector : MonoBehaviour
     }
 
     /// <summary>
-    /// StageSceneContextの実行情報をリザルト表示Modelへ反映します。
+    /// 現在のステージ番号を取得します。
+    /// </summary>
+    /// <returns>現在のステージ番号。</returns>
+    private int GetCurrentStageNumber()
+    {
+        return m_stageSceneContext != null
+            ? m_stageSceneContext.StageNumber
+            : 0;
+    }
+
+    /// <summary>
+    /// リザルト開始時の結果確定とセーブ処理を行います。
+    /// </summary>
+    private void HandleResultStarted()
+    {
+        StopGameProgressTimer();
+
+        if (m_saveDataController == null
+            || m_resultTimeModel == null
+            || m_resultRankModel == null
+            || m_stageSettings == null
+            || m_gameProgressElapsedTimer == null)
+        {
+            Debug.LogError(
+                "リザルト確定に必要な参照が不足しています。",
+                this);
+
+            return;
+        }
+
+        int stageNumber =
+            GetCurrentStageNumber();
+
+        if (stageNumber <= 0)
+        {
+            Debug.LogError(
+                "ステージ番号がContextへ設定されていません。",
+                this);
+
+            return;
+        }
+
+        /*
+         * SaveDataを書き換える前に、
+         * 更新前の自己ベストをResultTimeModelへ読み込む。
+         */
+        if (!m_resultTimeModel.SetTimeData(
+            m_saveDataController.CurrentData,
+            m_gameProgressElapsedTimer,
+            stageNumber))
+        {
+            Debug.LogError(
+                "リザルトタイムの設定に失敗しました。",
+                this);
+
+            return;
+        }
+
+        // ランク判定はStageSettingsAssetへ委譲する
+        if (!m_resultRankModel.EvaluateRank(
+            m_resultTimeModel,
+            m_stageSettings))
+        {
+            Debug.LogError(
+                "リザルトランクの設定に失敗しました。",
+                this);
+
+            return;
+        }
+
+        ApplyResultContextData();
+
+        StageRank stageRank =
+            m_stageSettings.EvaluateRank(
+                m_resultTimeModel.ClearTime);
+
+        if (stageRank == StageRank.NONE)
+        {
+            Debug.LogWarning(
+                "保存可能なステージランクを取得できませんでした。",
+                this);
+
+            return;
+        }
+
+        /*
+         * 現在のSaveDataはBestTimeをint秒で保持しているため、
+         * 既存構造に合わせて秒単位へ変換する。
+         */
+        int clearTimeSeconds =
+            Mathf.FloorToInt(
+                m_resultTimeModel.ClearTime);
+
+        if (!m_saveDataController.SaveStageResult(
+            stageNumber,
+            (int)stageRank,
+            clearTimeSeconds))
+        {
+            Debug.LogError(
+                "ステージリザルトの保存に失敗しました。",
+                this);
+        }
+    }
+
+    /// <summary>
+    /// StageSceneContextの情報をリザルト表示Modelへ反映します。
     /// </summary>
     private void ApplyResultContextData()
     {
         if (m_stageSceneContext == null)
         {
-            Debug.LogWarning(
-                $"{nameof(StageSceneContext)} が設定されていません。",
-                this);
-
             return;
         }
 
@@ -584,7 +676,6 @@ public sealed class GameDirector : MonoBehaviour
         if (m_resultStageModel != null)
         {
             m_resultStageModel.SetStageData(
-                1,
                 m_stageSceneContext);
         }
     }
@@ -600,13 +691,11 @@ public sealed class GameDirector : MonoBehaviour
         }
 
         m_gameProgressElapsedTimer.StopTimer();
-        m_resultTimeModel.SetTimeData(m_saveDataController.CurrentData, m_gameProgressElapsedTimer, 1);
-        m_resultRankModel.EvaluateRank(m_resultTimeModel, m_stageSettings);
     }
 
     /// <summary>
-    /// ステージ最初からリスタートします。
-    /// UI Buttonから呼び出すことを想定しています。
+    /// ステージ最初からリスタートするContextを設定します。
+    /// Scene再読み込みは別途ReloadInGameScene()で行います。
     /// </summary>
     public void RestartInGame()
     {
@@ -619,15 +708,12 @@ public sealed class GameDirector : MonoBehaviour
             return;
         }
 
-        // リスタート時は累計プレイ時間も0秒へ戻し、
-        // イントロを飛ばしてステージ最初から開始
         m_stageSceneContext.SetRestart();
-
     }
 
     /// <summary>
-    /// 最新のチェックポイントから再開します。
-    /// UI Buttonから呼び出すことを想定しています。
+    /// 最新のチェックポイントから再開するContextを設定します。
+    /// Scene再読み込みは別途ReloadInGameScene()で行います。
     /// </summary>
     public void RestartFromCheckpoint()
     {
@@ -666,10 +752,7 @@ public sealed class GameDirector : MonoBehaviour
             Debug.LogWarning(
                 "チェックポイントContextの設定に失敗しました。",
                 this);
-
-            return;
         }
-
     }
 
     /// <summary>
@@ -677,24 +760,18 @@ public sealed class GameDirector : MonoBehaviour
     /// </summary>
     public void ReloadInGameScene()
     {
-        // Pause等でTimeScaleが0のままSceneを跨がないよう戻す
-        Time.timeScale = 1.0f;
-
-        Scene currentScene =
-            SceneManager.GetActiveScene();
-
-        if (!currentScene.IsValid()
-            || string.IsNullOrEmpty(currentScene.name))
+        if (m_stageSceneTransitionController == null)
         {
             Debug.LogWarning(
-                "現在のSceneを取得できませんでした。",
+                $"{nameof(StageSceneTransitionController)} "
+                + "が設定されていません。",
                 this);
 
             return;
         }
 
-        SceneManager.LoadScene(
-            currentScene.name);
+        m_stageSceneTransitionController
+            .ReloadCurrentStage();
     }
 
     /// <summary>
@@ -702,20 +779,27 @@ public sealed class GameDirector : MonoBehaviour
     /// </summary>
     public void LoadNextStage()
     {
-        if (string.IsNullOrEmpty(
-            m_nextStageSceneName))
+        if (m_stageSceneTransitionController == null)
         {
             Debug.LogWarning(
-                "次のステージシーン名が設定されていません。",
+                $"{nameof(StageSceneTransitionController)} "
+                + "が設定されていません。",
                 this);
 
             return;
         }
 
-        m_stageSceneContext?.SetNewGame();
+        if (m_nextStageDefinition == null)
+        {
+            Debug.LogWarning(
+                "次のステージ定義が設定されていません。",
+                this);
 
-        SceneManager.LoadScene(
-            m_nextStageSceneName);
+            return;
+        }
+
+        m_stageSceneTransitionController.LoadNewGame(
+            m_nextStageDefinition);
     }
 
     /// <summary>
@@ -723,24 +807,22 @@ public sealed class GameDirector : MonoBehaviour
     /// </summary>
     public void LoadStageSelect()
     {
-        if (string.IsNullOrEmpty(
-            m_stageSelectSceneName))
+        if (m_stageSceneTransitionController == null)
         {
             Debug.LogWarning(
-                "ステージ選択画面シーン名が設定されていません。",
+                $"{nameof(StageSceneTransitionController)} "
+                + "が設定されていません。",
                 this);
 
             return;
         }
 
-        m_stageSceneContext?.Clear();
-
-        SceneManager.LoadScene(
-            m_stageSelectSceneName);
+        m_stageSceneTransitionController
+            .LoadStageSelect();
     }
 
     /// <summary>
-    /// 現在のステージを最初からリスタートします。
+    /// 現在のステージを最初からリスタートするContextを設定します。
     /// </summary>
     public void LoadRestartScene()
     {
