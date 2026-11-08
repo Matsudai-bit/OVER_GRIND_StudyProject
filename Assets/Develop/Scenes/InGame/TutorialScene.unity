@@ -167,6 +167,7 @@ Transform:
   - {fileID: 1783205627}
   - {fileID: 1922835999}
   - {fileID: 91753782}
+  - {fileID: 1028958236}
   - {fileID: 1300881164}
   - {fileID: 1473375800}
   - {fileID: 1625033774}
@@ -704,6 +705,10 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 799341816}
     - target: {fileID: 1578346737910079965, guid: c769b2ffd8134da4b9d8b06f0b12f8a2, type: 3}
+      propertyPath: m_stageSettings
+      value: 
+      objectReference: {fileID: 11400000, guid: 2519f417a5ed1b94d8613255032a3ddc, type: 2}
+    - target: {fileID: 1578346737910079965, guid: c769b2ffd8134da4b9d8b06f0b12f8a2, type: 3}
       propertyPath: m_resultRankModel
       value: 
       objectReference: {fileID: 1211965056}
@@ -723,6 +728,22 @@ PrefabInstance:
       propertyPath: m_resultStageModel
       value: 
       objectReference: {fileID: 292181493}
+    - target: {fileID: 1578346737910079965, guid: c769b2ffd8134da4b9d8b06f0b12f8a2, type: 3}
+      propertyPath: m_nextStageDefinition
+      value: 
+      objectReference: {fileID: 11400000, guid: 4d0a82f33eced8b48b8f487572d09a26, type: 2}
+    - target: {fileID: 1578346737910079965, guid: c769b2ffd8134da4b9d8b06f0b12f8a2, type: 3}
+      propertyPath: m_gameProgressElapsedTimer
+      value: 
+      objectReference: {fileID: 930356618}
+    - target: {fileID: 1578346737910079965, guid: c769b2ffd8134da4b9d8b06f0b12f8a2, type: 3}
+      propertyPath: m_stageTimeLimitController
+      value: 
+      objectReference: {fileID: 2108693760}
+    - target: {fileID: 1578346737910079965, guid: c769b2ffd8134da4b9d8b06f0b12f8a2, type: 3}
+      propertyPath: m_stageSceneTransitionController
+      value: 
+      objectReference: {fileID: 72281730}
     - target: {fileID: 2242521604457839927, guid: c769b2ffd8134da4b9d8b06f0b12f8a2, type: 3}
       propertyPath: m_initialState
       value: 2
@@ -786,13 +807,25 @@ MonoBehaviour:
   m_destroyedEvent:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 72281730}
-        m_TargetAssemblyTypeName: StageSceneTransitionController, Assembly-CSharp
-        m_MethodName: LoadNewGame
-        m_Mode: 2
+      - m_Target: {fileID: 713538812}
+        m_TargetAssemblyTypeName: GameDirector, Assembly-CSharp
+        m_MethodName: SaveResultDataFromEvent
+        m_Mode: 1
         m_Arguments:
-          m_ObjectArgument: {fileID: 11400000, guid: 4d0a82f33eced8b48b8f487572d09a26, type: 2}
-          m_ObjectArgumentAssemblyTypeName: StageDefinitionAsset, Assembly-CSharp
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+      - m_Target: {fileID: 713538812}
+        m_TargetAssemblyTypeName: GameDirector, Assembly-CSharp
+        m_MethodName: LoadNextStage
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
           m_IntArgument: 0
           m_FloatArgument: 0
           m_StringArgument: 
@@ -3111,6 +3144,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 17371170}
     m_Modifications:
+    - target: {fileID: 181788959980630978, guid: ad19b8063c2724e4e8284b954c24ea1e, type: 3}
+      propertyPath: m_timer
+      value: 
+      objectReference: {fileID: 2108693760}
     - target: {fileID: 1525325264220404712, guid: ad19b8063c2724e4e8284b954c24ea1e, type: 3}
       propertyPath: m_speedModel
       value: 
@@ -3367,6 +3404,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c8bd802d219ef604eaf73e266e667b7b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TargetPoint
+--- !u!114 &713538812 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 1578346737910079965, guid: c769b2ffd8134da4b9d8b06f0b12f8a2, type: 3}
+  m_PrefabInstance: {fileID: 155641278}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 932f279a7ed712946916ff111c27d9cd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GameDirector
 --- !u!1 &716320809 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 6615525330458425774, guid: a5f49f1156875d14bba1b3e3d0b7c38b, type: 3}
@@ -3727,6 +3775,17 @@ Mesh:
       - serializedVersion: 1
         m_IndexStart: 0
         m_IndexCount: 0
+--- !u!114 &930356618 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 1927124159426402150, guid: 5c16cd1c04124704483a7169c50df04a, type: 3}
+  m_PrefabInstance: {fileID: 2033156397}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8e9c606cb4fdd4442af1f4a5b29f9d44, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ElapsedTimer
 --- !u!1001 &932412839
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -3938,6 +3997,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::SplineRailCollisionSettings
   m_collisionColliders:
   - {fileID: 1025402405}
+--- !u!4 &1028958236 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 7520601961384819648, guid: 5c16cd1c04124704483a7169c50df04a, type: 3}
+  m_PrefabInstance: {fileID: 2033156397}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1051264158 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 1219064930356089509, guid: 6320066f71809c34c868d1ac0d5458bc, type: 3}
@@ -3963,13 +4027,25 @@ MonoBehaviour:
   m_destroyedEvent:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 72281730}
-        m_TargetAssemblyTypeName: StageSceneTransitionController, Assembly-CSharp
-        m_MethodName: LoadNewGame
-        m_Mode: 2
+      - m_Target: {fileID: 713538812}
+        m_TargetAssemblyTypeName: GameDirector, Assembly-CSharp
+        m_MethodName: SaveResultDataFromEvent
+        m_Mode: 1
         m_Arguments:
-          m_ObjectArgument: {fileID: 11400000, guid: 4d0a82f33eced8b48b8f487572d09a26, type: 2}
-          m_ObjectArgumentAssemblyTypeName: StageDefinitionAsset, Assembly-CSharp
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+      - m_Target: {fileID: 713538812}
+        m_TargetAssemblyTypeName: GameDirector, Assembly-CSharp
+        m_MethodName: LoadNextStage
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
           m_IntArgument: 0
           m_FloatArgument: 0
           m_StringArgument: 
@@ -8274,6 +8350,63 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 4882132359728080988, guid: d016dafce0faaa949a98a67c4c9dddb3, type: 3}
   m_PrefabInstance: {fileID: 600806788}
   m_PrefabAsset: {fileID: 0}
+--- !u!1001 &2033156397
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 17371170}
+    m_Modifications:
+    - target: {fileID: 364788733906708070, guid: 5c16cd1c04124704483a7169c50df04a, type: 3}
+      propertyPath: m_Name
+      value: Timer
+      objectReference: {fileID: 0}
+    - target: {fileID: 7520601961384819648, guid: 5c16cd1c04124704483a7169c50df04a, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 31.978838
+      objectReference: {fileID: 0}
+    - target: {fileID: 7520601961384819648, guid: 5c16cd1c04124704483a7169c50df04a, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: -4.21332
+      objectReference: {fileID: 0}
+    - target: {fileID: 7520601961384819648, guid: 5c16cd1c04124704483a7169c50df04a, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -40.35216
+      objectReference: {fileID: 0}
+    - target: {fileID: 7520601961384819648, guid: 5c16cd1c04124704483a7169c50df04a, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7520601961384819648, guid: 5c16cd1c04124704483a7169c50df04a, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7520601961384819648, guid: 5c16cd1c04124704483a7169c50df04a, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7520601961384819648, guid: 5c16cd1c04124704483a7169c50df04a, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7520601961384819648, guid: 5c16cd1c04124704483a7169c50df04a, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7520601961384819648, guid: 5c16cd1c04124704483a7169c50df04a, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7520601961384819648, guid: 5c16cd1c04124704483a7169c50df04a, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 5c16cd1c04124704483a7169c50df04a, type: 3}
 --- !u!43 &2052473490
 Mesh:
   m_ObjectHideFlags: 8
@@ -8685,6 +8818,17 @@ PrefabInstance:
       insertIndex: -1
       addedObject: {fileID: 716320813}
   m_SourcePrefab: {fileID: 100100000, guid: a5f49f1156875d14bba1b3e3d0b7c38b, type: 3}
+--- !u!114 &2108693760 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 4315386308065986251, guid: 5c16cd1c04124704483a7169c50df04a, type: 3}
+  m_PrefabInstance: {fileID: 2033156397}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d881e51abc983fd4c94c3c2d366fc339, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::StageTimeLimitController
 --- !u!1 &2114131630
 GameObject:
   m_ObjectHideFlags: 0

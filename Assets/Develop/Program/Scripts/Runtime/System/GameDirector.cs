@@ -240,18 +240,18 @@ public sealed class GameDirector : MonoBehaviour
                 OnBossPhaseCompletionRequested;
         }
     }
-
-    /// <summary>
-    /// ゲーム進行状態変更を受け取ります。
-    /// </summary>
-    /// <param name="eventData">ゲーム進行状態変更情報。</param>
     private void OnGameFlowStateChanged(
-        GameFlowStateChangedEventData eventData)
+    GameFlowStateChangedEventData eventData)
     {
         switch (eventData.CurrentState)
         {
             case GameFlowStateType.INTRO:
+                StopGameProgressTimer();
                 HandleStageEntry();
+                break;
+
+            case GameFlowStateType.PLAYING:
+                HandlePlayingStarted();
                 break;
 
             case GameFlowStateType.ENDING:
@@ -428,8 +428,21 @@ public sealed class GameDirector : MonoBehaviour
     /// </summary>
     /// <param name="eventData">シーケンス状態変更情報。</param>
     private void OnGameplaySequenceChanged(
-        GameplaySequenceChangedEventData eventData)
+      GameplaySequenceChangedEventData eventData)
     {
+        switch (eventData.EventType)
+        {
+            case GameplaySequenceEventType.STARTED:
+                StopGameProgressTimer();
+                break;
+
+            case GameplaySequenceEventType.FINISHED:
+            case GameplaySequenceEventType.CANCELED:
+                ResumeGameProgressTimerIfPlaying();
+                break;
+        }
+
+        // 以下、既存のイントロ固有処理
         if (eventData.Sequence ==
             m_introSequenceAsset_PlayerSpawn)
         {
@@ -458,26 +471,49 @@ public sealed class GameDirector : MonoBehaviour
 
         StartPlaying();
     }
-
     /// <summary>
-    /// 通常ゲームプレイを開始します。
+    /// 通常ゲームプレイ中であればゲーム進行Timerを再開します。
+    /// </summary>
+    private void ResumeGameProgressTimerIfPlaying()
+    {
+        if (m_gameFlowController == null)
+        {
+            return;
+        }
+
+        if (m_gameFlowController.CurrentState !=
+            GameFlowStateType.PLAYING)
+        {
+            return;
+        }
+
+        /*
+         * 別Sequenceが続けて開始されている場合は
+         * Timerを再開しません。
+         */
+        if (m_sequenceController != null
+            && m_sequenceController.IsRunning)
+        {
+            return;
+        }
+
+        StartGameProgressTimer();
+    }
+    /// <summary>
+    /// 通常ゲームプレイ状態へ遷移します。
     /// </summary>
     private void StartPlaying()
     {
-        if (m_gameFlowController != null)
+        if (m_gameFlowController == null)
         {
-            m_gameFlowController.EnterPlaying();
+            Debug.LogWarning(
+                $"{nameof(GameFlowController)} が設定されていません。",
+                this);
+
+            return;
         }
 
-        if (m_gameplayModeController != null)
-        {
-            m_gameplayModeController.ActivateGameplay();
-        }
-
-        if (m_gameProgressElapsedTimer != null)
-        {
-            m_gameProgressElapsedTimer.StartTimer();
-        }
+        m_gameFlowController.EnterPlaying();
     }
 
     /// <summary>
@@ -562,7 +598,42 @@ public sealed class GameDirector : MonoBehaviour
             ? m_stageSceneContext.StageNumber
             : 0;
     }
+    /// <summary>
+    /// ゲーム進行時間の計測を開始します。
+    /// </summary>
+    private void StartGameProgressTimer()
+    {
+        if (m_gameProgressElapsedTimer == null)
+        {
+            return;
+        }
 
+        m_gameProgressElapsedTimer.StartTimer();
+    }
+    /// <summary>
+    /// PLAYING状態へ入った際の通常ゲーム開始処理を行います。
+    /// </summary>
+    private void HandlePlayingStarted()
+    {
+        if (m_gameplayModeController != null)
+        {
+            m_gameplayModeController.ActivateGameplay();
+        }
+
+        /*
+         * PLAYINGへ入った時点でSequenceが実行中なら、
+         * Sequence終了までゲーム時間は進めません。
+         */
+        if (m_sequenceController != null
+            && m_sequenceController.IsRunning)
+        {
+            StopGameProgressTimer();
+
+            return;
+        }
+
+        StartGameProgressTimer();
+    }
     /// <summary>
     /// リザルト開始時の結果確定とセーブ処理を行います。
     /// </summary>
@@ -625,6 +696,41 @@ public sealed class GameDirector : MonoBehaviour
 
         ApplyResultContextData();
 
+        SaveResultData();
+    }
+
+    /// <summary>
+    /// 現在のリザルトデータをセーブします。
+    /// </summary>
+    /// <returns>
+    /// true：セーブに成功しました。
+    /// false：必要な情報が不足しているか、セーブに失敗しました。
+    /// </returns>
+    public bool SaveResultData()
+    {
+        if (m_saveDataController == null
+            || m_resultTimeModel == null
+            || m_stageSettings == null)
+        {
+            Debug.LogError(
+                "リザルトデータの保存に必要な参照が不足しています。",
+                this);
+
+            return false;
+        }
+
+        int stageNumber =
+            GetCurrentStageNumber();
+
+        if (stageNumber <= 0)
+        {
+            Debug.LogError(
+                "ステージ番号がContextへ設定されていません。",
+                this);
+
+            return false;
+        }
+
         StageRank stageRank =
             m_stageSettings.EvaluateRank(
                 m_resultTimeModel.ClearTime);
@@ -635,13 +741,9 @@ public sealed class GameDirector : MonoBehaviour
                 "保存可能なステージランクを取得できませんでした。",
                 this);
 
-            return;
+            return false;
         }
 
-        /*
-         * 現在のSaveDataはBestTimeをint秒で保持しているため、
-         * 既存構造に合わせて秒単位へ変換する。
-         */
         int clearTimeSeconds =
             Mathf.FloorToInt(
                 m_resultTimeModel.ClearTime);
@@ -654,7 +756,19 @@ public sealed class GameDirector : MonoBehaviour
             Debug.LogError(
                 "ステージリザルトの保存に失敗しました。",
                 this);
+
+            return false;
         }
+
+        return true;
+    }
+
+    /// <summary>
+    /// UnityEventからリザルトデータをセーブします。
+    /// </summary>
+    public void SaveResultDataFromEvent()
+    {
+        SaveResultData();
     }
 
     /// <summary>

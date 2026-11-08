@@ -8,7 +8,7 @@
     menuName = "Game/Stage/Stage Definition")]
 public sealed class StageDefinitionAsset : ScriptableObject
 {
-    private const int MIN_STAGE_NUMBER = 1;
+    private const int MIN_STAGE_NUMBER = 0;
 
     // ステージ番号
     [SerializeField, Header("ステージ")]

@@ -210,6 +210,9 @@ public sealed class StageSelectManager : MonoBehaviour
 
         // ステージ情報表示を初期化
         ResetComponents();
+
+        m_enterActionRef.action.Enable();
+        m_navigateActionRef.action.Enable();
     }
 
     private void LateUpdate()
