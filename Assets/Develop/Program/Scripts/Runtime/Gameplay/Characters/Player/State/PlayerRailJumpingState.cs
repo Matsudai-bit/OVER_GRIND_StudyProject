@@ -232,7 +232,7 @@ public sealed class PlayerRailJumpingState : StateBase<PlayerStateMachineCompone
     {
         StopAirAttack();
 
-        Owner.Motor.RestoreRailCollisions();
+        // Rail Collision IgnoreはGuardが分離確認後に復元する。
 
         if (m_isFollowingRail)
         {
@@ -300,8 +300,9 @@ public sealed class PlayerRailJumpingState : StateBase<PlayerStateMachineCompone
     {
         grindController.BlockRailUntilSeparated(m_sourceRail);
 
-        Owner.Motor.BeginRailCollisionIgnore(
-            m_sourceRail,
+        // StopGrind()で既にRelease要求済みなので、
+        // 方向入力ジャンプでは最低Ignore時間だけ延長する。
+        Owner.Motor.RequestRailCollisionRelease(
             parameters.RailCollisionIgnoreDuration);
 
         Vector3 direction =
