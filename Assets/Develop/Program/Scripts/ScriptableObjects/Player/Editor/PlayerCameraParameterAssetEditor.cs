@@ -1,57 +1,107 @@
 using UnityEditor;
 using UnityEngine;
 
+/// <summary>
+/// PlayerCameraParameterAssetのInspectorを描画します。
+/// デフォルト設定とPlay中のランタイム設定を分けて表示します。
+/// </summary>
 [CustomEditor(typeof(PlayerCameraParameterAsset))]
-public class PlayerCameraParameterAssetEditor : Editor
+public sealed class PlayerCameraParameterAssetEditor
+    : Editor
 {
-    // Inspectorの配置に関するパラメータ --------------------------------
-
     // Inspector内のセクション間隔
     private const float SECTION_SPACE = 8.0f;
 
-    // 設定するパラメータ -----------------------------------------------
+    // --------------------------------------------------------
+    // Serialized Property
+    // --------------------------------------------------------
 
-    // X軸カメラ感度。
-    private SerializedProperty m_cameraSensitivityXProperty;
+    // X軸カメラ感度
+    private SerializedProperty
+        m_cameraMaxSensitivityXProperty;
 
-    // Y軸カメラ感度。
-    private SerializedProperty m_cameraSensitivityYProperty;
+    private SerializedProperty
+        m_cameraMinSensitivityXProperty;
 
-    // Y軸カメラの操作を反転させるかどうか。
-    private SerializedProperty m_isCameraReverseYProperty;
+    private SerializedProperty
+        m_defaultCameraSensitivityRatioXProperty;
 
+    // Y軸カメラ感度
+    private SerializedProperty
+        m_cameraMaxSensitivityYProperty;
 
-    // チャージ中に進行方向へ向く割合。0でチャージ開始時の向き、1で進行方向を向きます。
-    private SerializedProperty m_chargeCameraDirectionInfluenceProperty;
+    private SerializedProperty
+        m_cameraMinSensitivityYProperty;
 
-    // チャージ中に維持するカメラの上下角度。Playerを少し上から見る角度です。
-    private SerializedProperty m_chargeCameraVerticalAngleProperty;
+    private SerializedProperty
+        m_defaultCameraSensitivityRatioYProperty;
 
-    // チャージ中にカメラの高さを目的角度へ戻す速度[度/秒]。
-    private SerializedProperty m_chargeCameraVerticalTurnSpeedProperty;
+    // Y軸反転
+    private SerializedProperty
+        m_defaultCameraReverseYProperty;
+
+    // チャージカメラ
+    private SerializedProperty
+        m_chargeCameraDirectionInfluenceProperty;
+
+    private SerializedProperty
+        m_chargeCameraVerticalAngleProperty;
+
+    private SerializedProperty
+        m_chargeCameraVerticalTurnSpeedProperty;
 
     /// <summary>
-    /// SerializedPropertyを取得します。
+    /// Inspector描画に使用するSerializedPropertyを取得します。
     /// </summary>
     private void OnEnable()
     {
-        m_cameraSensitivityXProperty =
-            serializedObject.FindProperty("m_cameraSensitivityX");
-        m_cameraSensitivityYProperty =
-            serializedObject.FindProperty("m_cameraSensitivityY");
-        m_isCameraReverseYProperty =
-            serializedObject.FindProperty("m_isCameraReverseY");
+        // X軸感度
+        m_cameraMaxSensitivityXProperty =
+            serializedObject.FindProperty(
+                "m_cameraMaxSensitivityX");
 
+        m_cameraMinSensitivityXProperty =
+            serializedObject.FindProperty(
+                "m_cameraMinSensitivityX");
+
+        m_defaultCameraSensitivityRatioXProperty =
+            serializedObject.FindProperty(
+                "m_defaultCameraSensitivityRatioX");
+
+        // Y軸感度
+        m_cameraMaxSensitivityYProperty =
+            serializedObject.FindProperty(
+                "m_cameraMaxSensitivityY");
+
+        m_cameraMinSensitivityYProperty =
+            serializedObject.FindProperty(
+                "m_cameraMinSensitivityY");
+
+        m_defaultCameraSensitivityRatioYProperty =
+            serializedObject.FindProperty(
+                "m_defaultCameraSensitivityRatioY");
+
+        // Y軸反転
+        m_defaultCameraReverseYProperty =
+            serializedObject.FindProperty(
+                "m_defaultCameraReverseY");
+
+        // チャージカメラ
         m_chargeCameraDirectionInfluenceProperty =
-            serializedObject.FindProperty("m_chargeCameraDirectionInfluence");
+            serializedObject.FindProperty(
+                "m_chargeCameraDirectionInfluence");
+
         m_chargeCameraVerticalAngleProperty =
-            serializedObject.FindProperty("m_chargeCameraVerticalAngle");
+            serializedObject.FindProperty(
+                "m_chargeCameraVerticalAngle");
+
         m_chargeCameraVerticalTurnSpeedProperty =
-            serializedObject.FindProperty("m_chargeCameraVerticalTurnSpeed");
+            serializedObject.FindProperty(
+                "m_chargeCameraVerticalTurnSpeed");
     }
 
     /// <summary>
-    /// Inspectorを描画します。
+    /// カメラパラメータ用Inspectorを描画します。
     /// </summary>
     public override void OnInspectorGUI()
     {
@@ -59,100 +109,217 @@ public class PlayerCameraParameterAssetEditor : Editor
 
         DrawDescription();
 
-        EditorGUILayout.Space(SECTION_SPACE);
+        EditorGUILayout.Space(
+            SECTION_SPACE);
 
-        DrawCameraParameter();
+        DrawSensitivitySection();
 
-        EditorGUILayout.Space(SECTION_SPACE);
+        EditorGUILayout.Space(
+            SECTION_SPACE);
+
+        DrawReverseSection();
+
+        EditorGUILayout.Space(
+            SECTION_SPACE);
 
         DrawChargeSection();
 
+        EditorGUILayout.Space(
+            SECTION_SPACE);
+
+        DrawRuntimeSection();
+
         serializedObject.ApplyModifiedProperties();
+
+        // Play中は設定変更によってランタイム値が変化するため再描画する
+        if (Application.isPlaying)
+        {
+            Repaint();
+        }
     }
 
-    // ------------------------------------------------------------------
-
     /// <summary>
-    /// パラメータの説明を表示します。
+    /// ParameterAssetの責務を説明します。
     /// </summary>
     private void DrawDescription()
     {
         EditorGUILayout.HelpBox(
-            "カメラ処理に使用されるパラメータを設定します",
+            "PlayerCameraが参照する唯一のカメラParameterAssetです。\n"
+            + "Inspector値はデフォルト設定、"
+            + "Play中のユーザー設定はランタイム値として保持されます。\n"
+            + "設定変更時はPlayerCameraへ自動反映されます。",
             MessageType.Info);
     }
 
     /// <summary>
-    /// カメラの基礎パラメータを表示します。
+    /// X・Y軸の感度設定を描画します。
     /// </summary>
-    private void DrawCameraParameter()
+    private void DrawSensitivitySection()
     {
-        EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+        EditorGUILayout.BeginVertical(
+            EditorStyles.helpBox);
 
         EditorGUILayout.LabelField(
-            "カメラパラメータ",
-            EditorStyles.boldLabel
-        );
+            "カメラ感度",
+            EditorStyles.boldLabel);
 
-        EditorGUILayout.PropertyField(
-            m_cameraSensitivityXProperty,
-            new GUIContent(
-                "X軸カメラ感度。"
-                )
-            );
+        DrawAxisSensitivity(
+            "X軸",
+            m_cameraMinSensitivityXProperty,
+            m_cameraMaxSensitivityXProperty,
+            m_defaultCameraSensitivityRatioXProperty);
 
-        EditorGUILayout.PropertyField(
-            m_cameraSensitivityYProperty,
-            new GUIContent(
-                "Y軸カメラ感度。"
-                )
-            );
+        EditorGUILayout.Space(
+            SECTION_SPACE);
 
-        EditorGUILayout.PropertyField(
-            m_isCameraReverseYProperty,
-            new GUIContent(
-                "Y軸カメラの操作を反転させるかどうか。",
-                " TRUE の場合は反転させる、 FALSE の場合は反転させません。"
-                )
-            );
+        DrawAxisSensitivity(
+            "Y軸",
+            m_cameraMinSensitivityYProperty,
+            m_cameraMaxSensitivityYProperty,
+            m_defaultCameraSensitivityRatioYProperty);
 
         EditorGUILayout.EndVertical();
     }
 
     /// <summary>
-    /// チャージパラメータを表示します。
+    /// 1軸分の感度設定を描画します。
+    /// </summary>
+    private static void DrawAxisSensitivity(
+        string axisLabel,
+        SerializedProperty minProperty,
+        SerializedProperty maxProperty,
+        SerializedProperty defaultRatioProperty)
+    {
+        EditorGUILayout.LabelField(
+            axisLabel,
+            EditorStyles.boldLabel);
+
+        EditorGUILayout.PropertyField(
+            minProperty,
+            new GUIContent(
+                "最小感度"));
+
+        EditorGUILayout.PropertyField(
+            maxProperty,
+            new GUIContent(
+                "最大感度"));
+
+        EditorGUILayout.PropertyField(
+            defaultRatioProperty,
+            new GUIContent(
+                "デフォルト感度比率",
+                "0で最小感度、1で最大感度です。"));
+    }
+
+    /// <summary>
+    /// Y軸反転のデフォルト設定を描画します。
+    /// </summary>
+    private void DrawReverseSection()
+    {
+        EditorGUILayout.BeginVertical(
+            EditorStyles.helpBox);
+
+        EditorGUILayout.LabelField(
+            "カメラ反転",
+            EditorStyles.boldLabel);
+
+        EditorGUILayout.PropertyField(
+            m_defaultCameraReverseYProperty,
+            new GUIContent(
+                "Y軸反転",
+                "有効にするとY軸操作を反転します。"));
+
+        EditorGUILayout.EndVertical();
+    }
+
+    /// <summary>
+    /// チャージ中のカメラ設定を描画します。
     /// </summary>
     private void DrawChargeSection()
     {
-        EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+        EditorGUILayout.BeginVertical(
+            EditorStyles.helpBox);
 
         EditorGUILayout.LabelField(
-            "チャージパラメータ",
-            EditorStyles.boldLabel
-        );
+            "チャージカメラ",
+            EditorStyles.boldLabel);
 
         EditorGUILayout.PropertyField(
             m_chargeCameraDirectionInfluenceProperty,
             new GUIContent(
-                "チャージ中に進行方向へ向く割合。",
-                "0でチャージ開始時の向き、1で進行方向を向きます。"
-                )
-            );
+                "進行方向への影響率",
+                "0でチャージ開始時の向き、"
+                + "1で進行方向を向きます。"));
 
         EditorGUILayout.PropertyField(
             m_chargeCameraVerticalAngleProperty,
             new GUIContent(
-                "チャージ中に維持するカメラの上下角度。",
-                "Playerを少し上から見る角度です。"
-                )
-            );
+                "上下角度",
+                "Playerを少し上から見る角度です。"));
 
         EditorGUILayout.PropertyField(
             m_chargeCameraVerticalTurnSpeedProperty,
             new GUIContent(
-                "チャージ中にカメラの高さを目的角度へ戻す速度[度/秒]。"
-                )
-            );
+                "上下回転速度",
+                "目的角度へ戻す速度[度/秒]。"));
+
+        EditorGUILayout.EndVertical();
+    }
+
+    /// <summary>
+    /// Play中に実際に使用されている値を表示します。
+    /// </summary>
+    private void DrawRuntimeSection()
+    {
+        PlayerCameraParameterAsset parameterAsset =
+            target as PlayerCameraParameterAsset;
+
+        if (parameterAsset == null)
+        {
+            return;
+        }
+
+        EditorGUILayout.BeginVertical(
+            EditorStyles.helpBox);
+
+        EditorGUILayout.LabelField(
+            "ランタイム値",
+            EditorStyles.boldLabel);
+
+        if (!Application.isPlaying)
+        {
+            EditorGUILayout.HelpBox(
+                "ランタイム値はPlay中に表示されます。",
+                MessageType.Info);
+
+            EditorGUILayout.EndVertical();
+            return;
+        }
+
+        EditorGUI.BeginDisabledGroup(
+            true);
+
+        EditorGUILayout.FloatField(
+            "X軸 感度比率",
+            parameterAsset.CameraSensitivityRatioX);
+
+        EditorGUILayout.FloatField(
+            "X軸 実感度",
+            parameterAsset.CameraSensitivityX);
+
+        EditorGUILayout.FloatField(
+            "Y軸 感度比率",
+            parameterAsset.CameraSensitivityRatioY);
+
+        EditorGUILayout.FloatField(
+            "Y軸 実感度",
+            parameterAsset.CameraSensitivityY);
+
+        EditorGUILayout.Toggle(
+            "Y軸 反転",
+            parameterAsset.IsCameraReverseY);
+
+        EditorGUI.EndDisabledGroup();
 
         EditorGUILayout.EndVertical();
     }

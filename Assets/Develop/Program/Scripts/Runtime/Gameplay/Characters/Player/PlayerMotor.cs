@@ -129,14 +129,60 @@ public sealed class PlayerMotor : MonoBehaviour
     private float m_lastIntentionalUpwardVelocityFixedTime = float.NegativeInfinity;
     private bool m_wasMovingAlongGround;
 
-    /// <summary>方向指定ジャンプの離陸元レールとの衝突を一時的に無視します。</summary>
-    public void BeginRailCollisionIgnore(SplineRailInfo rail, float minimumDuration)
+    /// <summary>
+    /// 搭乗中のレールとの物理衝突を無視し、Ignore状態を保持します。
+    /// </summary>
+    /// <param name="rail">搭乗するレール。</param>
+    /// <returns>true：Ignore開始成功。false：設定不足。</returns>
+    public bool BeginRailCollisionIgnore(
+        SplineRailInfo rail)
     {
-        if (m_isInitialized) m_railCollisionGuard.Begin(m_playerRigidbody, rail, minimumDuration);
+        if (!m_isInitialized ||
+            m_playerCapsuleCollider == null ||
+            rail == null)
+        {
+            return false;
+        }
+
+        return m_railCollisionGuard.Begin(
+            m_playerCapsuleCollider,
+            rail);
     }
 
-    /// <summary>ジャンプ中断時などにレールとの衝突を復元します。</summary>
-    public void RestoreRailCollisions() => m_railCollisionGuard.Restore();
+    /// <summary>
+    /// レール離脱後の衝突復帰を要求します。
+    /// </summary>
+    /// <param name="minimumDuration">
+    /// Release要求後にIgnoreを最低維持する時間。
+    /// </param>
+    public void RequestRailCollisionRelease(
+        float minimumDuration = 0.0f)
+    {
+        if (!m_isInitialized)
+        {
+            return;
+        }
+
+        m_railCollisionGuard.RequestRelease(
+            minimumDuration);
+    }
+
+    /// <summary>
+    /// 指定したレールとの衝突を現在無視しているか確認します。
+    /// </summary>
+    public bool IsRailCollisionIgnored(
+        SplineRailInfo rail)
+    {
+        return m_isInitialized &&
+               m_railCollisionGuard.IsIgnoring(
+                   rail);
+    }
+
+    /// <summary>
+    /// 無視しているRail Colliderとの衝突を即座に復元します。
+    /// </summary>
+    public void RestoreRailCollisions() =>
+        m_railCollisionGuard.Restore();
 
     /// <summary>物理演算前の速度を記録し、レールから離れたことを確認します。</summary>
     private void FixedUpdate()
@@ -2363,6 +2409,126 @@ public sealed class PlayerMotor : MonoBehaviour
             Mathf.Max(
                 speed,
                 0.0f);
+    }
+
+    /// <summary>
+    /// 空中で水平速度だけを指定方向へ設定します。
+    /// 垂直速度・接地補正・段差処理・障害物回避には干渉しません。
+    /// </summary>
+    /// <param name="worldDirection">
+    /// ワールド空間の水平移動方向。
+    /// </param>
+    /// <param name="speed">
+    /// 水平移動速度。
+    /// </param>
+    /// <param name="rotationSpeed">
+    /// プレイヤーの回転速度。
+    /// </param>
+    /// <param name="deltaTime">
+    /// 物理更新時間。
+    /// </param>
+    public void MoveAirAtFixedWorldDirection(
+        Vector3 worldDirection,
+        float speed,
+        float rotationSpeed,
+        float deltaTime)
+    {
+        if (!m_isInitialized)
+        {
+            return;
+        }
+
+        // 空中攻撃では水平成分だけを制御する
+        worldDirection.y = 0.0f;
+
+        if (worldDirection.sqrMagnitude <=
+            DIRECTION_SQR_THRESHOLD)
+        {
+            return;
+        }
+
+        worldDirection.Normalize();
+
+        Vector3 currentVelocity =
+            m_playerRigidbody.linearVelocity;
+
+        Vector3 nextHorizontalVelocity =
+            worldDirection *
+            Mathf.Max(
+                speed,
+                0.0f);
+
+        // レール離脱・ジャンプ由来のY速度は変更しない
+        m_playerRigidbody.linearVelocity =
+            new Vector3(
+                nextHorizontalVelocity.x,
+                currentVelocity.y,
+                nextHorizontalVelocity.z);
+
+        RotateTowardsMoveDirection(
+            worldDirection,
+            rotationSpeed,
+            deltaTime);
+
+        m_currentMaxMoveSpeed =
+            Mathf.Max(
+                speed,
+                0.0f);
+    }
+
+    /// <summary>
+    /// 空中で水平速度だけを減速します。
+    /// 垂直速度・接地補正・段差処理・障害物回避には干渉しません。
+    /// </summary>
+    /// <param name="parameters">
+    /// 移動用パラメータ。
+    /// </param>
+    /// <param name="deltaTime">
+    /// 物理更新時間。
+    /// </param>
+    public void DecelerateAirHorizontal(
+        PlayerMoveParameters parameters,
+        float deltaTime)
+    {
+        if (!m_isInitialized)
+        {
+            return;
+        }
+
+        float maxMoveSpeed =
+            Mathf.Max(
+                parameters.MaxMoveSpeed,
+                0.0f);
+
+        m_currentMaxMoveSpeed =
+            maxMoveSpeed;
+
+        Vector3 currentVelocity =
+            m_playerRigidbody.linearVelocity;
+
+        Vector3 currentHorizontalVelocity =
+            new Vector3(
+                currentVelocity.x,
+                0.0f,
+                currentVelocity.z);
+
+        float deceleration =
+            CalculateAcceleration(
+                maxMoveSpeed,
+                parameters.TimeToStop);
+
+        Vector3 nextHorizontalVelocity =
+            Vector3.MoveTowards(
+                currentHorizontalVelocity,
+                Vector3.zero,
+                deceleration * deltaTime);
+
+        // 空中ではY速度をそのまま維持する
+        m_playerRigidbody.linearVelocity =
+            new Vector3(
+                nextHorizontalVelocity.x,
+                currentVelocity.y,
+                nextHorizontalVelocity.z);
     }
 
     /// <summary>

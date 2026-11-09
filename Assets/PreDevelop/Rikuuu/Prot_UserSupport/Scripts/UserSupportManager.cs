@@ -65,12 +65,17 @@ public class UserSupportManager : MonoBehaviour
     {
     }
 
+    public void Initialize(MenuOpenTargetType openTargetType)
+    {
+        ChangePage(openTargetType);
+    }
+
     private void Start()
     {
         // オプションページを表示する
-        m_choseState = ChoseState.OPTION;
-        // 切り替え関数を実行する
-        ChangeToOptionPage();
+        //m_choseState = ChoseState.OPTION;
+        //// 切り替え関数を実行する
+        //ChangeToOptionPage();
     }
 
     private void Update()
@@ -78,6 +83,7 @@ public class UserSupportManager : MonoBehaviour
         // ページの切り替え
         if(WasPressedChangeKey())
         {
+         
             if(m_choseState != ChoseState.MANUAL)
             {
                 // マニュアルページにする
@@ -94,6 +100,30 @@ public class UserSupportManager : MonoBehaviour
                 // 切り替え関数を実行する
                 ChangeToOptionPage();
             }
+        }
+    }
+
+    void ChangePage(MenuOpenTargetType openTargetType)
+    {
+        switch (openTargetType)
+        {
+            case MenuOpenTargetType.MANUAL:
+                if (m_choseState == ChoseState.MANUAL) { break; }
+                // マニュアルページにする
+                m_choseState = ChoseState.MANUAL;
+
+                // 切り替え関数を実行する
+                ChangeToManualPage();
+                break;
+            case MenuOpenTargetType.OPTIONS:
+                if (m_choseState == ChoseState.OPTION) { break; }
+                // オプションページにする
+                m_choseState = ChoseState.OPTION;
+
+                // 切り替え関数を実行する
+                ChangeToOptionPage();
+
+                break;
         }
     }
 

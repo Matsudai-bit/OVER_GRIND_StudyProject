@@ -30,6 +30,9 @@ public class SceneNavigatorSwitcher : MonoBehaviour
     [Header("対象")]
     [SerializeField] private SceneNavigator m_sceneNavigator;
 
+    [Header("セーブデータ")]
+    [SerializeField]  SaveDataController m_saveDataController;
+
     [Header("初回判定のキー(用途ごとに変える)")]
     [SerializeField] private string m_visitKey = "Story";
 
@@ -88,18 +91,24 @@ public class SceneNavigatorSwitcher : MonoBehaviour
     /// </summary>
     private bool IsVisited()
     {
-        switch (m_debugVisitMode)
+        if (m_debugVisitMode != DebugVisitMode.USE_SAVED_DATA)
         {
-            case DebugVisitMode.FORCE_FIRST_TIME:
-                return false;
 
-            case DebugVisitMode.FORCE_AFTER_FIRST_TIME:
-                return true;
+            switch (m_debugVisitMode)
+            {
+                case DebugVisitMode.FORCE_FIRST_TIME:
+                    return false;
 
-            default:
-                return true;
-                //return FirstVisitFlag.HasVisited(m_visitKey);
+                case DebugVisitMode.FORCE_AFTER_FIRST_TIME:
+                    return true;
+
+                default:
+                    return true;
+                    //return FirstVisitFlag.HasVisited(m_visitKey);
+            }            
         }
+
+        return m_saveDataController.Progress.HasWatchedOpening;
     }
 
     /// <summary>
@@ -107,11 +116,16 @@ public class SceneNavigatorSwitcher : MonoBehaviour
     /// </summary>
     private void SaveVisited()
     {
-        bool isForced = m_debugVisitMode != DebugVisitMode.USE_SAVED_DATA;
-        if (isForced && m_debugSkipSave)
+        if (m_debugVisitMode != DebugVisitMode.USE_SAVED_DATA)
         {
-            return;
+            bool isForced = m_debugVisitMode != DebugVisitMode.USE_SAVED_DATA;
+            if (isForced && m_debugSkipSave)
+            {
+                return;
+            }
         }
+        m_saveDataController.Progress.MarkOpeningWatched();
+        m_saveDataController.Save();
 
         //FirstVisitFlag.MarkVisited(m_visitKey);
     }

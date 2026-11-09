@@ -49,7 +49,7 @@ public class ResultTimeModel : MonoBehaviour, IResultTimeModel
     private const float MILLISECONDS_PER_SECOND = 100f;
     private const float DEFAULT_CLEAR_TIME = 0f;
 
-    [Header("★ 今回のクリアタイム（新しい数字）")]
+    [Header("今回のクリアタイム（新しい数字）")]
     [Tooltip("分 (0～99分)")]
     [Range(MIN_MINUTES, MAX_MINUTES)]
     [SerializeField] private int m_debugMinutes = 1; // 今回のクリアタイム（分）
@@ -62,7 +62,7 @@ public class ResultTimeModel : MonoBehaviour, IResultTimeModel
     [Range(MIN_MILLISECONDS, MAX_MILLISECONDS)]
     [SerializeField] private int m_debugMilliseconds = 46; // 今回のクリアタイム（ミリ秒）
 
-    [Header("★ 前の記録 / 自己ベスト（前の数字）")]
+    [Header("前の記録 / 自己ベスト（前の数字）")]
     [Tooltip("分 (0～99分)")]
     [Range(MIN_MINUTES, MAX_MINUTES)]
     [SerializeField] private int m_bestMinutes = 1; // 前回の自己ベストタイム（分）
@@ -133,6 +133,125 @@ public class ResultTimeModel : MonoBehaviour, IResultTimeModel
     }
 
     /// <summary>
+    /// ElapsedTimerから今回のクリアタイムを取得して設定します。
+    /// </summary>
+    /// <param name="elapsedTimer">
+    /// クリアまでの累計時間を保持しているElapsedTimer。
+    /// </param>
+    /// <returns>
+    /// true：設定しました。
+    /// false：ElapsedTimerが設定されていません。
+    /// </returns>
+    public bool SetClearTime(
+        ElapsedTimer elapsedTimer)
+    {
+        if (elapsedTimer == null)
+        {
+            return false;
+        }
+
+        ConvertTotalSeconds(
+            100,
+            out int minutes,
+            out int seconds,
+            out int milliseconds);
+
+        SetClearTime(
+            minutes,
+            seconds,
+            milliseconds);
+
+        return true;
+    }
+
+    /// <summary>
+    /// SaveDataから前回の自己ベストタイムを取得して設定します。
+    /// </summary>
+    /// <param name="saveData">
+    /// 読み取り対象のSaveData。
+    /// </param>
+    /// <param name="stageNumber">
+    /// 記録を取得するステージ番号。
+    /// </param>
+    /// <returns>
+    /// true：設定しました。
+    /// false：SaveDataが使用できませんでした。
+    /// </returns>
+    public bool SetPersonalBestTime(
+        SaveData saveData,
+        int stageNumber)
+    {
+        if (saveData == null
+            || saveData.Progress == null)
+        {
+            return false;
+        }
+
+        /*
+         * 未記録の場合は0秒を設定します。
+         * 既存のIsNewRecordではPersonalBestTimeが0以下なら
+         * 初回記録として扱われます。
+         */
+        if (!saveData.Progress.TryGetStageData(
+                stageNumber,
+                out GameProgressSaveData.StageData stageData)
+            || stageData.BestTime < 0)
+        {
+            SetPersonalBestTime(
+                0,
+                0,
+                0);
+
+            return true;
+        }
+
+        ConvertTotalSeconds(
+            stageData.BestTime,
+            out int minutes,
+            out int seconds,
+            out int milliseconds);
+
+        SetPersonalBestTime(
+            minutes,
+            seconds,
+            milliseconds);
+
+        return true;
+    }
+
+    /// <summary>
+    /// SaveDataとElapsedTimerからリザルト用タイムを設定します。
+    /// </summary>
+    /// <param name="saveData">
+    /// 前回の自己ベストを取得するSaveData。
+    /// </param>
+    /// <param name="elapsedTimer">
+    /// 今回のクリアタイムを取得するElapsedTimer。
+    /// </param>
+    /// <param name="stageNumber">
+    /// 対象のステージ番号。
+    /// </param>
+    /// <returns>
+    /// true：両方の値を設定しました。
+    /// false：必要な参照が不足しています。
+    /// </returns>
+    public bool SetTimeData(
+        SaveData saveData,
+        ElapsedTimer elapsedTimer,
+        int stageNumber)
+    {
+        if (!SetClearTime(
+                elapsedTimer))
+        {
+            return false;
+        }
+
+        return SetPersonalBestTime(
+            saveData,
+            stageNumber);
+    }
+
+    /// <summary>
     /// 外部から今回のクリアタイムを直接設定します。
     /// </summary>
     /// <param name="minutes">設定する分。</param>
@@ -164,6 +283,60 @@ public class ResultTimeModel : MonoBehaviour, IResultTimeModel
 
         // タイム変更を通知します
         OnTimeChanged?.Invoke(ClearTime);
+    }
+
+    /// <summary>
+    /// 合計秒数を既存の分・秒・1/100秒形式へ変換します。
+    /// </summary>
+    /// <param name="totalSeconds">
+    /// 変換する合計秒数。
+    /// </param>
+    /// <param name="minutes">
+    /// 変換後の分。
+    /// </param>
+    /// <param name="seconds">
+    /// 変換後の秒。
+    /// </param>
+    /// <param name="milliseconds">
+    /// 変換後の1/100秒。
+    /// </param>
+    private static void ConvertTotalSeconds(
+        double totalSeconds,
+        out int minutes,
+        out int seconds,
+        out int milliseconds)
+    {
+        double clampedSeconds =
+            Math.Max(
+                DEFAULT_CLEAR_TIME,
+                totalSeconds);
+
+        int totalMilliseconds =
+            Mathf.FloorToInt(
+                (float)(
+                    clampedSeconds
+                    * MILLISECONDS_PER_SECOND));
+
+        int millisecondsPerMinute =
+            (int)(
+                SECONDS_PER_MINUTE
+                * MILLISECONDS_PER_SECOND);
+
+        minutes =
+            totalMilliseconds
+            / millisecondsPerMinute;
+
+        int remainingMilliseconds =
+            totalMilliseconds
+            % millisecondsPerMinute;
+
+        seconds =
+            remainingMilliseconds
+            / (int)MILLISECONDS_PER_SECOND;
+
+        milliseconds =
+            remainingMilliseconds
+            % (int)MILLISECONDS_PER_SECOND;
     }
 
     /// <summary>

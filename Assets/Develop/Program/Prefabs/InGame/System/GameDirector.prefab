@@ -137,6 +137,7 @@ Transform:
   - {fileID: 3944020377121035341}
   - {fileID: 3675985706014588432}
   - {fileID: 1316664552328517733}
+  - {fileID: 7613041170769368046}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1578346737910079965
@@ -151,7 +152,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 932f279a7ed712946916ff111c27d9cd, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameDirector
+  m_bgmPlayer: {fileID: 0}
+  m_saveDataController: {fileID: 3915125000450725587}
+  m_resultTimeModel: {fileID: 0}
+  m_resultRankModel: {fileID: 0}
+  m_resultRetryModel: {fileID: 0}
+  m_resultStageModel: {fileID: 0}
   m_gameProgressElapsedTimer: {fileID: 0}
+  m_stageTimeLimitController: {fileID: 0}
+  m_stageSettings: {fileID: 11400000, guid: 78e5ea566bf14ee4bb1be183318b87c5, type: 2}
   m_gameFlowController: {fileID: 2242521604457839927}
   m_gameplayModeController: {fileID: 5548452651704436227}
   m_sequenceController: {fileID: 3333782683411042572}
@@ -161,8 +170,10 @@ MonoBehaviour:
   m_gameplaySequenceChangedEvent: {fileID: 11400000, guid: c19d0671df7fde64196577670e2de7ef, type: 2}
   m_playerHealth: {fileID: 0}
   m_bossPhaseController: {fileID: 0}
-  m_nextStageSceneName: CreditScene
-  m_stageSelectSceneName: StageSelectScene
+  m_stageSceneContext: {fileID: 11400000, guid: 68aee590d64e33541bfc28f5095591a1, type: 2}
+  m_stageCheckpointController: {fileID: 9072200169802392018}
+  m_stageSceneTransitionController: {fileID: 0}
+  m_nextStageDefinition: {fileID: 0}
 --- !u!1 &847114433165207616
 GameObject:
   m_ObjectHideFlags: 0
@@ -212,6 +223,7 @@ MonoBehaviour:
   m_runtimeSaveData: {fileID: 11400000, guid: 1417d56afb27c7c409bb4e0226b1e72c, type: 2}
   m_saveRequestEvent: {fileID: 11400000, guid: 775283ddd1722f8499be4e3a2468f3b7, type: 2}
   m_saveChangedEvent: {fileID: 11400000, guid: b9da027596e888c4aafb3b52a2b02ff3, type: 2}
+  m_gameSettingsChangedEvent: {fileID: 11400000, guid: 6969bd8b20fa29e468a2dbb45c820af9, type: 2}
 --- !u!1 &2747008211945219762
 GameObject:
   m_ObjectHideFlags: 0
@@ -326,6 +338,79 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PauseInputReader
   m_pauseActionReference: {fileID: 2608373035165194785, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_pauseRequestEvent: {fileID: 11400000, guid: ac58557b95b7dca4290f0395fcfe969c, type: 2}
+--- !u!1 &6970778893132082097
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7613041170769368046}
+  - component: {fileID: 9072200169802392018}
+  - component: {fileID: 4184780752914176483}
+  m_Layer: 0
+  m_Name: CheckpointController
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &7613041170769368046
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6970778893132082097}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 284275094415752705}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &9072200169802392018
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6970778893132082097}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9e581d25fac657b418e0172e65219f1d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::StageCheckpointController
+  m_bossPhaseController: {fileID: 0}
+  m_checkpointDefinitions:
+  - {fileID: 11400000, guid: 9a8b9b6719e5eb54883a69c4af5a5ff3, type: 2}
+  - {fileID: 11400000, guid: 745da825d9dd699489affd4cb88e1d92, type: 2}
+  - {fileID: 11400000, guid: b562bb99bf732464bb935f4e1294ee16, type: 2}
+  m_participants:
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  m_currentSnapshot:
+    m_checkpointId: 
+    m_bossPhase: 0
+    m_participantSnapshots: []
+--- !u!114 &4184780752914176483
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6970778893132082097}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 13bd0a5be34738f4f93b6f551a3184f5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BossPhaseCheckpointCaptureHandler
+  m_bossPhaseController: {fileID: 0}
+  m_checkpointController: {fileID: 9072200169802392018}
 --- !u!1 &7597259925633240252
 GameObject:
   m_ObjectHideFlags: 0
