@@ -24,6 +24,9 @@ public sealed class PlayerGrindingState
     // グラインド開始済みか
     private bool m_hasStarted;
 
+    // ForcesEscapeが無効なレール搭乗中に一時停止したPlayer CapsuleCollider
+    private CapsuleCollider m_disabledPlayerCapsuleCollider;
+
     /// <summary>
     /// 通常のレール検出からグラインドを開始します。
     /// </summary>
@@ -88,9 +91,14 @@ public sealed class PlayerGrindingState
     {
         if (!m_hasStarted)
         {
-            // Player Colliderは常に有効のまま維持する。
-            // グラインド中の物理干渉は
-            // PlayerMotor.BeginRailMotion() のKinematic制御で抑制する。
+            // 障害物との衝突で強制離脱しないレールでは、
+            // グラインド中だけPlayerのCapsuleColliderを無効化します。
+            if (m_rail != null &&
+                !m_rail.ForcesEscape)
+            {
+                DisablePlayerCapsuleCollider();
+            }
+
             if (m_isResuming)
             {
                 Owner.GrindController.StartGrindAt(
@@ -116,6 +124,8 @@ public sealed class PlayerGrindingState
             return;
         }
 
+        RestorePlayerCapsuleCollider();
+
         // 障害物との衝突によるレール離脱
         if (Owner.GrindController.IsCollisionExiting)
         {
@@ -136,9 +146,9 @@ public sealed class PlayerGrindingState
         }
 
         // 通常のレール終了
-   // 通常のレール終了
-Owner.RequestRailStateChange<
-    PlayerRailExitingState>();
+        // 通常のレール終了
+        Owner.RequestRailStateChange<
+            PlayerRailExitingState>();
     }
 
     /// <summary>
@@ -147,7 +157,51 @@ Owner.RequestRailStateChange<
     /// </summary>
     protected override void OnExitState()
     {
+        RestorePlayerCapsuleCollider();
+
         Owner.AnimationPresenter
             .StopRailGrindAnimation();
+    }
+
+    /// <summary>
+    /// ForcesEscapeが無効なレール搭乗中だけ、
+    /// PlayerのCapsuleColliderを一時的に無効化します。
+    /// </summary>
+    private void DisablePlayerCapsuleCollider()
+    {
+        if (m_disabledPlayerCapsuleCollider != null)
+        {
+            return;
+        }
+
+        if (!Owner.gameObject.TryGetComponent(
+                out CapsuleCollider capsuleCollider) ||
+            !capsuleCollider.enabled)
+        {
+            return;
+        }
+
+        m_disabledPlayerCapsuleCollider =
+            capsuleCollider;
+
+        m_disabledPlayerCapsuleCollider.enabled =
+            false;
+    }
+
+    /// <summary>
+    /// グラインド中に無効化したPlayer CapsuleColliderを復元します。
+    /// </summary>
+    private void RestorePlayerCapsuleCollider()
+    {
+        if (m_disabledPlayerCapsuleCollider == null)
+        {
+            return;
+        }
+
+        m_disabledPlayerCapsuleCollider.enabled =
+            true;
+
+        m_disabledPlayerCapsuleCollider =
+            null;
     }
 }

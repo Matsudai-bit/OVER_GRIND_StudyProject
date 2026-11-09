@@ -6,6 +6,8 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public sealed class GameDirector : MonoBehaviour
 {
+    [SerializeField, Header("BGMPlayer")]
+    private BGMPlayer m_bgmPlayer;
     // セーブデータ管理
     [SerializeField, Header("リザルト")]
     private SaveDataController m_saveDataController;
@@ -512,7 +514,6 @@ public sealed class GameDirector : MonoBehaviour
 
             return;
         }
-
         m_gameFlowController.EnterPlaying();
     }
 
@@ -631,6 +632,7 @@ public sealed class GameDirector : MonoBehaviour
 
             return;
         }
+        m_bgmPlayer.Play();
 
         StartGameProgressTimer();
     }
@@ -911,6 +913,7 @@ public sealed class GameDirector : MonoBehaviour
 
             return;
         }
+        m_bgmPlayer.Stop();
 
         m_stageSceneTransitionController.LoadNewGame(
             m_nextStageDefinition);
@@ -930,7 +933,7 @@ public sealed class GameDirector : MonoBehaviour
 
             return;
         }
-
+        m_bgmPlayer.Stop();
         m_stageSceneTransitionController
             .LoadStageSelect();
     }
@@ -940,6 +943,8 @@ public sealed class GameDirector : MonoBehaviour
     /// </summary>
     public void LoadRestartScene()
     {
+        m_bgmPlayer.Stop();
+
         RestartInGame();
     }
 }

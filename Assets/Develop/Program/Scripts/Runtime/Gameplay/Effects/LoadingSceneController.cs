@@ -36,8 +36,8 @@ public class LoadingSceneController : MonoBehaviour
 
     void Update()
     {
-        //m_uIAlphaLoop.SetSpeed(0.1f + m_progress * 3.0f);
-        //m_videoPlayer.playbackSpeed = 0.1f + m_progress * 3.0f;
+        m_uIAlphaLoop.SetSpeed(0.1f + m_progress * 3.0f);
+        m_videoPlayer.playbackSpeed = 0.1f + m_progress * 3.0f;
 
         //m_angle += 100.0f * Time.deltaTime;
 

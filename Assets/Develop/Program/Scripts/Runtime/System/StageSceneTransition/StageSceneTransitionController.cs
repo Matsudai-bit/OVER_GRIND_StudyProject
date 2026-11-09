@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.SceneManagement;
 
 /// <summary>
@@ -7,6 +8,8 @@ using UnityEngine.SceneManagement;
 [DisallowMultipleComponent]
 public sealed class StageSceneTransitionController : MonoBehaviour
 {
+    [SerializeField, Header("ローディング直前に呼ばれる")]
+    private UnityEvent m_beforeLoadingAction;
     // Scene間で引き継ぐステージContext
     [SerializeField, Header("Context")]
     private StageSceneContext m_stageSceneContext;
@@ -198,7 +201,7 @@ public sealed class StageSceneTransitionController : MonoBehaviour
         {
             return;
         }
-
+        m_beforeLoadingAction?.Invoke();
         // Pause中のTimeScaleを遷移先へ持ち越さない
         Time.timeScale = 1.0f;
 

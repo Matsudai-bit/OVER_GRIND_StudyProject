@@ -1,9 +1,9 @@
-using System;
+ï»¿using System;
 using UnityEngine;
 using UnityEngine.Audio;
 
 /// <summary>
-/// ‰¹º‚ÌÄ¶‚¨‚æ‚Ñƒv[ƒ‹‚Ö‚Ì©“®•Ô‹p‚ğs‚¤‰¹Œ¹ƒm[ƒhƒNƒ‰ƒX‚Å‚·B
+/// éŸ³å£°ã®å€‹åˆ¥å†ç”Ÿã€è¿½å¾“ã€ãŠã‚ˆã³ãƒ—ãƒ¼ãƒ«ã¸ã®è¿”å´ã‚’ç®¡ç†ã—ã¾ã™ã€‚
 /// </summary>
 [RequireComponent(typeof(AudioSource))]
 public class AudioSourceNode : MonoBehaviour
@@ -12,28 +12,57 @@ public class AudioSourceNode : MonoBehaviour
     private const float SPATIAL_BLEND_3D = 1.0f;
     private const float SPATIAL_BLEND_2D = 0.0f;
 
-    /// <summary>
-    /// Ä¶‚Ég—p‚·‚é AudioSource ƒRƒ“ƒ|[ƒlƒ“ƒg‚Å‚·B
-    /// </summary>
+    // å†ç”Ÿå‡¦ç†ã§åˆ©ç”¨ã™ã‚‹ AudioSource
     private AudioSource m_audioSource;
 
-    /// <summary>
-    /// 3D ’Ç]Ä¶‚Ì’Ç]‘ÎÛ Transform ‚Å‚·B
-    /// </summary>
+    // SoundDatabaseã§æŒ‡å®šã—ãŸéŸ³é‡ã®åˆæœŸå€¤
+    private float m_baseVolume = 1.0f;
+
+    // è¿½å¾“å¯¾è±¡ã¨è¿½å¾“ä¸­ãƒ•ãƒ©ã‚°
     private Transform m_followTarget;
+    private bool m_isFollowing;
 
-    /// <summary>
-    /// ’Ç]Ä¶’†‚©‚Ç‚¤‚©‚ğ¦‚·ƒtƒ‰ƒO‚Å‚·B
-    /// </summary>
-    private bool m_isFollowing = false;
+    // å†ç”ŸçŠ¶æ…‹ã¨ãƒ—ãƒ¼ãƒ«å†åˆ©ç”¨æ™‚ã®è­˜åˆ¥ç•ªå·
+    private bool m_isPlaybackActive;
+    private bool m_isPaused;
+    private int m_playbackVersion;
 
-    /// <summary>
-    /// ƒv[ƒ‹•Ô‹p‚ÉŒÄ‚Ño‚·ƒR[ƒ‹ƒoƒbƒNƒAƒNƒVƒ‡ƒ“‚Å‚·B
-    /// </summary>
+    // ãƒ—ãƒ¼ãƒ«è¿”å´ã¨å†ç”Ÿçµ‚äº†é€šçŸ¥
     private Action<AudioSourceNode> m_onReturnPool;
+    private Action<bool> m_onPlaybackFinished;
 
     /// <summary>
-    /// ˆÀ‘S‚É AudioSource ƒRƒ“ƒ|[ƒlƒ“ƒg‚ğæ“¾‚µ‚Ü‚·B
+    /// ç¾åœ¨ã®å†ç”ŸãŒæœ‰åŠ¹ã‹ã‚’å–å¾—ã—ã¾ã™ã€‚
+    /// </summary>
+    public bool IsPlaybackActive => m_isPlaybackActive;
+
+    /// <summary>
+    /// ç¾åœ¨ã®éŸ³å£°ãŒå®Ÿéš›ã«å†ç”Ÿä¸­ã‹ã‚’å–å¾—ã—ã¾ã™ã€‚
+    /// </summary>
+    public bool IsPlaying => m_isPlaybackActive && !m_isPaused && Source.isPlaying;
+
+    /// <summary>
+    /// ç¾åœ¨ã®éŸ³å£°ãŒä¸€æ™‚åœæ­¢ä¸­ã‹ã‚’å–å¾—ã—ã¾ã™ã€‚
+    /// </summary>
+    public bool IsPaused => m_isPlaybackActive && m_isPaused;
+
+    /// <summary>
+    /// ç¾åœ¨è¿½å¾“ä¸­ã®Transformã‚’å–å¾—ã—ã¾ã™ã€‚
+    /// </summary>
+    public Transform FollowTarget => m_isPlaybackActive && m_isFollowing ? m_followTarget : null;
+
+    /// <summary>
+    /// ç¾åœ¨ã®éŸ³å£°ã‚«ãƒ†ã‚´ãƒªã‚’å–å¾—ã—ã¾ã™ã€‚
+    /// </summary>
+    public SoundCategory Category { get; private set; }
+
+    /// <summary>
+    /// ãƒ—ãƒ¼ãƒ«å†åˆ©ç”¨æ™‚ã«æ›´æ–°ã•ã‚Œã‚‹è­˜åˆ¥ç•ªå·ã‚’å–å¾—ã—ã¾ã™ã€‚
+    /// </summary>
+    public int PlaybackVersion => m_playbackVersion;
+
+    /// <summary>
+    /// AudioSource ã‚’å–å¾—ã—ã¾ã™ã€‚
     /// </summary>
     private AudioSource Source
     {
@@ -42,142 +71,215 @@ public class AudioSourceNode : MonoBehaviour
             if (m_audioSource == null)
             {
                 m_audioSource = GetComponent<AudioSource>();
-                if (m_audioSource == null)
-                {
-                    m_audioSource = gameObject.AddComponent<AudioSource>();
-                }
                 m_audioSource.playOnAwake = false;
             }
+
             return m_audioSource;
         }
     }
 
     /// <summary>
-    /// ‰¹º‚ªÄ¶’†‚©‚Ç‚¤‚©‚ğæ“¾‚µ‚Ü‚·B
+    /// éŸ³å£°ã®å†ç”Ÿè¨­å®šã‚’åˆæœŸåŒ–ã—ã¾ã™ã€‚
     /// </summary>
-    /// <returns>
-    /// trueFÄ¶’†‚Å‚·B
-    /// falseF’â~’†‚Å‚·B
-    /// </returns>
-    public bool IsPlaying => Source != null && Source.isPlaying;
-
-    /// <summary>
-    /// Œ»İİ’è‚³‚ê‚Ä‚¢‚éƒTƒEƒ“ƒh‚ÌƒJƒeƒSƒŠ‚ğæ“¾‚µ‚Ü‚·B
-    /// </summary>
-    public SoundCategory Category { get; private set; }
-
-    /// <summary>
-    /// ƒTƒEƒ“ƒhİ’è‚¨‚æ‚Ñƒv[ƒ‹•Ô‹pƒAƒNƒVƒ‡ƒ“‚ğƒZƒbƒgƒAƒbƒv‚µ‚Ü‚·B
-    /// </summary>
-    /// <param name="data">Ä¶‚·‚éƒTƒEƒ“ƒhƒf[ƒ^B</param>
-    /// <param name="mixerGroup">o—Íæ‚Ì AudioMixerGroupB</param>
-    /// <param name="returnAction">ƒv[ƒ‹•Ô‹p—pƒAƒNƒVƒ‡ƒ“B</param>
+    /// <param name="data">ç™»éŒ²æ¸ˆã¿éŸ³å£°ãƒ‡ãƒ¼ã‚¿ã€‚</param>
+    /// <param name="mixerGroup">å‡ºåŠ›ã™ã‚‹MixerGroupã€‚</param>
+    /// <param name="returnAction">ãƒ—ãƒ¼ãƒ«ã¸ã®è¿”å´å‡¦ç†ã€‚</param>
     public void Setup(SoundDatabase.SoundData data, AudioMixerGroup mixerGroup, Action<AudioSourceNode> returnAction)
     {
+        Source.Stop();
+        ResetTarget();
+
+        m_isPlaybackActive = false;
+        m_isPaused = false;
         m_onReturnPool = returnAction;
+        m_onPlaybackFinished = null;
+        m_playbackVersion++;
         Category = data.m_category;
 
+        // å‰å›ã®å†ç”Ÿè¨­å®šã«ä¾å­˜ã—ãªã„ã‚ˆã†ã«æ¯å›è¨­å®šã—ã¾ã™ã€‚
         Source.clip = data.m_clip;
-        Source.volume = data.m_volume;
+        m_baseVolume = data.m_volume;
+        Source.volume = m_baseVolume;
         Source.pitch = data.m_pitch;
         Source.loop = data.m_loop;
         Source.outputAudioMixerGroup = mixerGroup;
-
-        if (data.m_is3D)
-        {
-            Source.spatialBlend = SPATIAL_BLEND_3D;
-            Source.minDistance = DEFAULT_MIN_DISTANCE;
-            Source.maxDistance = data.m_maxDistance;
-            Source.rolloffMode = AudioRolloffMode.Logarithmic;
-        }
-        else
-        {
-            Source.spatialBlend = SPATIAL_BLEND_2D;
-        }
+        Source.minDistance = DEFAULT_MIN_DISTANCE;
+        Source.maxDistance = data.m_maxDistance;
+        Source.rolloffMode = AudioRolloffMode.Logarithmic;
+        Source.spatialBlend = data.m_is3D ? SPATIAL_BLEND_3D : SPATIAL_BLEND_2D;
     }
 
     /// <summary>
-    /// 2D ‰¹º‚Æ‚µ‚ÄÄ¶‚ğŠJn‚µ‚Ü‚·B
+    /// å†ç”Ÿçµ‚äº†æ™‚ã®é€šçŸ¥å…ˆã‚’ç™»éŒ²ã—ã¾ã™ã€‚
+    /// </summary>
+    /// <param name="onFinished">trueã¯è‡ªç„¶çµ‚äº†ã€falseã¯å¼·åˆ¶çµ‚äº†ã€‚</param>
+    public void SetPlaybackFinishedCallback(Action<bool> onFinished)
+    {
+        m_onPlaybackFinished = onFinished;
+    }
+
+    /// <summary>
+    /// ä»Šå›ã®å†ç”Ÿã«é™ã‚Šãƒ«ãƒ¼ãƒ—è¨­å®šã‚’ä¸Šæ›¸ãã—ã¾ã™ã€‚
+    /// </summary>
+    /// <param name="loop">ãƒ«ãƒ¼ãƒ—ã®æœ‰åŠ¹ãƒ»ç„¡åŠ¹ã€‚</param>
+    public void SetLoop(bool loop)
+    {
+        Source.loop = loop;
+    }
+
+    /// <summary>
+    /// ç™»éŒ²ã•ã‚ŒãŸå…ƒã®éŸ³é‡ã«å¯¾ã—ã¦å€‹åˆ¥å†ç”Ÿç”¨ã®å€ç‡ã‚’é©ç”¨ã—ã¾ã™ã€‚
+    /// </summary>
+    /// <param name="multiplier">å…ƒéŸ³é‡ã«å¯¾ã™ã‚‹å€ç‡ï¼ˆ0ã€œ1ï¼‰ã€‚</param>
+    public void SetVolumeMultiplier(float multiplier)
+    {
+        Source.volume = m_baseVolume * Mathf.Clamp01(multiplier);
+    }
+
+    /// <summary>
+    /// 2DéŸ³å£°ã‚’å†ç”Ÿã—ã¾ã™ã€‚
     /// </summary>
     public void Play2D()
     {
         ResetTarget();
         Source.spatialBlend = SPATIAL_BLEND_2D;
-        Source.Play();
+        StartPlayback();
     }
 
     /// <summary>
-    /// w’è‚³‚ê‚½ƒ[ƒ‹ƒhÀ•W‚Å 3D ‰¹º‚ğÄ¶‚µ‚Ü‚·B
+    /// æŒ‡å®šã—ãŸåœ°ç‚¹ã§3DéŸ³å£°ã‚’å†ç”Ÿã—ã¾ã™ã€‚
     /// </summary>
-    /// <param name="pos">Ä¶ˆÊ’u‚Ìƒ[ƒ‹ƒhÀ•WB</param>
-    public void Play3DAtPosition(Vector3 pos)
+    /// <param name="position">å†ç”Ÿä½ç½®ã€‚</param>
+    public void Play3DAtPosition(Vector3 position)
     {
         ResetTarget();
+        transform.position = position;
         Source.spatialBlend = SPATIAL_BLEND_3D;
-        transform.position = pos;
-        Source.Play();
+        StartPlayback();
     }
 
     /// <summary>
-    /// w’è‚³‚ê‚½ Transform ‚ğ’Ç]‚µ‚È‚ª‚ç 3D ‰¹º‚ğÄ¶‚µ‚Ü‚·B
+    /// æŒ‡å®šã—ãŸTransformã«è¿½å¾“ã—ã¦3DéŸ³å£°ã‚’å†ç”Ÿã—ã¾ã™ã€‚
     /// </summary>
-    /// <param name="target">’Ç]‘ÎÛ‚Ì TransformB</param>
+    /// <param name="target">è¿½å¾“å…ˆã€‚</param>
     public void Play3DFollowing(Transform target)
     {
         m_followTarget = target;
         m_isFollowing = true;
+        transform.position = target.position;
         Source.spatialBlend = SPATIAL_BLEND_3D;
+        StartPlayback();
+    }
+
+    /// <summary>
+    /// å†ç”Ÿä¸­ã®è¿½å¾“å…ˆã‚’å¤‰æ›´ã—ã¾ã™ã€‚
+    /// </summary>
+    /// <param name="newTarget">æ–°ã—ã„è¿½å¾“å…ˆã€‚</param>
+    public void SetFollowTarget(Transform newTarget)
+    {
+        if (m_isPlaybackActive && m_isFollowing && newTarget != null)
+        {
+            m_followTarget = newTarget;
+            transform.position = newTarget.position;
+        }
+    }
+
+    /// <summary>
+    /// éŸ³å£°ã‚’ä¸€æ™‚åœæ­¢ã—ã¾ã™ã€‚
+    /// </summary>
+    public void Pause()
+    {
+        if (!m_isPlaybackActive || m_isPaused) return;
+
+        Source.Pause();
+        m_isPaused = true;
+    }
+
+    /// <summary>
+    /// ä¸€æ™‚åœæ­¢ä¸­ã®éŸ³å£°ã‚’å†é–‹ã—ã¾ã™ã€‚
+    /// </summary>
+    public void Resume()
+    {
+        if (!m_isPlaybackActive || !m_isPaused) return;
+
+        Source.UnPause();
+        m_isPaused = false;
+    }
+
+    /// <summary>
+    /// éŸ³å£°ã‚’å¼·åˆ¶çµ‚äº†ã—ã¦ãƒ—ãƒ¼ãƒ«ã¸è¿”å´ã—ã¾ã™ã€‚
+    /// </summary>
+    public void StopAndReturnToPool()
+    {
+        FinishPlayback(false);
+    }
+
+    /// <summary>
+    /// éŸ³å£°å†ç”Ÿã‚’é–‹å§‹ã—ã¾ã™ã€‚
+    /// </summary>
+    private void StartPlayback()
+    {
+        m_isPlaybackActive = true;
         Source.Play();
     }
 
-    /// <summary>
-    /// ’Ç]‘ÎÛ‚Ì Transform ‚ğV‚µ‚¢ƒ^[ƒQƒbƒg‚É•ÏX‚µ‚Ü‚·B
-    /// </summary>
-    /// <param name="newTarget">V‚µ‚¢’Ç]‘ÎÛ‚Ì TransformB</param>
-    public void SetFollowTarget(Transform newTarget)
+    private void Update()
     {
-        m_followTarget = newTarget;
+        if (!m_isPlaybackActive) return;
+
+        // è¿½å¾“ãŒå¿…è¦ãªéŸ³å£°ã®ã¿Transformã‚’æ›´æ–°ã—ã¾ã™ã€‚
+        if (m_isFollowing)
+        {
+            if (m_followTarget == null)
+            {
+                StopAndReturnToPool();
+                return;
+            }
+
+            transform.position = m_followTarget.position;
+        }
+
+        // Pauseä¸­ã‚„AudioListenerã®ä¸€æ™‚åœæ­¢ä¸­ã¯è‡ªç„¶çµ‚äº†ã¨åˆ¤å®šã—ã¾ã›ã‚“ã€‚
+        if (m_isPaused || (AudioListener.pause && !Source.ignoreListenerPause)) return;
+
+        // éãƒ«ãƒ¼ãƒ—éŸ³å£°ã®è‡ªç„¶çµ‚äº†ã‚’æ¤œå‡ºã—ã¾ã™ã€‚
+        if (!Source.loop && !Source.isPlaying)
+        {
+            FinishPlayback(true);
+        }
     }
 
     /// <summary>
-    /// ’Ç]ó‘Ô‚¨‚æ‚Ñƒ^[ƒQƒbƒgQÆ‚ğƒŠƒZƒbƒg‚µ‚Ü‚·B
+    /// ãƒ—ãƒ¼ãƒ«ã«è¿”å´ã—ã¦ã‹ã‚‰çµ‚äº†é€šçŸ¥ã‚’ç™ºè¡Œã—ã¾ã™ã€‚
+    /// </summary>
+    /// <param name="completedNaturally">è‡ªç„¶çµ‚äº†ã‹ã©ã†ã‹ã€‚</param>
+    private void FinishPlayback(bool completedNaturally)
+    {
+        if (!m_isPlaybackActive) return;
+
+        m_isPlaybackActive = false;
+        m_isPaused = false;
+        Source.Stop();
+        Source.clip = null;
+        ResetTarget();
+
+        // ã‚³ãƒ¼ãƒ«ãƒãƒƒã‚¯ã¯ä»Šå›ã®å†ç”Ÿã«é™ã‚Šã¾ã™ã€‚
+        Action<AudioSourceNode> returnAction = m_onReturnPool;
+        Action<bool> finishedAction = m_onPlaybackFinished;
+        m_onReturnPool = null;
+        m_onPlaybackFinished = null;
+
+        gameObject.SetActive(false);
+        returnAction?.Invoke(this);
+        finishedAction?.Invoke(completedNaturally);
+    }
+
+    /// <summary>
+    /// è¿½å¾“å…ˆã‚’åˆæœŸåŒ–ã—ã¾ã™ã€‚
     /// </summary>
     private void ResetTarget()
     {
         m_followTarget = null;
         m_isFollowing = false;
-    }
-
-    private void Update()
-    {
-        if (!Source.isPlaying)
-        {
-            return;
-        }
-
-        if (m_isFollowing && m_followTarget != null)
-        {
-            transform.position = m_followTarget.position;
-        }
-
-        if (!Source.loop && !Source.isPlaying)
-        {
-            StopAndReturnToPool();
-        }
-    }
-
-    /// <summary>
-    /// ‰¹º‚ğ’â~‚µAƒIƒuƒWƒFƒNƒg‚ğ”ñƒAƒNƒeƒBƒu‰»‚µ‚Äƒv[ƒ‹‚É–ß‚µ‚Ü‚·B
-    /// </summary>
-    public void StopAndReturnToPool()
-    {
-        if (Source.isPlaying)
-        {
-            Source.Stop();
-        }
-
-        ResetTarget();
-        gameObject.SetActive(false);
-        m_onReturnPool?.Invoke(this);
     }
 }

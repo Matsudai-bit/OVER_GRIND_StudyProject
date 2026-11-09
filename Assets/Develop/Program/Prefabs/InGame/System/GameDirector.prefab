@@ -152,6 +152,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 932f279a7ed712946916ff111c27d9cd, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameDirector
+  m_bgmPlayer: {fileID: 0}
   m_saveDataController: {fileID: 3915125000450725587}
   m_resultTimeModel: {fileID: 0}
   m_resultRankModel: {fileID: 0}
@@ -171,8 +172,8 @@ MonoBehaviour:
   m_bossPhaseController: {fileID: 0}
   m_stageSceneContext: {fileID: 11400000, guid: 68aee590d64e33541bfc28f5095591a1, type: 2}
   m_stageCheckpointController: {fileID: 9072200169802392018}
-  m_nextStageSceneName: CreditScene
-  m_stageSelectSceneName: StageSelectScene
+  m_stageSceneTransitionController: {fileID: 0}
+  m_nextStageDefinition: {fileID: 0}
 --- !u!1 &847114433165207616
 GameObject:
   m_ObjectHideFlags: 0
@@ -454,7 +455,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 734408da4e186084f93f198e02228b1d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameFlowController
-  m_initialState: 4
+  m_initialState: 1
   m_stateChangedEvent: {fileID: 11400000, guid: 3c24164873d50a4479bdb3f6441eb8b1, type: 2}
 --- !u!1 &7706326280041637164
 GameObject:

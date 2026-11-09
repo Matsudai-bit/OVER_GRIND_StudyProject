@@ -643,6 +643,66 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: d016dafce0faaa949a98a67c4c9dddb3, type: 3}
+--- !u!1 &141267205
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 141267206}
+  - component: {fileID: 141267208}
+  - component: {fileID: 141267207}
+  m_Layer: 8
+  m_Name: Audio
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &141267206
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 141267205}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 799341817}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &141267207
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 141267205}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 81af29007c2817c4a838c046144539fe, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SequentialAudioPlayer
+  m_defaultEmissionPoint: {fileID: 799341817}
+--- !u!114 &141267208
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 141267205}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6e21897eea7c6d944a0ff383522472d9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AnimationAudioSequentialController
+  m_audioPlayer: {fileID: 141267207}
+  m_emissionPoint: {fileID: 799341817}
 --- !u!4 &144492716 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 3226897335415858999, guid: 6320066f71809c34c868d1ac0d5458bc, type: 3}
@@ -700,6 +760,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: GameDirector
       objectReference: {fileID: 0}
+    - target: {fileID: 1578346737910079965, guid: c769b2ffd8134da4b9d8b06f0b12f8a2, type: 3}
+      propertyPath: m_bgmPlayer
+      value: 
+      objectReference: {fileID: 2121942103}
     - target: {fileID: 1578346737910079965, guid: c769b2ffd8134da4b9d8b06f0b12f8a2, type: 3}
       propertyPath: m_playerHealth
       value: 
@@ -782,6 +846,11 @@ MonoBehaviour:
   m_hideEase: 8
   m_slideDistance: 500
   m_collapsedWidthRatio: 0.05
+--- !u!1 &223129363 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 415096441624393917, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
+  m_PrefabInstance: {fileID: 1117425774}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &249395847 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 8735690000611759797, guid: 6320066f71809c34c868d1ac0d5458bc, type: 3}
@@ -3546,12 +3615,30 @@ MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 1405796748971180126, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
   m_PrefabInstance: {fileID: 1117425774}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
+  m_GameObject: {fileID: 223129363}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8222b5fb196ae104cb9d73fa23d19d13, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Health
+--- !u!4 &799341817 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 5260446927991776623, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
+  m_PrefabInstance: {fileID: 1117425774}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &799341843
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 223129363}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f69b9005c9ecbed45aeafdb07446adaa, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AnimationAudioSequentialEventReceiver
+  m_audioController: {fileID: 141267208}
 --- !u!114 &801745444 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 210276624335604078, guid: d016dafce0faaa949a98a67c4c9dddb3, type: 3}
@@ -4367,8 +4454,14 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
-    m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedGameObjects:
+    - targetCorrespondingSourceObject: {fileID: 5260446927991776623, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 141267206}
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 415096441624393917, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 799341843}
   m_SourcePrefab: {fileID: 100100000, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
 --- !u!4 &1130003578 stripped
 Transform:
@@ -7693,6 +7786,14 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 17371170}
     m_Modifications:
+    - target: {fileID: 656682623424679890, guid: 3a4ea6bdd6d870641a0df3e8aeb400ed, type: 3}
+      propertyPath: m_bgmId
+      value: 15
+      objectReference: {fileID: 0}
+    - target: {fileID: 656682623424679890, guid: 3a4ea6bdd6d870641a0df3e8aeb400ed, type: 3}
+      propertyPath: m_playOnStart
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 3268620928704596805, guid: 3a4ea6bdd6d870641a0df3e8aeb400ed, type: 3}
       propertyPath: m_LocalPosition.x
       value: 1.5156097
@@ -8972,6 +9073,17 @@ MonoBehaviour:
   m_targetLayerMask:
     serializedVersion: 2
     m_Bits: 256
+--- !u!114 &2121942103 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 656682623424679890, guid: 3a4ea6bdd6d870641a0df3e8aeb400ed, type: 3}
+  m_PrefabInstance: {fileID: 1725258993}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4eb735ea66ed10f4ea193e1973e87b3f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BGMPlayer
 --- !u!1 &3214109542580104 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 7595706370011489536, guid: 0d87fe819d918f04f9b17cd1f7452859, type: 3}

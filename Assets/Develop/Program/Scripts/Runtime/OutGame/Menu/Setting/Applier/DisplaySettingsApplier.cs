@@ -25,7 +25,7 @@ public sealed class DisplaySettingsApplier : MonoBehaviour
     {
         new ResolutionData(1920, 1080),
         new ResolutionData(1280, 720),
-        new ResolutionData(800, 600)
+        new ResolutionData(640, 360)
     };
 
     [SerializeField, Header("設定変更イベント")]
@@ -111,9 +111,11 @@ public sealed class DisplaySettingsApplier : MonoBehaviour
         ResolutionData resolution =
             RESOLUTIONS[index];
 
+        bool isFullScreen = index == 0;
+
         Screen.SetResolution(
             resolution.Width,
             resolution.Height,
-            Screen.fullScreenMode);
+            isFullScreen);
     }
 }

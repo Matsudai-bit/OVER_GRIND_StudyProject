@@ -68,25 +68,30 @@ public sealed class PlayerRailCollisionGuard
 
         Restore();
 
-        SplineRailCollisionSettings collisionSettings =
-            rail.GetComponent<SplineRailCollisionSettings>();
+        Collider[] railColliders =
+            GetRailCollisionColliders(
+                rail);
 
-        if (collisionSettings == null ||
-            !collisionSettings.HasCollisionCollider())
+        if (railColliders == null ||
+            railColliders.Length == 0)
         {
             Debug.LogWarning(
                 $"[{nameof(PlayerRailCollisionGuard)}] " +
-                $"{rail.name} に {nameof(SplineRailCollisionSettings)} " +
-                "または衝突対象Colliderが設定されていません。",
+                $"{rail.name} からCollision Ignore対象の" +
+                "Colliderを取得できませんでした。",
                 rail);
 
             return false;
         }
 
-        m_playerCollider = playerCollider;
-        m_sourceRail = rail;
+        m_playerCollider =
+            playerCollider;
+
+        m_sourceRail =
+            rail;
+
         m_railColliders =
-            collisionSettings.CollisionColliders;
+            railColliders;
 
         SetIgnoreCollision(true);
 
@@ -200,7 +205,73 @@ public sealed class PlayerRailCollisionGuard
     }
 
     /// <summary>
-    /// Player Capsuleと明示指定Rail Colliderが重なっているか確認します。
+    /// Rail Collision制御対象のColliderを取得します。
+    /// CollisionSettingsが存在する場合は明示指定を使用し、
+    /// 存在しない場合のみ旧式の子Collider自動探索へフォールバックします。
+    /// </summary>
+    /// <param name="rail">
+    /// 対象レール。
+    /// </param>
+    /// <returns>
+    /// Collision Ignore対象Collider。
+    /// 取得できない場合はnull。
+    /// </returns>
+    private static Collider[] GetRailCollisionColliders(
+        SplineRailInfo rail)
+    {
+        if (rail == null)
+        {
+            return null;
+        }
+
+        SplineRailCollisionSettings collisionSettings =
+            rail.GetComponent<SplineRailCollisionSettings>();
+
+        // 新方式：
+        // Settingsがある場合はInspectorの明示指定だけを使用する。
+        if (collisionSettings != null)
+        {
+            if (!collisionSettings.HasCollisionCollider())
+            {
+                Debug.LogWarning(
+                    $"[{nameof(PlayerRailCollisionGuard)}] " +
+                    $"{rail.name} の " +
+                    $"{nameof(SplineRailCollisionSettings)} に" +
+                    "衝突対象Colliderが設定されていません。",
+                    rail);
+
+                return null;
+            }
+
+            return collisionSettings.CollisionColliders;
+        }
+
+        // 旧方式：
+        // Settings未導入のRailだけ子階層からColliderを自動探索する。
+        Collider[] foundColliders =
+            rail.GetComponentsInChildren<Collider>(
+                true);
+
+        if (foundColliders == null ||
+            foundColliders.Length == 0)
+        {
+            return null;
+        }
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        Debug.LogWarning(
+            $"[{nameof(PlayerRailCollisionGuard)}] " +
+            $"{rail.name} に " +
+            $"{nameof(SplineRailCollisionSettings)} " +
+            "が存在しないため、旧式のCollider自動探索を使用します。",
+            rail);
+#endif
+
+        return foundColliders;
+    }
+
+    /// <summary>
+    /// Player CapsuleとCollision Ignore対象のRail Colliderが重なっているか確認します。
     /// </summary>
     private bool IsOverlappingSourceRail()
     {
