@@ -1,22 +1,38 @@
 using UnityEngine;
 
 /// <summary>
-/// ミサイルの物理移動を制御します。
+/// ミサイルの物理移動を制御するクラスです。
 /// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(Rigidbody))]
 public sealed class MissileMotor : MonoBehaviour
 {
-    // 速度ベクトルが有効か判定する閾値
     private const float VELOCITY_SQR_THRESHOLD = 0.0001f;
 
-    // Rigidbody
+    /// <summary>
+    /// ミサイル発射時に再生するサウンド ID です。
+    /// </summary>
+    [Header("Audio Settings")]
+    [SerializeField] private AudioID m_launchSoundId;
+
+    /// <summary>
+    /// ミサイル飛行中に追従再生するエンジン音のサウンド ID です。
+    /// </summary>
+    [SerializeField] private AudioID m_engineSoundId;
+
+    /// <summary>
+    /// Rigidbody コンポーネントの参照です。
+    /// </summary>
     private Rigidbody m_rigidbody;
 
-    // 移動パラメータ
+    /// <summary>
+    /// ミサイルの移動パラメータです。
+    /// </summary>
     private MissileMotorParameters m_parameters;
 
-    // 現在の目標速度
+    /// <summary>
+    /// 現在の目標速度です。
+    /// </summary>
     private float m_currentSpeed;
 
     /// <summary>
@@ -32,8 +48,6 @@ public sealed class MissileMotor : MonoBehaviour
     private void Awake()
     {
         m_rigidbody = GetComponent<Rigidbody>();
-
-        // 独自重力を使用する
         m_rigidbody.useGravity = false;
     }
 
@@ -50,9 +64,26 @@ public sealed class MissileMotor : MonoBehaviour
         RotateTowardsVelocity();
     }
 
+    private void OnDisable()
+    {
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.Stop3DFollowing(transform);
+        }
+    }
+
+    private void OnDestroy()
+    {
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.Stop3DFollowing(transform);
+        }
+    }
+
     /// <summary>
     /// 移動パラメータを設定します。
     /// </summary>
+    /// <param name="parameters">ミサイルの移動パラメータ。</param>
     public void SetParameters(MissileMotorParameters parameters)
     {
         m_parameters = parameters;
@@ -60,39 +91,35 @@ public sealed class MissileMotor : MonoBehaviour
     }
 
     /// <summary>
-    /// 指定方向へ初速度を与えます。
+    /// 指定方向へ初速度を与え、発射音および飛行エンジン音を再生します。
     /// </summary>
+    /// <param name="direction">発射方向。</param>
     public void Launch(Vector3 direction)
     {
-        if (m_parameters == null)
-        {
-            return;
-        }
-
-        if (direction.sqrMagnitude <= VELOCITY_SQR_THRESHOLD)
+        if (m_parameters == null || direction.sqrMagnitude <= VELOCITY_SQR_THRESHOLD)
         {
             return;
         }
 
         m_currentSpeed = m_parameters.InitialSpeed;
+        m_rigidbody.linearVelocity = direction.normalized * m_currentSpeed;
 
-        m_rigidbody.linearVelocity =
-            direction.normalized * m_currentSpeed;
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.Play3DAtPosition(m_launchSoundId, transform.position);
+            AudioManager.Instance.Play3DFollowing(m_engineSoundId, transform);
+        }
     }
 
     /// <summary>
     /// 指定された加速度を適用します。
     /// </summary>
+    /// <param name="acceleration">適用する加速度。</param>
     public void AddAcceleration(Vector3 acceleration)
     {
-        m_rigidbody.AddForce(
-            acceleration,
-            ForceMode.Acceleration);
+        m_rigidbody.AddForce(acceleration, ForceMode.Acceleration);
     }
 
-    /// <summary>
-    /// 目標速度を最大速度まで加速させます。
-    /// </summary>
     private void UpdateSpeed()
     {
         m_currentSpeed = Mathf.MoveTowards(
@@ -101,20 +128,12 @@ public sealed class MissileMotor : MonoBehaviour
             m_parameters.Acceleration * Time.fixedDeltaTime);
     }
 
-    /// <summary>
-    /// ミサイル固有の重力を適用します。
-    /// </summary>
     private void ApplyGravity()
     {
-        Vector3 gravityAcceleration =
-            Vector3.down * m_parameters.GravityAcceleration;
-
+        Vector3 gravityAcceleration = Vector3.down * m_parameters.GravityAcceleration;
         AddAcceleration(gravityAcceleration);
     }
 
-    /// <summary>
-    /// 最大速度を超えないよう制限します。
-    /// </summary>
     private void LimitSpeed()
     {
         Vector3 velocity = m_rigidbody.linearVelocity;
@@ -125,13 +144,9 @@ public sealed class MissileMotor : MonoBehaviour
             return;
         }
 
-        m_rigidbody.linearVelocity =
-            velocity.normalized * maxSpeed;
+        m_rigidbody.linearVelocity = velocity.normalized * maxSpeed;
     }
 
-    /// <summary>
-    /// 現在の進行方向へミサイルを回転させます。
-    /// </summary>
     private void RotateTowardsVelocity()
     {
         Vector3 velocity = m_rigidbody.linearVelocity;

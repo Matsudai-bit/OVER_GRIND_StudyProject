@@ -104,6 +104,10 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
 
     // 初期化されているか
     private bool m_isInitialized;
+
+    // GameObject / Componentの破棄処理中か
+    private bool m_isDestroying;
+
     private EffectEmitter m_effectEmitter;
 
     public EffectEmitter EffectEmitter => m_effectEmitter;
@@ -528,11 +532,17 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
     /// </summary>
     private void OnDestroy()
     {
+        /*
+         * Dispose()では現在StateのOnExitState()が呼ばれるため、
+         * 先に破棄中フラグを立ててゲームプレイ用の終了処理を抑止します。
+         */
+        m_isDestroying = true;
+        m_isInitialized = false;
+
         m_stateMachine?.Dispose();
 
         m_pendingRailStateChange = null;
         m_stateMachine = null;
-        m_isInitialized = false;
     }
     [SerializeField, Header("被弾ノックバック"), Min(0.0f)]
     private float m_knockbackSpeed = 12.0f;
@@ -624,12 +634,37 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
     {
         IsHitReacting = false;
         HasHitEnvironment = false;
+
+        /*
+         * OnDestroy()からStateMachine.Dispose()された場合も
+         * PlayerHitState.OnExitState()経由でここへ到達します。
+         * 破棄中は通常プレイ用の被弾後無敵処理を開始しません。
+         */
+        if (m_isDestroying)
+        {
+            return;
+        }
+
         StartPostHitInvincibility();
     }
 
     /// <summary>被弾状態終了後の無敵時間を開始します。</summary>
     private void StartPostHitInvincibility()
     {
+        /*
+         * 非アクティブ化・無効化されたMonoBehaviourでは
+         * Coroutineを開始できないため、ここでも防御します。
+         */
+        if (m_isDestroying
+            || !isActiveAndEnabled
+            || !gameObject.activeInHierarchy)
+        {
+            m_isPostHitInvincible = false;
+            m_postHitInvincibilityCoroutine = null;
+
+            return;
+        }
+
         if (m_postHitInvincibilityCoroutine != null)
         {
             StopCoroutine(m_postHitInvincibilityCoroutine);

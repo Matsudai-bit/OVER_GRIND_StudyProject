@@ -61,9 +61,6 @@ public sealed class PlayerBoostChargingState
     private float m_driftElapsedTime;
     private bool m_isDashRequested;
 
-    // Animator更新後にモデルの向きを反映するPresenter
-    private PlayerChargeFacingPresenter m_chargeFacingPresenter;
-
     // 現在のロックオン対象を参照するターゲット制御
     private PlayerTargetingController m_targetingController;
 
@@ -221,17 +218,6 @@ public sealed class PlayerBoostChargingState
                     currentModelDirection.normalized;
             }
 
-            m_chargeFacingPresenter =
-                Owner.ModelTransform.GetComponent<PlayerChargeFacingPresenter>();
-
-            if (m_chargeFacingPresenter == null)
-            {
-                m_chargeFacingPresenter =
-                    Owner.ModelTransform.gameObject.AddComponent<PlayerChargeFacingPresenter>();
-            }
-
-            m_chargeFacingPresenter.BeginFacingOverride(
-                m_currentModelFacingDirection);
         }
 
         Debug.Log(
@@ -386,6 +372,19 @@ public sealed class PlayerBoostChargingState
         m_effectMap.Clear();
         m_currentEffect = EffectId.NONE;
         m_intervalTime = 0.0f;
+    }
+
+    /// <summary>
+    /// AnimatorとConstraintが評価される前に、
+    /// チャージ中のモデル向きを反映します。
+    /// </summary>
+    /// <param name="deltaTime">
+    /// 前フレームからの経過時間。
+    /// </param>
+    protected override void OnUpdate(
+        float deltaTime)
+    {
+        ApplyModelFacing();
     }
 
     /// <summary>
@@ -545,9 +544,8 @@ public sealed class PlayerBoostChargingState
                     : GetChargeMovementDirection(normalizedInput);
 
             // 移動方向と体の方向を分け、旋回中の横滑り姿勢を表示します。
-            m_chargeFacingPresenter?.SetFacingDirection(
-                m_currentModelFacingDirection);
-
+            // 見た目の回転適用自体はOnUpdateで行い、
+            // Animator / Constraint評価より前にTransformを確定させます。
             Owner.Motor.MoveWithDriftAtFixedSpeed(
                 movementDirection,
                 m_chargeSpeed,
@@ -559,8 +557,9 @@ public sealed class PlayerBoostChargingState
         }
         else
         {
-            m_chargeFacingPresenter?.SetFacingDirection(
-                m_currentFacingDirection);
+            // 停止チャージでは本体の向きをモデル表示にも使用します。
+            m_currentModelFacingDirection =
+                m_currentFacingDirection;
         }
 
         // --------------------------------------------------------
@@ -1091,6 +1090,61 @@ public sealed class PlayerBoostChargingState
     }
 
     /// <summary>
+    /// モデルの現在姿勢を維持したまま、
+    /// 水平方向の向きだけを目標方向へ合わせます。
+    /// </summary>
+    private void ApplyModelFacing()
+    {
+        Transform modelTransform =
+            Owner.ModelTransform;
+
+        if (modelTransform == null)
+        {
+            return;
+        }
+
+        Vector3 targetDirection =
+            m_currentModelFacingDirection;
+
+        targetDirection.y = 0.0f;
+
+        if (targetDirection.sqrMagnitude <=
+            0.0001f)
+        {
+            return;
+        }
+
+        targetDirection.Normalize();
+
+        Vector3 currentDirection =
+            modelTransform.forward;
+
+        currentDirection.y = 0.0f;
+
+        if (currentDirection.sqrMagnitude <=
+            0.0001f)
+        {
+            return;
+        }
+
+        currentDirection.Normalize();
+
+        float yawDelta =
+            Vector3.SignedAngle(
+                currentDirection,
+                targetDirection,
+                Vector3.up);
+
+        // Quaternion.LookRotationでPrefab固有の軸補正を上書きせず、
+        // 現在姿勢へYaw差分だけを加えます。
+        modelTransform.rotation =
+            Quaternion.AngleAxis(
+                yawDelta,
+                Vector3.up) *
+            modelTransform.rotation;
+    }
+
+    /// <summary>
     /// 状態終了時に呼ばれます。
     /// </summary>
     protected override void OnExitState()
@@ -1116,24 +1170,12 @@ public sealed class PlayerBoostChargingState
                     : m_currentVelocityDirection);
         }
 
-        // モデルを元の姿勢へ戻す
+        // チャージ中だけ適用していたモデル向きを解除し、
+        // Prefabで設定された基準姿勢へ戻します。
         if (Owner.ModelTransform != null)
         {
-            if (m_isDashRequested)
-            {
-                // ダッシュ成立時は従来どおり即座に基準姿勢へ戻す。
-                m_chargeFacingPresenter?.EndFacingOverride();
-                Owner.ModelTransform.localRotation =
-                    m_defaultModelLocalRotation;
-            }
-            else
-            {
-                // チャージ不成立などで通常状態へ戻る場合は、
-                // 現在表示中の角度からチャージ開始前の通常姿勢へ滑らかに戻す。
-                m_chargeFacingPresenter?.EndFacingOverrideSmoothly(
-                    m_defaultModelLocalRotation,
-                    m_parameterAsset.FacingRotationSpeed);
-            }
+            Owner.ModelTransform.localRotation =
+                m_defaultModelLocalRotation;
         }
 
         // 開始状態に対応したアニメーションを停止
