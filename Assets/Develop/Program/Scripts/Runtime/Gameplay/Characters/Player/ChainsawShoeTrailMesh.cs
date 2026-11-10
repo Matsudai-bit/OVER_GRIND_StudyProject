@@ -12,6 +12,8 @@ public sealed class ChainsawShoeTrailMesh : System.IDisposable
     private readonly Mesh m_mesh;
     private readonly Material m_material;
     private readonly Vector3[] m_vertices;
+    private readonly Vector3[] m_normals;
+    private readonly Vector4[] m_tangents;
     private readonly Vector2[] m_uv;
     private readonly Vector2[] m_birthTimes;
     private readonly int m_capacity;
@@ -23,6 +25,8 @@ public sealed class ChainsawShoeTrailMesh : System.IDisposable
     {
         m_capacity = Mathf.Clamp(capacity, 128, 8192);
         m_vertices = new Vector3[m_capacity * 4];
+        m_normals = new Vector3[m_vertices.Length];
+        m_tangents = new Vector4[m_vertices.Length];
         m_uv = new Vector2[m_vertices.Length];
         m_birthTimes = new Vector2[m_vertices.Length];
         int[] triangles = new int[m_capacity * 6];
@@ -40,6 +44,8 @@ public sealed class ChainsawShoeTrailMesh : System.IDisposable
         m_mesh = new Mesh { name = "Chainsaw shoe marks" };
         m_mesh.MarkDynamic();
         m_mesh.vertices = m_vertices;
+        m_mesh.normals = m_normals;
+        m_mesh.tangents = m_tangents;
         m_mesh.triangles = triangles;
         m_material = new Material(material);
         m_material.SetFloat(LIFETIME, lifetime);
@@ -66,6 +72,16 @@ public sealed class ChainsawShoeTrailMesh : System.IDisposable
         m_vertices[vertex + 1] = start + startSide;
         m_vertices[vertex + 2] = end - endSide;
         m_vertices[vertex + 3] = end + endSide;
+        // UVのU方向を幅方向、V方向を進行方向とし、床に沿う法線マップ用の座標系を渡します。
+        // Cross(normal, tangent)は進行方向と逆を向くため、接線の符号は-1です。
+        Vector3 startTangent = startSide.normalized;
+        Vector3 endTangent = endSide.normalized;
+        for (int i = 0; i < 4; i++)
+        {
+            Vector3 tangent = i < 2 ? startTangent : endTangent;
+            m_normals[vertex + i] = (i < 2 ? startNormal : endNormal).normalized;
+            m_tangents[vertex + i] = new Vector4(tangent.x, tangent.y, tangent.z, -1f);
+        }
         float endDistance = distance + Vector3.Distance(start, end);
         m_uv[vertex] = new Vector2(0f, distance);
         m_uv[vertex + 1] = new Vector2(1f, distance);
@@ -82,6 +98,8 @@ public sealed class ChainsawShoeTrailMesh : System.IDisposable
         m_material.SetFloat(TRAIL_TIME, time);
         if (!m_dirty) return;
         m_mesh.vertices = m_vertices;
+        m_mesh.normals = m_normals;
+        m_mesh.tangents = m_tangents;
         m_mesh.uv = m_uv;
         m_mesh.uv2 = m_birthTimes;
         m_mesh.RecalculateBounds();
