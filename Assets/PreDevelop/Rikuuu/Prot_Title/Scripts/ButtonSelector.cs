@@ -175,12 +175,12 @@ public class ButtonSelector : MonoBehaviour
                 {
                     m_moveAction.Invoke(
                         m_cursor,
-                        m_buttons[m_selectButtonNumber].transform.position
+                        GetButtonCenter(m_selectButtonNumber)
                     );
                 }
                 else
                 {
-                    m_cursor.transform.position = m_buttons[m_selectButtonNumber].transform.position;
+                    m_cursor.transform.position = GetButtonCenter(m_selectButtonNumber);
                 }
             }
 
@@ -317,5 +317,16 @@ public class ButtonSelector : MonoBehaviour
         // 今選択されているボタンの見た目を解除してから番号を戻す
         m_buttons[m_selectButtonNumber].OnCursorExit();
         m_selectButtonNumber = 0;
+    }
+
+    // ボタンの見た目上の中心(ワールド座標)を返す
+    private Vector3 GetButtonCenter(int index)
+    {
+        RectTransform rect = m_buttons[index].transform as RectTransform;
+        if (rect == null)
+        {
+            return m_buttons[index].transform.position;
+        }
+        return rect.TransformPoint(rect.rect.center);
     }
 }
