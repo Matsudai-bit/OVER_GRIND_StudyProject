@@ -191,6 +191,49 @@ public class AudioManager : MonoBehaviour
     }
 
     /// <summary>
+    /// UnityEventの整数パラメータから2D音声を再生します。
+    /// </summary>
+    /// <param name="audioId">再生するAudioIDの数値。</param>
+    public void Play2DFromEvent(int audioId)
+    {
+        // 数値とAudioIDの対応が有効か確認します。
+        if (!Enum.IsDefined(typeof(AudioID), audioId))
+        {
+            Debug.LogWarning($"[AudioManager] 存在しないAudioIDです: {audioId}", this);
+            return;
+        }
+
+        Play2D((AudioID)audioId);
+    }
+
+    /// <summary>
+    /// UnityEventからBGMカテゴリの音量を変更します。
+    /// </summary>
+    /// <param name="volume">音量（0〜1）。</param>
+    public void SetBGMVolume(float volume)
+    {
+        SetVolume(SoundCategory.BGM, volume);
+    }
+
+    /// <summary>
+    /// UnityEventからインゲームSEカテゴリの音量を変更します。
+    /// </summary>
+    /// <param name="volume">音量（0〜1）。</param>
+    public void SetInGameSEVolume(float volume)
+    {
+        SetVolume(SoundCategory.SE_InGame, volume);
+    }
+
+    /// <summary>
+    /// UnityEventからボイスカテゴリの音量を変更します。
+    /// </summary>
+    /// <param name="volume">音量（0〜1）。</param>
+    public void SetVoiceVolume(float volume)
+    {
+        SetVolume(SoundCategory.Voice, volume);
+    }
+
+    /// <summary>
     /// 音声IDを検索し、個別音源を取得して再生します。
     /// </summary>
     private AudioPlayHandle PlayInternal(
@@ -294,4 +337,3 @@ public class AudioManager : MonoBehaviour
         };
     }
 }
-
