@@ -9,6 +9,7 @@ public sealed class PlayerRailExitingState
     private readonly bool m_startAirAttack;
     private float m_elapsedTime;
     private PlayerContinuousAttack m_airAttack;
+    private bool m_hasStartedAttackWhileHeld;
 
     /// <summary>Creates a rail exit state for collision departure.</summary>
     public PlayerRailExitingState()
@@ -32,8 +33,7 @@ public sealed class PlayerRailExitingState
         Owner.AnimationPresenter.PlayJumpAnimation(PlayerJumpAnimationType.RAIL);
         if (m_startAirAttack && Owner.InputReader.IsAttackHeld)
         {
-            m_airAttack = new PlayerContinuousAttack(Owner, true);
-            m_airAttack.StartAttack();
+            StartAirAttack();
         }
     }
 
@@ -44,6 +44,16 @@ public sealed class PlayerRailExitingState
     {
         m_elapsedTime += Time.fixedDeltaTime;
         Owner.GrindController.UpdateCollisionExit(Time.fixedDeltaTime);
+        Owner.InputReader.ConsumeAttackInput();
+        if (!Owner.InputReader.IsAttackHeld)
+        {
+            m_hasStartedAttackWhileHeld = false;
+        }
+        else if (!m_hasStartedAttackWhileHeld &&
+                 m_airAttack == null && !Owner.Monitor.IsGrounded)
+        {
+            StartAirAttack();
+        }
         if (m_airAttack != null && !m_airAttack.UpdateAttack(Time.fixedDeltaTime))
         {
             StopAirAttack();
@@ -59,6 +69,14 @@ public sealed class PlayerRailExitingState
             StopAirAttack();
             Machine.ChangeState<PlayerIdlingState>();
         }
+    }
+
+    /// <summary>レール離脱中の空中攻撃を開始します。</summary>
+    private void StartAirAttack()
+    {
+        m_hasStartedAttackWhileHeld = true;
+        m_airAttack = new PlayerContinuousAttack(Owner, true);
+        m_airAttack.StartAttack();
     }
 
     /// <summary>

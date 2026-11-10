@@ -199,6 +199,7 @@ public sealed class PlayerTargetingController : MonoBehaviour
     /// </summary>
     private void OnEnable()
     {
+        AttackReactiveInteractObject.Launched += OnDynamicObjectLaunched;
         m_targetAction.performed += OnTargetPerformed;
 
         m_targetLeftAction.performed += OnTargetLeftPerformed;
@@ -210,11 +211,23 @@ public sealed class PlayerTargetingController : MonoBehaviour
     /// </summary>
     private void OnDisable()
     {
+        AttackReactiveInteractObject.Launched -= OnDynamicObjectLaunched;
         StopTargeting();
         m_targetAction.performed -= OnTargetPerformed;
 
         m_targetLeftAction.performed -= OnTargetLeftPerformed;
         m_targetRightAction.performed -= OnTargetRightPerformed;
+    }
+
+    /// <summary>現在の対象が吹き飛んだ場合だけターゲットを解除します。</summary>
+    /// <param name="launchedObject">吹き飛んだ動的オブジェクト。</param>
+    private void OnDynamicObjectLaunched(AttackReactiveInteractObject launchedObject)
+    {
+        if (m_isTargeting && m_currentTargetPoint != null &&
+            m_currentTargetPoint.GetComponentInParent<AttackReactiveInteractObject>() == launchedObject)
+        {
+            StopTargeting();
+        }
     }
 
     /// <summary>
