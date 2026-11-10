@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.Playables;
 
-public class PauseFadeAnimator : MonoBehaviour
+public class PauseFadeManager : MonoBehaviour
 {
     [Header("Timeline")]
     [SerializeField] private PlayableDirector m_fadeInDirector;
