@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -13,6 +14,8 @@ public sealed class AttackReactiveInteractObject : MonoBehaviour,
     IAttackContactDamageReceiver,
     IAttackMovementBlocker
 {
+    /// <summary>動的オブジェクトが吹き飛んだときに通知します。</summary>
+    public static event Action<AttackReactiveInteractObject> Launched;
     private const float DIRECTION_EPSILON = 0.0001f;
     private const float GROUND_CHECK_START_OFFSET = 0.02f;
     private const int GROUND_HIT_BUFFER_SIZE = 8;
@@ -599,6 +602,7 @@ public sealed class AttackReactiveInteractObject : MonoBehaviour,
         m_lastGroundContactTime = float.NegativeInfinity;
         m_isRecoveringFromLaunch = true;
         m_hasBeenLaunched = true;
+        Launched?.Invoke(this);
     }
 
     /// <summary>物理速度を止め、次の攻撃まで動かない状態へ戻します。</summary>

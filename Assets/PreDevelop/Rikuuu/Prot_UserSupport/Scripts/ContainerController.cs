@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.InputSystem;
 
 public class ContainerController : MonoBehaviour
@@ -48,6 +49,9 @@ public class ContainerController : MonoBehaviour
     [SerializeField]
     private InputActionReference m_backActionRef;
 
+    [SerializeField, Header("メニューコンテイナー変更時に呼ばれる")]
+    UnityEvent m_onChanged;
+
     public bool IsLeft => m_choseState == ChoseState.LEFT;
 
     private void OnEnable()
@@ -91,7 +95,7 @@ public class ContainerController : MonoBehaviour
     public void ChangeToLeft()
     {
         Debug.Log($"[Lock] {name} frame={Time.frameCount}", this);
-
+        m_onChanged?.Invoke();
         // 選択状態の更新
         m_choseState = ChoseState.LEFT;
         // 表示するテクスチャを入れ替える

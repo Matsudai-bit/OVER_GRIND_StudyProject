@@ -397,15 +397,6 @@ public sealed class PlayerRailJumpingState : StateBase<PlayerStateMachineCompone
             return;
         }
 
-        float movementSpeed = m_isFollowingRail
-            ? m_path.Speed
-            : Owner.Motor.HorizontalSpeed;
-
-        if (movementSpeed <= ATTACK_SPEED_EPSILON)
-        {
-            return;
-        }
-
         ExitControlledJumpMotion();
 
         Owner.GrindController.BlockRailUntilSeparated(m_sourceRail);

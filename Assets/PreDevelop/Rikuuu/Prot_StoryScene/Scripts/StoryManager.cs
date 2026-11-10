@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using TMPro;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.InputSystem;
 using UnityEngine.Serialization;
 using UnityEngine.UI;
@@ -262,6 +263,8 @@ public class StoryManager : MonoBehaviour
     [SerializeField]
     private float m_arrowBlinkMinAlpha = DEFAULT_ARROW_BLINK_MIN_ALPHA;
 
+    [SerializeField, Header("切り替え時に呼ばれる")]
+    private UnityEvent m_selectAction;
     // ---------- 内部状態 ----------
 
     /// <summary>
@@ -911,7 +914,7 @@ public class StoryManager : MonoBehaviour
 
         // 次のページへ向かう間は、矢印を完全に見える状態にする
         SetArrowAlpha(ARROW_MAX_ALPHA);
-
+        m_selectAction?.Invoke();
         // ワイプアウト（画面を暗くする）を再生して待つ
         yield return StartCoroutine(PlayWipeAnimationCoroutine(m_animationOutStateName));
 

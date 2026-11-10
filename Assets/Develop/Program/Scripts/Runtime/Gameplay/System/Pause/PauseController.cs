@@ -119,7 +119,7 @@ public sealed class PauseController : MonoBehaviour
         if (m_isPaused)
         {
             return false;
-            return Resume();
+            //return Resume();
         }
 
         return Pause();

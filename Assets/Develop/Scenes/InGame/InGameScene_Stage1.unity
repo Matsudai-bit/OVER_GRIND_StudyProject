@@ -913,6 +913,58 @@ MeshCollider:
   m_CorrespondingSourceObject: {fileID: 2351796524976116516, guid: 9537df2f52fa84840b4231653372fa08, type: 3}
   m_PrefabInstance: {fileID: 2017442061}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &825646114
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 825646115}
+  - component: {fileID: 825646116}
+  m_Layer: 8
+  m_Name: MeshRetistry
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &825646115
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 825646114}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 974132652}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &825646116
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 825646114}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5ac5fb11a0cbced4dbb7c0ba0cd155bf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MeshReferenceRegistry
+  m_modelRoot: {fileID: 1156904953}
+  m_references:
+  - m_id: Chainsaw_Left
+    m_relativePath: Geometry/shoes_Grp/chainsawblad_Grp/leftchainsawblad
+    m_renderer: {fileID: 2102836283}
+  - m_id: Chainsaw_Right
+    m_relativePath: Geometry/shoes_Grp/chainsawblad_Grp/rightchainsawblad
+    m_renderer: {fileID: 2104902649}
 --- !u!114 &839216703 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 296171908789512050, guid: 3a4ea6bdd6d870641a0df3e8aeb400ed, type: 3}
@@ -3812,7 +3864,13 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 86029869826681732, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
       insertIndex: -1
       addedObject: {fileID: 98571769}
-    m_AddedComponents: []
+    - targetCorrespondingSourceObject: {fileID: 86029869826681732, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 825646115}
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 415096441624393917, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2048823709}
   m_SourcePrefab: {fileID: 100100000, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
 --- !u!4 &1080929310 stripped
 Transform:
@@ -3834,7 +3892,7 @@ MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 1405796748971180126, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
   m_PrefabInstance: {fileID: 1080929309}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
+  m_GameObject: {fileID: 2048823684}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8222b5fb196ae104cb9d73fa23d19d13, type: 3}
@@ -3899,6 +3957,11 @@ Transform:
 MeshCollider:
   m_CorrespondingSourceObject: {fileID: 778972255937065195, guid: 9537df2f52fa84840b4231653372fa08, type: 3}
   m_PrefabInstance: {fileID: 2017442061}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &1156904953 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 301451982182821376, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
+  m_PrefabInstance: {fileID: 1080929309}
   m_PrefabAsset: {fileID: 0}
 --- !u!64 &1158398180 stripped
 MeshCollider:
@@ -5195,6 +5258,40 @@ ParentConstraint:
   m_CorrespondingSourceObject: {fileID: 5792100661619299799, guid: 73f682ea431806344a40672f6603e9b6, type: 3}
   m_PrefabInstance: {fileID: 7347005756200349049}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &2048823684 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 415096441624393917, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
+  m_PrefabInstance: {fileID: 1080929309}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &2048823702 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 7831071542829783627, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
+  m_PrefabInstance: {fileID: 1080929309}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2048823684}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 57fd4ddafe7cfc7408b9dd19920404a8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerStateMachineComponent
+--- !u!114 &2048823709
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2048823684}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b6cb9f9991d74f0ead0ab83523d1ed77, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerChainsawPresenter
+  m_stateMachine: {fileID: 2048823702}
+  m_speedData: {fileID: 11400000, guid: 3c013aa7858a459888177d31bf441eb1, type: 2}
+  m_targetRenderer: {fileID: 2102836283}
+  m_rightRenderer: {fileID: 2104902649}
+  m_materialIndex: 0
+  m_rightMaterialIndex: 0
 --- !u!1 &2050945656
 GameObject:
   m_ObjectHideFlags: 0
@@ -5400,6 +5497,16 @@ Transform:
 ParentConstraint:
   m_CorrespondingSourceObject: {fileID: 6760469074173574214, guid: 73f682ea431806344a40672f6603e9b6, type: 3}
   m_PrefabInstance: {fileID: 7347005756200349049}
+  m_PrefabAsset: {fileID: 0}
+--- !u!137 &2102836283 stripped
+SkinnedMeshRenderer:
+  m_CorrespondingSourceObject: {fileID: 8841886319978303420, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
+  m_PrefabInstance: {fileID: 1080929309}
+  m_PrefabAsset: {fileID: 0}
+--- !u!137 &2104902649 stripped
+SkinnedMeshRenderer:
+  m_CorrespondingSourceObject: {fileID: 8478470568389495354, guid: 92ea8cb45f2dda345a057b00e7861af3, type: 3}
+  m_PrefabInstance: {fileID: 1080929309}
   m_PrefabAsset: {fileID: 0}
 --- !u!64 &2112637410 stripped
 MeshCollider:
