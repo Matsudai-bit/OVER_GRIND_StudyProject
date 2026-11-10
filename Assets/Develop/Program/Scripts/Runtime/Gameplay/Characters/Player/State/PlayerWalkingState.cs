@@ -22,6 +22,8 @@ public sealed class PlayerWalkingState
             Owner.MovementParameterAsset.CreateMoveParameters();
 
         Owner.AnimationPresenter.PlayWalkAnimation();
+
+
     }
 
     /// <summary>

@@ -7,7 +7,7 @@ using System;
 public class TimerUiModel : MonoBehaviour
 {
     [SerializeField]
-    private ElapsedTimer m_timer;
+    private StageTimeLimitController m_timer;
     /// <summary>Œ»İ‚ÌŒo‰ßŠÔ‚ğæ“¾‚µ‚Ü‚·B</summary>
     public float CurrentTime { get; private set; }
 
@@ -16,7 +16,8 @@ public class TimerUiModel : MonoBehaviour
 
     private void Awake()
     {
-        m_timer.ElapsedTimeChanged += (seconds) => { OnTimeChanged?.Invoke((float)(seconds)); };
+        if (m_timer)
+        m_timer.RemainingTimeChanged += (seconds) => { OnTimeChanged?.Invoke((float)(seconds)); };
     }
 
     /// <summary>

@@ -194,6 +194,89 @@ public sealed class SaveDataController : MonoBehaviour
     }
 
     /// <summary>
+    /// ステージリザルトを反映し、セーブデータへ保存します。
+    /// </summary>
+    /// <param name="stageNumber">対象のステージ番号。</param>
+    /// <param name="rank">今回獲得したランク。</param>
+    /// <param name="clearTime">今回のクリアタイム（秒）。</param>
+    /// <returns>
+    /// true：更新または保存処理に成功しました。
+    /// false：入力値または初期化に問題があります。
+    /// </returns>
+    public bool SaveStageResult(
+        int stageNumber,
+        int rank,
+        int clearTime)
+    {
+        if (!EnsureInitialized()
+            || stageNumber <= 0
+            || rank < 0
+            || clearTime < 0)
+        {
+            return false;
+        }
+
+        GameProgressSaveData progress =
+            m_runtimeSaveData.Progress;
+
+        bool hasChanged =
+            false;
+
+        // ステージクリア状態を更新
+        if (progress.MarkStageCleared(
+            stageNumber))
+        {
+            hasChanged =
+                true;
+        }
+
+        /*
+         * ランク値は
+         * C = 0, B = 1, A = 2, S = 3, S+ = 4
+         * のため、既存ランクより高い場合のみ更新する。
+         */
+        bool shouldUpdateRank =
+            true;
+
+        if (progress.TryGetStageData(
+            stageNumber,
+            out GameProgressSaveData.StageData stageData))
+        {
+            shouldUpdateRank =
+                stageData.Rank < rank;
+        }
+
+        if (shouldUpdateRank
+            && progress.SetStageRank(
+                stageNumber,
+                rank))
+        {
+            hasChanged =
+                true;
+        }
+
+        // ベストタイムはGameProgressSaveData側で最速時のみ更新される
+        if (progress.UpdateStageBestTime(
+            stageNumber,
+            clearTime))
+        {
+            hasChanged =
+                true;
+        }
+
+        // 更新がなければ既存の保存内容がそのまま有効
+        if (!hasChanged)
+        {
+            return true;
+        }
+
+        MarkDirty();
+
+        // リザルト確定時に1回だけ保存
+        return Save();
+    }
+
+    /// <summary>
     /// OPムービーを視聴済みにし、自動保存します。
     /// </summary>
     /// <returns>

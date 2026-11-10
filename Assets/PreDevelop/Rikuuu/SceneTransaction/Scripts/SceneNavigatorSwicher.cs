@@ -31,7 +31,7 @@ public class SceneNavigatorSwitcher : MonoBehaviour
     [SerializeField] private SceneNavigator m_sceneNavigator;
 
     [Header("セーブデータ")]
-    [SerializeField]  SaveData m_saveData;
+    [SerializeField]  SaveDataController m_saveDataController;
 
     [Header("初回判定のキー(用途ごとに変える)")]
     [SerializeField] private string m_visitKey = "Story";
@@ -108,7 +108,7 @@ public class SceneNavigatorSwitcher : MonoBehaviour
             }            
         }
 
-        return m_saveData.Progress.HasWatchedOpening;
+        return m_saveDataController.Progress.HasWatchedOpening;
     }
 
     /// <summary>
@@ -124,8 +124,9 @@ public class SceneNavigatorSwitcher : MonoBehaviour
                 return;
             }
         }
-        m_saveData.Progress.MarkOpeningWatched();
-        
+        m_saveDataController.Progress.MarkOpeningWatched();
+        m_saveDataController.Save();
+
         //FirstVisitFlag.MarkVisited(m_visitKey);
     }
 }
