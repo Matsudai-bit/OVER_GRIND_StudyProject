@@ -953,6 +953,10 @@ PrefabInstance:
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 3359363951409773951, guid: 46e33a8ed3a52c44bb44bc1a0902def3, type: 3}
+      propertyPath: m_window
+      value: 
+      objectReference: {fileID: 847308247}
+    - target: {fileID: 3359363951409773951, guid: 46e33a8ed3a52c44bb44bc1a0902def3, type: 3}
       propertyPath: m_onFadeOutCompleted.m_PersistentCalls.m_Calls.Array.size
       value: 1
       objectReference: {fileID: 0}
@@ -1122,34 +1126,10 @@ MonoBehaviour:
   m_waitForHideCompletion: 1
   m_onShow:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 847308248}
-        m_TargetAssemblyTypeName: PauseFadeManager, Assembly-CSharp
-        m_MethodName: PlayFadeIn
-        m_Mode: 1
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
+      m_Calls: []
   m_onHide:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 847308248}
-        m_TargetAssemblyTypeName: PauseFadeManager, Assembly-CSharp
-        m_MethodName: PlayFadeOut
-        m_Mode: 1
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
+      m_Calls: []
   m_onOpened:
     m_PersistentCalls:
       m_Calls: []
@@ -1158,45 +1138,10 @@ MonoBehaviour:
       m_Calls: []
   m_onInputEnabled:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 1016170748}
-        m_TargetAssemblyTypeName: ButtonSelector, Assembly-CSharp
-        m_MethodName: UnLockCursor
-        m_Mode: 1
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
+      m_Calls: []
   m_onInputDisabled:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 1016170748}
-        m_TargetAssemblyTypeName: ButtonSelector, Assembly-CSharp
-        m_MethodName: LockCursor
-        m_Mode: 1
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
---- !u!114 &847308248 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 3359363951409773951, guid: 46e33a8ed3a52c44bb44bc1a0902def3, type: 3}
-  m_PrefabInstance: {fileID: 847308244}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b2fa442b3b8bd764ba3234dd58198c7d, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PauseFadeAnimator
+      m_Calls: []
 --- !u!114 &848049326 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 1927124159426402150, guid: 5c16cd1c04124704483a7169c50df04a, type: 3}
@@ -1381,17 +1326,6 @@ MeshCollider:
   m_CorrespondingSourceObject: {fileID: 8928746958948879275, guid: 9537df2f52fa84840b4231653372fa08, type: 3}
   m_PrefabInstance: {fileID: 2017442061}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &1016170748 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 2397213832096904368, guid: 46e33a8ed3a52c44bb44bc1a0902def3, type: 3}
-  m_PrefabInstance: {fileID: 847308244}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4aae24bb00f5145468ec1dcfce9c5d22, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ButtonSelector
 --- !u!64 &1017297527 stripped
 MeshCollider:
   m_CorrespondingSourceObject: {fileID: 5777852200029876827, guid: 9537df2f52fa84840b4231653372fa08, type: 3}

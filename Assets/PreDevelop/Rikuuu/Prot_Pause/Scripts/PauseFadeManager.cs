@@ -62,9 +62,6 @@ public class PauseFadeManager : MonoBehaviour, IUIInputControllable
     // 初期状態を反映したかどうか
     private bool m_initialized = false;
 
-    // キー入力が有効かどうか
-    private bool m_isKeyInputEnabled = true;
-
     // 現在表示されているかどうか
     public bool IsShown => m_isShown;
 
@@ -134,7 +131,7 @@ public class PauseFadeManager : MonoBehaviour, IUIInputControllable
     // 背面UIとして入力を止める・戻す(UIOverlaySceneManager から呼ばれます)
     public void SetInputEnabled(bool isEnabled)
     {
-        m_isKeyInputEnabled = isEnabled;
+        //m_isKeyInputEnabled = isEnabled;
 
         //if (m_buttonSelector == null)
         //{
