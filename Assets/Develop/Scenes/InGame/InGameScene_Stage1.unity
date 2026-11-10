@@ -1040,6 +1040,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: PauseWindow
       objectReference: {fileID: 0}
+    - target: {fileID: 8630382268053573715, guid: 46e33a8ed3a52c44bb44bc1a0902def3, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 8908499256317640014, guid: 46e33a8ed3a52c44bb44bc1a0902def3, type: 3}
       propertyPath: m_Pivot.x
       value: 0.5
@@ -1141,6 +1145,9 @@ PrefabInstance:
       addedObject: {fileID: 847308246}
     - targetCorrespondingSourceObject: {fileID: 7062970479722657432, guid: 46e33a8ed3a52c44bb44bc1a0902def3, type: 3}
       insertIndex: -1
+      addedObject: {fileID: 847308250}
+    - targetCorrespondingSourceObject: {fileID: 7062970479722657432, guid: 46e33a8ed3a52c44bb44bc1a0902def3, type: 3}
+      insertIndex: -1
       addedObject: {fileID: 847308247}
   m_SourcePrefab: {fileID: 100100000, guid: 46e33a8ed3a52c44bb44bc1a0902def3, type: 3}
 --- !u!224 &847308245 stripped
@@ -1174,26 +1181,134 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIWindow
   m_openMode: 0
   m_firstSelectable: {fileID: 0}
-  m_waitForShowCompletion: 0
-  m_waitForHideCompletion: 1
+  m_waitForShowCompletion: 1
+  m_waitForHideCompletion: 0
   m_onShow:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 847308250}
+        m_TargetAssemblyTypeName: PauseWindowController, Assembly-CSharp
+        m_MethodName: OnWindowShow
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
   m_onHide:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 847308250}
+        m_TargetAssemblyTypeName: PauseWindowController, Assembly-CSharp
+        m_MethodName: OnWindowHide
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
   m_onOpened:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 847308250}
+        m_TargetAssemblyTypeName: PauseWindowController, Assembly-CSharp
+        m_MethodName: OnWindowOpened
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
   m_onClosed:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 847308250}
+        m_TargetAssemblyTypeName: PauseWindowController, Assembly-CSharp
+        m_MethodName: OnWindowClosed
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
   m_onInputEnabled:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 847308250}
+        m_TargetAssemblyTypeName: PauseWindowController, Assembly-CSharp
+        m_MethodName: OnWindowInputEnabled
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
   m_onInputDisabled:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 847308250}
+        m_TargetAssemblyTypeName: PauseWindowController, Assembly-CSharp
+        m_MethodName: OnWindowInputDisabled
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+--- !u!320 &847308248 stripped
+PlayableDirector:
+  m_CorrespondingSourceObject: {fileID: 5650938119316821567, guid: 46e33a8ed3a52c44bb44bc1a0902def3, type: 3}
+  m_PrefabInstance: {fileID: 847308244}
+  m_PrefabAsset: {fileID: 0}
+--- !u!320 &847308249 stripped
+PlayableDirector:
+  m_CorrespondingSourceObject: {fileID: 5971908946327081795, guid: 46e33a8ed3a52c44bb44bc1a0902def3, type: 3}
+  m_PrefabInstance: {fileID: 847308244}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &847308250
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 522535228}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b78602819bc2f0b489d9a26c4b8ae6b8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PauseWindowController
+  m_pauseActionReference: {fileID: 1001886555977818379, guid: 052faaac586de48259a63d0c4782560b, type: 3}
+  m_pauseRequestEvent: {fileID: 11400000, guid: ac58557b95b7dca4290f0395fcfe969c, type: 2}
+  menuContext: {fileID: 11400000, guid: b0c88a8365d180447aba5923c37702f4, type: 2}
+  m_window: {fileID: 847308247}
+  m_fadeInDirector: {fileID: 847308249}
+  m_fadeOutDirector: {fileID: 847308248}
+  m_detailText: {fileID: 1758747042}
+  m_container: {fileID: 1758747044}
+  m_background: {fileID: 1729677774}
+  m_selectButton: {fileID: 1758747041}
+  m_mechPanel: {fileID: 1758747043}
+  m_buttonSelector: {fileID: 1729677772}
+  m_cursor: {fileID: 1729677773}
+  m_cursorInitialPosition: {x: 0, y: 0}
 --- !u!114 &848049326 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 1927124159426402150, guid: 5c16cd1c04124704483a7169c50df04a, type: 3}
@@ -4789,6 +4904,27 @@ MeshCollider:
   m_CorrespondingSourceObject: {fileID: 2382574283583540583, guid: 9537df2f52fa84840b4231653372fa08, type: 3}
   m_PrefabInstance: {fileID: 2017442061}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &1729677772 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 2397213832096904368, guid: 46e33a8ed3a52c44bb44bc1a0902def3, type: 3}
+  m_PrefabInstance: {fileID: 847308244}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4aae24bb00f5145468ec1dcfce9c5d22, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ButtonSelector
+--- !u!1 &1729677773 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6311438550151998127, guid: 46e33a8ed3a52c44bb44bc1a0902def3, type: 3}
+  m_PrefabInstance: {fileID: 847308244}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &1729677774 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1373780362626246134, guid: 46e33a8ed3a52c44bb44bc1a0902def3, type: 3}
+  m_PrefabInstance: {fileID: 847308244}
+  m_PrefabAsset: {fileID: 0}
 --- !u!64 &1743941319 stripped
 MeshCollider:
   m_CorrespondingSourceObject: {fileID: 6091077413676791609, guid: 9537df2f52fa84840b4231653372fa08, type: 3}
@@ -4824,6 +4960,26 @@ GameObject:
 MeshCollider:
   m_CorrespondingSourceObject: {fileID: 4965825409926507731, guid: 9537df2f52fa84840b4231653372fa08, type: 3}
   m_PrefabInstance: {fileID: 2017442061}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &1758747041 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1789302548398591966, guid: 46e33a8ed3a52c44bb44bc1a0902def3, type: 3}
+  m_PrefabInstance: {fileID: 847308244}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &1758747042 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 4346851817692231609, guid: 46e33a8ed3a52c44bb44bc1a0902def3, type: 3}
+  m_PrefabInstance: {fileID: 847308244}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &1758747043 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1329930980106196017, guid: 46e33a8ed3a52c44bb44bc1a0902def3, type: 3}
+  m_PrefabInstance: {fileID: 847308244}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &1758747044 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 7186620419770265742, guid: 46e33a8ed3a52c44bb44bc1a0902def3, type: 3}
+  m_PrefabInstance: {fileID: 847308244}
   m_PrefabAsset: {fileID: 0}
 --- !u!4 &1759603094 stripped
 Transform:
