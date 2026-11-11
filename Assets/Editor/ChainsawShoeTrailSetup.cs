@@ -8,7 +8,7 @@ using UnityEngine;
 public static class ChainsawShoeTrailSetup
 {
     private const string SCENE_PATH = "Assets/Develop/Scenes/InGame/InGameScene_Stage1.unity";
-    private const string MATERIAL_PATH = "Assets/Develop/Program/Shaders/ChainsawShoeTrail.mat";
+    private const string MATERIAL_PATH = "Assets/PreDevelop/Haruki/ShaderGraph/Chainsaw/M_ChainsawShoeTrail_Custom.mat";
 
     /// <summary>バッチ実行用にStage1を設定・検証して保存します。</summary>
     [MenuItem("Tools/Chainsaw Shoes/Configure Stage1")]
@@ -26,15 +26,11 @@ public static class ChainsawShoeTrailSetup
         Transform[] bones = model.GetComponentsInChildren<Transform>(true);
         Transform left = bones.Single(bone => bone.name == "Toes_L");
         Transform right = bones.Single(bone => bone.name == "Toes_R");
-        Shader shader = Shader.Find("OverGraind/ChainsawShoeTrail");
-        if (shader == null || ShaderUtil.ShaderHasError(shader))
-            throw new InvalidOperationException("Shoe trail shader did not compile.");
         Material material = AssetDatabase.LoadAssetAtPath<Material>(MATERIAL_PATH);
         if (material == null)
-        {
-            material = new Material(shader);
-            AssetDatabase.CreateAsset(material, MATERIAL_PATH);
-        }
+            throw new InvalidOperationException($"Shoe trail material was not found: {MATERIAL_PATH}");
+        if (material.shader == null || ShaderUtil.ShaderHasError(material.shader))
+            throw new InvalidOperationException("Shoe trail material shader did not compile.");
         PlayerChainsawShoeTrail trail = monitor.GetComponent<PlayerChainsawShoeTrail>();
         if (trail == null) trail = monitor.gameObject.AddComponent<PlayerChainsawShoeTrail>();
         SerializedObject serialized = new SerializedObject(trail);
