@@ -85,6 +85,7 @@ public sealed class PlayerHitState : StateBase<PlayerStateMachineComponent>
     /// <summary>被弾中の先行入力と無敵状態を解除します。</summary>
     protected override void OnExitState()
     {
+        Owner.GrindController.RestoreBoardingAfterHit();
         Owner.InputReader.DiscardInput();
         Owner.EndHitReaction();
         Owner.AnimationPresenter.StopHitAnimation();

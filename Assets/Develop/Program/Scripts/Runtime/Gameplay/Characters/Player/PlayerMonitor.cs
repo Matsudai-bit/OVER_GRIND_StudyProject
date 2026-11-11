@@ -1,5 +1,7 @@
 using System.Collections.Generic;
+using Unity.Mathematics;
 using UnityEngine;
+using UnityEngine.Splines;
 
 /// <summary>
 /// プレイヤーの物理状態と周辺環境を監視します。
@@ -78,6 +80,10 @@ public sealed class PlayerMonitor : MonoBehaviour
     private readonly HashSet<int> m_groundContactColliderIds = new();
 
     private SplineRailInfo m_hitRailInfo;
+
+    // Playerを支えるボス配下のレールをキャッシュします。
+    private BossPhaseParameterProvider m_cachedRailBoss;
+    private SplineRailInfo[] m_cachedBossRails = System.Array.Empty<SplineRailInfo>();
     /// <summary>
     /// プレイヤーが接地しているかを取得します。
     /// </summary>
@@ -430,8 +436,9 @@ public sealed class PlayerMonitor : MonoBehaviour
     /// </summary>
     private void RefreshRailDetection(Vector3 checkPosition)
     {
+        float detectionRadius = GetRailDetectionRadius(m_isGrounded);
         Collider[] hitColliders = Physics.OverlapSphere(
-            checkPosition, GetRailDetectionRadius(m_isGrounded),
+            checkPosition, detectionRadius,
             m_railLayerMask, QueryTriggerInteraction.Ignore);
 
         // 範囲を広げた際にも、レール以外の接触や前回の参照で搭乗しないよう毎回更新します。
@@ -460,7 +467,57 @@ public sealed class PlayerMonitor : MonoBehaviour
             m_hitRailInfo = rail;
         }
 
+        if (m_hitRailInfo == null)
+        {
+            RefreshBossRailDetection(checkPosition, detectionRadius);
+        }
+
         m_isRailed = m_hitRailInfo != null;
+    }
+
+    /// <summary>接地中のボスにあるレールを現在のSpline位置から検知します。</summary>
+    /// <param name="checkPosition">Playerの接地判定位置。</param>
+    /// <param name="detectionRadius">地上または空中のレール判定半径。</param>
+    private void RefreshBossRailDetection(Vector3 checkPosition, float detectionRadius)
+    {
+        if (m_groundCollider == null) return;
+
+        BossPhaseParameterProvider boss =
+            m_groundCollider.GetComponentInParent<BossPhaseParameterProvider>();
+        if (boss == null) return;
+
+        if (boss != m_cachedRailBoss)
+        {
+            m_cachedRailBoss = boss;
+            m_cachedBossRails = boss.GetComponentsInChildren<SplineRailInfo>(true);
+        }
+
+        float maximumDistanceSquared = detectionRadius * detectionRadius;
+        float nearestDistanceSquared = maximumDistanceSquared;
+        foreach (SplineRailInfo rail in m_cachedBossRails)
+        {
+            if (rail == null || !rail.isActiveAndEnabled ||
+                (m_railLayerMask.value & (1 << rail.gameObject.layer)) == 0 ||
+                rail.Container == null || rail.Container.Splines.Count == 0 ||
+                rail.Container.Splines[0].Count < 2)
+            {
+                continue;
+            }
+
+            using (var spline = new NativeSpline(
+                rail.Container.Splines[0],
+                rail.Container.transform.localToWorldMatrix))
+            {
+                SplineUtility.GetNearestPoint(
+                    spline, (float3)checkPosition, out float3 nearestPoint, out _);
+                float distanceSquared =
+                    math.distancesq((float3)checkPosition, nearestPoint);
+                if (distanceSquared >= nearestDistanceSquared) continue;
+
+                nearestDistanceSquared = distanceSquared;
+                m_hitRailInfo = rail;
+            }
+        }
     }
 
     /// <summary>衝突開始時に、ジャンプ可能な地面接触を記録します。</summary>

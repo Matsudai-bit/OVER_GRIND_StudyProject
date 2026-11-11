@@ -56,6 +56,13 @@ public sealed class PlayerWalkingState
             return;
         }
 
+        if (Owner.GrindController.CanStartGrind(
+            Owner.Monitor.IsRailed ? Owner.Monitor.HitRailInfo : null))
+        {
+            Machine.ChangeState<PlayerGrindingState>(Owner.Monitor.HitRailInfo);
+            return;
+        }
+
         // Vブーストの長押し成立を確認。
         // ただし新規のブースト開始は接地中のみ許可する
         UpdateMovingChargeStartDirection();

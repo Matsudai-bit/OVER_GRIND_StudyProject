@@ -53,6 +53,14 @@ public class SplineGrindController : MonoBehaviour
         IsCollisionExiting = false;
     }
 
+    /// <summary>被弾から復帰した際、レール離脱中の再搭乗制限と衝突無視を解除します。</summary>
+    public void RestoreBoardingAfterHit()
+    {
+        FinishCollisionExit();
+        collisionExitRail = null;
+        m_motor?.RestoreRailCollisions();
+    }
+
     // 現在の状態管理
     public bool IsGrinding { get; private set; } = false;
 

@@ -198,6 +198,14 @@ public sealed class PlayerVRunningState
             return;
         }
 
+        if (Owner.GrindController.CanStartGrind(
+            Owner.Monitor.IsRailed ? Owner.Monitor.HitRailInfo : null))
+        {
+            SuspendBoost();
+            Machine.ChangeState<PlayerGrindingState>(Owner.Monitor.HitRailInfo);
+            return;
+        }
+
         UpdatePhaseMovement();
     }
 
