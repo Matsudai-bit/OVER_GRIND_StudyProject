@@ -151,7 +151,8 @@ public sealed class PlayerMonitor : MonoBehaviour
     /// <returns>true：実際に地面へ接触中。false：空中または接地検出範囲内のみ。</returns>
     public bool CanStartJump =>
         m_isGrounded &&
-        HasGroundContact;
+        HasGroundContact &&
+        m_hasGroundSurface;
     /// <summary>足元の下向き判定で床面を確認し、側面への接触を除外します。</summary>
     /// <returns>true：足元に登坂可能な支持面あり。false：側面接触または空中。</returns>
     public bool HasGroundSupport()
