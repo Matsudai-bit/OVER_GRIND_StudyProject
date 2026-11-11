@@ -110,7 +110,105 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
 
     private EffectEmitter m_effectEmitter;
 
-    public EffectEmitter EffectEmitter => m_effectEmitter;
+    // Playerのシーケンス音声を再生・停止するController
+    private AnimationAudioSequentialController
+        m_audioSequentialController;
+
+    // PlayerAudioActionIDとAudioSequentialAssetの対応表
+    private PlayerAudioSequentialTableAsset
+        m_audioSequentialTableAsset;
+
+    // --------------------------------------------------------
+    // Attack Hit Audio
+    // --------------------------------------------------------
+
+    // 多段攻撃でヒットSEが過密にならないよう制限する最小再生間隔
+    [SerializeField, Header("Attack Hit Audio"), Min(0.0f)]
+    [Tooltip(
+        "HIT_ACTIVEのOneShotを再生できる最小間隔[秒]。"
+        + "0で命中通知ごとに再生します。")]
+    private float m_attackHitAudioInterval = 0.05f;
+
+    // 最後にHIT_ACTIVEを再生した時刻
+    private float m_lastAttackHitAudioTime =
+        float.NegativeInfinity;
+
+    /// <summary>
+    /// エフェクト発生機能を取得します。
+    /// </summary>
+    public EffectEmitter EffectEmitter =>
+        m_effectEmitter;
+
+    /// <summary>
+    /// Player用のシーケンス音声Controllerを取得します。
+    /// 各StateはOwner経由でこのControllerへアクセスできます。
+    /// </summary>
+    public AnimationAudioSequentialController
+        AudioSequentialController =>
+            m_audioSequentialController;
+
+    /// <summary>
+    /// Player用のシーケンス音声対応表を取得します。
+    /// </summary>
+    public PlayerAudioSequentialTableAsset
+        AudioSequentialTableAsset =>
+            m_audioSequentialTableAsset;
+
+    /// <summary>
+    /// ActionIDに対応するシーケンス音声データを取得します。
+    /// </summary>
+    /// <param name="actionID">Playerの行動ID。</param>
+    /// <param name="audioSequentialAsset">
+    /// 対応するシーケンス音声データ。
+    /// </param>
+    /// <returns>
+    /// true：対応するデータがあります。
+    /// false：対応表またはデータがありません。
+    /// </returns>
+    public bool TryGetAudioSequentialAsset(
+        PlayerAudioActionID actionID,
+        out AudioSequentialAsset audioSequentialAsset)
+    {
+        audioSequentialAsset = null;
+
+        if (m_audioSequentialTableAsset == null)
+        {
+            return false;
+        }
+
+        return m_audioSequentialTableAsset
+            .TryGetAudioSequentialAsset(
+                actionID,
+                out audioSequentialAsset);
+    }
+
+    /// <summary>
+    /// ActionIDに対応する単発再生用音声データを取得します。
+    /// </summary>
+    /// <param name="actionID">Playerの行動ID。</param>
+    /// <param name="audioOneShotAsset">
+    /// 対応する単発再生用音声データ。
+    /// </param>
+    /// <returns>
+    /// true：対応するデータがあります。
+    /// false：対応表またはデータがありません。
+    /// </returns>
+    public bool TryGetAudioOneShotAsset(
+        PlayerAudioActionID actionID,
+        out AudioOneShotAsset audioOneShotAsset)
+    {
+        audioOneShotAsset = null;
+
+        if (m_audioSequentialTableAsset == null)
+        {
+            return false;
+        }
+
+        return m_audioSequentialTableAsset
+            .TryGetAudioOneShotAsset(
+                actionID,
+                out audioOneShotAsset);
+    }
 
     public Health Health => m_health;
 
@@ -327,6 +425,10 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
         SpeedPlaceModel speedPlaceModel,
         PlayerStatusProvider statusProvider,
         EffectEmitter effectEmitter,
+        AnimationAudioSequentialController
+            audioSequentialController,
+        PlayerAudioSequentialTableAsset
+            audioSequentialTableAsset,
         Health health)
     {
         ApplyParameterAsset();
@@ -371,6 +473,29 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
                 this);
         }
 
+        if (audioSequentialController == null)
+        {
+            Debug.LogWarning(
+                $"[{nameof(PlayerStateMachineComponent)}] " +
+                $"{nameof(AnimationAudioSequentialController)}" +
+                "が設定されていません。" +
+                "Stateからシーケンス音声を再生できません。",
+                this);
+        }
+
+        if (audioSequentialTableAsset == null)
+        {
+            Debug.LogWarning(
+                $"[{nameof(PlayerStateMachineComponent)}] " +
+                $"{nameof(PlayerAudioSequentialTableAsset)}" +
+                "が設定されていません。" +
+                "ActionIDから音声データを取得できません。",
+                this);
+        }
+
+        // 再初期化時に旧AttackControllerのイベント購読を残さない
+        UnsubscribeAttackHitAudio();
+
         m_stateMachine?.Dispose();
 
         m_inputReader = inputReader;
@@ -402,6 +527,12 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
         m_speedPlaceModel.ResetSpeed();
         m_effectEmitter = effectEmitter;
         m_statusProvider = statusProvider;
+        m_audioSequentialController =
+            audioSequentialController;
+        m_audioSequentialTableAsset =
+            audioSequentialTableAsset;
+
+        SubscribeAttackHitAudio();
 
         m_stateMachine =
             new StateMachine<PlayerStateMachineComponent>(
@@ -513,13 +644,100 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
 
         m_vGaugePlaceModel.ConsumeBoostGauge(Time.fixedDeltaTime);
 
-        // 中断中にゲージを使い切った場合も、
-        // 復帰しようがないため中断状態を解除しておく
+        // 中断中にゲージを使い切った場合は、
+        // PlayerVRunningStateへ戻らないため、この場でVブースト音を終了します。
         if (SuspendedBoostGaugeRate <= 0.0f &&
             m_isBoostSuspended)
         {
+            PlayerAudioActionUtility.StopSequential(
+                this,
+                PlayerAudioActionID.V_RUNNING);
+
             m_isBoostSuspended = false;
         }
+    }
+
+
+    // ============================================================
+    // Attack Hit Audio
+    // ============================================================
+
+    /// <summary>
+    /// PlayerAttackControllerの命中通知を購読します。
+    /// </summary>
+    private void SubscribeAttackHitAudio()
+    {
+        if (m_attackController == null)
+        {
+            return;
+        }
+
+        m_attackController.ContinuousAttackHit -=
+            HandleContinuousAttackHitAudio;
+
+        m_attackController.ContinuousAttackHit +=
+            HandleContinuousAttackHitAudio;
+
+        m_lastAttackHitAudioTime =
+            float.NegativeInfinity;
+    }
+
+    /// <summary>
+    /// PlayerAttackControllerの命中通知購読を解除します。
+    /// </summary>
+    private void UnsubscribeAttackHitAudio()
+    {
+        if (m_attackController == null)
+        {
+            return;
+        }
+
+        m_attackController.ContinuousAttackHit -=
+            HandleContinuousAttackHitAudio;
+    }
+
+    /// <summary>
+    /// Player自身の攻撃でダメージが成立した時に、
+    /// HIT_ACTIVEのOneShotを再生します。
+    /// </summary>
+    /// <param name="target">
+    /// ダメージを与えた対象。
+    /// </param>
+    private void HandleContinuousAttackHitAudio(
+        IDamageable target)
+    {
+        if (target == null ||
+            m_audioSequentialController == null ||
+            m_audioSequentialTableAsset == null)
+        {
+            return;
+        }
+
+        float currentTime =
+            Time.time;
+
+        // 多段攻撃は高頻度で命中通知されるため、
+        // OneShotが過密にならないよう最小再生間隔を設けます。
+        if (m_attackHitAudioInterval > 0.0f &&
+            currentTime -
+            m_lastAttackHitAudioTime <
+            m_attackHitAudioInterval)
+        {
+            return;
+        }
+
+        bool hasPlayed =
+            PlayerAudioActionUtility.PlayOneShot(
+                this,
+                PlayerAudioActionID.HIT_ACTIVE);
+
+        if (!hasPlayed)
+        {
+            return;
+        }
+
+        m_lastAttackHitAudioTime =
+            currentTime;
     }
 
 
@@ -538,6 +756,8 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
          */
         m_isDestroying = true;
         m_isInitialized = false;
+
+        UnsubscribeAttackHitAudio();
 
         m_stateMachine?.Dispose();
 

@@ -26,10 +26,14 @@ public sealed class SoundIDGeneratorWindow : EditorWindow
     [Serializable]
     private sealed class AddItem
     {
+        public bool isSelected = false;
         public string idName = "";
         public AudioClip clip = null;
         public SoundCategory category = SoundCategory.BGM;
+        public float volume = 1.0f;
+        public float pitch = 1.0f;
         public bool is3D = false;
+        public float maxDistance = 30.0f;
         public bool loop = false;
     }
 
@@ -42,7 +46,10 @@ public sealed class SoundIDGeneratorWindow : EditorWindow
         public string idName;
         public string clipPath;
         public SoundCategory category;
+        public float volume;
+        public float pitch;
         public bool is3D;
+        public float maxDistance;
         public bool loop;
     }
 
@@ -85,8 +92,15 @@ public sealed class SoundIDGeneratorWindow : EditorWindow
     // 新規追加するサウンド一覧
     private readonly List<AddItem> m_addList = new List<AddItem>();
 
+    // 新規追加時に使用する初期カテゴリー
+    [SerializeField]
+    private SoundCategory m_defaultAddCategory = SoundCategory.BGM;
+
     // カテゴリフィルタの選択インデックス。0はすべて
     private int m_updateCategoryFilterIndex = 0;
+
+    // 登録済みサウンドの名前検索文字列
+    private string m_updateNameSearchText = "";
 
     // 削除対象の選択インデックス
     private int m_deleteSelectedIndex = 0;
@@ -109,8 +123,40 @@ public sealed class SoundIDGeneratorWindow : EditorWindow
     // 更新対象がループ再生か
     private bool m_updateLoop = false;
 
+    // 更新対象の音量
+    private float m_updateVolume = 1.0f;
+
+    // 更新対象のピッチ
+    private float m_updatePitch = 1.0f;
+
+    // 更新対象の3D最大距離
+    private float m_updateMaxDistance = 30.0f;
+
+    // 一括編集対象の登録済みAudioID
+    private readonly HashSet<AudioID> m_selectedExistingIDs =
+        new HashSet<AudioID>();
+
+    // 一括設定で変更する項目
+    private bool m_bulkApplyCategory = true;
+    private bool m_bulkApplyVolume = false;
+    private bool m_bulkApplyPitch = false;
+    private bool m_bulkApplyIs3D = true;
+    private bool m_bulkApplyMaxDistance = false;
+    private bool m_bulkApplyLoop = true;
+
+    // 一括設定値
+    private SoundCategory m_bulkCategory = SoundCategory.BGM;
+    private float m_bulkVolume = 1.0f;
+    private float m_bulkPitch = 1.0f;
+    private bool m_bulkIs3D = false;
+    private float m_bulkMaxDistance = 30.0f;
+    private bool m_bulkLoop = false;
+
     // 最後に選択した更新対象ID
     private string m_lastUpdateSelectedID = "";
+
+    // ウィンドウ全体のスクロール位置
+    private Vector2 m_windowScrollPosition = Vector2.zero;
 
     // カテゴリー検索結果一覧のスクロール位置
     private Vector2 m_updateSearchScrollPosition = Vector2.zero;
@@ -134,7 +180,7 @@ public sealed class SoundIDGeneratorWindow : EditorWindow
     {
         if (m_addList.Count == 0)
         {
-            m_addList.Add(new AddItem());
+            m_addList.Add(CreateAddItem());
         }
     }
 
@@ -145,9 +191,17 @@ public sealed class SoundIDGeneratorWindow : EditorWindow
 
     private void OnGUI()
     {
+        m_windowScrollPosition =
+            EditorGUILayout.BeginScrollView(
+                m_windowScrollPosition);
+
         EditorGUILayout.Space(10.0f);
 
         DrawAddSection();
+
+        DrawSeparator();
+
+        DrawBulkEditSection();
 
         string[] currentNames =
             Enum.GetNames(typeof(AudioID));
@@ -163,6 +217,10 @@ public sealed class SoundIDGeneratorWindow : EditorWindow
         DrawSeparator();
 
         DrawDeleteSection(currentNames);
+
+        EditorGUILayout.Space(10.0f);
+
+        EditorGUILayout.EndScrollView();
     }
 
     /// <summary>
@@ -174,6 +232,13 @@ public sealed class SoundIDGeneratorWindow : EditorWindow
             "識別子 + AudioClip の一括追加",
             EditorStyles.boldLabel);
 
+        m_defaultAddCategory =
+            (SoundCategory)EditorGUILayout.EnumPopup(
+                "追加時の初期カテゴリー",
+                m_defaultAddCategory);
+
+        EditorGUILayout.Space(4.0f);
+
         EditorGUILayout.BeginHorizontal();
 
         if (GUILayout.Button(
@@ -181,7 +246,7 @@ public sealed class SoundIDGeneratorWindow : EditorWindow
                 GUILayout.Width(100.0f),
                 GUILayout.Height(24.0f)))
         {
-            m_addList.Add(new AddItem());
+            m_addList.Add(CreateAddItem());
         }
 
         using (new EditorGUI.DisabledScope(m_addList.Count == 0))
@@ -213,10 +278,16 @@ public sealed class SoundIDGeneratorWindow : EditorWindow
 
         EditorGUILayout.Space(5.0f);
 
+        DrawAudioClipDropArea();
+
+        EditorGUILayout.Space(5.0f);
+
+        DrawAddSelectionControls();
+
         if (m_addList.Count == 0)
         {
             EditorGUILayout.HelpBox(
-                "追加する要素がありません。［+ 行を追加］から追加してください。",
+                "追加する要素がありません。AudioClipをドラッグ＆ドロップするか、［+ 行を追加］から追加してください。",
                 MessageType.Info);
         }
 
@@ -229,6 +300,11 @@ public sealed class SoundIDGeneratorWindow : EditorWindow
             EditorGUILayout.BeginVertical(EditorStyles.helpBox);
             EditorGUILayout.BeginHorizontal();
 
+            item.isSelected =
+                EditorGUILayout.Toggle(
+                    item.isSelected,
+                    GUILayout.Width(18.0f));
+
             EditorGUILayout.BeginVertical(GUILayout.Width(130.0f));
             EditorGUILayout.LabelField("識別子 (ID):", EditorStyles.miniLabel);
             item.idName = EditorGUILayout.TextField(item.idName);
@@ -236,11 +312,27 @@ public sealed class SoundIDGeneratorWindow : EditorWindow
 
             EditorGUILayout.BeginVertical();
             EditorGUILayout.LabelField("AudioClip:", EditorStyles.miniLabel);
-            item.clip =
+
+            AudioClip selectedClip =
                 (AudioClip)EditorGUILayout.ObjectField(
                     item.clip,
                     typeof(AudioClip),
                     false);
+
+            if (selectedClip != item.clip)
+            {
+                if (selectedClip == null)
+                {
+                    item.clip = null;
+                }
+                else
+                {
+                    SetAudioClipToAddItem(
+                        item,
+                        selectedClip);
+                }
+            }
+
             EditorGUILayout.EndVertical();
 
             EditorGUILayout.BeginVertical(GUILayout.Width(120.0f));
@@ -263,6 +355,37 @@ public sealed class SoundIDGeneratorWindow : EditorWindow
             }
 
             EditorGUILayout.EndHorizontal();
+
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField(
+                "詳細設定",
+                GUILayout.Width(70.0f));
+
+            item.volume =
+                EditorGUILayout.Slider(
+                    "Volume",
+                    item.volume,
+                    0.0f,
+                    1.0f);
+
+            item.pitch =
+                EditorGUILayout.Slider(
+                    "Pitch",
+                    item.pitch,
+                    0.1f,
+                    3.0f);
+
+            using (new EditorGUI.DisabledScope(!item.is3D))
+            {
+                item.maxDistance =
+                    Mathf.Max(
+                        0.0f,
+                        EditorGUILayout.FloatField(
+                            "3D最大距離",
+                            item.maxDistance));
+            }
+
+            EditorGUILayout.EndHorizontal();
             EditorGUILayout.EndVertical();
         }
 
@@ -282,6 +405,466 @@ public sealed class SoundIDGeneratorWindow : EditorWindow
                 BatchAddProcess();
             }
         }
+    }
+
+    /// <summary>
+    /// 追加予定スロットの複数選択UIを描画します。
+    /// </summary>
+    private void DrawAddSelectionControls()
+    {
+        if (m_addList.Count == 0)
+        {
+            return;
+        }
+
+        EditorGUILayout.BeginHorizontal();
+
+        if (GUILayout.Button(
+                "追加スロットを全選択",
+                GUILayout.Width(140.0f)))
+        {
+            foreach (AddItem item in m_addList)
+            {
+                item.isSelected = true;
+            }
+        }
+
+        if (GUILayout.Button(
+                "追加選択を解除",
+                GUILayout.Width(120.0f)))
+        {
+            foreach (AddItem item in m_addList)
+            {
+                item.isSelected = false;
+            }
+        }
+
+        GUILayout.FlexibleSpace();
+
+        EditorGUILayout.LabelField(
+            $"選択: {GetSelectedAddItemCount()}件",
+            GUILayout.Width(85.0f));
+
+        EditorGUILayout.EndHorizontal();
+        EditorGUILayout.Space(4.0f);
+    }
+
+    /// <summary>
+    /// 一括設定UIを描画します。
+    /// </summary>
+    private void DrawBulkEditSection()
+    {
+        EditorGUILayout.LabelField(
+            "一括設定",
+            EditorStyles.boldLabel);
+
+        EditorGUILayout.HelpBox(
+            "チェックした追加予定スロット、またはカテゴリー検索一覧で選択した登録済みサウンドへ、指定した項目だけをまとめて適用します。",
+            MessageType.Info);
+
+        EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+
+        DrawBulkCategorySetting();
+        DrawBulkVolumeSetting();
+        DrawBulkPitchSetting();
+        DrawBulk3DSetting();
+        DrawBulkMaxDistanceSetting();
+        DrawBulkLoopSetting();
+
+        EditorGUILayout.Space(6.0f);
+
+        EditorGUILayout.LabelField(
+            $"追加予定の選択: {GetSelectedAddItemCount()}件 / 登録済みの選択: {m_selectedExistingIDs.Count}件",
+            EditorStyles.miniBoldLabel);
+
+        EditorGUILayout.BeginHorizontal();
+
+        using (new EditorGUI.DisabledScope(GetSelectedAddItemCount() == 0))
+        {
+            if (GUILayout.Button(
+                    "選択した追加スロットに適用",
+                    GUILayout.Height(28.0f)))
+            {
+                ApplyBulkSettingsToAddItems();
+            }
+        }
+
+        using (new EditorGUI.DisabledScope(m_selectedExistingIDs.Count == 0))
+        {
+            if (GUILayout.Button(
+                    "選択した登録済みに適用",
+                    GUILayout.Height(28.0f)))
+            {
+                ApplyBulkSettingsToExistingSounds();
+            }
+        }
+
+        using (new EditorGUI.DisabledScope(
+                   GetSelectedAddItemCount() == 0 &&
+                   m_selectedExistingIDs.Count == 0))
+        {
+            if (GUILayout.Button(
+                    "両方に適用",
+                    GUILayout.Height(28.0f)))
+            {
+                if (GetSelectedAddItemCount() > 0)
+                {
+                    ApplyBulkSettingsToAddItems(false);
+                }
+
+                if (m_selectedExistingIDs.Count > 0)
+                {
+                    ApplyBulkSettingsToExistingSounds(false);
+                }
+
+                Debug.Log(
+                    "[SoundIDGeneratorWindow] 選択中の追加予定・登録済みサウンドへ一括設定を適用しました。");
+            }
+        }
+
+        EditorGUILayout.EndHorizontal();
+        EditorGUILayout.EndVertical();
+    }
+
+    private void DrawBulkCategorySetting()
+    {
+        EditorGUILayout.BeginHorizontal();
+        m_bulkApplyCategory = EditorGUILayout.ToggleLeft(
+            "カテゴリーを変更",
+            m_bulkApplyCategory,
+            GUILayout.Width(145.0f));
+        using (new EditorGUI.DisabledScope(!m_bulkApplyCategory))
+        {
+            m_bulkCategory =
+                (SoundCategory)EditorGUILayout.EnumPopup(m_bulkCategory);
+        }
+        EditorGUILayout.EndHorizontal();
+    }
+
+    private void DrawBulkVolumeSetting()
+    {
+        EditorGUILayout.BeginHorizontal();
+        m_bulkApplyVolume = EditorGUILayout.ToggleLeft(
+            "Volumeを変更",
+            m_bulkApplyVolume,
+            GUILayout.Width(145.0f));
+        using (new EditorGUI.DisabledScope(!m_bulkApplyVolume))
+        {
+            m_bulkVolume = EditorGUILayout.Slider(m_bulkVolume, 0.0f, 1.0f);
+        }
+        EditorGUILayout.EndHorizontal();
+    }
+
+    private void DrawBulkPitchSetting()
+    {
+        EditorGUILayout.BeginHorizontal();
+        m_bulkApplyPitch = EditorGUILayout.ToggleLeft(
+            "Pitchを変更",
+            m_bulkApplyPitch,
+            GUILayout.Width(145.0f));
+        using (new EditorGUI.DisabledScope(!m_bulkApplyPitch))
+        {
+            m_bulkPitch = EditorGUILayout.Slider(m_bulkPitch, 0.1f, 3.0f);
+        }
+        EditorGUILayout.EndHorizontal();
+    }
+
+    private void DrawBulk3DSetting()
+    {
+        EditorGUILayout.BeginHorizontal();
+        m_bulkApplyIs3D = EditorGUILayout.ToggleLeft(
+            "3D設定を変更",
+            m_bulkApplyIs3D,
+            GUILayout.Width(145.0f));
+        using (new EditorGUI.DisabledScope(!m_bulkApplyIs3D))
+        {
+            m_bulkIs3D = EditorGUILayout.ToggleLeft("3D音源", m_bulkIs3D);
+        }
+        EditorGUILayout.EndHorizontal();
+    }
+
+    private void DrawBulkMaxDistanceSetting()
+    {
+        EditorGUILayout.BeginHorizontal();
+        m_bulkApplyMaxDistance = EditorGUILayout.ToggleLeft(
+            "3D最大距離を変更",
+            m_bulkApplyMaxDistance,
+            GUILayout.Width(145.0f));
+        using (new EditorGUI.DisabledScope(!m_bulkApplyMaxDistance))
+        {
+            m_bulkMaxDistance =
+                Mathf.Max(0.0f, EditorGUILayout.FloatField(m_bulkMaxDistance));
+        }
+        EditorGUILayout.EndHorizontal();
+    }
+
+    private void DrawBulkLoopSetting()
+    {
+        EditorGUILayout.BeginHorizontal();
+        m_bulkApplyLoop = EditorGUILayout.ToggleLeft(
+            "Loopを変更",
+            m_bulkApplyLoop,
+            GUILayout.Width(145.0f));
+        using (new EditorGUI.DisabledScope(!m_bulkApplyLoop))
+        {
+            m_bulkLoop = EditorGUILayout.ToggleLeft("ループ", m_bulkLoop);
+        }
+        EditorGUILayout.EndHorizontal();
+    }
+
+    /// <summary>
+    /// 選択中の追加予定スロットへ一括設定を適用します。
+    /// </summary>
+    private void ApplyBulkSettingsToAddItems(bool logResult = true)
+    {
+        int appliedCount = 0;
+
+        foreach (AddItem item in m_addList)
+        {
+            if (!item.isSelected)
+            {
+                continue;
+            }
+
+            ApplyBulkSettings(item);
+            appliedCount++;
+        }
+
+        if (logResult)
+        {
+            Debug.Log(
+                $"[SoundIDGeneratorWindow] 追加予定 {appliedCount}件へ一括設定を適用しました。");
+        }
+    }
+
+    /// <summary>
+    /// 選択中の登録済みサウンドへ一括設定を適用します。
+    /// </summary>
+    private void ApplyBulkSettingsToExistingSounds(bool logResult = true)
+    {
+        SoundDatabase database = GetDatabaseStatic();
+
+        if (database == null)
+        {
+            Debug.LogWarning(
+                "[SoundIDGeneratorWindow] SoundDatabaseが見つかりません。");
+            return;
+        }
+
+        Undo.RecordObject(database, "Bulk Update Sound Data");
+
+        int appliedCount = 0;
+
+        foreach (AudioID audioID in m_selectedExistingIDs)
+        {
+            SoundDatabase.SoundData data = database.GetSoundData(audioID);
+
+            if (data == null)
+            {
+                continue;
+            }
+
+            ApplyBulkSettings(data);
+            appliedCount++;
+        }
+
+        EditorUtility.SetDirty(database);
+        AssetDatabase.SaveAssets();
+
+        // 現在個別表示しているデータも更新後の値へ同期する。
+        if (!string.IsNullOrWhiteSpace(m_lastUpdateSelectedID))
+        {
+            LoadSoundDataForUpdate(m_lastUpdateSelectedID);
+        }
+
+        if (logResult)
+        {
+            Debug.Log(
+                $"[SoundIDGeneratorWindow] 登録済み {appliedCount}件へ一括設定を適用しました。");
+        }
+    }
+
+    private void ApplyBulkSettings(AddItem item)
+    {
+        if (m_bulkApplyCategory) item.category = m_bulkCategory;
+        if (m_bulkApplyVolume) item.volume = m_bulkVolume;
+        if (m_bulkApplyPitch) item.pitch = m_bulkPitch;
+        if (m_bulkApplyIs3D) item.is3D = m_bulkIs3D;
+        if (m_bulkApplyMaxDistance) item.maxDistance = m_bulkMaxDistance;
+        if (m_bulkApplyLoop) item.loop = m_bulkLoop;
+    }
+
+    private void ApplyBulkSettings(SoundDatabase.SoundData data)
+    {
+        if (m_bulkApplyCategory) data.m_category = m_bulkCategory;
+        if (m_bulkApplyVolume) data.m_volume = m_bulkVolume;
+        if (m_bulkApplyPitch) data.m_pitch = m_bulkPitch;
+        if (m_bulkApplyIs3D) data.m_is3D = m_bulkIs3D;
+        if (m_bulkApplyMaxDistance) data.m_maxDistance = m_bulkMaxDistance;
+        if (m_bulkApplyLoop) data.m_loop = m_bulkLoop;
+    }
+
+    private int GetSelectedAddItemCount()
+    {
+        int count = 0;
+
+        foreach (AddItem item in m_addList)
+        {
+            if (item.isSelected)
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    /// <summary>
+    /// AudioClipのドラッグ＆ドロップ領域を描画します。
+    /// </summary>
+    private void DrawAudioClipDropArea()
+    {
+        Rect dropArea = GUILayoutUtility.GetRect(
+            0.0f,
+            58.0f,
+            GUILayout.ExpandWidth(true));
+
+        GUI.Box(
+            dropArea,
+            "AudioClipをここにドラッグ＆ドロップ\n複数選択に対応しています",
+            EditorStyles.helpBox);
+
+        HandleAudioClipDragAndDrop(dropArea);
+    }
+
+    /// <summary>
+    /// AudioClipのドラッグ＆ドロップ操作を処理します。
+    /// </summary>
+    /// <param name="dropArea">ドロップを受け付ける領域。</param>
+    private void HandleAudioClipDragAndDrop(Rect dropArea)
+    {
+        Event currentEvent = Event.current;
+
+        if (!dropArea.Contains(currentEvent.mousePosition))
+        {
+            return;
+        }
+
+        if (currentEvent.type != EventType.DragUpdated &&
+            currentEvent.type != EventType.DragPerform)
+        {
+            return;
+        }
+
+        bool containsAudioClip = false;
+
+        foreach (UnityEngine.Object draggedObject in DragAndDrop.objectReferences)
+        {
+            if (draggedObject is AudioClip)
+            {
+                containsAudioClip = true;
+                break;
+            }
+        }
+
+        if (!containsAudioClip)
+        {
+            DragAndDrop.visualMode = DragAndDropVisualMode.Rejected;
+            return;
+        }
+
+        DragAndDrop.visualMode = DragAndDropVisualMode.Copy;
+
+        if (currentEvent.type != EventType.DragPerform)
+        {
+            currentEvent.Use();
+            return;
+        }
+
+        DragAndDrop.AcceptDrag();
+
+        AddDroppedAudioClips(DragAndDrop.objectReferences);
+
+        currentEvent.Use();
+    }
+
+    /// <summary>
+    /// ドロップされたAudioClipを追加リストへ登録します。
+    /// 既存の空スロットを優先して使用し、不足分は新しいスロットを作成します。
+    /// </summary>
+    /// <param name="draggedObjects">ドラッグされたオブジェクト一覧。</param>
+    private void AddDroppedAudioClips(
+        IReadOnlyList<UnityEngine.Object> draggedObjects)
+    {
+        foreach (UnityEngine.Object draggedObject in draggedObjects)
+        {
+            if (draggedObject is not AudioClip audioClip)
+            {
+                continue;
+            }
+
+            AddItem targetItem = FindEmptyAddItem();
+
+            if (targetItem == null)
+            {
+                targetItem = CreateAddItem();
+                m_addList.Add(targetItem);
+            }
+
+            SetAudioClipToAddItem(
+                targetItem,
+                audioClip);
+        }
+
+        Repaint();
+    }
+
+    /// <summary>
+    /// 現在の初期設定を適用した追加スロットを生成します。
+    /// </summary>
+    private AddItem CreateAddItem()
+    {
+        return new AddItem
+        {
+            category = m_defaultAddCategory
+        };
+    }
+
+    /// <summary>
+    /// AudioClipが未設定の追加スロットを取得します。
+    /// </summary>
+    private AddItem FindEmptyAddItem()
+    {
+        foreach (AddItem item in m_addList)
+        {
+            if (item.clip == null)
+            {
+                return item;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// 追加スロットへAudioClipを設定します。
+    /// IDが未入力の場合はAudioClip名を大文字化して自動設定します。
+    /// </summary>
+    /// <param name="item">設定先の追加スロット。</param>
+    /// <param name="audioClip">設定するAudioClip。</param>
+    private static void SetAudioClipToAddItem(
+        AddItem item,
+        AudioClip audioClip)
+    {
+        item.clip = audioClip;
+
+        if (!string.IsNullOrWhiteSpace(item.idName))
+        {
+            return;
+        }
+
+        item.idName =
+            audioClip.name.ToUpperInvariant();
     }
 
     /// <summary>
@@ -349,6 +932,7 @@ public sealed class SoundIDGeneratorWindow : EditorWindow
             EditorStyles.boldLabel);
 
         DrawUpdateCategoryFilter();
+        DrawUpdateNameSearchField();
 
         string[] currentNames =
             GetFilteredAudioIDNamesForUpdate();
@@ -400,10 +984,34 @@ public sealed class SoundIDGeneratorWindow : EditorWindow
                 "カテゴリー:",
                 m_updateCategory);
 
+        m_updateVolume =
+            EditorGUILayout.Slider(
+                "Volume:",
+                m_updateVolume,
+                0.0f,
+                1.0f);
+
+        m_updatePitch =
+            EditorGUILayout.Slider(
+                "Pitch:",
+                m_updatePitch,
+                0.1f,
+                3.0f);
+
         m_updateIs3D =
             EditorGUILayout.Toggle(
                 "3D音源:",
                 m_updateIs3D);
+
+        using (new EditorGUI.DisabledScope(!m_updateIs3D))
+        {
+            m_updateMaxDistance =
+                Mathf.Max(
+                    0.0f,
+                    EditorGUILayout.FloatField(
+                        "3D最大距離:",
+                        m_updateMaxDistance));
+        }
 
         m_updateLoop =
             EditorGUILayout.Toggle(
@@ -440,9 +1048,27 @@ public sealed class SoundIDGeneratorWindow : EditorWindow
             return;
         }
 
+        EditorGUILayout.BeginHorizontal();
+
         EditorGUILayout.LabelField(
             $"検索結果: {currentNames.Length}件",
             EditorStyles.boldLabel);
+
+        if (GUILayout.Button(
+                "検索結果を全選択",
+                GUILayout.Width(120.0f)))
+        {
+            SetExistingSelection(currentNames, true);
+        }
+
+        if (GUILayout.Button(
+                "登録済み選択を解除",
+                GUILayout.Width(130.0f)))
+        {
+            m_selectedExistingIDs.Clear();
+        }
+
+        EditorGUILayout.EndHorizontal();
 
         m_updateSearchScrollPosition =
             EditorGUILayout.BeginScrollView(
@@ -469,6 +1095,26 @@ public sealed class SoundIDGeneratorWindow : EditorWindow
 
             EditorGUILayout.BeginHorizontal(
                 EditorStyles.helpBox);
+
+            bool isSelected =
+                m_selectedExistingIDs.Contains(audioID);
+
+            bool newIsSelected =
+                EditorGUILayout.Toggle(
+                    isSelected,
+                    GUILayout.Width(18.0f));
+
+            if (newIsSelected != isSelected)
+            {
+                if (newIsSelected)
+                {
+                    m_selectedExistingIDs.Add(audioID);
+                }
+                else
+                {
+                    m_selectedExistingIDs.Remove(audioID);
+                }
+            }
 
             EditorGUILayout.LabelField(
                 idName,
@@ -500,6 +1146,31 @@ public sealed class SoundIDGeneratorWindow : EditorWindow
         }
 
         EditorGUILayout.EndScrollView();
+    }
+
+    /// <summary>
+    /// 現在の検索結果に含まれる登録済みサウンドの選択状態をまとめて変更します。
+    /// </summary>
+    private void SetExistingSelection(
+        IReadOnlyList<string> currentNames,
+        bool isSelected)
+    {
+        foreach (string idName in currentNames)
+        {
+            if (!Enum.TryParse(idName, out AudioID audioID))
+            {
+                continue;
+            }
+
+            if (isSelected)
+            {
+                m_selectedExistingIDs.Add(audioID);
+            }
+            else
+            {
+                m_selectedExistingIDs.Remove(audioID);
+            }
+        }
     }
 
     /// <summary>
@@ -629,12 +1300,57 @@ public sealed class SoundIDGeneratorWindow : EditorWindow
 
         m_updateCategoryFilterIndex = newFilterIndex;
 
-        // 絞り込み対象が変わるため、選択中データを初期化する。
+        // 絞り込み対象が変わるため、確認・更新対象の選択状態を初期化する。
+        ResetUpdateSelection();
+    }
+
+    /// <summary>
+    /// 登録済みサウンドの名前検索UIを描画します。
+    /// AudioID名またはAudioClip名を部分一致で検索します。
+    /// </summary>
+    private void DrawUpdateNameSearchField()
+    {
+        EditorGUILayout.BeginHorizontal();
+
+        string newSearchText =
+            EditorGUILayout.TextField(
+                "名前検索:",
+                m_updateNameSearchText);
+
+        if (GUILayout.Button(
+                "クリア",
+                GUILayout.Width(60.0f)))
+        {
+            newSearchText = "";
+            GUI.FocusControl(null);
+        }
+
+        EditorGUILayout.EndHorizontal();
+
+        if (newSearchText == m_updateNameSearchText)
+        {
+            return;
+        }
+
+        m_updateNameSearchText = newSearchText;
+
+        // 絞り込み対象が変わるため、確認・更新対象の選択状態を初期化する。
+        ResetUpdateSelection();
+    }
+
+    /// <summary>
+    /// 確認・更新画面の選択状態を初期化します。
+    /// </summary>
+    private void ResetUpdateSelection()
+    {
         m_updateSelectedIndex = 0;
         m_lastUpdateSelectedID = "";
         m_updateClip = null;
         m_updateCategory = SoundCategory.BGM;
+        m_updateVolume = 1.0f;
+        m_updatePitch = 1.0f;
         m_updateIs3D = false;
+        m_updateMaxDistance = 30.0f;
         m_updateLoop = false;
     }
 
@@ -739,10 +1455,52 @@ public sealed class SoundIDGeneratorWindow : EditorWindow
                 continue;
             }
 
+            if (!MatchesUpdateNameSearch(
+                    idName,
+                    soundData))
+            {
+                continue;
+            }
+
             filteredNames.Add(idName);
         }
 
         return filteredNames.ToArray();
+    }
+
+    /// <summary>
+    /// サウンドが現在の名前検索条件に一致するか確認します。
+    /// </summary>
+    /// <param name="idName">AudioID名。</param>
+    /// <param name="soundData">サウンドデータ。</param>
+    /// <returns>検索条件に一致する場合はtrue。</returns>
+    private bool MatchesUpdateNameSearch(
+        string idName,
+        SoundDatabase.SoundData soundData)
+    {
+        if (string.IsNullOrWhiteSpace(m_updateNameSearchText))
+        {
+            return true;
+        }
+
+        string searchText =
+            m_updateNameSearchText.Trim();
+
+        if (idName.IndexOf(
+                searchText,
+                StringComparison.OrdinalIgnoreCase) >= 0)
+        {
+            return true;
+        }
+
+        if (soundData.m_clip == null)
+        {
+            return false;
+        }
+
+        return soundData.m_clip.name.IndexOf(
+            searchText,
+            StringComparison.OrdinalIgnoreCase) >= 0;
     }
 
     /// <summary>
@@ -875,7 +1633,10 @@ public sealed class SoundIDGeneratorWindow : EditorWindow
                     idName = sanitized,
                     clipPath = AssetDatabase.GetAssetPath(item.clip),
                     category = item.category,
+                    volume = item.volume,
+                    pitch = item.pitch,
                     is3D = item.is3D,
+                    maxDistance = item.maxDistance,
                     loop = item.loop
                 });
         }
@@ -967,7 +1728,10 @@ public sealed class SoundIDGeneratorWindow : EditorWindow
 
             data.m_clip = clip;
             data.m_category = entry.category;
+            data.m_volume = entry.volume;
+            data.m_pitch = entry.pitch;
             data.m_is3D = entry.is3D;
+            data.m_maxDistance = entry.maxDistance;
             data.m_loop = entry.loop;
         }
 
@@ -1038,6 +1802,11 @@ public sealed class SoundIDGeneratorWindow : EditorWindow
         GenerateEnumFile(
             idEntries,
             nextAudioIDValue);
+
+        if (Enum.TryParse(targetID, out AudioID deletedAudioID))
+        {
+            m_selectedExistingIDs.Remove(deletedAudioID);
+        }
 
         m_previewSelectedIndex = 0;
         m_updateSelectedIndex = 0;
@@ -1358,7 +2127,10 @@ public sealed class SoundIDGeneratorWindow : EditorWindow
 
         m_updateClip = data.m_clip;
         m_updateCategory = data.m_category;
+        m_updateVolume = data.m_volume;
+        m_updatePitch = data.m_pitch;
         m_updateIs3D = data.m_is3D;
+        m_updateMaxDistance = data.m_maxDistance;
         m_updateLoop = data.m_loop;
     }
 
@@ -1369,7 +2141,10 @@ public sealed class SoundIDGeneratorWindow : EditorWindow
     {
         m_updateClip = null;
         m_updateCategory = SoundCategory.BGM;
+        m_updateVolume = 1.0f;
+        m_updatePitch = 1.0f;
         m_updateIs3D = false;
+        m_updateMaxDistance = 30.0f;
         m_updateLoop = false;
     }
 
@@ -1417,7 +2192,10 @@ public sealed class SoundIDGeneratorWindow : EditorWindow
 
         data.m_clip = m_updateClip;
         data.m_category = m_updateCategory;
+        data.m_volume = m_updateVolume;
+        data.m_pitch = m_updatePitch;
         data.m_is3D = m_updateIs3D;
+        data.m_maxDistance = m_updateMaxDistance;
         data.m_loop = m_updateLoop;
 
         EditorUtility.SetDirty(database);

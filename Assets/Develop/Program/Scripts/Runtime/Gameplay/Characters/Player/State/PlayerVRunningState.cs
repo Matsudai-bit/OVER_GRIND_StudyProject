@@ -51,6 +51,16 @@ public sealed class PlayerVRunningState
     /// </summary>
     protected override void OnStartState()
     {
+        // 通常移動音からVブースト走行音へ切り替えます。
+        PlayerAudioActionUtility.StopSequential(
+            Owner,
+            PlayerAudioActionID.WALKING,
+            true);
+
+        PlayerAudioActionUtility.PlaySequential(
+            Owner,
+            PlayerAudioActionID.V_RUNNING);
+
         m_isWaitingForMovingCharge = false;
 
         PlayerMoveParameters normalParameters =
@@ -134,7 +144,7 @@ public sealed class PlayerVRunningState
             Owner.SuspendedBoostGaugeRate);
 
         Owner.EffectEmitter.Play(EffectId.PLAYER_MOVE_VBOOST_I);
-        m_loopEffect =  Owner.EffectEmitter.Play(EffectId.PLAYER_MOVE_VBOOST_L);
+        m_loopEffect = Owner.EffectEmitter.Play(EffectId.PLAYER_MOVE_VBOOST_L);
     }
 
 
@@ -148,6 +158,13 @@ public sealed class PlayerVRunningState
         {
             // 攻撃中も残量を引き継ぎ、チャージの継続消費を維持する。
             SuspendBoost();
+
+            // 攻撃音へ切り替えるためVブースト音は即時停止します。
+            PlayerAudioActionUtility.StopSequential(
+                Owner,
+                PlayerAudioActionID.V_RUNNING,
+                true);
+
             Machine.ChangeState<PlayerAttackingState>();
             return;
         }
@@ -233,14 +250,24 @@ public sealed class PlayerVRunningState
         m_loopEffect.Stop();
         Owner.EffectEmitter.Play(EffectId.PLAYER_MOVE_VBOOST_O);
 
-        // 中断による終了の場合は、後で再開するため
-        // ゲージ表示・演出をリセットしない
+        // 無入力・ジャンプ等による中断では、
+        // Vブースト自体は残りゲージを保持したまま継続しているため、
+        // V_RUNNING音声も停止しません。
+        //
+        // 再びPlayerVRunningStateへ戻った場合は、
+        // PlayerAudioActionUtility側のIsPlaying判定によって
+        // 同じ音声が二重再生されることもありません。
         if (Owner.IsBoostSuspended)
         {
             return;
         }
 
-        // ゲージを消費しきった場合などの完全終了
+        // ゲージ枯渇などでVブーストが完全終了した場合だけ、
+        // 終了音へ遷移してV_RUNNING音声を停止します。
+        PlayerAudioActionUtility.StopSequential(
+            Owner,
+            PlayerAudioActionID.V_RUNNING);
+
         Owner.VGaugePlaceModel.SetGaugeRate(0.0f);
     }
 
@@ -263,11 +290,11 @@ public sealed class PlayerVRunningState
 
 
 
-/// <summary>
-/// 現在のフェーズに応じた移動処理を行い、
-/// ダッシュ時間経過時はフェーズを切り替えます。
-/// </summary>
-private void UpdatePhaseMovement()
+    /// <summary>
+    /// 現在のフェーズに応じた移動処理を行い、
+    /// ダッシュ時間経過時はフェーズを切り替えます。
+    /// </summary>
+    private void UpdatePhaseMovement()
     {
         switch (m_currentPhase)
         {
@@ -357,6 +384,12 @@ private void UpdatePhaseMovement()
                         $"残りゲージを引き継いでVブーストチャージを開始します。" +
                         $"引き継ぎ率={Owner.SuspendedBoostGaugeRate:P1}",
                         Owner);
+
+                    // チャージ音へ切り替えるため終了音を鳴らさず停止します。
+                    PlayerAudioActionUtility.StopSequential(
+                        Owner,
+                        PlayerAudioActionID.V_RUNNING,
+                        true);
 
                     Machine.ChangeState<PlayerBoostChargingState>();
                     return;

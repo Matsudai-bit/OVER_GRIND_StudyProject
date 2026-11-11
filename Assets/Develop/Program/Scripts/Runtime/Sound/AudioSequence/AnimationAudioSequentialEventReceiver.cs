@@ -33,6 +33,28 @@ public sealed class AnimationAudioSequentialEventReceiver : MonoBehaviour
     }
 
     /// <summary>
+    /// Animation Eventから単発音声を再生します。
+    /// Object ParameterにAudioOneShotAssetを設定してください。
+    /// </summary>
+    public void OnAnimationAudioOneShot(AnimationEvent animationEvent)
+    {
+        AudioOneShotAsset asset = animationEvent != null
+            ? animationEvent.objectReferenceParameter as AudioOneShotAsset
+            : null;
+
+        if (asset == null)
+        {
+            Debug.LogWarning("[AnimationAudioSequentialEventReceiver] 単発音声Assetがありません。", this);
+            return;
+        }
+
+        if (TryGetController())
+        {
+            m_audioController.PlayOneShot(asset);
+        }
+    }
+
+    /// <summary>
     /// AnimationClipの終了地点に配置したイベントを受け取ります。
     /// </summary>
     public void OnAnimationAudioSequentialEnd(AnimationEvent animationEvent)

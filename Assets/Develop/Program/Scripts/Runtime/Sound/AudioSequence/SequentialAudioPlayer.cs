@@ -46,6 +46,36 @@ public sealed class SequentialAudioPlayer : MonoBehaviour
     }
 
     /// <summary>
+    /// 単発音声を再生します。アニメーション終了時にも自動停止しません。
+    /// </summary>
+    /// <param name="asset">単発音声の設定。</param>
+    /// <param name="emissionPoint">音声発生位置。省略時は既定値。</param>
+    /// <returns>個別停止用ハンドル。失敗した場合はnull。</returns>
+    public AudioPlayHandle PlayOneShot(AudioOneShotAsset asset, Transform emissionPoint = null)
+    {
+        if (asset == null || AudioManager.Instance == null)
+        {
+            Debug.LogWarning("[SequentialAudioPlayer] 単発音声AssetまたはAudioManagerがありません。", this);
+            return null;
+        }
+
+        AudioManager manager = AudioManager.Instance;
+        Transform source = emissionPoint != null ? emissionPoint : GetDefaultEmissionPoint();
+
+        switch (asset.SpatialMode)
+        {
+            case AudioSequentialSpatialMode.THREE_DIMENSIONAL_AT_POSITION:
+                return manager.Play3DAtPosition(asset.AudioID, source.position, false);
+
+            case AudioSequentialSpatialMode.THREE_DIMENSIONAL_FOLLOWING:
+                return manager.Play3DFollowing(asset.AudioID, source, false);
+
+            default:
+                return manager.Play2D(asset.AudioID, false);
+        }
+    }
+
+    /// <summary>
     /// 指定した音声セットを終了音へ遷移させます。
     /// </summary>
     public void Stop(AudioSequentialHandle handle)

@@ -137,6 +137,69 @@ public class AudioManager : MonoBehaviour
     }
 
     /// <summary>
+    /// DSP時刻を指定して2D音声を予約します。
+    /// </summary>
+    /// <param name="id">音声ID。</param>
+    /// <param name="dspTime">AudioSettings.dspTime基準の開始時刻。</param>
+    /// <param name="loop">今回の再生だけで使うループ指定。</param>
+    /// <param name="initialVolumeMultiplier">開始音量倍率（0〜1）。</param>
+    /// <returns>再生ハンドル。失敗した場合はnull。</returns>
+    public AudioPlayHandle PlayScheduled2D(AudioID id, double dspTime, bool loop,
+        float initialVolumeMultiplier = 1.0f)
+    {
+        return PlayInternal(id, node => node.Schedule2D(dspTime), loop, initialVolumeMultiplier);
+    }
+
+    /// <summary>
+    /// DSP時刻を指定して固定位置3D音声を予約します。
+    /// </summary>
+    public AudioPlayHandle PlayScheduled3DAtPosition(AudioID id, Vector3 position,
+        double dspTime, bool loop, float initialVolumeMultiplier = 1.0f)
+    {
+        return PlayInternal(id, node => node.Schedule3DAtPosition(position, dspTime),
+            loop, initialVolumeMultiplier);
+    }
+
+    /// <summary>
+    /// DSP時刻を指定して3D追従音声を予約します。
+    /// </summary>
+    public AudioPlayHandle PlayScheduled3DFollowing(AudioID id, Transform target,
+        double dspTime, bool loop, float initialVolumeMultiplier = 1.0f)
+    {
+        if (target == null)
+        {
+            Debug.LogWarning("[AudioManager] 予約音声の追従先がありません。", this);
+            return null;
+        }
+
+        return PlayInternal(id, node => node.Schedule3DFollowing(target, dspTime),
+            loop, initialVolumeMultiplier);
+    }
+
+    /// <summary>
+    /// クリップとPitchから音声の再生時間を取得します。
+    /// </summary>
+    /// <returns>true：有効な再生時間です。false：音声が未登録またはPitch不正です。</returns>
+    public bool TryGetClipDuration(AudioID id, out double durationSeconds)
+    {
+        durationSeconds = 0.0;
+        if (m_database == null)
+        {
+            return false;
+        }
+
+        SoundDatabase.SoundData data = m_database.GetSoundData(id);
+        if (data == null || data.m_clip == null || data.m_clip.frequency <= 0 ||
+            data.m_pitch <= 0.0f)
+        {
+            return false;
+        }
+
+        durationSeconds = (double)data.m_clip.samples / data.m_clip.frequency / data.m_pitch;
+        return durationSeconds > 0.0;
+    }
+
+    /// <summary>
     /// 指定したTransformに追従するすべての音声を停止します。
     /// </summary>
     /// <param name="target">追従先。</param>
