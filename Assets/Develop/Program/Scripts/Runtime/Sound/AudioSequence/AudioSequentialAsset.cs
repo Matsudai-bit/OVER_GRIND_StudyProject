@@ -19,8 +19,13 @@ public sealed class AudioSequentialAsset : ScriptableObject
     [SerializeField] private AudioID m_endAudioID;
 
     [Header("再生位置")]
-    [SerializeField] private AudioSequentialSpatialMode m_spatialMode =
+    [SerializeField]
+    private AudioSequentialSpatialMode m_spatialMode =
         AudioSequentialSpatialMode.THREE_DIMENSIONAL_FOLLOWING;
+
+    [Header("無音対策 / 予約再生")]
+    [SerializeField, Min(0.02f)] private float m_scheduleLeadSeconds = 0.05f;
+    [SerializeField, Min(0.0f)] private float m_endCrossfadeSeconds = 0.06f;
 
     [Header("アニメーション連携")]
     [SerializeField] private bool m_stopOnAnimationEnd = true;
@@ -43,6 +48,12 @@ public sealed class AudioSequentialAsset : ScriptableObject
 
     /// <summary>音源位置の方式を取得します。</summary>
     public AudioSequentialSpatialMode SpatialMode => m_spatialMode;
+
+    /// <summary>DSP予約に必要な先読み時間（秒）です。</summary>
+    public float ScheduleLeadSeconds => Mathf.Max(0.02f, m_scheduleLeadSeconds);
+
+    /// <summary>終了音へのクロスフェード時間（秒）です。</summary>
+    public float EndCrossfadeSeconds => Mathf.Max(0.0f, m_endCrossfadeSeconds);
 
     /// <summary>アニメーション終了時に停止するかを取得します。</summary>
     public bool StopOnAnimationEnd => m_stopOnAnimationEnd;

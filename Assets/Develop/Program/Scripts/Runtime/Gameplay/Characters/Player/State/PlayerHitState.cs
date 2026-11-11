@@ -26,6 +26,12 @@ public sealed class PlayerHitState : StateBase<PlayerStateMachineComponent>
     /// <summary>攻撃やグラインドを中断し、攻撃中心から離れる速度を適用します。</summary>
     protected override void OnStartState()
     {
+        // 被弾は現在の行動を強制中断するため、
+        // 継続中のPlayer行動音を終了音なしで停止します。
+        PlayerAudioActionUtility
+            .StopAllGameplaySequentialImmediate(
+                Owner);
+
         if (Owner.GrindController.IsGrinding)
         {
             Owner.GrindController.StopGrind();
@@ -44,7 +50,7 @@ public sealed class PlayerHitState : StateBase<PlayerStateMachineComponent>
             type = 1;
         }
 
-            Owner.AnimationPresenter.PlayHitAnimation(type);
+        Owner.AnimationPresenter.PlayHitAnimation(type);
         Owner.Motor.ApplyKnockback(m_attackCenter, m_horizontalSpeed, m_liftSpeed);
         // 倍率0でも被弾・無敵・復帰待機は発生させ、吹き飛びだけを省略します。
         m_isRecovering = m_horizontalSpeed <= 0.0f && m_liftSpeed <= 0.0f;

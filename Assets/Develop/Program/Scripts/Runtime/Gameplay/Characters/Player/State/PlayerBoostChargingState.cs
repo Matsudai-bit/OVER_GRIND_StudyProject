@@ -100,6 +100,15 @@ public sealed class PlayerBoostChargingState
     /// </summary>
     protected override void OnStartState()
     {
+        // 通常移動音からチャージ音へ切り替えるため、
+        // 移動側の終了音は鳴らさず即時停止します。
+        PlayerAudioActionUtility.StopSequential(
+            Owner,
+            PlayerAudioActionID.WALKING,
+            true);
+
+
+
         // Stateの再入時もID登録が重複しないように初期化します。
         m_effectMap.Clear();
         m_vUpGradeIntervalTimeMap.Clear();
@@ -166,6 +175,9 @@ public sealed class PlayerBoostChargingState
             currentSpeedAtChargeStart *
             m_parameterAsset.ChargeMoveSpeedRate;
 
+        PlayerAudioActionUtility.PlaySequential(
+    Owner,
+     PlayerAudioActionUtility.GetChargeActionID(m_startedFromStationary));
         // --------------------------------------------------------
         // チャージ開始時の移動方向を取得
         // --------------------------------------------------------
@@ -1149,6 +1161,11 @@ public sealed class PlayerBoostChargingState
     /// </summary>
     protected override void OnExitState()
     {
+        // チャージ継続音を終了音へ遷移させます。
+        PlayerAudioActionUtility.StopSequential(
+            Owner,
+            PlayerAudioActionUtility.GetChargeActionID(m_startedFromStationary));
+
         // State終了後にエフェクトの終了通知で次段階へ進まないよう解除します。
         StopChargeEffects();
 
