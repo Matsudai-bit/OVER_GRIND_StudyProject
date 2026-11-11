@@ -100,6 +100,21 @@ public sealed class AnimationAudioSequentialController : MonoBehaviour
     }
 
     /// <summary>
+    /// Animation Event向けの単発音声を再生します。
+    /// </summary>
+    /// <returns>再生ハンドル。失敗した場合はnull。</returns>
+    public AudioPlayHandle PlayOneShot(AudioOneShotAsset asset)
+    {
+        if (m_audioPlayer == null)
+        {
+            Debug.LogWarning("[AnimationAudioSequentialController] SequentialAudioPlayerがありません。", this);
+            return null;
+        }
+
+        return m_audioPlayer.PlayOneShot(asset, m_emissionPoint);
+    }
+
+    /// <summary>
     /// 再生時と同じAssetとチャンネルの音声セットを終了音へ遷移させます。
     /// </summary>
     /// <returns>true：停止対象がありました。false：対象なし。</returns>
@@ -110,14 +125,106 @@ public sealed class AnimationAudioSequentialController : MonoBehaviour
             return false;
         }
 
-        PlaybackKey key = new PlaybackKey(asset, channel);
-        if (!m_activeHandles.TryGetValue(key, out List<AudioSequentialHandle> handles))
+        PlaybackKey key =
+            new PlaybackKey(
+                asset,
+                channel);
+
+        if (!m_activeHandles.TryGetValue(
+                key,
+                out List<AudioSequentialHandle> handles))
         {
             return false;
         }
 
-        m_activeHandles.Remove(key);
-        return StopHandles(handles, false);
+        m_activeHandles.Remove(
+            key);
+
+        return StopHandles(
+            handles,
+            false);
+    }
+
+    /// <summary>
+    /// 指定したAssetとチャンネルの音声セットを、
+    /// 終了音を再生せず即座に停止します。
+    /// </summary>
+    /// <param name="asset">停止する音声セット。</param>
+    /// <param name="channel">再生チャンネル。</param>
+    /// <returns>
+    /// true：停止対象がありました。
+    /// false：停止対象がありません。
+    /// </returns>
+    public bool StopImmediate(
+        AudioSequentialAsset asset,
+        int channel = 0)
+    {
+        if (asset == null)
+        {
+            return false;
+        }
+
+        PlaybackKey key =
+            new PlaybackKey(
+                asset,
+                channel);
+
+        if (!m_activeHandles.TryGetValue(
+                key,
+                out List<AudioSequentialHandle> handles))
+        {
+            return false;
+        }
+
+        m_activeHandles.Remove(
+            key);
+
+        return StopHandles(
+            handles,
+            true);
+    }
+
+    /// <summary>
+    /// 指定したAssetとチャンネルの音声セットが再生中か確認します。
+    /// </summary>
+    /// <param name="asset">確認する音声セット。</param>
+    /// <param name="channel">再生チャンネル。</param>
+    /// <returns>
+    /// true：再生中です。
+    /// false：再生されていません。
+    /// </returns>
+    public bool IsPlaying(
+        AudioSequentialAsset asset,
+        int channel = 0)
+    {
+        if (asset == null)
+        {
+            return false;
+        }
+
+        PlaybackKey key =
+            new PlaybackKey(
+                asset,
+                channel);
+
+        if (!m_activeHandles.TryGetValue(
+                key,
+                out List<AudioSequentialHandle> handles))
+        {
+            return false;
+        }
+
+        foreach (AudioSequentialHandle handle in
+                 handles)
+        {
+            if (handle != null &&
+                handle.IsActive)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>

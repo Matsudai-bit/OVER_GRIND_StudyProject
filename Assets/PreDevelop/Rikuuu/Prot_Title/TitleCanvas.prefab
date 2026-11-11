@@ -331,7 +331,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: -15, y: 0}
-  m_SizeDelta: {x: 74, y: 37}
+  m_SizeDelta: {x: 44, y: 36}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &3743320403470881381
 CanvasRenderer:
@@ -361,7 +361,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: bc0cd29d22f57bf49bfdfaf1ddc39def, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 10aabe59b96f8684ca3ee9c1c630c6d9, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -881,36 +881,36 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
+      - m_Target: {fileID: 1694774537627944828}
+        m_TargetAssemblyTypeName: AudioEventPlayer, Assembly-CSharp
+        m_MethodName: Play2D
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
   m_onClickAction:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 5223373128085291123}
-        m_TargetAssemblyTypeName: SceneNavigator, Assembly-CSharp
-        m_MethodName: ChangeTransitionInEffect
-        m_Mode: 2
+      - m_Target: {fileID: 2024152555846834551}
+        m_TargetAssemblyTypeName: AudioEventPlayer, Assembly-CSharp
+        m_MethodName: Play2D
+        m_Mode: 1
         m_Arguments:
-          m_ObjectArgument: {fileID: 4850721005755377521, guid: e5ee7460be3a26344b0b6ddd753e3700, type: 3}
-          m_ObjectArgumentAssemblyTypeName: SceneTransitionEffect, Assembly-CSharp
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
           m_IntArgument: 0
           m_FloatArgument: 0
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
-      - m_Target: {fileID: 5223373128085291123}
-        m_TargetAssemblyTypeName: SceneNavigator, Assembly-CSharp
-        m_MethodName: ChangeTransitionOutEffect
-        m_Mode: 2
-        m_Arguments:
-          m_ObjectArgument: {fileID: 8713407394917058467, guid: 45d4f5741c0df74469a650ff3812b906, type: 3}
-          m_ObjectArgumentAssemblyTypeName: SceneTransitionEffect, Assembly-CSharp
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
-      - m_Target: {fileID: 5223373128085291123}
-        m_TargetAssemblyTypeName: SceneNavigator, Assembly-CSharp
-        m_MethodName: ChangeScene
+      - m_Target: {fileID: 0}
+        m_TargetAssemblyTypeName: WindowNavigator, Assembly-CSharp
+        m_MethodName: OpenWindow
         m_Mode: 5
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -1022,7 +1022,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: -25, y: 0}
-  m_SizeDelta: {x: 63, y: 37}
+  m_SizeDelta: {x: 43, y: 43}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &1426697062874598625
 CanvasRenderer:
@@ -1052,7 +1052,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: b5e1b5dd439773b4281233e3dfc67ea2, type: 3}
+  m_Sprite: {fileID: 21300000, guid: ff88e9fc844968e448b830f9b831c0d7, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -1168,9 +1168,33 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
+      - m_Target: {fileID: 1694774537627944828}
+        m_TargetAssemblyTypeName: AudioEventPlayer, Assembly-CSharp
+        m_MethodName: Play2D
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
   m_onClickAction:
     m_PersistentCalls:
       m_Calls:
+      - m_Target: {fileID: 9132240187075632956}
+        m_TargetAssemblyTypeName: AudioEventPlayer, Assembly-CSharp
+        m_MethodName: Play2D
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
       - m_Target: {fileID: 3462346213339809989}
         m_TargetAssemblyTypeName: SceneNavigatorSwitcher, Assembly-CSharp
         m_MethodName: Execute
@@ -1180,7 +1204,7 @@ MonoBehaviour:
           m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
           m_IntArgument: 0
           m_FloatArgument: 0
-          m_StringArgument: ProtStoryScene
+          m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
   m_onClickExitAction:
@@ -1248,7 +1272,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: -25, y: 0}
-  m_SizeDelta: {x: 81, y: 37}
+  m_SizeDelta: {x: 43, y: 43}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &8706638187969252194
 CanvasRenderer:
@@ -1278,7 +1302,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 0426305848644754abad03a9e2511c85, type: 3}
+  m_Sprite: {fileID: 21300000, guid: db78ba576df71cc418fa907a01b53bac, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -1519,8 +1543,8 @@ RectTransform:
   - {fileID: 4575285137821195265}
   - {fileID: 5251035335311896219}
   - {fileID: 664652960388363683}
-  - {fileID: 2919185786765056198}
   - {fileID: 58466738906511154}
+  - {fileID: 2919185786765056198}
   m_Father: {fileID: 3692239803717995891}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
@@ -1573,6 +1597,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SceneNavigatorSwitcher
   m_sceneNavigator: {fileID: 5223373128085291123}
+  m_saveDataController: {fileID: 0}
   m_visitKey: Story
   m_firstTime:
     SceneName: OpningScene
@@ -1583,7 +1608,7 @@ MonoBehaviour:
     InEffect: {fileID: 2789103863317319705, guid: 81d4041b12a5c154c9a68ce1803bd324, type: 3}
     OutEffect: {fileID: 1693598453171396716, guid: 033b5b16a0fec3a449a086f62725c7e1, type: 3}
   m_markOnExecute: 1
-  m_debugVisitMode: 2
+  m_debugVisitMode: 0
   m_debugSkipSave: 1
 --- !u!1 &6427808312841514959
 GameObject:
@@ -1932,7 +1957,8 @@ RectTransform:
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 4525968807893890450}
   m_Father: {fileID: 3692239803717995891}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
@@ -1955,8 +1981,34 @@ MonoBehaviour:
   m_buttons:
   - {fileID: 4072346880475271174}
   - {fileID: 1208439567481916408}
-  - {fileID: 1705443795362988298}
   - {fileID: 6503948823791327769}
+  - {fileID: 1705443795362988298}
+  m_onCursorAction:
+    m_PersistentCalls:
+      m_Calls: []
+  m_onCursorExitAction:
+    m_PersistentCalls:
+      m_Calls:
+      - m_Target: {fileID: 1694774537627944828}
+        m_TargetAssemblyTypeName: AudioEventPlayer, Assembly-CSharp
+        m_MethodName: Play2D
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+  m_onClickAction:
+    m_PersistentCalls:
+      m_Calls: []
+  m_onClickExitAction:
+    m_PersistentCalls:
+      m_Calls: []
+  m_isInvokeOnStart: 0
+  m_isCallCursorExitForAllButtons: 0
   m_cursor: {fileID: 4318769068801039934}
   m_moveAction:
     m_PersistentCalls:
@@ -2348,7 +2400,7 @@ Transform:
   m_GameObject: {fileID: 8653755777754350715}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: -45, z: 0}
+  m_LocalPosition: {x: 0, y: -135, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -2397,9 +2449,33 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
+      - m_Target: {fileID: 1694774537627944828}
+        m_TargetAssemblyTypeName: AudioEventPlayer, Assembly-CSharp
+        m_MethodName: Play2D
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
   m_onClickAction:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 2024152555846834551}
+        m_TargetAssemblyTypeName: AudioEventPlayer, Assembly-CSharp
+        m_MethodName: Play2D
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
   m_onClickExitAction:
     m_PersistentCalls:
       m_Calls: []
@@ -2493,7 +2569,7 @@ Transform:
   m_GameObject: {fileID: 8902009461225538117}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: -135, z: 0}
+  m_LocalPosition: {x: 0, y: -45, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -2542,9 +2618,33 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
+      - m_Target: {fileID: 1694774537627944828}
+        m_TargetAssemblyTypeName: AudioEventPlayer, Assembly-CSharp
+        m_MethodName: Play2D
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
   m_onClickAction:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 2024152555846834551}
+        m_TargetAssemblyTypeName: AudioEventPlayer, Assembly-CSharp
+        m_MethodName: Play2D
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
   m_onClickExitAction:
     m_PersistentCalls:
       m_Calls: []
@@ -2573,3 +2673,138 @@ MonoBehaviour:
   m_onCursorLabelColor: {r: 1, g: 1, b: 1, a: 1}
   m_tooltip: "\u30AF\u30EC\u30B8\u30C3\u30C8\u3092\u8868\u793A\u3057\u307E\u3059"
   m_tipText: {fileID: 5910550564612649325}
+--- !u!1001 &7201020176024438818
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 5192396165436196696}
+    m_Modifications:
+    - target: {fileID: 6710452592186031536, guid: d136c70657c998447b8a5d3b33cd8bb4, type: 3}
+      propertyPath: m_Pivot.x
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 6710452592186031536, guid: d136c70657c998447b8a5d3b33cd8bb4, type: 3}
+      propertyPath: m_Pivot.y
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 6710452592186031536, guid: d136c70657c998447b8a5d3b33cd8bb4, type: 3}
+      propertyPath: m_AnchorMax.x
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 6710452592186031536, guid: d136c70657c998447b8a5d3b33cd8bb4, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 6710452592186031536, guid: d136c70657c998447b8a5d3b33cd8bb4, type: 3}
+      propertyPath: m_AnchorMin.x
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 6710452592186031536, guid: d136c70657c998447b8a5d3b33cd8bb4, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 6710452592186031536, guid: d136c70657c998447b8a5d3b33cd8bb4, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 100
+      objectReference: {fileID: 0}
+    - target: {fileID: 6710452592186031536, guid: d136c70657c998447b8a5d3b33cd8bb4, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 100
+      objectReference: {fileID: 0}
+    - target: {fileID: 6710452592186031536, guid: d136c70657c998447b8a5d3b33cd8bb4, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6710452592186031536, guid: d136c70657c998447b8a5d3b33cd8bb4, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6710452592186031536, guid: d136c70657c998447b8a5d3b33cd8bb4, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6710452592186031536, guid: d136c70657c998447b8a5d3b33cd8bb4, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6710452592186031536, guid: d136c70657c998447b8a5d3b33cd8bb4, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6710452592186031536, guid: d136c70657c998447b8a5d3b33cd8bb4, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6710452592186031536, guid: d136c70657c998447b8a5d3b33cd8bb4, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6710452592186031536, guid: d136c70657c998447b8a5d3b33cd8bb4, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6710452592186031536, guid: d136c70657c998447b8a5d3b33cd8bb4, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6710452592186031536, guid: d136c70657c998447b8a5d3b33cd8bb4, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6710452592186031536, guid: d136c70657c998447b8a5d3b33cd8bb4, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6710452592186031536, guid: d136c70657c998447b8a5d3b33cd8bb4, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8678971526542346940, guid: d136c70657c998447b8a5d3b33cd8bb4, type: 3}
+      propertyPath: m_Name
+      value: ButtonAudioPlayerGroup
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: d136c70657c998447b8a5d3b33cd8bb4, type: 3}
+--- !u!114 &1694774537627944828 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 8388558783934844766, guid: d136c70657c998447b8a5d3b33cd8bb4, type: 3}
+  m_PrefabInstance: {fileID: 7201020176024438818}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e79e227b59338854697e34f113e60ed4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AudioEventPlayer
+--- !u!114 &2024152555846834551 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 9221144103673696597, guid: d136c70657c998447b8a5d3b33cd8bb4, type: 3}
+  m_PrefabInstance: {fileID: 7201020176024438818}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e79e227b59338854697e34f113e60ed4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AudioEventPlayer
+--- !u!224 &4525968807893890450 stripped
+RectTransform:
+  m_CorrespondingSourceObject: {fileID: 6710452592186031536, guid: d136c70657c998447b8a5d3b33cd8bb4, type: 3}
+  m_PrefabInstance: {fileID: 7201020176024438818}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &9132240187075632956 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 2113056437011420958, guid: d136c70657c998447b8a5d3b33cd8bb4, type: 3}
+  m_PrefabInstance: {fileID: 7201020176024438818}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e79e227b59338854697e34f113e60ed4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AudioEventPlayer
