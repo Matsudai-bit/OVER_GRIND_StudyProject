@@ -413,7 +413,6 @@ public class PauseFadeManager : MonoBehaviour, IUIInputControllable
         }
 
         // Å‰‚©‚çÄ¶‚·‚é
-        target.Stop();
         target.time = 0;
         target.Evaluate();
 
