@@ -97,7 +97,9 @@ public sealed class S1P2BossMoveState :
         }
         
         m_effectHandle = m_commonReferences.EffectEmitter.Play(EffectId.S1P2_BOSS_SMOKE);
-           
+        m_commonReferences.AudioEmitter.PlaySequence(AudioCueId.MOVE_0);
+
+
         /*
          * MoveState開始時に一度だけ
          * 尻尾攻撃を実行するか判定します。
@@ -449,6 +451,8 @@ public sealed class S1P2BossMoveState :
     /// </summary>
     private void TryCompleteState()
     {
+        m_commonReferences.AudioEmitter.StopSequence(AudioCueId.MOVE_0);
+
         if (!m_isMoveCompleted ||
             !m_isTailSlamCompleted)
         {

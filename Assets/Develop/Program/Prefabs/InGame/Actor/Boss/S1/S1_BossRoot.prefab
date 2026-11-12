@@ -315,7 +315,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BossPhaseController
   m_phaseEventChannel: {fileID: 11400000, guid: df9d164d5f445284d9a90cfc59a579f9, type: 2}
-  m_initialPhase: 0
+  m_initialPhase: 1
   m_phaseDefinitions:
   - m_phaseID: 0
     m_phaseRoot: {fileID: 3370906925090144230}
@@ -1114,6 +1114,136 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AnimationEffectController
   m_effectEmitter: {fileID: 5413641790462775355}
+--- !u!1 &6278863887370295058
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2487739658644778831}
+  - component: {fileID: 4056573775131462855}
+  - component: {fileID: 298761773684046748}
+  - component: {fileID: 8541271151762693305}
+  - component: {fileID: 5531368054422877231}
+  m_Layer: 7
+  m_Name: Audio
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2487739658644778831
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6278863887370295058}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 5483682173405828417}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &4056573775131462855
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6278863887370295058}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6e21897eea7c6d944a0ff383522472d9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AnimationAudioSequentialController
+  m_audioPlayer: {fileID: 298761773684046748}
+  m_emissionPoint: {fileID: 0}
+--- !u!114 &298761773684046748
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6278863887370295058}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 81af29007c2817c4a838c046144539fe, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SequentialAudioPlayer
+  m_defaultEmissionPoint: {fileID: 0}
+--- !u!114 &8541271151762693305
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6278863887370295058}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 28462435d7c398b47aec7d7b7c47c6b2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AudioEmitter
+  m_sequentialPlayer: {fileID: 298761773684046748}
+  m_anchorRegistry: {fileID: 5531368054422877231}
+  m_entries:
+  - m_cueId: 7
+    m_playbackType: 0
+    m_sequentialAsset: {fileID: 11400000, guid: 8d2e7f7aefde69e4ca1104cdee6c8a6d, type: 2}
+    m_oneShotAsset: {fileID: 0}
+    m_anchorId: 0
+  - m_cueId: 8
+    m_playbackType: 0
+    m_sequentialAsset: {fileID: 11400000, guid: ba698f0b88c6095409d8acac61fbcade, type: 2}
+    m_oneShotAsset: {fileID: 0}
+    m_anchorId: 0
+  - m_cueId: 1
+    m_playbackType: 0
+    m_sequentialAsset: {fileID: 11400000, guid: c993553afa79be34eb3cbf5e8706eccf, type: 2}
+    m_oneShotAsset: {fileID: 0}
+    m_anchorId: 0
+  - m_cueId: 2
+    m_playbackType: 1
+    m_sequentialAsset: {fileID: 0}
+    m_oneShotAsset: {fileID: 11400000, guid: 7e79337698769e54088c602b15021652, type: 2}
+    m_anchorId: 108
+  - m_cueId: 51
+    m_playbackType: 1
+    m_sequentialAsset: {fileID: 0}
+    m_oneShotAsset: {fileID: 11400000, guid: 1fda13cbb1eb339428dc2284b7ffb53c, type: 2}
+    m_anchorId: 108
+  m_stopOneShotsOnDisable: 0
+--- !u!114 &5531368054422877231
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6278863887370295058}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 89f4c50c1b26de145a14225a37d29657, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AudioAnchorRegistry
+  m_modelRoot: {fileID: 2336704364496153205}
+  m_animator: {fileID: 0}
+  m_entries:
+  - m_id: 0
+    m_target: {fileID: 4237256859409231704}
+    m_mode: 0
+    m_relativePath: Group/DeformationSystem/Root_M
+    m_uniqueName: Root_M
+    m_humanoidBone: 0
+  - m_id: 108
+    m_target: {fileID: 2219876731916616175}
+    m_mode: 0
+    m_relativePath: Group/DeformationSystem/Root_M/Root1_M/Tail0_M/Tail1_M/Tail2_M/Tail3_M/Tail4_M/Tail5_M/Tail6_M/Tail7_M/Tail8_M/Tail9_M/Tail10_M/Tail11_M
+    m_uniqueName: Tail11_M
+    m_humanoidBone: 0
 --- !u!1 &8342613364481132130
 GameObject:
   m_ObjectHideFlags: 0
@@ -3292,6 +3422,10 @@ PrefabInstance:
       value: 0.07677313
       objectReference: {fileID: 0}
     - target: {fileID: 4161574303545481022, guid: 1952ae232a121494aa25817a54b2be1f, type: 3}
+      propertyPath: m_audioEmitter
+      value: 
+      objectReference: {fileID: 8541271151762693305}
+    - target: {fileID: 4161574303545481022, guid: 1952ae232a121494aa25817a54b2be1f, type: 3}
       propertyPath: m_effectEmitter
       value: 
       objectReference: {fileID: 3608730856555016627}
@@ -4041,7 +4175,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6926342611240679952, guid: 1952ae232a121494aa25817a54b2be1f, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 6930861987818890304, guid: 1952ae232a121494aa25817a54b2be1f, type: 3}
       propertyPath: m_LocalPosition.x
@@ -4669,6 +4803,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 5132993289057097369, guid: 1952ae232a121494aa25817a54b2be1f, type: 3}
       insertIndex: -1
       addedObject: {fileID: 5725503610542381460}
+    - targetCorrespondingSourceObject: {fileID: 5132993289057097369, guid: 1952ae232a121494aa25817a54b2be1f, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2487739658644778831}
     - targetCorrespondingSourceObject: {fileID: 5654471839653819131, guid: 1952ae232a121494aa25817a54b2be1f, type: 3}
       insertIndex: -1
       addedObject: {fileID: 4193213556210996040}
@@ -4682,6 +4819,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 6926342611240679952, guid: 1952ae232a121494aa25817a54b2be1f, type: 3}
       insertIndex: -1
       addedObject: {fileID: 4821852410138318033}
+    - targetCorrespondingSourceObject: {fileID: 6926342611240679952, guid: 1952ae232a121494aa25817a54b2be1f, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 8804989048322878963}
   m_SourcePrefab: {fileID: 100100000, guid: 1952ae232a121494aa25817a54b2be1f, type: 3}
 --- !u!4 &664673844775091104 stripped
 Transform:
@@ -4732,6 +4872,16 @@ ParentConstraint:
 --- !u!4 &1739031848212735364 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 1371264249548432988, guid: 1952ae232a121494aa25817a54b2be1f, type: 3}
+  m_PrefabInstance: {fileID: 803327184160244696}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &2219876731916616175 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 1579474777310151223, guid: 1952ae232a121494aa25817a54b2be1f, type: 3}
+  m_PrefabInstance: {fileID: 803327184160244696}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &2336704364496153205 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 3118841613924477357, guid: 1952ae232a121494aa25817a54b2be1f, type: 3}
   m_PrefabInstance: {fileID: 803327184160244696}
   m_PrefabAsset: {fileID: 0}
 --- !u!1773428102 &2468996165482333816 stripped
@@ -4818,6 +4968,11 @@ Transform:
 --- !u!1773428102 &4136398372137574030 stripped
 ParentConstraint:
   m_CorrespondingSourceObject: {fileID: 3621612864232152406, guid: 1952ae232a121494aa25817a54b2be1f, type: 3}
+  m_PrefabInstance: {fileID: 803327184160244696}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &4237256859409231704 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 3596194090261539968, guid: 1952ae232a121494aa25817a54b2be1f, type: 3}
   m_PrefabInstance: {fileID: 803327184160244696}
   m_PrefabAsset: {fileID: 0}
 --- !u!1773428102 &4339481607232554219 stripped
@@ -4968,6 +5123,20 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AnimationTimelineEventReceiver
   m_timelineController: {fileID: 1083745586657254219}
+--- !u!114 &8804989048322878963
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7726684068824201672}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0bfadf23fa59a3a429be72cd4cfc3282, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AnimationAudioCueEventReceiver
+  m_audioEmitter: {fileID: 8541271151762693305}
+  m_allowLegacyIntParameter: 1
 --- !u!4 &7898727239529687649 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 7401691561489541561, guid: 1952ae232a121494aa25817a54b2be1f, type: 3}
@@ -6597,6 +6766,10 @@ PrefabInstance:
       value: 0.2769111
       objectReference: {fileID: 0}
     - target: {fileID: 2483743263431458382, guid: 152dba4b6a651034d883c7f6ce2c67fe, type: 3}
+      propertyPath: m_audioEmitter
+      value: 
+      objectReference: {fileID: 3270295546487359240}
+    - target: {fileID: 2483743263431458382, guid: 152dba4b6a651034d883c7f6ce2c67fe, type: 3}
       propertyPath: m_effectEmitter
       value: 
       objectReference: {fileID: 4925575449156145951}
@@ -6846,7 +7019,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3998479390973877006, guid: 152dba4b6a651034d883c7f6ce2c67fe, type: 3}
       propertyPath: m_IsActive
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4108747142441568064, guid: 152dba4b6a651034d883c7f6ce2c67fe, type: 3}
       propertyPath: m_LocalRotation.w
@@ -7785,6 +7958,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AnimationAudioCueEventReceiver
   m_audioEmitter: {fileID: 3270295546487359240}
+  m_allowLegacyIntParameter: 1
 --- !u!4 &3431129572481651881 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 3902223967322796097, guid: 152dba4b6a651034d883c7f6ce2c67fe, type: 3}
@@ -8774,6 +8948,30 @@ PrefabInstance:
       propertyPath: m_InitialState
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 7342203583455425929, guid: 20e093f6e8a030a4fa35f2791755f4df, type: 3}
+      propertyPath: m_SceneBindings.Array.size
+      value: 9
+      objectReference: {fileID: 0}
+    - target: {fileID: 7342203583455425929, guid: 20e093f6e8a030a4fa35f2791755f4df, type: 3}
+      propertyPath: m_SceneBindings.Array.data[5].key
+      value: 
+      objectReference: {fileID: 2795511538137399822, guid: 6849ae89966593445a1a30010121d4e6, type: 2}
+    - target: {fileID: 7342203583455425929, guid: 20e093f6e8a030a4fa35f2791755f4df, type: 3}
+      propertyPath: m_SceneBindings.Array.data[6].key
+      value: 
+      objectReference: {fileID: 2864191578039916949, guid: 6849ae89966593445a1a30010121d4e6, type: 2}
+    - target: {fileID: 7342203583455425929, guid: 20e093f6e8a030a4fa35f2791755f4df, type: 3}
+      propertyPath: m_SceneBindings.Array.data[7].key
+      value: 
+      objectReference: {fileID: 941462622339954147, guid: 6849ae89966593445a1a30010121d4e6, type: 2}
+    - target: {fileID: 7342203583455425929, guid: 20e093f6e8a030a4fa35f2791755f4df, type: 3}
+      propertyPath: m_SceneBindings.Array.data[8].key
+      value: 
+      objectReference: {fileID: -4853606123072356161, guid: 6849ae89966593445a1a30010121d4e6, type: 2}
+    - target: {fileID: 7342203583455425929, guid: 20e093f6e8a030a4fa35f2791755f4df, type: 3}
+      propertyPath: m_SceneBindings.Array.data[8].value
+      value: 
+      objectReference: {fileID: 1553472624272277160}
     - target: {fileID: 7384980689108588265, guid: 20e093f6e8a030a4fa35f2791755f4df, type: 3}
       propertyPath: m_Name
       value: S1P2_Boss_ExhaustHeat
@@ -8809,13 +9007,36 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 7384980689108588265, guid: 20e093f6e8a030a4fa35f2791755f4df, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1553472624272277160}
   m_SourcePrefab: {fileID: 100100000, guid: 20e093f6e8a030a4fa35f2791755f4df, type: 3}
 --- !u!320 &3852436933041229620 stripped
 PlayableDirector:
   m_CorrespondingSourceObject: {fileID: 7342203583455425929, guid: 20e093f6e8a030a4fa35f2791755f4df, type: 3}
   m_PrefabInstance: {fileID: 5805744345830226621}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &3958274260599745620 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 7384980689108588265, guid: 20e093f6e8a030a4fa35f2791755f4df, type: 3}
+  m_PrefabInstance: {fileID: 5805744345830226621}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1553472624272277160
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3958274260599745620}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b71091be0b41955499cdc9bcb6bf6cb0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AudioCueTimelineReceiver
+  m_audioEmitter: {fileID: 8541271151762693305}
+  m_director: {fileID: 3852436933041229620}
+  m_stopSequencesOnDirectorStopped: 1
 --- !u!1773428102 &7613099092841050755 stripped
 ParentConstraint:
   m_CorrespondingSourceObject: {fileID: 4122215263444846654, guid: 20e093f6e8a030a4fa35f2791755f4df, type: 3}
@@ -10014,6 +10235,30 @@ PrefabInstance:
       propertyPath: m_InitialState
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 7342203583455425929, guid: 20e093f6e8a030a4fa35f2791755f4df, type: 3}
+      propertyPath: m_SceneBindings.Array.size
+      value: 9
+      objectReference: {fileID: 0}
+    - target: {fileID: 7342203583455425929, guid: 20e093f6e8a030a4fa35f2791755f4df, type: 3}
+      propertyPath: m_SceneBindings.Array.data[5].key
+      value: 
+      objectReference: {fileID: 2795511538137399822, guid: 6849ae89966593445a1a30010121d4e6, type: 2}
+    - target: {fileID: 7342203583455425929, guid: 20e093f6e8a030a4fa35f2791755f4df, type: 3}
+      propertyPath: m_SceneBindings.Array.data[6].key
+      value: 
+      objectReference: {fileID: 2864191578039916949, guid: 6849ae89966593445a1a30010121d4e6, type: 2}
+    - target: {fileID: 7342203583455425929, guid: 20e093f6e8a030a4fa35f2791755f4df, type: 3}
+      propertyPath: m_SceneBindings.Array.data[7].key
+      value: 
+      objectReference: {fileID: 941462622339954147, guid: 6849ae89966593445a1a30010121d4e6, type: 2}
+    - target: {fileID: 7342203583455425929, guid: 20e093f6e8a030a4fa35f2791755f4df, type: 3}
+      propertyPath: m_SceneBindings.Array.data[8].key
+      value: 
+      objectReference: {fileID: -4853606123072356161, guid: 6849ae89966593445a1a30010121d4e6, type: 2}
+    - target: {fileID: 7342203583455425929, guid: 20e093f6e8a030a4fa35f2791755f4df, type: 3}
+      propertyPath: m_SceneBindings.Array.data[8].value
+      value: 
+      objectReference: {fileID: 8639121360148198173}
     - target: {fileID: 7384980689108588265, guid: 20e093f6e8a030a4fa35f2791755f4df, type: 3}
       propertyPath: m_Name
       value: S1P2_Boss_ExhaustHeat
@@ -10049,8 +10294,31 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 7384980689108588265, guid: 20e093f6e8a030a4fa35f2791755f4df, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 8639121360148198173}
   m_SourcePrefab: {fileID: 100100000, guid: 20e093f6e8a030a4fa35f2791755f4df, type: 3}
+--- !u!1 &1276781563873521061 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 7384980689108588265, guid: 20e093f6e8a030a4fa35f2791755f4df, type: 3}
+  m_PrefabInstance: {fileID: 8630219454197611340}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &8639121360148198173
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1276781563873521061}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b71091be0b41955499cdc9bcb6bf6cb0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AudioCueTimelineReceiver
+  m_audioEmitter: {fileID: 8541271151762693305}
+  m_director: {fileID: 1306058856835108549}
+  m_stopSequencesOnDirectorStopped: 1
 --- !u!320 &1306058856835108549 stripped
 PlayableDirector:
   m_CorrespondingSourceObject: {fileID: 7342203583455425929, guid: 20e093f6e8a030a4fa35f2791755f4df, type: 3}
