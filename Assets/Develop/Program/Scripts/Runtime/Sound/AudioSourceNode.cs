@@ -9,6 +9,9 @@ using UnityEngine.Audio;
 public class AudioSourceNode : MonoBehaviour
 {
     private const float DEFAULT_MIN_DISTANCE = 1.0f;
+    private const float DEFAULT_MAX_DISTANCE = 30.0f;
+    private const float MIN_VALID_DISTANCE = 0.01f;
+    private const float DISTANCE_EPSILON = 0.01f;
     private const float SPATIAL_BLEND_3D = 1.0f;
     private const float SPATIAL_BLEND_2D = 0.0f;
 
@@ -111,9 +114,27 @@ public class AudioSourceNode : MonoBehaviour
         Source.pitch = data.m_pitch;
         Source.loop = data.m_loop;
         Source.outputAudioMixerGroup = mixerGroup;
-        Source.minDistance = DEFAULT_MIN_DISTANCE;
-        Source.maxDistance = data.m_maxDistance;
-        Source.rolloffMode = AudioRolloffMode.Logarithmic;
+        // プールから再利用されても、前の音の距離減衰設定を引き継がないよう初期化します。
+        // 既存データに未設定の新規フィールドがある場合も従来値で動作させます。
+        float minDistance = data.m_minDistance > 0.0f
+            ? data.m_minDistance : DEFAULT_MIN_DISTANCE;
+        float maxDistance = data.m_maxDistance > 0.0f
+            ? data.m_maxDistance : DEFAULT_MAX_DISTANCE;
+        Source.minDistance = Mathf.Max(MIN_VALID_DISTANCE, minDistance);
+        Source.maxDistance = Mathf.Max(Source.minDistance + DISTANCE_EPSILON, maxDistance);
+        Source.rolloffMode = data.m_rolloffMode;
+        if (data.m_rolloffMode == AudioRolloffMode.Custom)
+        {
+            AnimationCurve curve = data.m_customRolloffCurve;
+            if (curve == null || curve.length == 0)
+            {
+                // 未設定のカーブでは意図せず無音になるため、直線減衰を使用します。
+                curve = AnimationCurve.Linear(0.0f, 1.0f, 1.0f, 0.0f);
+            }
+
+            Source.SetCustomCurve(AudioSourceCurveType.CustomRolloff, curve);
+        }
+
         Source.spatialBlend = data.m_is3D ? SPATIAL_BLEND_3D : SPATIAL_BLEND_2D;
     }
 
