@@ -83,6 +83,7 @@ public class ButtonSelector : MonoBehaviour
     private Vector2 m_previousNav = Vector2.zero;
 
     // カーソルがロックされているかどうか
+    [SerializeField]
     private bool m_isLockCursor = false;
 
     // 初期化を行ったかどうか

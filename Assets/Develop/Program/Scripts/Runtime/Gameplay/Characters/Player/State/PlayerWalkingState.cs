@@ -1,18 +1,20 @@
+
 using UnityEngine;
 
 /// <summary>
-/// ƒvƒŒƒCƒ„[‚Ì’Êí•àsó‘Ô‚ğŠÇ—‚µ‚Ü‚·B
+/// ãƒ—ãƒ¬ã‚¤ãƒ¤ãƒ¼ã®é€šå¸¸æ­©è¡ŒçŠ¶æ…‹ã‚’ç®¡ç†ã—ã¾ã™ã€‚
 /// </summary>
 public sealed class PlayerWalkingState
     : StateBase<PlayerStateMachineComponent>
 {
-    // ’ÊíˆÚ“®ƒpƒ‰ƒ[ƒ^
+    // é€šå¸¸ç§»å‹•ç”¨ãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿
     private PlayerMoveParameters m_moveParameters;
     private Vector3 m_movingChargeStartDirection;
     private bool m_isWaitingForMovingCharge;
 
     /// <summary>
-    /// ó‘ÔŠJn‚ÉŒÄ‚Î‚ê‚Ü‚·B
+    /// çŠ¶æ…‹é–‹å§‹æ™‚ã«ç§»å‹•ãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿ã‚’å–å¾—ã—ã€
+    /// æ­©è¡Œã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³ã¨æ­©è¡ŒSEã‚’é–‹å§‹ã—ã¾ã™ã€‚
     /// </summary>
     protected override void OnStartState()
     {
@@ -23,34 +25,32 @@ public sealed class PlayerWalkingState
 
         Owner.AnimationPresenter.PlayWalkAnimation();
 
-        // ’ÊíˆÚ“®‰¹‚ÍƒWƒƒƒ“ƒvState‚Ö‘JˆÚ‚µ‚Ä‚àŒp‘±‚·‚é‚½‚ßA
-        // Stateƒ[ƒJƒ‹‚Å‚Í‚È‚­ActionID’PˆÊ‚ÅÄ¶‚µ‚Ü‚·B
+        // æ­©è¡ŒSEã¯ã‚¸ãƒ£ãƒ³ãƒ—ä¸­ã‚‚ç¶™ç¶šã™ã‚‹ãŸã‚ã€
+        // Stateå˜ä½ã§ã¯ãªãActionIDå˜ä½ã§ç®¡ç†ã—ã¾ã™ã€‚
         PlayerAudioActionUtility.PlaySequential(
             Owner,
             PlayerAudioActionID.WALKING);
     }
 
     /// <summary>
-    /// ˆê’èŠÔŠu‚ÌXVˆ—‚ğs‚¢‚Ü‚·B
+    /// å›ºå®šæ™‚é–“é–“éš”ã§çŠ¶æ…‹é·ç§»ã®åˆ¤å®šã¨ç§»å‹•å‡¦ç†ã‚’å®Ÿè¡Œã—ã¾ã™ã€‚
     /// </summary>
     protected override void OnFixedUpdate()
     {
-        // UŒ‚“ü—Í‚ğŠm”F
+        // æ”»æ’ƒå…¥åŠ›ã‚’ç¢ºèªã—ã¾ã™ã€‚
         if (Owner.InputReader.ConsumeAttackInput() &&
             Owner.Monitor.IsGrounded)
         {
-            // State‘JˆÚŒã‚ÉUŒ‚‰¹‚ğŠJn‚·‚é‚ÆA
-            // WALKING‚Ì‘¦’â~‚ªæ‚É•·‚±‚¦‚Ä‰¹‚ª“rØ‚ê‚â‚·‚¢‚½‚ßA
-            // ‘JˆÚ—v‹‘O‚ÉUŒ‚‰¹‚ğæsÄ¶‚µ‚Ü‚·B
+            // æ”»æ’ƒçŠ¶æ…‹ã¸é·ç§»ã™ã‚‹å‰ã«æ”»æ’ƒSEã‚’å†ç”Ÿã—ã€
+            // æ­©è¡ŒSEã¨ã®åˆ‡ã‚Šæ›¿ãˆã‚’è¡Œã„ã¾ã™ã€‚
             StartAttackAudioBeforeTransition();
 
             Machine.ChangeState<PlayerAttackingState>();
             return;
         }
 
-        // ƒWƒƒƒ“ƒv“ü—Í‚ğˆÚ“®“ü—Í‚È‚µ”»’è‚æ‚èæ‚Éˆ—‚µ‚Ü‚·B
-        // ƒWƒƒƒ“ƒvŠJn‚Æ“¯‚ÉƒXƒeƒBƒbƒN‚ğ—£‚µ‚Ä‚àA
-        // WALKING‰¹‚ğ’â~‚¹‚¸JumpingState‚Öˆø‚«Œp‚¬‚Ü‚·B
+        // ã‚¸ãƒ£ãƒ³ãƒ—å…¥åŠ›ã‚’ç¢ºèªã—ã¾ã™ã€‚
+        // ç§»å‹•å…¥åŠ›ãŒãªãã¦ã‚‚ã‚¸ãƒ£ãƒ³ãƒ—ã§ãã‚‹ã‚ˆã†ã«ã—ã¾ã™ã€‚
         if (Owner.Monitor.CanStartJump &&
             Owner.InputReader.HasJumpInput)
         {
@@ -58,29 +58,45 @@ public sealed class PlayerWalkingState
             return;
         }
 
-        // ˆÚ“®“ü—Í‚ª‚È‚¯‚ê‚ÎWalking‰¹‚ğ’â~‚µ‚Ä‘Ò‹@ó‘Ô‚Ö‘JˆÚ
-        if (!Owner.InputReader.HasMoveInput)
+        // ã‚°ãƒ©ã‚¤ãƒ³ãƒ‰å¯èƒ½ãªå ´åˆã¯ã‚°ãƒ©ã‚¤ãƒ³ãƒ‰çŠ¶æ…‹ã¸é·ç§»ã—ã¾ã™ã€‚
+        if (Owner.GrindController.CanStartGrind(
+            Owner.Monitor.IsRailed
+                ? Owner.Monitor.HitRailInfo
+                : null))
         {
-            // ’Êí•às’†‚ÉˆÚ“®“ü—Í‚ª‚È‚­‚È‚Á‚½ê‡‚ÍA
-            // Walking‰¹‚ğI—¹‰¹‚Ö‘JˆÚ‚³‚¹‚Ä’â~‚µ‚Ü‚·B
-            //
-            // JumpingState‚Ö‚Ì‘JˆÚ‚Å‚Í‚±‚Ì•ªŠò‚ğ’Ê‚ç‚È‚¢‚½‚ßA
-            // ƒWƒƒƒ“ƒv’†‚ÍWalking‰¹‚ğ–Â‚ç‚µ‘±‚¯‚Ü‚·B
+            // ã‚°ãƒ©ã‚¤ãƒ³ãƒ‰ä¸­ã«æ­©è¡ŒSEãŒæ®‹ã‚‰ãªã„ã‚ˆã†åœæ­¢ã—ã¾ã™ã€‚
             PlayerAudioActionUtility.StopSequential(
                 Owner,
                 PlayerAudioActionID.WALKING);
 
-            // Vƒu[ƒXƒg“ü—Í‚ªc‚ç‚È‚¢‚æ‚¤‚ÉÁ”ï
+            Machine.ChangeState<PlayerGrindingState>(
+                Owner.Monitor.HitRailInfo);
+
+            // ã‚°ãƒ©ã‚¤ãƒ³ãƒ‰ã¸ã®é·ç§»å¾Œã¯é€šå¸¸ç§»å‹•å‡¦ç†ã‚’å®Ÿè¡Œã—ã¾ã›ã‚“ã€‚
+            return;
+        }
+
+        // ç§»å‹•å…¥åŠ›ãŒãªããªã£ãŸå ´åˆã¯å¾…æ©ŸçŠ¶æ…‹ã¸é·ç§»ã—ã¾ã™ã€‚
+        if (!Owner.InputReader.HasMoveInput)
+        {
+            // å¾…æ©ŸçŠ¶æ…‹ã¸ã®é·ç§»æ™‚ã«æ­©è¡ŒSEã‚’åœæ­¢ã—ã¾ã™ã€‚
+            // ã‚¸ãƒ£ãƒ³ãƒ—æ™‚ã¯ã“ã®å‡¦ç†ã‚’é€šã‚‰ãªã„ãŸã‚ã€
+            // ã‚¸ãƒ£ãƒ³ãƒ—ä¸­ã®æ­©è¡ŒSEã¯ç¶™ç¶šã—ã¾ã™ã€‚
+            PlayerAudioActionUtility.StopSequential(
+                Owner,
+                PlayerAudioActionID.WALKING);
+
+            // Vãƒ–ãƒ¼ã‚¹ãƒˆå…¥åŠ›ãŒæ®‹ã‚‰ãªã„ã‚ˆã†ã«æ¶ˆè²»ã—ã¾ã™ã€‚
             Owner.InputReader.ConsumeVBoostInput();
 
             Machine.ChangeState<PlayerIdlingState>();
             return;
         }
 
-        // Vƒu[ƒXƒg‚Ì’·‰Ÿ‚µ¬—§‚ğŠm”FB
-        // ‚½‚¾‚µV‹K‚Ìƒu[ƒXƒgŠJn‚ÍÚ’n’†‚Ì‚İ‹–‰Â‚·‚é
+        // ç§»å‹•ãƒãƒ£ãƒ¼ã‚¸ã®é–‹å§‹æ–¹å‘ã‚’æ›´æ–°ã—ã¾ã™ã€‚
         UpdateMovingChargeStartDirection();
 
+        // æ¥åœ°ä¸­ã®ã¿æ–°è¦ã®ç§»å‹•ãƒãƒ£ãƒ¼ã‚¸ã‚’è¨±å¯ã—ã¾ã™ã€‚
         if (Owner.Monitor.IsGrounded &&
             m_isWaitingForMovingCharge &&
             Owner.InputReader.HasVBoostHoldStarted &&
@@ -97,7 +113,7 @@ public sealed class PlayerWalkingState
             return;
         }
 
-        // ’ÊíˆÚ“®
+        // é€šå¸¸ç§»å‹•ã‚’å®Ÿè¡Œã—ã¾ã™ã€‚
         Owner.Motor.Move(
             Owner.InputReader.MoveInput,
             m_moveParameters,
@@ -105,8 +121,8 @@ public sealed class PlayerWalkingState
     }
 
     /// <summary>
-    /// WalkingState‚©‚çUŒ‚State‚Ö‘JˆÚ‚·‚é’¼‘O‚ÉA
-    /// UŒ‚‰¹‚ğæsÄ¶‚µ‚ÄˆÚ“®‰¹‚Æ‚ÌØ‚è‘Ö‚¦‚ğŠŠ‚ç‚©‚É‚µ‚Ü‚·B
+    /// æ”»æ’ƒçŠ¶æ…‹ã¸ã®é·ç§»å‰ã«æ”»æ’ƒSEã‚’é–‹å§‹ã—ã€
+    /// æ­©è¡ŒSEã‚’åœæ­¢ã—ã¾ã™ã€‚
     /// </summary>
     private void StartAttackAudioBeforeTransition()
     {
@@ -123,8 +139,8 @@ public sealed class PlayerWalkingState
                 Owner,
                 attackActionID);
 
-        // ƒu[ƒXƒgUŒ‚ê—p‰¹‚ª–¢“o˜^‚Ìê‡‚Í
-        // ’ÊíUŒ‚‰¹‚ÖƒtƒH[ƒ‹ƒoƒbƒN‚µ‚Ü‚·B
+        // ãƒ–ãƒ¼ã‚¹ãƒˆæ”»æ’ƒSEãŒæœªç™»éŒ²ã®å ´åˆã¯ã€
+        // é€šå¸¸æ”»æ’ƒSEã¸ãƒ•ã‚©ãƒ¼ãƒ«ãƒãƒƒã‚¯ã—ã¾ã™ã€‚
         if (!hasPlayedAttackAudio &&
             attackActionID ==
                 PlayerAudioActionID.ATTACKING_BOOST)
@@ -134,15 +150,18 @@ public sealed class PlayerWalkingState
                 PlayerAudioActionID.ATTACKING_NORMAL);
         }
 
-        // UŒ‚‰¹‚ÌÄ¶—v‹‚ğo‚µ‚½Œã‚ÅˆÚ“®‰¹‚ğ‘¦’â~‚µ‚Ü‚·B
-        // I—¹‰¹‚Í–Â‚ç‚µ‚Ü‚¹‚ñB
+        // æ”»æ’ƒSEã®é–‹å§‹æ™‚ã«æ­©è¡ŒSEã‚’å³åº§ã«åœæ­¢ã—ã¾ã™ã€‚
+        // çµ‚äº†éŸ³ã¯é³´ã‚‰ã—ã¾ã›ã‚“ã€‚
         PlayerAudioActionUtility.StopSequential(
             Owner,
             PlayerAudioActionID.WALKING,
             true);
     }
 
-    /// <summary>ƒ`ƒƒ[ƒWƒ{ƒ^ƒ“‰Ÿ‰º‚ÌÀˆÚ“®•ûŒü‚ğŠJn”»’è—p‚É•Û‚µ‚Ü‚·B</summary>
+    /// <summary>
+    /// ãƒãƒ£ãƒ¼ã‚¸ãƒœã‚¿ãƒ³æŠ¼ä¸‹æ™‚ã®ç§»å‹•æ–¹å‘ã‚’ä¿æŒã—ã€
+    /// ç§»å‹•ãƒãƒ£ãƒ¼ã‚¸ã®é–‹å§‹åˆ¤å®šã«ä½¿ç”¨ã—ã¾ã™ã€‚
+    /// </summary>
     private void UpdateMovingChargeStartDirection()
     {
         if (!Owner.InputReader.IsVBoostHeld)
@@ -159,18 +178,21 @@ public sealed class PlayerWalkingState
 
         m_movingChargeStartDirection =
             Owner.Motor.HorizontalDirection;
+
         m_isWaitingForMovingCharge = true;
     }
 
     /// <summary>
-    /// ó‘ÔI—¹‚ÉŒÄ‚Î‚ê‚Ü‚·B
+    /// çŠ¶æ…‹çµ‚äº†æ™‚ã«æ­©è¡Œã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³ã‚’åœæ­¢ã—ã¾ã™ã€‚
     /// </summary>
     protected override void OnExitState()
     {
-        // ˆÚ“®‰¹‚Í‚±‚±‚Å‚Í’â~‚µ‚Ü‚¹‚ñB
-        // EJumpingState‚Ö‘JˆÚ‚µ‚½ê‡‚Í–Â‚ç‚µ‘±‚¯‚é
-        // EIdlingState‚Å‚ÍŠ®‘S’â~‚ÉI—¹‰¹‚ğ–Â‚ç‚µ‚Ä’â~‚·‚é
-        // EAttack / Charge“™‚Í‘JˆÚæ‚ª‘¦’â~‚·‚é
+        // æ­©è¡ŒSEã¯ã“ã“ã§ã¯åœæ­¢ã—ã¾ã›ã‚“ã€‚
+        // ãƒ»JumpingStateã§ã¯æ­©è¡ŒSEã‚’ç¶™ç¶šã—ã¾ã™ã€‚
+        // ãƒ»IdlingStateã¸ã®é·ç§»å‰ã«åœæ­¢ã—ã¾ã™ã€‚
+        // ãƒ»AttackingStateã¸ã®é·ç§»å‰ã«åœæ­¢ã—ã¾ã™ã€‚
+        // ãƒ»GrindingStateã¸ã®é·ç§»å‰ã«åœæ­¢ã—ã¾ã™ã€‚
+        // ãƒ»BoostChargingStateã¸ã®é·ç§»æ™‚ã¯é·ç§»å…ˆã§ç®¡ç†ã—ã¾ã™ã€‚
         Owner.AnimationPresenter.StopWalkAnimation();
     }
 }
