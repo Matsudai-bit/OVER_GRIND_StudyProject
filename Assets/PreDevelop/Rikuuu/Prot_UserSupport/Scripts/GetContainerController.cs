@@ -44,6 +44,7 @@ public sealed class GetContainerController : MonoBehaviour
 
             if (controller != null)
             {
+                Debug.LogWarning("Žæ“¾Š®—¹", this);
                 break;
             }
 
