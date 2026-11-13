@@ -148,7 +148,14 @@ public class PauseFadeManager : MonoBehaviour, IUIInputControllable
             PlayFadeIn();
         }
     }
-
+    public void OnWindowOpened()
+    {
+        Time.timeScale = 0.0f;
+    }
+    public void OnWindowClosed()
+    {
+        Time.timeScale = 1.0f;
+    }
     private void OnDisable()
     {
         // ƒCƒxƒ“ƒg‚ğ‰ğœ

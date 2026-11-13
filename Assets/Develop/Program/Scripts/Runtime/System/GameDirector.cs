@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 
 /// <summary>
@@ -91,6 +92,14 @@ public sealed class GameDirector : MonoBehaviour
     // 次のステージ定義
     [SerializeField]
     private StageDefinitionAsset m_nextStageDefinition;
+
+    // ポーズ画面表示用データ
+    [SerializeField, Header("ポーズ")]
+    private PauseStatusModel m_pauseStatusModel;
+
+    // ポーズ状態変更イベント
+    [SerializeField]
+    private PauseChangedEvent m_pauseChangedEvent;
 
     private void Awake()
     {
@@ -205,6 +214,18 @@ public sealed class GameDirector : MonoBehaviour
                 $"{nameof(BossPhaseController)} が設定されていません。",
                 this);
         }
+
+        if (m_pauseChangedEvent != null)
+        {
+            m_pauseChangedEvent.RegisterListener(
+                OnPauseChanged);
+        }
+        else
+        {
+            Debug.LogWarning(
+                $"{nameof(PauseChangedEvent)} が設定されていません。",
+                this);
+        }
     }
 
     /// <summary>
@@ -240,6 +261,12 @@ public sealed class GameDirector : MonoBehaviour
         {
             m_bossPhaseController.PhaseCompletionRequested -=
                 OnBossPhaseCompletionRequested;
+        }
+
+        if (m_pauseChangedEvent != null)
+        {
+            m_pauseChangedEvent.UnregisterListener(
+                OnPauseChanged);
         }
     }
     private void OnGameFlowStateChanged(
@@ -323,7 +350,8 @@ public sealed class GameDirector : MonoBehaviour
     /// </summary>
     private void StartRestart()
     {
-        StartPlaying();
+        StartCoroutine(
+            StartPlayingDeferred());
     }
 
     /// <summary>
@@ -356,7 +384,8 @@ public sealed class GameDirector : MonoBehaviour
                 this);
         }
 
-        StartPlaying();
+        StartCoroutine(
+            StartPlayingDeferred());
     }
 
     /// <summary>
@@ -501,6 +530,26 @@ public sealed class GameDirector : MonoBehaviour
 
         StartGameProgressTimer();
     }
+    /// <summary>
+    /// 現在のGameFlow状態変更イベントの通知完了後に
+    /// 通常ゲームプレイ状態へ遷移します。
+    /// </summary>
+    /// <returns>次フレームまで待機するCoroutine。</returns>
+    private IEnumerator StartPlayingDeferred()
+    {
+        /*
+         * INTROのGameFlowStateChangedEvent通知中に
+         * PLAYINGへ再遷移すると、イベント通知が入れ子になります。
+         *
+         * PLAYING通知後に古いINTRO通知を受け取るリスナーが存在すると、
+         * UIや入力がINTRO状態へ上書きされる可能性があるため、
+         * 次フレームへ遅延させてからPLAYINGへ遷移します。
+         */
+        yield return null;
+
+        StartPlaying();
+    }
+
     /// <summary>
     /// 通常ゲームプレイ状態へ遷移します。
     /// </summary>
@@ -794,6 +843,52 @@ public sealed class GameDirector : MonoBehaviour
             m_resultStageModel.SetStageData(
                 m_stageSceneContext);
         }
+    }
+
+    /// <summary>
+    /// ポーズ状態変更を受け取ります。
+    /// ポーズ開始時に表示用データを更新します。
+    /// </summary>
+    /// <param name="eventData">ポーズ状態変更情報。</param>
+    private void OnPauseChanged(
+        PauseChangedEventData eventData)
+    {
+        if (!eventData.IsPaused)
+        {
+            return;
+        }
+
+        ApplyPauseStatusData();
+    }
+
+    /// <summary>
+    /// 現在の残り時間とリトライ回数を
+    /// ポーズ画面表示用Modelへ反映します。
+    /// </summary>
+    public void ApplyPauseStatusData()
+    {
+        if (m_pauseStatusModel == null)
+        {
+            Debug.LogWarning(
+                $"{nameof(PauseStatusModel)} が設定されていません。",
+                this);
+
+            return;
+        }
+
+        double remainingSeconds =
+            m_stageTimeLimitController != null
+                ? m_stageTimeLimitController.RemainingSeconds
+                : 0.0;
+
+        int retryCount =
+            m_stageSceneContext != null
+                ? m_stageSceneContext.RetryCount
+                : 0;
+
+        m_pauseStatusModel.SetStatus(
+            remainingSeconds,
+            retryCount);
     }
 
     /// <summary>
