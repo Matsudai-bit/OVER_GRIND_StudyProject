@@ -76,11 +76,13 @@ public sealed class AudioSequentialHandle
     internal bool Begin()
     {
         AudioManager manager = AudioManager.Instance;
-        if (m_asset == null || manager == null || m_state != PlaybackState.IDLE)
+        if (m_asset == null ||
+            manager == null ||
+            !manager.isActiveAndEnabled ||
+            m_state != PlaybackState.IDLE)
         {
             return false;
         }
-
         if (!m_asset.HasStartAudio)
         {
             // 開始音を使わない設定では、ループ音を直ちに開始します。
@@ -135,8 +137,8 @@ public sealed class AudioSequentialHandle
         {
             return;
         }
-
         AudioManager manager = AudioManager.Instance;
+
         if (m_asset == null || !m_asset.HasEndAudio || manager == null)
         {
             StopImmediate();
