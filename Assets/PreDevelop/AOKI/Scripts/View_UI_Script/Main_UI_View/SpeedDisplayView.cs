@@ -264,7 +264,12 @@ public class SpeedDisplayView : MonoBehaviour
         // 数字スプライトの更新
         if (m_numberSprites != null && m_numberSprites.Length >= NUMBER_SPRITE_COUNT)
         {
-            int speedInt = Mathf.FloorToInt(speed);
+            speed *= 3.5f;
+            if (speed >= 99.9f)
+            {
+                speed = 99.9f;
+            }
+            int speedInt = Mathf.FloorToInt(speed) ;
             int digit10 = (speedInt / 10) % 10;
             int digit1 = speedInt % 10;
             int digitDecimal = Mathf.FloorToInt((speed - speedInt) * 10f) % 10;
