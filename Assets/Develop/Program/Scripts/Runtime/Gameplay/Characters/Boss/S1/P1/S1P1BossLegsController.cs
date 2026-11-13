@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -28,7 +29,11 @@ public sealed class S1P1BossLegsController : MonoBehaviour
     // 右レールのMesh ID
     [SerializeField]
     private string[] m_rightRailBodyMeshIds;
-
+    // 開放後のレールRoot
+    [SerializeField, Header("初期ターゲットグループ")]
+    private List<TargetPoint> m_defaultTargets;
+    [SerializeField, Header("破壊後のターゲットグループ")]
+    private List<TargetPoint> m_brokenTargets;
     // 開放後のレールRoot
     [SerializeField]
     private GameObject m_railRoot;
@@ -45,6 +50,18 @@ public sealed class S1P1BossLegsController : MonoBehaviour
         m_railRoot.SetActive(false);
 
         ApplyLegRailOpenState();
+    }
+
+    private void Start()
+    {
+        foreach (var target in m_defaultTargets)
+        {
+            target.IsActive = true;
+        }
+        foreach (var target in m_brokenTargets)
+        {
+            target.IsActive = false;
+        }
     }
 
     private void OnEnable()
@@ -105,6 +122,14 @@ public sealed class S1P1BossLegsController : MonoBehaviour
         }
 
         OpenLegRail();
+        foreach (var target in m_defaultTargets)
+        {
+            target.IsActive = false;
+        }
+        foreach (var target in m_brokenTargets)
+        {
+            target.IsActive = true;
+        }
     }
 
     /// <summary>
