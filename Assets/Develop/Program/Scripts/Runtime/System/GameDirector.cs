@@ -207,6 +207,9 @@ public sealed class GameDirector : MonoBehaviour
         {
             m_bossPhaseController.PhaseCompletionRequested +=
                 OnBossPhaseCompletionRequested;
+
+            m_bossPhaseController.PhaseChanged +=
+                OnBossPhaseChanged;
         }
         else
         {
@@ -261,6 +264,9 @@ public sealed class GameDirector : MonoBehaviour
         {
             m_bossPhaseController.PhaseCompletionRequested -=
                 OnBossPhaseCompletionRequested;
+
+            m_bossPhaseController.PhaseChanged -=
+                OnBossPhaseChanged;
         }
 
         if (m_pauseChangedEvent != null)
@@ -564,6 +570,40 @@ public sealed class GameDirector : MonoBehaviour
             return;
         }
         m_gameFlowController.EnterPlaying();
+    }
+
+    /// <summary>
+    /// ボスフェーズ変更を受け取り、
+    /// 新しいフェーズをチェックポイントとして記録します。
+    /// </summary>
+    /// <param name="phaseID">変更後のボスフェーズ。</param>
+    private void OnBossPhaseChanged(
+        BossPhaseID phaseID)
+    {
+        if (m_stageCheckpointController == null)
+        {
+            return;
+        }
+
+        /*
+         * RestoreCheckpoint() 内の SetPhase() でも
+         * PhaseChanged は通知されます。
+         *
+         * 復元中にチェックポイントを上書きしないよう、
+         * StageCheckpointController の復元状態を確認します。
+         */
+        if (m_stageCheckpointController.IsRestoring)
+        {
+            return;
+        }
+
+        if (!m_stageCheckpointController
+            .CaptureCurrentPhaseCheckpoint())
+        {
+            Debug.LogWarning(
+                $"{phaseID} のチェックポイント記録に失敗しました。",
+                this);
+        }
     }
 
     /// <summary>

@@ -1,4 +1,3 @@
-using System.Collections;
 using UnityEngine;
 
 /// <summary>
@@ -43,8 +42,7 @@ public sealed class GameFlowController : MonoBehaviour
 
     private void Start()
     {
-        StartCoroutine(
-            InitializeFlowDeferred());
+        InitializeFlow();
     }
 
     private void OnDestroy()
@@ -55,26 +53,6 @@ public sealed class GameFlowController : MonoBehaviour
         }
 
         m_stateMachine.StateChanged -= OnStateChanged;
-    }
-
-    /// <summary>
-    /// Scene内の各コンポーネントのStart完了後に
-    /// ゲーム進行を初期化します。
-    /// </summary>
-    /// <returns>次フレームまで待機するCoroutine。</returns>
-    private IEnumerator InitializeFlowDeferred()
-    {
-        /*
-         * GameFlow初期化時にINTROの状態変更イベントが即時通知されます。
-         * その通知からSequenceが開始されると、
-         * 他コンポーネントのStartより先に制御処理が実行される可能性があります。
-         *
-         * 1フレーム待機し、Scene内のStart処理が完了してから
-         * GameFlowを初期化します。
-         */
-        yield return null;
-
-        InitializeFlow();
     }
 
     /// <summary>
