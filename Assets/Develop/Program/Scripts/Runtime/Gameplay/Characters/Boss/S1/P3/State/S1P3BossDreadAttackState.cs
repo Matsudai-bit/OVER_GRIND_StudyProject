@@ -3,13 +3,12 @@ using UnityEngine;
 
 /// <summary>
 /// ステージ1フェーズ3のドレット攻撃を実行します。
+/// AnimationEventのHITBOX_ENABLEごとに
+/// オイルを1発ずつ発射します。
 /// </summary>
 public sealed class S1P3BossDreadAttackState :
     StateBase<BossController>
 {
-    // 仕様上のオイル発射数
-    private const int DREAD_PROJECTILE_COUNT = 12;
-
     // フェーズ3参照
     private BossPhaseReferences m_commonReferences;
     private S1P3BossReferences m_references;
@@ -23,8 +22,8 @@ public sealed class S1P3BossDreadAttackState :
     // 攻撃ID
     private AttackIdentifier m_attackIdentifier;
 
-    // Animator Trigger ID
-    private int m_animationTriggerId;
+    // Animator Bool ID
+    private int m_animationBoolID;
 
     // オイルに設定するダメージ
     private int m_projectileDamage;
@@ -33,14 +32,17 @@ public sealed class S1P3BossDreadAttackState :
     private readonly List<S1P3OilController> m_spawnedOils =
         new();
 
+    // 次に使用する発射地点Index
+    private int m_nextLaunchPointIndex;
+
     // 発射したオイル数
     private int m_launchedOilCount;
 
     // 着弾したオイル数
     private int m_landedOilCount;
 
-    // 発射済みか
-    private bool m_hasLaunched;
+    // 全弾発射済みか
+    private bool m_hasFinishedLaunching;
 
     // 全弾着弾後の待機中か
     private bool m_isWaitingFinish;
@@ -80,21 +82,29 @@ public sealed class S1P3BossDreadAttackState :
             return;
         }
 
-        Owner.Motor?.StopHorizontalMovement();
+        Owner.Motor?
+            .StopHorizontalMovement();
 
         SubscribeAnimationEvent();
 
         Owner.SetStateExecutionStatus(
             StateExecutionStatus.RUNNING);
 
-        Owner.AnimationController.SetTrigger(
-            m_animationTriggerId);
+        /*
+         * TriggerではなくBoolで
+         * ドレット攻撃Animationを開始します。
+         */
+        Owner.AnimationController.SetBool(
+            m_animationBoolID,
+            true);
     }
 
     /// <summary>
     /// 全弾着弾後の終了待機を更新します。
     /// </summary>
-    /// <param name="deltaTime">経過時間。</param>
+    /// <param name="deltaTime">
+    /// 経過時間。
+    /// </param>
     protected override void OnUpdate(
         float deltaTime)
     {
@@ -120,14 +130,23 @@ public sealed class S1P3BossDreadAttackState :
     /// </summary>
     protected override void OnExitState()
     {
-        StartCoolTimeIfSucceeded();
-
         UnsubscribeAnimationEvent();
         UnsubscribeOilEvents();
 
-        // 途中終了した場合は飛行中のオイルを停止する
-        if (Owner.GetStateExecutionStatus() ==
-            StateExecutionStatus.RUNNING)
+        if (Owner?.AnimationController != null)
+        {
+            Owner.AnimationController.SetBool(
+                m_animationBoolID,
+                false);
+        }
+
+        /*
+         * 途中終了した場合は
+         * 飛行中のオイルを停止します。
+         */
+        if (Owner != null &&
+            Owner.GetStateExecutionStatus() ==
+                StateExecutionStatus.RUNNING)
         {
             CancelFlyingOils();
 
@@ -137,49 +156,112 @@ public sealed class S1P3BossDreadAttackState :
 
         m_spawnedOils.Clear();
 
-        m_references = null;
-        m_stateReferences = null;
-        m_parameters = null;
-        m_attackIdentifier = null;
+        m_commonReferences =
+            null;
+
+        m_references =
+            null;
+
+        m_stateReferences =
+            null;
+
+        m_parameters =
+            null;
+
+        m_attackIdentifier =
+            null;
     }
 
     /// <summary>
     /// 攻撃AnimationEventを処理します。
     /// </summary>
-    /// <param name="attackEventData">攻撃イベント情報。</param>
+    /// <param name="attackEventData">
+    /// 攻撃イベント情報。
+    /// </param>
     private void HandleAttackEvent(
         AttackEventData attackEventData)
     {
+        if (attackEventData == null ||
+            Owner == null ||
+            Owner.GetStateExecutionStatus() !=
+                StateExecutionStatus.RUNNING)
+        {
+            return;
+        }
+
         switch (attackEventData.AttackEventType)
         {
             case AttackEventType.HITBOX_ENABLE:
-                LaunchOils();
+                LaunchNextOil();
                 break;
 
             case AttackEventType.ANIMATION_END:
-                // ドレット攻撃はAnimation終了では完了しない
+                /*
+                 * ドレット攻撃はAnimation終了では
+                 * Stateを終了しません。
+                 * 全オイル着弾を待ちます。
+                 */
                 break;
         }
     }
 
     /// <summary>
-    /// 全発射地点からオイルを発射します。
+    /// 次の発射地点からオイルを1発発射します。
+    /// HITBOX_ENABLE 1回につき1発だけ発射します。
     /// </summary>
-    private void LaunchOils()
+    private void LaunchNextOil()
     {
-        if (m_hasLaunched)
+        if (m_hasFinishedLaunching ||
+            m_parameters == null)
         {
             return;
         }
 
-        m_hasLaunched = true;
+        if (m_launchedOilCount >=
+            m_parameters.LaunchCount)
+        {
+            FinishLaunching();
+
+            return;
+        }
 
         IReadOnlyList<Transform> launchPoints =
             m_stateReferences.LaunchPoints;
 
-        foreach (Transform launchPoint
-                 in launchPoints)
+        if (launchPoints == null ||
+            launchPoints.Count == 0)
         {
+            Debug.LogError(
+                "ドレット攻撃の発射地点が設定されていません。");
+
+            FailState();
+
+            return;
+        }
+
+        /*
+         * 発射数が発射地点数より多い場合にも対応するため、
+         * 発射地点を循環して使用します。
+         */
+        int searchCount =
+            0;
+
+        while (searchCount <
+               launchPoints.Count)
+        {
+            int launchPointIndex =
+                m_nextLaunchPointIndex %
+                launchPoints.Count;
+
+            m_nextLaunchPointIndex =
+                (launchPointIndex + 1) %
+                launchPoints.Count;
+
+            searchCount++;
+
+            Transform launchPoint =
+                launchPoints[launchPointIndex];
+
             if (launchPoint == null)
             {
                 continue;
@@ -193,21 +275,31 @@ public sealed class S1P3BossDreadAttackState :
 
             if (oilController == null)
             {
-                continue;
+                Debug.LogError(
+                    "ドレット攻撃のオイルを生成できませんでした。");
+
+                FailState();
+
+                return;
             }
 
             if (!oilController.Initialize(
-                 m_commonReferences.PlayerTransform,
-                 m_parameters,
-                 m_stateReferences.GroundLayerMask,
-                 m_projectileDamage,
-                 m_stateReferences.TargetDecalPrefab,
-                 m_stateReferences.OilDecalPrefab))
+                    m_commonReferences.PlayerTransform,
+                    m_parameters,
+                    m_stateReferences.GroundLayerMask,
+                    m_projectileDamage,
+                    m_stateReferences.TargetDecalPrefab,
+                    m_stateReferences.OilDecalPrefab))
             {
                 Object.Destroy(
                     oilController.gameObject);
 
-                continue;
+                Debug.LogError(
+                    "ドレット攻撃のオイルを初期化できませんでした。");
+
+                FailState();
+
+                return;
             }
 
             oilController.Landed +=
@@ -222,21 +314,59 @@ public sealed class S1P3BossDreadAttackState :
             m_launchedOilCount++;
 
             oilController.Launch();
+
+            /*
+             * 指定数を撃ち終えたら
+             * 発射AnimationのBoolをOFFにします。
+             */
+            if (m_launchedOilCount >=
+                m_parameters.LaunchCount)
+            {
+                FinishLaunching();
+            }
+
+            return;
         }
 
-        if (m_launchedOilCount <= 0)
+        Debug.LogError(
+            "有効なドレット攻撃の発射地点がありません。");
+
+        FailState();
+    }
+
+    /// <summary>
+    /// 全オイルの発射完了を処理します。
+    /// </summary>
+    private void FinishLaunching()
+    {
+        if (m_hasFinishedLaunching)
         {
-            Debug.LogError(
-                "ドレット攻撃のオイルを発射できませんでした。");
-
-            FailState();
+            return;
         }
+
+        m_hasFinishedLaunching =
+            true;
+
+        if (Owner?.AnimationController == null)
+        {
+            return;
+        }
+
+        /*
+         * 発射回数分のAnimationEventを受け取ったため、
+         * BoolをOFFにして発射Animationを終了させます。
+         */
+        Owner.AnimationController.SetBool(
+            m_animationBoolID,
+            false);
     }
 
     /// <summary>
     /// オイル着弾を処理します。
     /// </summary>
-    /// <param name="oilController">着弾したオイル。</param>
+    /// <param name="oilController">
+    /// 着弾したオイル。
+    /// </param>
     private void HandleOilLanded(
         S1P3OilController oilController)
     {
@@ -253,21 +383,31 @@ public sealed class S1P3BossDreadAttackState :
 
         m_landedOilCount++;
 
-        if (m_landedOilCount <
-            m_launchedOilCount)
+        /*
+         * 全弾の発射が終わっており、
+         * かつ発射した全オイルが着弾した場合のみ
+         * 終了待機へ移行します。
+         */
+        if (!m_hasFinishedLaunching ||
+            m_landedOilCount <
+                m_launchedOilCount)
         {
             return;
         }
 
-        // 全弾着弾後から2秒間待機する
-        m_isWaitingFinish = true;
-        m_finishElapsedTime = 0.0f;
+        m_isWaitingFinish =
+            true;
+
+        m_finishElapsedTime =
+            0.0f;
     }
 
     /// <summary>
     /// オイル飛行失敗を処理します。
     /// </summary>
-    /// <param name="oilController">失敗したオイル。</param>
+    /// <param name="oilController">
+    /// 失敗したオイル。
+    /// </param>
     private void HandleOilFlightFailed(
         S1P3OilController oilController)
     {
@@ -284,7 +424,19 @@ public sealed class S1P3BossDreadAttackState :
     /// </summary>
     private void FinishAttack()
     {
-        m_isWaitingFinish = false;
+        if (!m_isWaitingFinish)
+        {
+            return;
+        }
+
+        m_isWaitingFinish =
+            false;
+
+        /*
+         * SUCCEEDEDより先に
+         * クールタイムを開始します。
+         */
+        StartCoolTime();
 
         Owner.SetStateExecutionStatus(
             StateExecutionStatus.SUCCEEDED);
@@ -299,20 +451,23 @@ public sealed class S1P3BossDreadAttackState :
     /// </returns>
     private bool TryGetReferences()
     {
-        if (Owner.PhaseController == null)
+        if (Owner == null ||
+            Owner.PhaseController == null)
         {
             return false;
         }
 
         if (!Owner.PhaseController
-               .TryGetCurrentPhaseComponent(
-                   out m_commonReferences))
+                .TryGetCurrentPhaseComponent(
+                    out m_commonReferences))
         {
             Debug.LogError(
-                $"{nameof(BossPhaseReferences)}が見つかりません。");
+                $"{nameof(BossPhaseReferences)}が" +
+                "見つかりません。");
 
             return false;
         }
+
         if (m_commonReferences == null)
         {
             Debug.LogError(
@@ -327,13 +482,15 @@ public sealed class S1P3BossDreadAttackState :
                     out m_references))
         {
             Debug.LogError(
-                $"{nameof(S1P3BossReferences)}が見つかりません。");
+                $"{nameof(S1P3BossReferences)}が" +
+                "見つかりません。");
 
             return false;
         }
 
         m_stateReferences =
-            m_references.DreadAttackStateReferences;
+            m_references
+                .DreadAttackStateReferences;
 
         if (m_stateReferences == null)
         {
@@ -344,7 +501,15 @@ public sealed class S1P3BossDreadAttackState :
             return false;
         }
 
-        m_parameters = m_references.StateParameterAsset.DreadAttack;
+        if (m_references.StateParameterAsset == null)
+        {
+            return false;
+        }
+
+        m_parameters =
+            m_references
+                .StateParameterAsset
+                .DreadAttack;
 
         if (m_parameters == null)
         {
@@ -380,27 +545,39 @@ public sealed class S1P3BossDreadAttackState :
             return false;
         }
 
-        //if (m_stateReferences.LaunchPoints == null ||
-        //    m_stateReferences.LaunchPoints.Count !=
-        //    DREAD_PROJECTILE_COUNT)
-        //{
-        //    Debug.LogError(
-        //        $"ドレット攻撃の発射地点を" +
-        //        $"{DREAD_PROJECTILE_COUNT}個設定してください。");
+        IReadOnlyList<Transform> launchPoints =
+    m_stateReferences.LaunchPoints;
 
-        //    return false;
-        //}
-
-        foreach (Transform launchPoint
-                 in m_stateReferences.LaunchPoints)
+        if (launchPoints == null ||
+            launchPoints.Count == 0)
         {
-            if (launchPoint != null)
+            Debug.LogError(
+                "ドレット攻撃の発射地点が設定されていません。");
+
+            return false;
+        }
+
+        bool hasValidLaunchPoint =
+            false;
+
+        foreach (Transform launchPoint in
+                 launchPoints)
+        {
+            if (launchPoint == null)
             {
                 continue;
             }
 
+            hasValidLaunchPoint =
+                true;
+
+            break;
+        }
+
+        if (!hasValidLaunchPoint)
+        {
             Debug.LogError(
-                "ドレット攻撃の発射地点に未設定があります。");
+                "有効なドレット攻撃の発射地点がありません。");
 
             return false;
         }
@@ -409,7 +586,7 @@ public sealed class S1P3BossDreadAttackState :
     }
 
     /// <summary>
-    /// 攻撃IDとAnimator Triggerを取得します。
+    /// 攻撃IDとAnimator Boolを取得します。
     /// </summary>
     /// <returns>
     /// true：取得しました。
@@ -419,7 +596,8 @@ public sealed class S1P3BossDreadAttackState :
     {
         S1P3BossAttackSettings attackSettings =
             Owner.GetComponentInChildren<
-                S1P3BossAttackSettings>(true);
+                S1P3BossAttackSettings>(
+                    true);
 
         if (attackSettings == null)
         {
@@ -430,10 +608,14 @@ public sealed class S1P3BossDreadAttackState :
             return false;
         }
 
+        /*
+         * AttackSettings側の文字列は
+         * Trigger名ではなくBool名として扱います。
+         */
         if (!attackSettings.TryGetAttackSetting(
                 S1P3BossAttackType.DREAD_ATTACK,
                 out m_attackIdentifier,
-                out string animationTriggerName))
+                out string animationBoolName))
         {
             Debug.LogError(
                 $"{S1P3BossAttackType.DREAD_ATTACK}の" +
@@ -444,7 +626,7 @@ public sealed class S1P3BossDreadAttackState :
 
         if (m_attackIdentifier == null ||
             string.IsNullOrEmpty(
-                animationTriggerName) ||
+                animationBoolName) ||
             Owner.AnimationController == null ||
             Owner.AnimationController
                 .CurrentAnimationEventReceiver == null)
@@ -452,9 +634,9 @@ public sealed class S1P3BossDreadAttackState :
             return false;
         }
 
-        m_animationTriggerId =
+        m_animationBoolID =
             Animator.StringToHash(
-                animationTriggerName);
+                animationBoolName);
 
         return true;
     }
@@ -462,7 +644,9 @@ public sealed class S1P3BossDreadAttackState :
     /// <summary>
     /// ドレット飛翔物のダメージを取得します。
     /// </summary>
-    /// <param name="damage">取得したダメージ。</param>
+    /// <param name="damage">
+    /// 取得したダメージ。
+    /// </param>
     /// <returns>
     /// true：取得しました。
     /// false：取得できませんでした。
@@ -470,10 +654,13 @@ public sealed class S1P3BossDreadAttackState :
     private bool TryGetProjectileDamage(
         out int damage)
     {
-        damage = 0;
+        damage =
+            0;
 
         S1BossAttackDamageParameterAsset parameterAsset =
-            m_references.AttackSettingsProvider.ParameterAsset;
+            m_references
+                .AttackSettingsProvider
+                .ParameterAsset;
 
         if (parameterAsset == null)
         {
@@ -495,9 +682,11 @@ public sealed class S1P3BossDreadAttackState :
             return false;
         }
 
-        IReadOnlyList<HitboxDamageParameter<S1BossHitboxId>>
+        IReadOnlyList<
+            HitboxDamageParameter<S1BossHitboxId>>
             hitboxParameters =
-                attackParameter.HitboxDamageParameters;
+                attackParameter
+                    .HitboxDamageParameters;
 
         if (hitboxParameters == null)
         {
@@ -547,7 +736,8 @@ public sealed class S1P3BossDreadAttackState :
             .AttackEventReceived +=
             HandleAttackEvent;
 
-        m_isAnimationEventSubscribed = true;
+        m_isAnimationEventSubscribed =
+            true;
     }
 
     /// <summary>
@@ -556,7 +746,7 @@ public sealed class S1P3BossDreadAttackState :
     private void UnsubscribeAnimationEvent()
     {
         if (!m_isAnimationEventSubscribed ||
-            Owner.AnimationController == null ||
+            Owner?.AnimationController == null ||
             Owner.AnimationController
                 .CurrentAnimationEventReceiver == null)
         {
@@ -568,7 +758,8 @@ public sealed class S1P3BossDreadAttackState :
             .AttackEventReceived -=
             HandleAttackEvent;
 
-        m_isAnimationEventSubscribed = false;
+        m_isAnimationEventSubscribed =
+            false;
     }
 
     /// <summary>
@@ -600,18 +791,17 @@ public sealed class S1P3BossDreadAttackState :
         foreach (S1P3OilController oilController
                  in m_spawnedOils)
         {
-            oilController?.Cancel();
+            oilController?
+                .Cancel();
         }
     }
 
     /// <summary>
-    /// 正常終了した行動のクールタイムを開始します。
+    /// ドレット攻撃のクールタイムを開始します。
     /// </summary>
-    private void StartCoolTimeIfSucceeded()
+    private void StartCoolTime()
     {
         if (Owner == null ||
-            Owner.GetStateExecutionStatus() !=
-            StateExecutionStatus.SUCCEEDED ||
             m_references == null ||
             m_references.DecisionParameterAsset == null)
         {
@@ -619,17 +809,21 @@ public sealed class S1P3BossDreadAttackState :
         }
 
         BossStateCoolTimeManager coolTimeManager =
-            Owner.GetComponent<BossStateCoolTimeManager>();
+            Owner.GetComponent<
+                BossStateCoolTimeManager>();
 
         if (coolTimeManager == null)
         {
             return;
         }
 
-        coolTimeManager.StartCoolTime<S1P3BossDreadAttackState>(
-            m_references.DecisionParameterAsset
-                .DreadAttack
-                .CoolTime);
+        coolTimeManager
+            .StartCoolTime<
+                S1P3BossDreadAttackState>(
+                m_references
+                    .DecisionParameterAsset
+                    .DreadAttack
+                    .CoolTime);
     }
 
     /// <summary>
@@ -637,7 +831,14 @@ public sealed class S1P3BossDreadAttackState :
     /// </summary>
     private void FailState()
     {
-        Owner.SetStateExecutionStatus(
+        if (Owner?.AnimationController != null)
+        {
+            Owner.AnimationController.SetBool(
+                m_animationBoolID,
+                false);
+        }
+
+        Owner?.SetStateExecutionStatus(
             StateExecutionStatus.FAILED);
     }
 
@@ -648,13 +849,25 @@ public sealed class S1P3BossDreadAttackState :
     {
         m_spawnedOils.Clear();
 
-        m_launchedOilCount = 0;
-        m_landedOilCount = 0;
+        m_nextLaunchPointIndex =
+            0;
 
-        m_hasLaunched = false;
-        m_isWaitingFinish = false;
-        m_finishElapsedTime = 0.0f;
+        m_launchedOilCount =
+            0;
 
-        m_isAnimationEventSubscribed = false;
+        m_landedOilCount =
+            0;
+
+        m_hasFinishedLaunching =
+            false;
+
+        m_isWaitingFinish =
+            false;
+
+        m_finishElapsedTime =
+            0.0f;
+
+        m_isAnimationEventSubscribed =
+            false;
     }
 }

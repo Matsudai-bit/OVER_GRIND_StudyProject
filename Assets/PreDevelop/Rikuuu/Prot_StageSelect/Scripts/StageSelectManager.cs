@@ -1,24 +1,40 @@
+using System.Collections;
 using TMPro;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.InputSystem;
+using UnityEngine.Serialization;
+using UnityEngine.UI;
 
 /// <summary>
-/// ステージ情報
+/// ステージの種類です。
+/// SaveDataで使用するステージ番号と値を一致させます。
+/// </summary>
+public enum StageType
+{
+    TUTORIAL = 0,
+    STAGE_1 = 1,
+    STAGE_2 = 2,
+    STAGE_3 = 3
+}
+
+/// <summary>
+/// ステージ選択画面で使用するステージ情報です。
 /// </summary>
 [System.Serializable]
 public struct StageInfomation
 {
     // ステージアイコン
-    public UnityEngine.UI.Image stagePoint;
+    public Image stagePoint;
 
     // ステージ番号
-    public int stageNumber;
+    public string stageNumber;
 
     // セクター番号テクスチャ
     public Sprite stageSectorNumber;
 
-    // ハイドイメージコンポーネント
-    public UnityEngine.UI.Image hideImage;
+    // 未解放時に表示する画像
+    public Image hideImage;
 
     // ステージ名（日本語）
     public string stageNameJa;
@@ -26,284 +42,615 @@ public struct StageInfomation
     // ステージ名（英語）
     public string stageNameEng;
 
+    // ランク
+    public string rank;
+
     // ベストタイム
     public int bestTime;
 
     // プレイ可能かどうか
     public bool canPlay;
+
+    // 一度クリアしたかどうか
+    public bool isCleared;
+
+    // 押下されたときに呼ぶイベント
+    public UnityEvent onClickAction;
+
+    // 半分のサイズで表示するか
+    public bool isHalfSize;
 }
 
 /// <summary>
 /// ステージ選択画面を管理します。
-/// カーソルとステージポイントの位置関係から、
-/// 現在選択されているステージを判定します。
+/// ステージ進捗の反映、カーソル判定、
+/// ステージ情報表示、ステージポイントへの吸着を管理します。
 /// </summary>
-public class StageSelectManager : MonoBehaviour
+public sealed class StageSelectManager : MonoBehaviour
 {
-    // 乗っているステージがないことを表すインデックス
+    // ステージにカーソルが乗っていないことを表すインデックス
     private const int NO_HOVER = -1;
 
-    [Header("カーソル判定")]
+    [SerializeField, Header("セーブデータ")]
+    private SaveDataController m_saveDataController;
 
-    // カーソルの衝突検知範囲
+    [SerializeField, Header("ステージマッピング")]
+    private SerializeDictionary<StageType, int>
+        m_stageIndexMap = new();
+
+    [SerializeField, Header("カーソル判定")]
+    [FormerlySerializedAs("HIT_RADIUS")]
+    [Min(0.0f)]
+    private float m_hitRadius = 40.0f;
+
+    [SerializeField, Header("ステージポイントへの吸着")]
+    [FormerlySerializedAs("SNAP_RADIUS")]
+    [Min(0.0f)]
+    [Tooltip("吸着を開始する距離。")]
+    private float m_snapRadius = 80.0f;
+
     [SerializeField]
-    private float HIT_RADIUS = 40.0f;
+    [FormerlySerializedAs("RELEASE_RADIUS")]
+    [Min(0.0f)]
+    [Tooltip("吸着を解除する距離。")]
+    private float m_releaseRadius = 150.0f;
 
-    [Header("ステージポイントへの吸着")]
-
-    // 吸着が始まる距離
     [SerializeField]
-    private float SNAP_RADIUS = 80.0f;
+    [FormerlySerializedAs("SNAP_COMPLETE_THRESHOLD")]
+    [Min(0.0f)]
+    [Tooltip("吸着完了と判定する距離。")]
+    private float m_snapCompleteThreshold = 2.0f;
 
-    // 吸着を解除する距離
     [SerializeField]
-    private float RELEASE_RADIUS = 150.0f;
+    [FormerlySerializedAs("SNAP_SPEED")]
+    [Min(0.0f)]
+    [Tooltip("ステージポイントへ吸着する速度。")]
+    private float m_snapSpeed = 10.0f;
 
-    // 吸着が完了したとみなす距離
-    [SerializeField]
-    private float SNAP_COMPLETE_THRESHOLD = 2.0f;
-
-    // 吸着の滑らかさ
-    [SerializeField]
-    private float SNAP_SPEED = 10.0f;
-
-    [Header("カーソル")]
-
-    // マップ中央に配置されたカーソル座標
-    [SerializeField]
+    [SerializeField, Header("カーソル")]
     private RectTransform m_cursor;
 
-    [Header("ステージの情報")]
-
-    // ステージの情報
-    [SerializeField]
+    [SerializeField, Header("ステージ情報")]
     private StageInfomation[] m_stagePoints;
 
-    [Header("ステージ情報を表示するコンポーネント")]
-
-    // ステージ番号
-    [SerializeField]
+    [SerializeField, Header("ステージ情報表示")]
     private TextMeshProUGUI m_stageNumber;
 
-    // セクター番号
     [SerializeField]
-    private UnityEngine.UI.Image m_sectorNumber;
+    private Image m_sectorNumber;
 
-    // ステージ名（日本語）
     [SerializeField]
-    private TextMeshProUGUI m_stageNameJa;
+    private ScrambleText m_stageNameJa;
 
-    // ステージ名（英語）
     [SerializeField]
-    private TextMeshProUGUI[] m_stageNameEng;
+    private ScrambleText[] m_stageNameEng;
 
-    // ベストタイム
     [SerializeField]
-    private TextMeshProUGUI m_bestTime;
+    private ScrambleText m_rank;
 
-    [Header("カーソル表示関連")]
-
-    // カーソルが乗っているときのイメージコンポーネント
     [SerializeField]
-    private UnityEngine.UI.Image m_onCursorImage;
+    private ScrambleText m_bestTime;
 
-    // 矢印線のイメージコンポーネント
+    [SerializeField, Header("カーソル選択表示")]
+    private Image m_onCursorImage;
+
     [SerializeField]
-    private UnityEngine.UI.Image m_arrowLineImage;
+    private Image m_arrowLineImage;
 
-    [Header("デフォルト値関連")]
-
-    // セクター番号の通常時テクスチャ
-    [SerializeField]
+    [SerializeField, Header("デフォルト表示")]
     private Sprite m_defaultSectorTexture;
 
-    // ステージ番号のデフォルト値
     [SerializeField]
     private string m_defaultStageNumber = "STAGE-";
 
-    // ステージ名（日本語）のデフォルト値
     [SerializeField]
     private string m_defaultStageNameJa = "--------";
 
-    // ステージ名（英語）のデフォルト値
     [SerializeField]
     private string m_defaultStageNameEn = "-------------";
 
-    // ベストタイムのデフォルト値
+    [SerializeField]
+    private string m_defaultRank = "-";
+
     [SerializeField]
     private string m_defaultBestTime = "-:-.-";
 
-    // 選択可能なボタンテクスチャ
-    [SerializeField]
-    private Sprite m_selectableButtonexture;
+    [SerializeField, Header("ステージポイント")]
+    [FormerlySerializedAs("m_selectableButtonexture")]
+    private Sprite m_selectableButtonTexture;
 
-    // 選択不可なボタンテクスチャ
     [SerializeField]
     private Sprite m_unselectableButtonTexture;
 
-    [Header("READYボタン")]
-
-    // 準備完了ボタン
     [SerializeField]
+    private Sprite m_clearedButtonTexture;
+
+    [SerializeField, Header("READYボタン")]
     private StageSelectButton m_readyButton;
 
-    [Header("入力判定関連")]
-
-    // 移動キーが押される判定
-    [SerializeField]
+    [SerializeField, Header("入力判定")]
     private InputActionReference m_navigateActionRef;
 
-    // 決定キーが押される判定
     [SerializeField]
     private InputActionReference m_enterActionRef;
 
-    [Header("マップコントローラー")]
-
-    // マップコントローラー
-    [SerializeField]
+    [SerializeField, Header("マップコントローラー")]
     private MapController m_mapController;
 
-    // 現在カーソルが乗っているステージのインデックス
+    [SerializeField, Header("ステージ決定")]
+    [Min(0.0f)]
+    private float m_invokeDelay = 1.0f;
+
+    // 現在カーソルが乗っているステージ
     private int m_hoveredIndex = NO_HOVER;
 
-    // カーソルがいずれかのステージに乗っているかどうか
-    public bool IsHovering => m_hoveredIndex != NO_HOVER;
-
-    // 現在吸着中のステージのインデックス
+    // 現在吸着しているステージ
     private int m_snappedIndex = NO_HOVER;
 
-    // 吸着が完了し、既に中心へ到達済みかどうか
+    // ステージポイントへの吸着が完了したか
     private bool m_isSnapCompleted = false;
+
+    // ステージ決定処理の遅延中か
+    private bool m_isWaiting = false;
+
+    /// <summary>
+    /// 現在カーソルがステージに乗っているか取得します。
+    /// </summary>
+    public bool IsHovering =>
+        m_hoveredIndex != NO_HOVER;
 
     private void Start()
     {
-        // 表示を初期化する
-        ResetComponent();
+        // 現在のSaveDataからステージ進捗を反映
+        ApplyStageProgress();
 
+        // 解放・クリア状態に応じて
+        // ステージポイントの見た目を更新
+        RefreshStagePointVisuals();
+
+        // ステージ情報表示を初期化
+        ResetComponents();
+
+        m_enterActionRef.action.Enable();
+        m_navigateActionRef.action.Enable();
+    }
+
+    private void LateUpdate()
+    {
+        // 判定前にステージポイントへの吸着処理を行う
+        UpdateCursorSnap();
+
+        // MapControllerの移動後に
+        // カーソルとステージポイントの位置を判定
+        int hoveredIndex =
+            FindHoveredIndex();
+
+        // ホバー対象が変化した場合のみ表示を更新
+        if (hoveredIndex != m_hoveredIndex)
+        {
+            m_hoveredIndex =
+                hoveredIndex;
+
+            OnHoverChanged();
+        }
+
+        // 決定入力を確認
+        UpdateReadyButtonInput();
+    }
+
+    /// <summary>
+    /// SaveDataの進捗をすべてのステージへ反映します。
+    /// </summary>
+    private void ApplyStageProgress()
+    {
+        if (m_saveDataController == null)
+        {
+            Debug.LogWarning(
+                $"{nameof(SaveDataController)} "
+                + "が設定されていません。",
+                this);
+
+            return;
+        }
+
+        GameProgressSaveData progress =
+            m_saveDataController.Progress;
+
+        if (progress == null)
+        {
+            Debug.LogWarning(
+                $"{nameof(GameProgressSaveData)} "
+                + "を取得できませんでした。",
+                this);
+
+            return;
+        }
+
+        ApplyStageProgress(
+            StageType.TUTORIAL,
+            progress);
+
+        ApplyStageProgress(
+            StageType.STAGE_1,
+            progress);
+
+        ApplyStageProgress(
+            StageType.STAGE_2,
+            progress);
+
+        ApplyStageProgress(
+            StageType.STAGE_3,
+            progress);
+    }
+
+    /// <summary>
+    /// 指定されたステージへ進行状況を反映します。
+    /// </summary>
+    /// <param name="stageType">
+    /// 反映するステージ。
+    /// </param>
+    /// <param name="progress">
+    /// 現在のゲーム進行データ。
+    /// </param>
+    private void ApplyStageProgress(
+        StageType stageType,
+        GameProgressSaveData progress)
+    {
+        if (!m_stageIndexMap.TryGetValue(
+            stageType,
+            out int stageIndex))
+        {
+            Debug.LogWarning(
+                $"{stageType} のステージIndexが"
+                + "設定されていません。",
+                this);
+
+            return;
+        }
+
+        if (!IsValidStageIndex(stageIndex))
+        {
+            Debug.LogWarning(
+                $"{stageType} のステージIndexが不正です。"
+                + $" Index: {stageIndex}",
+                this);
+
+            return;
+        }
+
+        int stageNumber =
+            (int)stageType;
+
+        /*
+         * Tutorialは最初からプレイ可能。
+         *
+         * Stage1以降は、
+         * 直前のステージをクリアすると解放される。
+         *
+         * Tutorial : 常時解放
+         * Stage1   : ClearedStage >= 0
+         * Stage2   : ClearedStage >= 1
+         * Stage3   : ClearedStage >= 2
+         */
+        bool canPlay =
+            stageNumber == 0
+            || progress.ClearedStage
+            >= stageNumber - 1;
+
+        // 自身のステージまで進行していればクリア済み
+        bool isCleared =
+            progress.ClearedStage
+            >= stageNumber;
+
+        m_stagePoints[stageIndex].canPlay =
+            canPlay;
+
+        m_stagePoints[stageIndex].isCleared =
+            isCleared;
+
+        // 記録が存在しない場合のデフォルト値
+        m_stagePoints[stageIndex].rank =
+            m_defaultRank;
+
+        m_stagePoints[stageIndex].bestTime =
+            -1;
+
+        // 未クリアの場合はクリア記録を表示しない
+        if (!isCleared)
+        {
+            return;
+        }
+
+        if (!progress.TryGetStageData(
+            stageNumber,
+            out GameProgressSaveData.StageData stageData))
+        {
+            return;
+        }
+
+        m_stagePoints[stageIndex].rank =
+            GetRank(stageData.Rank);
+
+        m_stagePoints[stageIndex].bestTime =
+            stageData.BestTime;
+    }
+
+    /// <summary>
+    /// ステージの解放状態とクリア状態に応じて
+    /// ステージポイントの表示を更新します。
+    /// </summary>
+    private void RefreshStagePointVisuals()
+    {
         if (m_stagePoints == null)
         {
             return;
         }
 
-        // 選択可否による表示の切り替え
-        for (int i = 0; i < m_stagePoints.Length; i++)
+        for (int i = 0;
+             i < m_stagePoints.Length;
+             i++)
         {
-            if (m_stagePoints[i].stagePoint == null)
+            Image stagePoint =
+                m_stagePoints[i].stagePoint;
+
+            if (stagePoint == null)
             {
                 continue;
             }
 
-            // 選択できる場合
             if (m_stagePoints[i].canPlay)
             {
-                m_stagePoints[i].stagePoint.sprite = m_selectableButtonexture;
-
-                // ハイドイメージを非表示にする
-                if (m_stagePoints[i].hideImage != null)
-                {
-                    m_stagePoints[i].hideImage.enabled = false;
-                }
+                ApplyUnlockedStageVisual(i);
             }
-            // 選択できない場合
             else
             {
-                m_stagePoints[i].stagePoint.sprite = m_unselectableButtonTexture;
-
-                // ハイドイメージを表示する
-                if (m_stagePoints[i].hideImage != null)
-                {
-                    m_stagePoints[i].hideImage.enabled = true;
-                }
+                ApplyLockedStageVisual(i);
             }
         }
-    }
-
-    private void LateUpdate()
-    {
-        // 判定の前にカーソルを吸着させる
-        UpdateCursorSnap();
-
-        // マップの移動・拡大縮小後に判定する
-        int hoveredIndex = FindHoveredIndex();
-
-        // カーソルが乗っている対象が変化した場合
-        if (hoveredIndex != m_hoveredIndex)
-        {
-            UpdateHoveredStage(hoveredIndex);
-        }
-
-        // READYボタンへの入力は毎フレーム確認する
-        UpdateReadyButtonInput();
     }
 
     /// <summary>
-    /// カーソルが乗っているステージの変更を反映します。
+    /// 解放済みステージの表示を設定します。
     /// </summary>
-    private void UpdateHoveredStage(int hoveredIndex)
+    /// <param name="index">
+    /// ステージ情報のインデックス。
+    /// </param>
+    private void ApplyUnlockedStageVisual(int index)
     {
-        m_hoveredIndex = hoveredIndex;
+        StageInfomation stageInfo =
+            m_stagePoints[index];
 
-        // ステージに乗っていない場合
-        if (!IsHovering)
+        if (!stageInfo.canPlay)
         {
-            ResetComponent();
+            stageInfo.stagePoint.sprite = m_unselectableButtonTexture;
+        }
+        else if (!stageInfo.isCleared)
+        {
+            stageInfo.stagePoint.sprite = m_selectableButtonTexture;
+        }
+        else
+        {
+            stageInfo.stagePoint.sprite = m_clearedButtonTexture;
+
+        }
+
+
+        ApplyStagePointSize(
+            stageInfo.stagePoint,
+            stageInfo.isHalfSize);
+
+        if (stageInfo.hideImage != null)
+        {
+            stageInfo.hideImage.enabled =
+                false;
+        }
+    }
+
+    /// <summary>
+    /// 未解放ステージの表示を設定します。
+    /// </summary>
+    /// <param name="index">
+    /// ステージ情報のインデックス。
+    /// </param>
+    private void ApplyLockedStageVisual(int index)
+    {
+        StageInfomation stageInfo =
+            m_stagePoints[index];
+
+        stageInfo.stagePoint.sprite =
+            m_unselectableButtonTexture;
+
+        ApplyStagePointSize(
+            stageInfo.stagePoint,
+            stageInfo.isHalfSize);
+
+        if (stageInfo.hideImage != null)
+        {
+            stageInfo.hideImage.enabled =
+                true;
+        }
+    }
+
+    /// <summary>
+    /// ステージポイントのサイズを設定します。
+    /// </summary>
+    /// <param name="stagePoint">
+    /// サイズを変更する画像。
+    /// </param>
+    /// <param name="isHalfSize">
+    /// 半分のサイズにするか。
+    /// </param>
+    private void ApplyStagePointSize(
+        Image stagePoint,
+        bool isHalfSize)
+    {
+        if (stagePoint == null)
+        {
             return;
         }
 
-        StageInfomation stageInformation = m_stagePoints[m_hoveredIndex];
+        /*
+         * 先にNativeSizeへ戻すことで、
+         * RefreshStagePointVisualsを複数回呼んでも
+         * 50% → 25% → 12.5% と縮み続けないようにする。
+         */
+        stagePoint.SetNativeSize();
 
-        // ステージ情報を表示する
-        UpdateStageInformation(stageInformation);
+        if (!isHalfSize)
+        {
+            return;
+        }
 
-        // プレイ可能なステージの場合
-        if (stageInformation.canPlay)
+        RectTransform rectTransform =
+            stagePoint.rectTransform;
+
+        Vector2 nativeSize =
+            rectTransform.rect.size;
+
+        rectTransform.SetSizeWithCurrentAnchors(
+            RectTransform.Axis.Horizontal,
+            nativeSize.x * 0.5f);
+
+        rectTransform.SetSizeWithCurrentAnchors(
+            RectTransform.Axis.Vertical,
+            nativeSize.y * 0.5f);
+    }
+
+    /// <summary>
+    /// ホバーしているステージが変更された際に
+    /// ステージ情報表示を更新します。
+    /// </summary>
+    private void OnHoverChanged()
+    {
+        if (!IsHovering)
+        {
+            ResetComponents();
+
+            return;
+        }
+
+        if (!IsValidStageIndex(
+            m_hoveredIndex))
+        {
+            ResetComponents();
+
+            return;
+        }
+
+        StageInfomation stageInfo =
+            m_stagePoints[m_hoveredIndex];
+
+        // ステージ番号
+        if (m_stageNumber != null)
+        {
+            m_stageNumber.text =
+                "STAGE-"
+                + stageInfo.stageNumber;
+        }
+
+        // セクター番号
+        if (m_sectorNumber != null)
+        {
+            m_sectorNumber.sprite =
+                stageInfo.stageSectorNumber;
+        }
+
+        // 日本語ステージ名
+        m_stageNameJa?.Play(
+            stageInfo.stageNameJa);
+
+        // 英語ステージ名
+        if (m_stageNameEng != null)
+        {
+            foreach (
+                ScrambleText stageName
+                in m_stageNameEng)
+            {
+                stageName?.Play(
+                    stageInfo.stageNameEng);
+            }
+        }
+
+        // ランク
+        if (m_rank != null)
+        {
+            string rank =
+                string.IsNullOrEmpty(stageInfo.rank)
+                    ? m_defaultRank
+                    : stageInfo.rank;
+
+            m_rank.Play(rank);
+        }
+
+        // ベストタイム
+        ApplyBestTimeText(
+            stageInfo.bestTime);
+
+        // カーソル選択表示
+        if (m_onCursorImage != null)
+        {
+            m_onCursorImage.enabled =
+                true;
+        }
+
+        if (m_arrowLineImage != null)
+        {
+            m_arrowLineImage.enabled =
+                true;
+        }
+
+        if (m_readyButton == null)
+        {
+            return;
+        }
+
+        // プレイ可能ならREADYボタンを選択状態にする
+        if (stageInfo.canPlay)
         {
             m_readyButton.OnCursor();
         }
-        // プレイ不可のステージの場合
         else
         {
+            // 未解放ステージへ移動した場合、
+            // 前ステージの選択状態を残さない
             m_readyButton.OnCursorExit();
         }
     }
 
     /// <summary>
-    /// 選択中のステージ情報をUIへ反映します。
+    /// ベストタイム表示を更新します。
     /// </summary>
-    private void UpdateStageInformation(StageInfomation stageInformation)
+    /// <param name="bestTime">
+    /// 表示するベストタイム。
+    /// 未記録の場合は負数。
+    /// </param>
+    private void ApplyBestTimeText(
+        int bestTime)
     {
-        // ステージ番号
-        m_stageNumber.text = "STAGE-" + stageInformation.stageNumber;
-
-        // セクター番号
-        m_sectorNumber.sprite = stageInformation.stageSectorNumber;
-
-        // ステージ名（日本語）
-        m_stageNameJa.text = stageInformation.stageNameJa;
-
-        // ステージ名（英語）
-        foreach (TextMeshProUGUI stageName in m_stageNameEng)
+        if (m_bestTime == null)
         {
-            if (stageName == null)
-            {
-                continue;
-            }
-
-            stageName.text = stageInformation.stageNameEng;
+            return;
         }
 
-        // ベストタイム
-        int bestTime = stageInformation.bestTime;
-        int minutes = bestTime / 60;
-        float seconds = bestTime - (minutes * 60);
+        if (bestTime < 0)
+        {
+            m_bestTime.Play(
+                m_defaultBestTime);
 
-        m_bestTime.text =
-            minutes.ToString("00") + ":" +
-            seconds.ToString("00.00");
+            return;
+        }
 
-        // カーソル関連のイメージを表示
-        m_onCursorImage.enabled = true;
-        m_arrowLineImage.enabled = true;
+        int minutes =
+            bestTime / 60;
+
+        int seconds =
+            bestTime % 60;
+
+        string timeText =
+            $"{minutes:00}:{seconds:00}";
+
+        m_bestTime.Play(
+            timeText);
     }
 
     /// <summary>
@@ -311,235 +658,469 @@ public class StageSelectManager : MonoBehaviour
     /// </summary>
     private void UpdateReadyButtonInput()
     {
-        if (m_readyButton == null)
+        if (m_readyButton == null
+            || !m_readyButton.m_isOnCursor
+            || m_enterActionRef == null
+            || !IsHovering
+            || !IsValidStageIndex(m_hoveredIndex))
         {
             return;
         }
 
-        // READYボタンにカーソルが合っていない場合
-        if (!m_readyButton.m_isOnCursor)
+        StageInfomation stageInfo =
+            m_stagePoints[m_hoveredIndex];
+
+        // 未解放ステージでは決定処理を行わない
+        if (!stageInfo.canPlay)
         {
             return;
         }
 
-        if (m_enterActionRef == null)
-        {
-            return;
-        }
-
-        // 決定ボタンが押された場合
+        // 決定キーを押した瞬間
         if (m_enterActionRef.action.WasPressedThisFrame())
         {
-            m_readyButton.OnClick();
+            if (m_isWaiting)
+            {
+                return;
+            }
+
+            int index =
+                m_hoveredIndex;
+
+            if (m_stagePoints[index].onClickAction != null
+                && m_stagePoints[index]
+                    .onClickAction
+                    .GetPersistentEventCount() > 0)
+            {
+                m_readyButton.OnClick();
+
+                StartCoroutine(
+                    InvokeAfterDelay(
+                        index,
+                        m_invokeDelay));
+            }
         }
 
-        // 決定ボタンが離された場合
+        // 決定キーを離した瞬間
         if (m_enterActionRef.action.WasReleasedThisFrame())
         {
-            m_readyButton.OnClickExit();
+            int index =
+                m_hoveredIndex;
+
+            if (m_stagePoints[index].onClickAction != null
+                && m_stagePoints[index]
+                    .onClickAction
+                    .GetPersistentEventCount() > 0)
+            {
+                m_readyButton.OnClickExit();
+            }
         }
     }
 
     /// <summary>
-    /// カーソルに最も近いステージのインデックスを返します。
-    /// 衝突検知範囲内になければ-1を返します。
+    /// カーソルに最も近いステージのインデックスを取得します。
+    /// 判定範囲内に存在しない場合はNO_HOVERを返します。
     /// </summary>
+    /// <returns>
+    /// 最も近いステージのインデックス。
+    /// </returns>
     private int FindHoveredIndex()
     {
-        // カーソル、またはステージ情報が設定されていない場合
-        if (m_cursor == null || m_stagePoints == null)
+        if (m_cursor == null
+            || m_stagePoints == null)
         {
             return NO_HOVER;
         }
 
-        int hoveredIndex = NO_HOVER;
-        float nearestDistance = HIT_RADIUS;
+        int hoveredIndex =
+            NO_HOVER;
 
-        for (int i = 0; i < m_stagePoints.Length; i++)
+        float nearestDistance =
+            m_hitRadius;
+
+        for (int i = 0;
+             i < m_stagePoints.Length;
+             i++)
         {
-            if (m_stagePoints[i].stagePoint == null)
+            Image stagePoint =
+                m_stagePoints[i].stagePoint;
+
+            if (stagePoint == null)
             {
                 continue;
             }
 
-            // ステージの座標をカーソルのローカル座標に変換する
             Vector2 localPosition =
                 m_cursor.InverseTransformPoint(
-                    m_stagePoints[i].stagePoint.rectTransform.position);
+                    stagePoint
+                        .rectTransform
+                        .position);
 
-            float distance = localPosition.magnitude;
+            float distance =
+                localPosition.magnitude;
 
-            // 最も近いステージを取得する
-            if (distance <= nearestDistance)
+            if (distance > nearestDistance)
             {
-                nearestDistance = distance;
-                hoveredIndex = i;
+                continue;
             }
+
+            nearestDistance =
+                distance;
+
+            hoveredIndex =
+                i;
         }
 
         return hoveredIndex;
     }
 
     /// <summary>
-    /// カーソルのステージポイントへの吸着を更新します。
+    /// カーソルを近くのステージポイントへ吸着させます。
     /// </summary>
     private void UpdateCursorSnap()
     {
-        if (m_cursor == null ||
-            m_stagePoints == null ||
-            m_mapController == null)
+        if (m_cursor == null
+            || m_stagePoints == null
+            || m_mapController == null)
         {
             return;
         }
 
-        // プレイヤーが移動操作をしている間は
-        // 吸着による引き寄せを行わない
         Vector2 moveInput =
-            m_navigateActionRef?.action.ReadValue<Vector2>() ??
-            Vector2.zero;
+            m_navigateActionRef?.action
+                .ReadValue<Vector2>()
+            ?? Vector2.zero;
 
+        /*
+         * プレイヤーがマップを操作している間は
+         * カーソル吸着による引き寄せを行わない。
+         */
         if (moveInput != Vector2.zero)
         {
-            m_snappedIndex = NO_HOVER;
-            m_isSnapCompleted = false;
+            ResetSnapState();
+
             return;
         }
 
-        // 既に何かへ吸着している場合
+        /*
+         * 既にステージポイントへ
+         * 吸着している場合の処理。
+         */
         if (m_snappedIndex != NO_HOVER)
         {
-            if (m_stagePoints[m_snappedIndex].stagePoint == null)
+            if (!IsValidStageIndex(
+                m_snappedIndex))
             {
-                // 参照が失われていたら吸着を解除する
-                m_snappedIndex = NO_HOVER;
-                m_isSnapCompleted = false;
+                ResetSnapState();
+            }
+            else if (
+                m_stagePoints[m_snappedIndex]
+                    .stagePoint == null)
+            {
+                ResetSnapState();
             }
             else
             {
                 Vector2 offset =
-                    (Vector2)m_cursor.InverseTransformPoint(
-                        m_stagePoints[m_snappedIndex]
-                            .stagePoint
-                            .rectTransform
-                            .position)
-                    + m_mapController.CursorTilt;
+                    GetStagePointOffset(
+                        m_snappedIndex);
 
-                float distance = offset.magnitude;
+                float distance =
+                    offset.magnitude;
 
                 // 解除距離を超えた場合
-                if (distance > RELEASE_RADIUS)
+                if (distance >
+                    m_releaseRadius)
                 {
-                    m_snappedIndex = NO_HOVER;
-                    m_isSnapCompleted = false;
+                    ResetSnapState();
                 }
-                // まだ中心に到達していない場合
+                // 中心へ到達するまで吸着
                 else if (!m_isSnapCompleted)
                 {
-                    // 中心へ到達した場合
-                    if (distance <= SNAP_COMPLETE_THRESHOLD)
+                    if (distance
+                        <= m_snapCompleteThreshold)
                     {
-                        m_isSnapCompleted = true;
+                        m_isSnapCompleted =
+                            true;
                     }
                     else
                     {
-                        // ステージポイントへ引き寄せる
-                        Vector2 moveDelta =
-                            -offset * SNAP_SPEED * Time.deltaTime;
-
-                        m_mapController.PanMapBy(moveDelta);
+                        MoveMapToStagePoint(
+                            offset);
                     }
 
                     return;
                 }
                 else
                 {
-                    // 到達済みの場合は解除判定のみ行う
+                    /*
+                     * 吸着完了後は、
+                     * プレイヤーの操作を妨げない。
+                     * 解除距離判定のみ継続する。
+                     */
                     return;
                 }
             }
         }
 
-        // 吸着していない場合、
-        // 範囲内にある最も近いステージを探す
-        int nearestIndex = NO_HOVER;
-        float nearestDistance = SNAP_RADIUS;
-        Vector2 nearestOffset = Vector2.zero;
+        FindAndStartSnap();
+    }
 
-        for (int i = 0; i < m_stagePoints.Length; i++)
+    /// <summary>
+    /// 吸着対象となる最も近いステージを検索します。
+    /// </summary>
+    private void FindAndStartSnap()
+    {
+        int nearestIndex =
+            NO_HOVER;
+
+        float nearestDistance =
+            m_snapRadius;
+
+        Vector2 nearestOffset =
+            Vector2.zero;
+
+        for (int i = 0;
+             i < m_stagePoints.Length;
+             i++)
         {
-            if (m_stagePoints[i].stagePoint == null)
+            if (m_stagePoints[i].stagePoint
+                == null)
             {
                 continue;
             }
 
             Vector2 offset =
-                (Vector2)m_cursor.InverseTransformPoint(
-                    m_stagePoints[i]
-                        .stagePoint
-                        .rectTransform
-                        .position)
-                + m_mapController.CursorTilt;
+                GetStagePointOffset(i);
 
-            float distance = offset.magnitude;
+            float distance =
+                offset.magnitude;
 
-            if (distance <= nearestDistance)
-            {
-                nearestDistance = distance;
-                nearestIndex = i;
-                nearestOffset = offset;
-            }
-        }
-
-        // 新たに範囲内へ入ったステージがある場合
-        if (nearestIndex != NO_HOVER)
-        {
-            m_snappedIndex = nearestIndex;
-            m_isSnapCompleted = false;
-
-            Vector2 moveDelta =
-                -nearestOffset * SNAP_SPEED * Time.deltaTime;
-
-            m_mapController.PanMapBy(moveDelta);
-        }
-    }
-
-    /// <summary>
-    /// ステージ情報表示とREADYボタンを初期状態へ戻します。
-    /// </summary>
-    private void ResetComponent()
-    {
-        m_enterActionRef.action.Enable();
-        // ステージ番号
-        m_stageNumber.text = m_defaultStageNumber;
-
-        // セクター番号
-        m_sectorNumber.sprite = m_defaultSectorTexture;
-
-        // ステージ名（日本語）
-        m_stageNameJa.text = m_defaultStageNameJa;
-
-        // ステージ名（英語）
-        foreach (TextMeshProUGUI stageName in m_stageNameEng)
-        {
-            if (stageName == null)
+            if (distance >
+                nearestDistance)
             {
                 continue;
             }
 
-            stageName.text = m_defaultStageNameEn;
+            nearestDistance =
+                distance;
+
+            nearestIndex =
+                i;
+
+            nearestOffset =
+                offset;
         }
 
-        // ベストタイム
-        m_bestTime.text = m_defaultBestTime;
-
-        // イメージコンポーネントを非表示にする
-        m_onCursorImage.enabled = false;
-        m_arrowLineImage.enabled = false;
-
-        // READYボタンの選択状態を解除する
-        if (m_readyButton != null)
+        if (nearestIndex == NO_HOVER)
         {
-            m_readyButton.OnCursorExit();
+            return;
         }
+
+        m_snappedIndex =
+            nearestIndex;
+
+        m_isSnapCompleted =
+            false;
+
+        MoveMapToStagePoint(
+            nearestOffset);
+    }
+
+    /// <summary>
+    /// 指定されたステージポイントまでの
+    /// カーソル基準オフセットを取得します。
+    /// </summary>
+    /// <param name="index">
+    /// ステージ情報のインデックス。
+    /// </param>
+    /// <returns>
+    /// ステージポイントまでのオフセット。
+    /// </returns>
+    private Vector2 GetStagePointOffset(
+        int index)
+    {
+        Vector2 offset =
+            m_cursor.InverseTransformPoint(
+                m_stagePoints[index]
+                    .stagePoint
+                    .rectTransform
+                    .position);
+
+        return offset
+            + m_mapController.CursorTilt;
+    }
+
+    /// <summary>
+    /// 指定されたオフセット分だけ
+    /// ステージポイント方向へマップを移動します。
+    /// </summary>
+    /// <param name="offset">
+    /// ステージポイントまでのオフセット。
+    /// </param>
+    private void MoveMapToStagePoint(
+        Vector2 offset)
+    {
+        Vector2 moveDelta =
+            -offset
+            * m_snapSpeed
+            * Time.deltaTime;
+
+        m_mapController.PanMapBy(
+            moveDelta);
+    }
+
+    /// <summary>
+    /// ステージポイントへの吸着状態を解除します。
+    /// </summary>
+    private void ResetSnapState()
+    {
+        m_snappedIndex =
+            NO_HOVER;
+
+        m_isSnapCompleted =
+            false;
+    }
+
+    /// <summary>
+    /// ステージ情報表示をデフォルト状態へ戻します。
+    /// </summary>
+    private void ResetComponents()
+    {
+        if (m_stageNumber != null)
+        {
+            m_stageNumber.text =
+                m_defaultStageNumber;
+        }
+
+        if (m_sectorNumber != null)
+        {
+            m_sectorNumber.sprite =
+                m_defaultSectorTexture;
+        }
+
+        m_stageNameJa?.Play(
+            m_defaultStageNameJa);
+
+        if (m_stageNameEng != null)
+        {
+            foreach (
+                ScrambleText stageName
+                in m_stageNameEng)
+            {
+                stageName?.Play(
+                    m_defaultStageNameEn);
+            }
+        }
+
+        m_rank?.Play(
+            m_defaultRank);
+
+        m_bestTime?.Play(
+            m_defaultBestTime);
+
+        if (m_onCursorImage != null)
+        {
+            m_onCursorImage.enabled =
+                false;
+        }
+
+        if (m_arrowLineImage != null)
+        {
+            m_arrowLineImage.enabled =
+                false;
+        }
+
+        m_readyButton?.OnCursorExit();
+    }
+
+    /// <summary>
+    /// 指定されたステージインデックスが有効か確認します。
+    /// </summary>
+    /// <param name="index">
+    /// 確認するインデックス。
+    /// </param>
+    /// <returns>
+    /// true：有効なインデックスです。
+    /// false：無効なインデックスです。
+    /// </returns>
+    private bool IsValidStageIndex(
+        int index)
+    {
+        if (m_stagePoints == null)
+        {
+            return false;
+        }
+
+        return index >= 0
+            && index < m_stagePoints.Length;
+    }
+
+    /// <summary>
+    /// 数値ランクを表示用文字列へ変換します。
+    /// </summary>
+    /// <param name="rank">
+    /// 数値ランク。
+    /// </param>
+    /// <returns>
+    /// 表示するランク文字列。
+    /// </returns>
+    private string GetRank(int rank)
+    {
+        switch (rank)
+        {
+            case 0:
+                return "C";
+
+            case 1:
+                return "B";
+
+            case 2:
+                return "A";
+
+            case 3:
+                return "S";
+
+            case 4:
+                return "S+";
+
+            default:
+                return m_defaultRank;
+        }
+    }
+
+    /// <summary>
+    /// 指定時間経過後にステージ決定イベントを実行します。
+    /// </summary>
+    /// <param name="index">
+    /// 決定したステージのインデックス。
+    /// </param>
+    /// <param name="delay">
+    /// イベント実行までの待機時間。
+    /// </param>
+    private IEnumerator InvokeAfterDelay(
+        int index,
+        float delay)
+    {
+        m_isWaiting =
+            true;
+
+        yield return new WaitForSeconds(
+            delay);
+
+        if (IsValidStageIndex(index)
+            && m_stagePoints[index]
+                .onClickAction != null
+            && m_stagePoints[index]
+                .onClickAction
+                .GetPersistentEventCount() > 0)
+        {
+            m_stagePoints[index]
+                .onClickAction
+                .Invoke();
+        }
+
+        m_isWaiting =
+            false;
     }
 }

@@ -48,6 +48,8 @@ public class ContainerController : MonoBehaviour
     [SerializeField]
     private InputActionReference m_backActionRef;
 
+    public bool IsLeft => m_choseState == ChoseState.LEFT;
+
     private void OnEnable()
     {
         if (m_backActionRef == null)
@@ -88,6 +90,8 @@ public class ContainerController : MonoBehaviour
 
     public void ChangeToLeft()
     {
+        Debug.Log($"[Lock] {name} frame={Time.frameCount}", this);
+
         // 選択状態の更新
         m_choseState = ChoseState.LEFT;
         // 表示するテクスチャを入れ替える
@@ -97,22 +101,24 @@ public class ContainerController : MonoBehaviour
         // カーソルを固定・解除する
         foreach (var selector in m_buttonSelectorL)
         {
-            if (selector.isActiveAndEnabled)
-            {
-                selector.UnLockCursor();
-            }
+            selector.enabled = true;
+
+            selector.UnLockCursor();
+            selector.UnLockCursorAnimation();
         }
         foreach (var selector in m_buttonSelectorR)
         {
-            if (selector.isActiveAndEnabled)
-            {
-                selector.LockCursor();
-            }
+            selector.LockCursorAnimation();
+            selector.LockCursor();
+
+            selector.enabled = false;
         }
     }
 
     public void ChangeToRight()
     {
+        Debug.Log($"[UnLock] {name} frame={Time.frameCount}", this);
+
         // 選択状態の更新
         m_choseState = ChoseState.RIGHT;
         // 表示するテクスチャを入れ替える
@@ -120,19 +126,19 @@ public class ContainerController : MonoBehaviour
         m_containerRImage.sprite = m_OnCursorContainerRTexture;
 
         // カーソルを固定・解除する
-         foreach (var selector in m_buttonSelectorL)
+        foreach (var selector in m_buttonSelectorL)
         {
-            if(selector.isActiveAndEnabled)
-            {
-                selector.LockCursor();
-            }
+            selector.LockCursorAnimation();
+            selector.LockCursor();
+
+            selector.enabled = false;
         }
         foreach (var selector in m_buttonSelectorR)
         {
-            if (selector.isActiveAndEnabled)
-            {
-                selector.UnLockCursor();
-            }
+            selector.enabled = true;
+
+            selector.UnLockCursor();
+            selector.UnLockCursorAnimation();
         }
     }
 }

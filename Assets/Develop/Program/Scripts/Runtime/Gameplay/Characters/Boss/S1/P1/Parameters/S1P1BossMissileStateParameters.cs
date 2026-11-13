@@ -11,9 +11,9 @@ public sealed class S1P1BossMissileStateParameters
     [SerializeField, Header("ミサイル本体")]
     private MissileParameterAsset m_missileParameterAsset;
 
-    // ミサイルを順番に発射する間隔
-    [SerializeField, Header("発射"), Min(0.0f)]
-    private float m_launchInterval = 0.5f;
+    // 1回の攻撃で発射するミサイル数
+    [SerializeField, Header("発射"), Min(1)]
+    private int m_launchCount = 3;
 
     // 発射直後に上方向へ進む時間
     [SerializeField, Min(0.0f)]
@@ -30,10 +30,12 @@ public sealed class S1P1BossMissileStateParameters
         m_missileParameterAsset;
 
     /// <summary>
-    /// 発射間隔を取得します。
+    /// 1回の攻撃で発射するミサイル数を取得します。
     /// </summary>
-    public float LaunchInterval =>
-        m_launchInterval;
+    public int LaunchCount =>
+        Mathf.Max(
+            1,
+            m_launchCount);
 
     /// <summary>
     /// ミサイルの上昇時間を取得します。
@@ -56,6 +58,7 @@ public sealed class S1P1BossMissileStateParameters
     /// </returns>
     public bool HasRequiredParameters()
     {
-        return m_missileParameterAsset != null;
+        return m_missileParameterAsset != null &&
+               m_launchCount > 0;
     }
 }

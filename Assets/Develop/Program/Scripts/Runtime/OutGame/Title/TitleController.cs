@@ -6,6 +6,9 @@ public class TitleController : MonoBehaviour
     [SerializeField]
     private string m_nextSceneName;
 
+    [SerializeField]
+    private SaveDataController saveDataController;
+
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
@@ -16,6 +19,16 @@ public class TitleController : MonoBehaviour
     void Update()
     {
         
+    }
+
+    public void MarkOpeningWatched()
+    {
+        if (!saveDataController.MarkOpeningWatched())
+        {
+            Debug.LogError("オープニング視聴済みにできない");
+            return;
+        }
+        Debug.Log("オープニング視聴済みにした");
     }
 
 

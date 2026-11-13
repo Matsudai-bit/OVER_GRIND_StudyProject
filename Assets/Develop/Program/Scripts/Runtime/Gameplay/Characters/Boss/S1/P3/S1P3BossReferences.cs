@@ -46,7 +46,26 @@ public sealed class S1P3BossReferences :
     [SerializeField, Header("ドレッド攻撃")]
     private DreadAttackStateReferences
         m_dreadAttackStateReferences;
+    // スタン中のQTE開始判定Sensor
+    [SerializeField, Header("スタンQTE")]
+    private CollisionSensor m_stunQTESensor;
 
+    // QTE Sequence
+    [SerializeField]
+    private GameplaySequenceAsset m_qteSequenceAsset;
+
+    // Sequence開始要求
+    [SerializeField]
+    private GameplaySequenceRequestEvent
+        m_sequenceRequestEvent;
+
+    // Sequence状態変更通知
+    [SerializeField]
+    private GameplaySequenceChangedEvent
+        m_sequenceChangedEvent;
+
+    [SerializeField]
+    private BossBreakablePart m_coreHealth;
     /// <summary>
     /// 状態パラメータを取得します。
     /// </summary>
@@ -88,7 +107,31 @@ public sealed class S1P3BossReferences :
     /// </summary>
     public DreadAttackStateReferences DreadAttackStateReferences =>
         m_dreadAttackStateReferences;
+    /// <summary>
+    /// スタンQTE開始判定Sensorを取得します。
+    /// </summary>
+    public CollisionSensor StunQTESensor =>
+        m_stunQTESensor;
 
+    /// <summary>
+    /// QTE Sequenceを取得します。
+    /// </summary>
+    public GameplaySequenceAsset QTESequenceAsset =>
+        m_qteSequenceAsset;
+
+    /// <summary>
+    /// Sequence開始要求イベントを取得します。
+    /// </summary>
+    public GameplaySequenceRequestEvent SequenceRequestEvent =>
+        m_sequenceRequestEvent;
+
+    /// <summary>
+    /// Sequence状態変更イベントを取得します。
+    /// </summary>
+    public GameplaySequenceChangedEvent SequenceChangedEvent =>
+        m_sequenceChangedEvent;
+
+    public BossBreakablePart BreakablePart => m_coreHealth;
     /// <summary>
     /// フェーズで使用するパラメータを生成します。
     /// </summary>

@@ -6,9 +6,28 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public sealed class TargetPoint : MonoBehaviour
 {
+    [Tooltip("この部位をロックオン対象として使用するかどうかを設定します。")]
+    [SerializeField]
+    private bool m_isActive = true;
+
     [Tooltip("ターゲット位置として使用するTransformです。未設定の場合は自身のTransformを使用します。")]
     [SerializeField]
     private Transform m_targetTransform;
+
+    /// <summary>
+    /// この部位をロックオン対象として使用するかどうかを取得または設定します。
+    /// </summary>
+    public bool IsActive
+    {
+        get
+        {
+            return m_isActive;
+        }
+        set
+        {
+            m_isActive = value;
+        }
+    }
 
     /// <summary>
     /// ターゲット位置として使用するTransformを取得します。

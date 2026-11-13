@@ -103,6 +103,11 @@ public sealed class GameFlowController : MonoBehaviour
 
         if (m_stateMachine.TryChangeState(nextState))
         {
+            Debug.Log(
+    $"ゲーム進行状態を変更"
+    + $" Current: {m_stateMachine.CurrentState}"
+    + $" Next: {nextState}",
+    this);
             return true;
         }
 

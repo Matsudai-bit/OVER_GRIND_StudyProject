@@ -5,11 +5,11 @@ using UnityEngine;
 /// </summary>
 public class ResultNewRecordPresenter : MonoBehaviour
 {
-    [Header("★ View と Model")]
+    [Header("View と Model")]
     [SerializeField] private Blinker_UI m_blinkerView;
     [SerializeField] private ResultTimeModel m_timeModel;
 
-    [Header("★ 演出タイミング")]
+    [Header("演出タイミング")]
     [Tooltip("タイム回転（カウントアップ）演出が終わってから NEW RECORD が出現するまでの遅延時間（秒）")]
     [SerializeField] private float m_appearanceDelay = 1.0f;
 

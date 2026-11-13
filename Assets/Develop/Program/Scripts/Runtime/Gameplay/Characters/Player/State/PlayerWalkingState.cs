@@ -22,6 +22,8 @@ public sealed class PlayerWalkingState
             Owner.MovementParameterAsset.CreateMoveParameters();
 
         Owner.AnimationPresenter.PlayWalkAnimation();
+
+
     }
 
     /// <summary>
@@ -61,6 +63,8 @@ public sealed class PlayerWalkingState
         if (Owner.Monitor.IsGrounded &&
             m_isWaitingForMovingCharge &&
             Owner.InputReader.HasVBoostHoldStarted &&
+            Owner.BoostChargingParameterAsset.CanStartMovingCharge(
+                Owner.Motor.HorizontalSpeed) &&
             Owner.BoostChargingParameterAsset.HasLateralChargeInput(
                 Owner.InputReader.MoveInput) &&
             Owner.BoostChargingParameterAsset.HasExceededFreeSteeringAngle(
