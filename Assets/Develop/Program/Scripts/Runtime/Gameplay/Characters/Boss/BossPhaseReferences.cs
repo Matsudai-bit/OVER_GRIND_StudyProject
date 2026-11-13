@@ -29,6 +29,9 @@ public sealed class BossPhaseReferences : MonoBehaviour
     // エフェクト制御器
     [SerializeField, Header("エフェクト制御器")]
     private EffectEmitter m_effectEmitter;
+    // オーディオ制御器
+    [SerializeField, Header("オーディオ制御器")]
+    private AudioEmitter m_audioEmitter;
 
 
     /// <summary>
@@ -51,6 +54,7 @@ public sealed class BossPhaseReferences : MonoBehaviour
 
 
     public EffectEmitter EffectEmitter => m_effectEmitter;
+    public AudioEmitter AudioEmitter => m_audioEmitter;
 
     /// <summary>
     /// 必須参照が設定されているか確認します。

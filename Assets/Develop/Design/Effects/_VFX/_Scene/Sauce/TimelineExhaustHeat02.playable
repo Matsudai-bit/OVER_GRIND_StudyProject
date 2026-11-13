@@ -224,6 +224,31 @@ MonoBehaviour:
     m_DisplayName: ExhaustHeat_Idol
   m_Markers:
     m_Objects: []
+--- !u!114 &-4853606123072356161
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4c2086f4fe387174ba6108990c545740, type: 3}
+  m_Name: Audio Cue Timeline Track
+  m_EditorClassIdentifier: Assembly-CSharp::AudioCueTimelineTrack
+  m_Version: 3
+  m_AnimClip: {fileID: 0}
+  m_Locked: 0
+  m_Muted: 0
+  m_CustomPlayableFullTypename: 
+  m_Curves: {fileID: 0}
+  m_Parent: {fileID: 11400000}
+  m_Children: []
+  m_Clips: []
+  m_Markers:
+    m_Objects:
+    - {fileID: 1802581956566336252}
+    - {fileID: 1208987974723066942}
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -244,6 +269,7 @@ MonoBehaviour:
   - {fileID: 2795511538137399822}
   - {fileID: 2864191578039916949}
   - {fileID: 941462622339954147}
+  - {fileID: -4853606123072356161}
   m_FixedDuration: 0
   m_EditorSettings:
     m_Framerate: 60
@@ -315,6 +341,21 @@ MonoBehaviour:
   active: 1
   postPlayback: 2
   directorOnClipEnd: 0
+--- !u!114 &1208987974723066942
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c4b31012076f23746a5a6cef49c307c4, type: 3}
+  m_Name: Audio Cue Marker
+  m_EditorClassIdentifier: Assembly-CSharp::AudioCueMarker
+  m_Time: 5.483333333333333
+  m_cueId: 1
+  m_action: 1
 --- !u!114 &1382530206839610922
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -339,6 +380,21 @@ MonoBehaviour:
   active: 1
   postPlayback: 2
   directorOnClipEnd: 0
+--- !u!114 &1802581956566336252
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c4b31012076f23746a5a6cef49c307c4, type: 3}
+  m_Name: Audio Cue Marker
+  m_EditorClassIdentifier: Assembly-CSharp::AudioCueMarker
+  m_Time: 0.05
+  m_cueId: 1
+  m_action: 0
 --- !u!114 &2795511538137399822
 MonoBehaviour:
   m_ObjectHideFlags: 1

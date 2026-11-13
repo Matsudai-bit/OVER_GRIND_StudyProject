@@ -12,41 +12,65 @@ public enum SoundCategory
     Voice
 }
 
-/// @ className :: サウンドデータ管理用データベース
-/// @ name :: Aoki Hayate (Update: Category & 3D Distance added)
-/// @ date :: 2026/10/28 
+
+/// <summary>
+/// AudioIDに対応する音声データと3D距離減衰設定を管理します。
+/// </summary>
 [CreateAssetMenu(fileName = "SoundDatabase", menuName = "Audio/Sound Database")]
-public class SoundDatabase : ScriptableObject
+public sealed class SoundDatabase : ScriptableObject
 {
-    /// @ className :: サウンドの各設定データ
+    /// <summary>
+    /// 音声ごとの再生設定です。
+    /// </summary>
     [Serializable]
-    public class SoundData
+    public sealed class SoundData
     {
-        public AudioID m_id;             // 識別子
-        public AudioClip m_clip;              // 音声ファイル
-        public SoundCategory m_category;      // サウンドのカテゴリ
+        private const float DEFAULT_MIN_DISTANCE = 1.0f;
+        private const float DEFAULT_MAX_DISTANCE = 30.0f;
 
-        [Range(0f, 1f)] public float m_volume = 1.0f; // 音量
-        [Range(0.1f, 3f)] public float m_pitch = 1.0f; // ピッチ
-        public bool m_loop = false;           // ループ再生するか
+        [Header("音声の識別とリソース")]
+        public AudioID m_id;
+        public AudioClip m_clip;
+        public SoundCategory m_category;
 
-        public bool m_is3D = false;           // 3D音響か
-        [Tooltip("3D再生時の音が届く最大距離")]
-        public float m_maxDistance = 30f;     // 3D音響の最大距離
+        [Header("基本再生設定")]
+        [Range(0.0f, 1.0f)] public float m_volume = 1.0f;
+        [Range(0.1f, 3.0f)] public float m_pitch = 1.0f;
+        public bool m_loop = false;
+        public bool m_is3D = false;
+
+        [Header("3D音声の距離減衰")]
+        [Min(0.01f)] public float m_minDistance = DEFAULT_MIN_DISTANCE;
+        [Min(0.02f)] public float m_maxDistance = DEFAULT_MAX_DISTANCE;
+        public AudioRolloffMode m_rolloffMode = AudioRolloffMode.Logarithmic;
+        // Customの横軸は距離の正規化値(0～1)、縦軸は音量倍率です。
+        public AnimationCurve m_customRolloffCurve = AnimationCurve.Linear(0.0f, 1.0f, 1.0f, 0.0f);
     }
 
-    public List<SoundData> m_soundList = new List<SoundData>(); // 登録されているサウンドのリスト
+    // ID登録ツールからも編集される音声リスト。既存のシリアライズ名を維持します。
+    [SerializeField, Header("音声一覧")]
+    public List<SoundData> m_soundList = new List<SoundData>();
 
-    // IDを指定して該当のデータを取得する
+    /// <summary>
+    /// 指定IDの音声情報を取得します。
+    /// </summary>
+    /// <param name="id">検索対象の音声ID。</param>
+    /// <returns>音声設定。見つからない場合はnull。</returns>
     public SoundData GetSoundData(AudioID id)
     {
-        for (int i = 0; i < m_soundList.Count; i++)
+        if (m_soundList == null)
         {
-            if (m_soundList[i].m_id == id)
+            return null;
+        }
+
+        foreach (SoundData data in m_soundList)
+        {
+            if (data != null && data.m_id == id)
             {
-                return m_soundList[i];
+                return data;
             }
         }
+
         return null;
     }
 }

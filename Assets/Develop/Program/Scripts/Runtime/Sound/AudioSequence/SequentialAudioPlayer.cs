@@ -29,12 +29,62 @@ public sealed class SequentialAudioPlayer : MonoBehaviour
         }
 
         Transform source = emissionPoint != null ? emissionPoint : GetDefaultEmissionPoint();
-        AudioSequentialHandle handle = new AudioSequentialHandle(asset, source);
+        return StartSequence(new AudioSequentialHandle(asset, source));
+    }
 
-        // 再生終了時のハンドルを自動で一覧から除外します。
+    /// <summary>
+    /// 指定ワールド座標でシーケンスを固定位置3D再生します。
+    /// AssetのSpatialModeはこの再生に限り上書きします。
+    /// </summary>
+    /// <param name="asset">連続音声の設定。</param>
+    /// <param name="position">発生するワールド座標。</param>
+    /// <returns>再生ハンドル。失敗時はnull。</returns>
+    public AudioSequentialHandle PlayAt(AudioSequentialAsset asset, Vector3 position)
+    {
+        if (asset == null) return null;
+        return StartSequence(new AudioSequentialHandle(asset, position));
+    }
+
+    /// <summary>
+    /// 指定Transformに追従させて3Dシーケンスを再生します。
+    /// </summary>
+    /// <param name="asset">連続音声の設定。</param>
+    /// <param name="target">追従先。</param>
+    /// <returns>再生ハンドル。失敗時はnull。</returns>
+    public AudioSequentialHandle PlayFollowing(AudioSequentialAsset asset, Transform target)
+    {
+        if (asset == null || target == null)
+        {
+            Debug.LogWarning("[SequentialAudioPlayer] Assetまたは追従先がありません。", this);
+            return null;
+        }
+
+        return StartSequence(new AudioSequentialHandle(asset,
+            AudioSequentialSpatialMode.THREE_DIMENSIONAL_FOLLOWING, target, target.position));
+    }
+
+    /// <summary>
+    /// シーケンスを2D再生します。
+    /// </summary>
+    /// <param name="asset">連続音声の設定。</param>
+    /// <returns>再生ハンドル。失敗時はnull。</returns>
+    public AudioSequentialHandle Play2D(AudioSequentialAsset asset)
+    {
+        if (asset == null) return null;
+        return StartSequence(new AudioSequentialHandle(asset,
+            AudioSequentialSpatialMode.TWO_DIMENSIONAL, null, Vector3.zero));
+    }
+
+    /// <summary>
+    /// 再生ハンドルを登録し、一連の再生を開始します。
+    /// </summary>
+    private AudioSequentialHandle StartSequence(AudioSequentialHandle handle)
+    {
+        if (handle == null) return null;
+
+        // 再生終了時に管理対象から自動的に除外します。
         handle.Finished += OnPlaybackFinished;
         m_activeHandles.Add(handle);
-
         if (!handle.Begin())
         {
             handle.Finished -= OnPlaybackFinished;
@@ -73,6 +123,41 @@ public sealed class SequentialAudioPlayer : MonoBehaviour
             default:
                 return manager.Play2D(asset.AudioID, false);
         }
+    }
+
+    /// <summary>
+    /// 単発SEを固定ワールド座標から再生します。
+    /// </summary>
+    /// <param name="asset">単発音声の設定。</param>
+    /// <param name="position">発生するワールド座標。</param>
+    /// <returns>再生ハンドル。失敗時はnull。</returns>
+    public AudioPlayHandle PlayOneShotAt(AudioOneShotAsset asset, Vector3 position)
+    {
+        if (asset == null || AudioManager.Instance == null) return null;
+        return AudioManager.Instance.Play3DAtPosition(asset.AudioID, position, false);
+    }
+
+    /// <summary>
+    /// 単発SEを指定Transformに追従して再生します。
+    /// </summary>
+    /// <param name="asset">単発音声の設定。</param>
+    /// <param name="target">追従先。</param>
+    /// <returns>再生ハンドル。失敗時はnull。</returns>
+    public AudioPlayHandle PlayOneShotFollowing(AudioOneShotAsset asset, Transform target)
+    {
+        if (asset == null || AudioManager.Instance == null || target == null) return null;
+        return AudioManager.Instance.Play3DFollowing(asset.AudioID, target, false);
+    }
+
+    /// <summary>
+    /// 単発SEを2D再生します。
+    /// </summary>
+    /// <param name="asset">単発音声の設定。</param>
+    /// <returns>再生ハンドル。失敗時はnull。</returns>
+    public AudioPlayHandle PlayOneShot2D(AudioOneShotAsset asset)
+    {
+        if (asset == null || AudioManager.Instance == null) return null;
+        return AudioManager.Instance.Play2D(asset.AudioID, false);
     }
 
     /// <summary>

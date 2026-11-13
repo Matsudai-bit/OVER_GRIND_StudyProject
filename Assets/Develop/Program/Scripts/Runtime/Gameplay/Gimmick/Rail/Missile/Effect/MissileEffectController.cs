@@ -15,6 +15,14 @@ public sealed class MissileEffectController : MonoBehaviour
     [SerializeField, Header("共有プール型：爆発エフェクト")]
     private EffectId m_explosionEffectId = EffectId.NONE;
 
+    [SerializeField, Header("ミサイルエフェクト 発射->移動中")]
+    AudioSequentialAsset m_missileAudioSequentialAsset;
+
+    [SerializeField, Header("爆発サウンド")]
+    AudioOneShotAsset m_explosionAudioOneShotAsset;
+    [SerializeField, Header("エミッター")]
+    private SequentialAudioPlayer m_sequentialAudioPlayer;
+
     // EffectServiceにつながるシーン共通Emitter
     private EffectEmitter m_sceneEmitter;
 
@@ -30,6 +38,11 @@ public sealed class MissileEffectController : MonoBehaviour
         if (m_sceneEmitter != null && m_launchEffectId != EffectId.NONE)
         {
             m_sceneEmitter.PlayAt(m_launchEffectId, transform.position, transform.rotation);
+        }
+
+        if (m_sequentialAudioPlayer != null)
+        {
+            m_sequentialAudioPlayer.PlayFollowing(m_missileAudioSequentialAsset, transform);
         }
 
         if (m_flightParticle != null)
@@ -54,6 +67,8 @@ public sealed class MissileEffectController : MonoBehaviour
         if (m_sceneEmitter != null && m_explosionEffectId != EffectId.NONE)
         {
             m_sceneEmitter.PlayAt(m_explosionEffectId, position, Quaternion.identity);
+
+            m_sequentialAudioPlayer.PlayOneShotAt(m_explosionAudioOneShotAsset, position);
         }
     }
 
