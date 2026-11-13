@@ -276,6 +276,7 @@ AnimatorState:
   m_StateMachineBehaviours:
   - {fileID: -2786410907202686427}
   - {fileID: 846827625942189363}
+  - {fileID: -5256168989557615625}
   m_Position: {x: 50, y: 50, z: 0}
   m_IKOnFeet: 0
   m_WriteDefaultValues: 1
@@ -370,6 +371,19 @@ AnimatorStateTransition:
   m_InterruptionSource: 0
   m_OrderedInterruption: 1
   m_CanTransitionToSelf: 1
+--- !u!114 &-5415894343807216542
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7f59c88065709084680701e3481b96a6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AnimationAudioCueStateExitNotifier
+  m_channel: 0
 --- !u!1101 &-5406583752752150437
 AnimatorStateTransition:
   m_ObjectHideFlags: 1
@@ -392,6 +406,19 @@ AnimatorStateTransition:
   m_InterruptionSource: 0
   m_OrderedInterruption: 1
   m_CanTransitionToSelf: 1
+--- !u!114 &-5256168989557615625
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7f59c88065709084680701e3481b96a6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AnimationAudioCueStateExitNotifier
+  m_channel: 0
 --- !u!1102 &-4582018191768961284
 AnimatorState:
   serializedVersion: 6
@@ -715,7 +742,7 @@ AnimatorStateMachine:
     m_Position: {x: -150, y: -20, z: 0}
   - serializedVersion: 1
     m_State: {fileID: -8051236095582623448}
-    m_Position: {x: 780, y: 590, z: 0}
+    m_Position: {x: 790, y: 590, z: 0}
   - serializedVersion: 1
     m_State: {fileID: 8582837951218300884}
     m_Position: {x: 670, y: 740, z: 0}
@@ -1233,7 +1260,8 @@ AnimatorState:
   m_CycleOffset: 0
   m_Transitions:
   - {fileID: -3073290451357359211}
-  m_StateMachineBehaviours: []
+  m_StateMachineBehaviours:
+  - {fileID: -5415894343807216542}
   m_Position: {x: 50, y: 50, z: 0}
   m_IKOnFeet: 0
   m_WriteDefaultValues: 1
