@@ -30,11 +30,11 @@ public sealed class PlayerIdlingState
     /// </summary>
     protected override void OnFixedUpdate()
     {
-        if (Owner.InputReader.ConsumeAttackInput() && Owner.Monitor.IsGrounded)
-        {
-            Machine.ChangeState<PlayerAttackingState>();
-            return;
-        }
+        //if (Owner.InputReader.ConsumeAttackInput() && Owner.Monitor.IsGrounded)
+        //{
+        //    Machine.ChangeState<PlayerAttackingState>();
+        //    return;
+        //}
 
         if (Owner.Monitor.CanStartJump &&
             Owner.InputReader.HasJumpInput)
