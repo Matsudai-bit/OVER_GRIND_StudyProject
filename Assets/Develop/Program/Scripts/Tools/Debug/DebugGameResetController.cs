@@ -4,6 +4,7 @@ using UnityEngine.SceneManagement;
 
 /// <summary>
 /// デバッグ用のゲームリセットコマンドを管理します。
+/// Editorおよび実行ビルドのどちらでも使用できます。
 /// </summary>
 public sealed class DebugGameResetController : MonoBehaviour
 {
@@ -17,14 +18,12 @@ public sealed class DebugGameResetController : MonoBehaviour
     private bool m_isResetting;
 
     /// <summary>
-    /// ゲーム起動時にデバッグControllerを生成します。
+    /// ゲーム起動時にデバッグControllerを自動生成します。
     /// </summary>
     [RuntimeInitializeOnLoadMethod(
         RuntimeInitializeLoadType.BeforeSceneLoad)]
     private static void CreateRuntimeController()
     {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-
         DebugGameResetController existingController =
             FindFirstObjectByType<DebugGameResetController>();
 
@@ -39,14 +38,22 @@ public sealed class DebugGameResetController : MonoBehaviour
         gameObject.AddComponent<DebugGameResetController>();
 
         DontDestroyOnLoad(gameObject);
+    }
 
-#endif
+    private void OnEnable()
+    {
+        SceneManager.sceneLoaded +=
+            OnSceneLoaded;
+    }
+
+    private void OnDisable()
+    {
+        SceneManager.sceneLoaded -=
+            OnSceneLoaded;
     }
 
     private void Update()
     {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-
         if (m_isResetting)
         {
             return;
@@ -60,14 +67,13 @@ public sealed class DebugGameResetController : MonoBehaviour
             return;
         }
 
-        if (!IsResetCommandPressed(keyboard))
+        if (!IsResetCommandPressed(
+            keyboard))
         {
             return;
         }
 
         ResetGame();
-
-#endif
     }
 
     /// <summary>
@@ -92,7 +98,7 @@ public sealed class DebugGameResetController : MonoBehaviour
             || keyboard.rightShiftKey.isPressed;
 
         bool isResetKeyPressed =
-            keyboard.rKey.wasPressedThisFrame;
+            keyboard.f12Key.wasPressedThisFrame;
 
         return isControlPressed
             && isShiftPressed
@@ -109,14 +115,16 @@ public sealed class DebugGameResetController : MonoBehaviour
             return;
         }
 
-        m_isResetting = true;
+        m_isResetting =
+            true;
 
         Debug.Log(
             "[Debug] ゲームデータを初期化します。",
             this);
 
-        // Pause状態を持ち越さない
-        Time.timeScale = 1.0f;
+        // Pause状態を遷移先へ持ち越さない
+        Time.timeScale =
+            1.0f;
 
         ResetSaveData();
 
@@ -141,7 +149,13 @@ public sealed class DebugGameResetController : MonoBehaviour
             saveFileName =
                 saveDataController.SaveFileName;
 
-            // Runtime上のデータも初期値へ戻す
+            /*
+             * 現在SceneにSaveDataControllerが存在する場合は、
+             * メモリ上のデータも初期状態へ戻します。
+             *
+             * この直後に保存ファイル自体を削除するため、
+             * ここでは即時保存しません。
+             */
             if (!saveDataController.ResetSaveData(
                 false))
             {
@@ -152,7 +166,7 @@ public sealed class DebugGameResetController : MonoBehaviour
             }
         }
 
-        // 保存済みJSONを削除
+        // 永続化されているJSONを削除
         if (!SaveSystem.TryDelete(
             saveFileName))
         {
@@ -170,7 +184,9 @@ public sealed class DebugGameResetController : MonoBehaviour
         StageSceneContext[] contexts =
             Resources.FindObjectsOfTypeAll<StageSceneContext>();
 
-        foreach (StageSceneContext context in contexts)
+        foreach (
+            StageSceneContext context
+            in contexts)
         {
             if (context == null)
             {
@@ -194,7 +210,8 @@ public sealed class DebugGameResetController : MonoBehaviour
                 + "がBuild Settingsに登録されていません。",
                 this);
 
-            m_isResetting = false;
+            m_isResetting =
+                false;
 
             return;
         }
@@ -202,28 +219,9 @@ public sealed class DebugGameResetController : MonoBehaviour
         SceneManager.LoadScene(
             SPLASH_SCENE_NAME);
     }
-    private void OnEnable()
-    {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-
-        SceneManager.sceneLoaded +=
-            OnSceneLoaded;
-
-#endif
-    }
-
-    private void OnDisable()
-    {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-
-        SceneManager.sceneLoaded -=
-            OnSceneLoaded;
-
-#endif
-    }
 
     /// <summary>
-    /// Sceneロード完了時の処理です。
+    /// Sceneロード完了時にリセット処理中状態を解除します。
     /// </summary>
     /// <param name="scene">
     /// ロードされたScene。
@@ -235,6 +233,7 @@ public sealed class DebugGameResetController : MonoBehaviour
         Scene scene,
         LoadSceneMode loadSceneMode)
     {
-        m_isResetting = false;
+        m_isResetting =
+            false;
     }
 }
