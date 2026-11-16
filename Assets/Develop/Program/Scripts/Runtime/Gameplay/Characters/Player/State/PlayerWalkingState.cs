@@ -40,7 +40,7 @@ public sealed class PlayerWalkingState
         // 攻撃入力を確認します。
         if (Owner.InputReader.ConsumeAttackInput() &&
             Owner.Monitor.IsGrounded &&
-            Owner.Monitor.HorizontalSpeed >= 3.0f)
+            Owner.Monitor.HorizontalSpeed >= 1.0f)
         {
             // 攻撃状態へ遷移する前に攻撃SEを再生し、
             // 歩行SEとの切り替えを行います。

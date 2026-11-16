@@ -1,3 +1,4 @@
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -35,5 +36,29 @@ public class TitleController : MonoBehaviour
     public void OnClickStartButton()
     {
         SceneManager.LoadScene(m_nextSceneName);
+    }
+
+    public void ExitGame()
+    {
+        GameApplication.QuitGame();
+    }
+
+}
+
+/// <summary>
+/// ゲーム終了処理を提供します。
+/// </summary>
+public static class GameApplication
+{
+    /// <summary>
+    /// ゲームを終了します。
+    /// </summary>
+    public static void QuitGame()
+    {
+#if UNITY_EDITOR
+        EditorApplication.isPlaying = false;
+#else
+        Application.Quit();
+#endif
     }
 }

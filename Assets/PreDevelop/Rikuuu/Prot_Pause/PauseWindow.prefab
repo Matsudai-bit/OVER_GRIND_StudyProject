@@ -599,6 +599,8 @@ GameObject:
   - component: {fileID: 4472386042927114974}
   - component: {fileID: 4834135989319362794}
   - component: {fileID: 5851140436589297371}
+  - component: {fileID: 4490022445356693067}
+  - component: {fileID: 7723690027268673327}
   m_Layer: 5
   m_Name: Stats
   m_TagString: Untagged
@@ -699,6 +701,33 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &4490022445356693067
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1329930980106196017}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a25c5a682e8abb54ab1c711546adc288, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PauseStatusView
+  m_model: {fileID: 7723690027268673327}
+  m_remainingTimeText: {fileID: 2622401020674796639}
+  m_retryCountText: {fileID: 1715326819621995184}
+--- !u!114 &7723690027268673327
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1329930980106196017}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 803fe41f339cef24e9852469fe4ab878, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PauseStatusModel
 --- !u!1 &1373780362626246134
 GameObject:
   m_ObjectHideFlags: 0
@@ -854,7 +883,7 @@ PlayableDirector:
   m_PlayableAsset: {fileID: 11400000, guid: 005d315b4f8d437419b289c9a274c435, type: 2}
   m_InitialState: 0
   m_WrapMode: 2
-  m_DirectorUpdateMode: 1
+  m_DirectorUpdateMode: 2
   m_InitialTime: 0
   m_SceneBindings:
   - key: {fileID: 7460402766070569510, guid: 005d315b4f8d437419b289c9a274c435, type: 2}
@@ -1349,7 +1378,19 @@ MonoBehaviour:
         m_CallState: 2
   m_onClickAction:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 0}
+        m_TargetAssemblyTypeName: GameDirector, Assembly-CSharp
+        m_MethodName: LoadStageSelect
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
   m_onClickExitAction:
     m_PersistentCalls:
       m_Calls: []
@@ -2333,16 +2374,16 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8908499256317640014}
-  - component: {fileID: 6289034018940348533}
   - component: {fileID: 7175064016619054194}
-  - component: {fileID: 5520092823185227740}
+  - component: {fileID: 8310662854537344755}
+  - component: {fileID: 1612456633751599946}
   m_Layer: 5
   m_Name: PauseWindow
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &8908499256317640014
 RectTransform:
   m_ObjectHideFlags: 0
@@ -2352,7 +2393,7 @@ RectTransform:
   m_GameObject: {fileID: 7062970479722657432}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 0.425, y: 0.425, z: 0.425}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 387605557585829468}
@@ -2368,18 +2409,6 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!225 &6289034018940348533
-CanvasGroup:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7062970479722657432}
-  m_Enabled: 1
-  m_Alpha: 1
-  m_Interactable: 1
-  m_BlocksRaycasts: 1
-  m_IgnoreParentGroups: 0
 --- !u!114 &7175064016619054194
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2392,13 +2421,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b2fa442b3b8bd764ba3234dd58198c7d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PauseFadeManager
-  m_inputRef: {fileID: 0}
-  m_buttonSelector: {fileID: 0}
-  m_pauseRequestEvent: {fileID: 0}
-  m_menuContext: {fileID: 0}
-  m_window: {fileID: 0}
-  m_fadeInDirector: {fileID: 0}
-  m_fadeOutDirector: {fileID: 0}
+  m_inputRef: {fileID: -8784545083839296357, guid: 052faaac586de48259a63d0c4782560b, type: 3}
+  m_buttonSelector: {fileID: 2397213832096904368}
+  m_pauseRequestEvent: {fileID: 11400000, guid: ac58557b95b7dca4290f0395fcfe969c, type: 2}
+  m_menuContext: {fileID: 11400000, guid: b0c88a8365d180447aba5923c37702f4, type: 2}
+  m_window: {fileID: 1612456633751599946}
+  m_fadeInDirector: {fileID: 5971908946327081795}
+  m_fadeOutDirector: {fileID: 5650938119316821567}
   m_activeSwitch:
     m_targets: []
     m_activateOnFadeIn: 1
@@ -2410,7 +2439,19 @@ MonoBehaviour:
   m_onFadeOutCompleted:
     m_PersistentCalls:
       m_Calls: []
---- !u!114 &5520092823185227740
+--- !u!225 &8310662854537344755
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7062970479722657432}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
+--- !u!114 &1612456633751599946
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -2425,25 +2466,97 @@ MonoBehaviour:
   m_openMode: 0
   m_firstSelectable: {fileID: 0}
   m_waitForShowCompletion: 0
-  m_waitForHideCompletion: 0
+  m_waitForHideCompletion: 1
   m_onShow:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 3359363951409773951}
+        m_TargetAssemblyTypeName: PauseFadeManager, Assembly-CSharp
+        m_MethodName: PlayFadeIn
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
   m_onHide:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 3359363951409773951}
+        m_TargetAssemblyTypeName: PauseFadeManager, Assembly-CSharp
+        m_MethodName: PlayFadeOut
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
   m_onOpened:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 7175064016619054194}
+        m_TargetAssemblyTypeName: PauseFadeManager, Assembly-CSharp
+        m_MethodName: OnWindowOpened
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
   m_onClosed:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 7175064016619054194}
+        m_TargetAssemblyTypeName: PauseFadeManager, Assembly-CSharp
+        m_MethodName: OnWindowClosed
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
   m_onInputEnabled:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 2397213832096904368}
+        m_TargetAssemblyTypeName: ButtonSelector, Assembly-CSharp
+        m_MethodName: UnLockCursor
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
   m_onInputDisabled:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 2397213832096904368}
+        m_TargetAssemblyTypeName: ButtonSelector, Assembly-CSharp
+        m_MethodName: LockCursor
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!1 &7152809612799986383
 GameObject:
   m_ObjectHideFlags: 0
@@ -2828,9 +2941,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PauseFadeAnimator
   m_inputRef: {fileID: 7727032971491509709, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_buttonSelector: {fileID: 2397213832096904368}
-  m_pauseRequestEvent: {fileID: 0}
-  m_menuContext: {fileID: 0}
-  m_window: {fileID: 0}
+  m_pauseRequestEvent: {fileID: 11400000, guid: ac58557b95b7dca4290f0395fcfe969c, type: 2}
+  m_menuContext: {fileID: 11400000, guid: b0c88a8365d180447aba5923c37702f4, type: 2}
+  m_window: {fileID: 1612456633751599946}
   m_fadeInDirector: {fileID: 5971908946327081795}
   m_fadeOutDirector: {fileID: 5650938119316821567}
   m_activeSwitch:
@@ -2844,7 +2957,19 @@ MonoBehaviour:
   m_startShown: 0
   m_onFadeOutCompleted:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 1612456633751599946}
+        m_TargetAssemblyTypeName: UIWindow, Assembly-CSharp
+        m_MethodName: NotifyHideCompleted
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!225 &1303205255928533105
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -2935,7 +3060,7 @@ PlayableDirector:
   m_PlayableAsset: {fileID: 11400000, guid: 1f3513fce3f42ca4a90ea7f1cb5a5d75, type: 2}
   m_InitialState: 0
   m_WrapMode: 2
-  m_DirectorUpdateMode: 1
+  m_DirectorUpdateMode: 2
   m_InitialTime: 0
   m_SceneBindings:
   - key: {fileID: -5785251488267646549, guid: 1f3513fce3f42ca4a90ea7f1cb5a5d75, type: 2}
@@ -2948,5 +3073,7 @@ PlayableDirector:
     value: {fileID: 1798038837468901918}
   - key: {fileID: 2755982617566152178, guid: 1f3513fce3f42ca4a90ea7f1cb5a5d75, type: 2}
     value: {fileID: 3224687258844999232}
+  - key: {fileID: 36439185395700872, guid: 1f3513fce3f42ca4a90ea7f1cb5a5d75, type: 2}
+    value: {fileID: 0}
   m_ExposedReferences:
     m_References: []

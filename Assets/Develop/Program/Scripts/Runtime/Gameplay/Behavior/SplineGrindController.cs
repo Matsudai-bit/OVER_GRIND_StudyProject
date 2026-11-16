@@ -178,9 +178,43 @@ public class SplineGrindController : MonoBehaviour
             // プレイヤー原点の高さを引き、坂でも搭乗位置を前方へずらしません。
             Vector3 railPosition = m_rb.position - Vector3.up * RideHeight;
             SplineUtility.GetNearestPoint(spline, (float3)railPosition, out _, out float nearestT);
-            Vector3 tangent = spline.EvaluateTangent(nearestT);
-            int direction = Vector3.Dot(tangent, m_rb.rotation * Vector3.forward) >= 0f ? 1 : -1;
-            StartGrindAt(rail, nearestT, direction, baseGrindSpeed * rail.SpeedMultiplier);
+            Vector3 tangent =
+        spline.EvaluateTangent(
+            nearestT);
+
+            int direction;
+
+            if (rail.LockBoardingDirection)
+            {
+                /*
+                 * 搭乗した向きには関係なく、
+                 * レール側で指定した方向へ進ませます。
+                 */
+                direction =
+                    rail.UseReverseDirection
+                        ? -1
+                        : 1;
+            }
+            else
+            {
+                Vector3 playerForward =
+                    m_rb.rotation *
+                    Vector3.forward;
+
+                direction =
+                    Vector3.Dot(
+                        tangent,
+                        playerForward) >= 0.0f
+                        ? 1
+                        : -1;
+            }
+
+            StartGrindAt(
+                rail,
+                nearestT,
+                direction,
+                baseGrindSpeed *
+                rail.SpeedMultiplier);
         }
     }
 
@@ -436,7 +470,8 @@ public class SplineGrindController : MonoBehaviour
 
             Debug.DrawRay(
     transform.position,
-    tangent.normalized * 5.0f,
+    tangent.normalized
+    * 5.0f,
     Color.blue,
     3.0f);
 
