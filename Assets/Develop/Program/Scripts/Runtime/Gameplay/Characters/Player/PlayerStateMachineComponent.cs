@@ -635,6 +635,7 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
     {
         bool isConsumingGauge =
             IsCurrentState<PlayerVRunningState>() ||
+            IsCurrentState<PlayerBoostDashingState>() ||
             m_isBoostSuspended;
 
         if (!isConsumingGauge)

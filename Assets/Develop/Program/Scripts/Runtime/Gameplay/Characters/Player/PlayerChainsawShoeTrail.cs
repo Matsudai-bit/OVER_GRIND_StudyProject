@@ -63,6 +63,7 @@ public sealed class PlayerChainsawShoeTrail : MonoBehaviour
         bool isMovingOnGround = m_monitor.IsGrounded && !m_monitor.IsRailed &&
             (m_stateMachine.IsCurrentState<PlayerWalkingState>() ||
              m_stateMachine.IsCurrentState<PlayerVRunningState>() ||
+             m_stateMachine.IsCurrentState<PlayerBoostDashingState>() ||
              m_stateMachine.IsCurrentState<PlayerBoostChargingState>() ||
              m_stateMachine.IsCurrentState<PlayerIdlingState>()) &&
             displacement > MIN_MOVE_SPEED * Time.deltaTime &&
