@@ -30,7 +30,7 @@ public readonly struct PlayerStatusSnapshot
         GroundNormal = groundNormal;
         GroundSlopeAngle = Mathf.Max(groundSlopeAngle, 0.0f);
         GroundCollider = groundCollider;
-        HealthValue = healthValue;
+        HealthValue = 100; // healthValue; <- 一旦マックスにする
     }
 
     public int HealthValue { get; }

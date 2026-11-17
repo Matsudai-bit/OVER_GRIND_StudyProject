@@ -181,6 +181,9 @@ public sealed class StageSelectManager : MonoBehaviour
     [Min(0.0f)]
     private float m_invokeDelay = 1.0f;
 
+    [SerializeField, Header("ホバー状態になった時に呼ばれる")]
+    private UnityEvent m_hoverAction;
+
     // 現在カーソルが乗っているステージ
     private int m_hoveredIndex = NO_HOVER;
 
@@ -537,6 +540,7 @@ public sealed class StageSelectManager : MonoBehaviour
             return;
         }
 
+        m_hoverAction?.Invoke();
         StageInfomation stageInfo =
             m_stagePoints[m_hoveredIndex];
 

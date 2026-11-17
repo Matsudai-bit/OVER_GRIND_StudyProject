@@ -19,6 +19,10 @@ public sealed class PlayerIdlingState
     {
         m_moveParameters =
             Owner.MovementParameterAsset.CreateMoveParameters();
+
+        // PlayerJumpingStateは下降開始時にIdlingStateへ遷移するため、
+        // Idle開始時点ではまだ空中の場合があります。
+        // ここではWALKING音を停止せず、着地して移動入力が無い時だけ停止します。
     }
 
     /// <summary>
@@ -26,11 +30,11 @@ public sealed class PlayerIdlingState
     /// </summary>
     protected override void OnFixedUpdate()
     {
-        if (Owner.InputReader.ConsumeAttackInput() && Owner.Monitor.IsGrounded)
-        {
-            Machine.ChangeState<PlayerAttackingState>();
-            return;
-        }
+        //if (Owner.InputReader.ConsumeAttackInput() && Owner.Monitor.IsGrounded)
+        //{
+        //    Machine.ChangeState<PlayerAttackingState>();
+        //    return;
+        //}
 
         if (Owner.Monitor.CanStartJump &&
             Owner.InputReader.HasJumpInput)
@@ -88,6 +92,16 @@ public sealed class PlayerIdlingState
         {
             Machine.ChangeState<PlayerBoostChargingState>();
             return;
+        }
+
+        // JumpingStateから引き継いだWALKING音は、
+        // 空中では維持し、着地して移動入力が無い時だけ停止します。
+        if (Owner.Monitor.IsGrounded &&
+            !Owner.InputReader.HasMoveInput)
+        {
+            PlayerAudioActionUtility.StopSequential(
+                Owner,
+                PlayerAudioActionID.WALKING);
         }
 
         // 通常移動パラメータで停止

@@ -43,6 +43,7 @@ public enum EffectId
     // ==============================
 
     BOSS_UPLIFT = 105, // 隆起エフェクト
+    BOSS_BREAK_WEAKPOINT = 111,
 
     S1_BOSS_MISSILE_EXPLOSION = 102,
     S1_BOSS_MISSILE_LAUNCH = 103,

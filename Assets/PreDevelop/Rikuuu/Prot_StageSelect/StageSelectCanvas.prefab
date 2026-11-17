@@ -495,7 +495,7 @@ GameObject:
   - component: {fileID: 2630921030838420207}
   - component: {fileID: 5026703411524405774}
   m_Layer: 5
-  m_Name: OpningStagePlace
+  m_Name: OpeningStagePlace
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1134,11 +1134,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5adf9f4c5237a284a92c4bbe2294b36b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::StageSelectManager
-  HIT_RADIUS: 40
-  SNAP_RADIUS: 80
-  RELEASE_RADIUS: 90
-  SNAP_COMPLETE_THRESHOLD: 2
-  SNAP_SPEED: 10
+  m_saveDataController: {fileID: 0}
+  m_stageIndexMap:
+    m_dictionaryElements: []
+  m_hitRadius: 40
+  m_snapRadius: 80
+  m_releaseRadius: 90
+  m_snapCompleteThreshold: 2
+  m_snapSpeed: 10
   m_cursor: {fileID: 4815914452050817066}
   m_stagePoints:
   - stagePoint: {fileID: 5026703411524405774}
@@ -1146,7 +1149,7 @@ MonoBehaviour:
     stageSectorNumber: {fileID: 21300000, guid: 2015a2721f0151c4aaf2b4f90aa5cd30, type: 3}
     hideImage: {fileID: 0}
     stageNameJa: "\u30AA\u30FC\u30D7\u30CB\u30F3\u30B0"
-    stageNameEng: OPNING
+    stageNameEng: OPENING
     rank: '-'
     bestTime: 0
     canPlay: 1
@@ -1335,13 +1338,14 @@ MonoBehaviour:
   m_defaultStageNameEn: -------------
   m_defaultRank: '-'
   m_defaultBestTime: -:-.-
-  m_selectableButtonexture: {fileID: 21300000, guid: 729f62027139e9e448efd6b09f3dd1f0, type: 3}
+  m_selectableButtonTexture: {fileID: 21300000, guid: 729f62027139e9e448efd6b09f3dd1f0, type: 3}
   m_unselectableButtonTexture: {fileID: 21300000, guid: 02875bce680634b4f95ce5e70212e6c7, type: 3}
   m_clearedButtonTexture: {fileID: 0}
   m_readyButton: {fileID: 4611674589613822221}
   m_navigateActionRef: {fileID: -8784545083839296357, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_enterActionRef: {fileID: 392368643174621059, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_mapController: {fileID: 5648162042149585074}
+  m_invokeDelay: 1
 --- !u!1 &3209884176125794674
 GameObject:
   m_ObjectHideFlags: 0
@@ -2849,9 +2853,9 @@ RectTransform:
   - {fileID: 6824846008865230120}
   m_Father: {fileID: 535225108788443735}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 210.62401, y: 450}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 160.62401, y: 500}
   m_SizeDelta: {x: 3839.9998, y: 2160}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &5993310826193665954
@@ -3627,6 +3631,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SceneNavigatorSwitcher
   m_sceneNavigator: {fileID: 418293706355607867}
+  m_saveData: {fileID: 0}
   m_visitKey: Story
   m_firstTime:
     SceneName: ProtStoryScene

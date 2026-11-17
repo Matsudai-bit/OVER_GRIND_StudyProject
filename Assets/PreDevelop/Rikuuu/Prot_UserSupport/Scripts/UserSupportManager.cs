@@ -72,10 +72,8 @@ public class UserSupportManager : MonoBehaviour
 
     private void Start()
     {
-        // オプションページを表示する
-        //m_choseState = ChoseState.OPTION;
-        //// 切り替え関数を実行する
-        //ChangeToOptionPage();
+        // 指定されたページを開く(指定がなければオプション)
+        ChangePage(UserSupportOpenRequest.Consume());
     }
 
     private void Update()

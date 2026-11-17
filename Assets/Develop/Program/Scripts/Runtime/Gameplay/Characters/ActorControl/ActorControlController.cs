@@ -28,6 +28,10 @@ public sealed class ActorControlController : MonoBehaviour
     // Actorの制御停止理由
     private readonly HashSet<ActorControlLockReason> m_lockReasons = new();
 
+    // 現在実行中のActor制御停止対象Sequence
+    private readonly HashSet<GameplaySequenceAsset>
+        m_activeControlLockSequences = new();
+
     // 制御可能なActor
     private readonly List<IActorControllable> m_actorControls = new();
 
@@ -143,7 +147,7 @@ public sealed class ActorControlController : MonoBehaviour
         }
     }
 
-  
+
 
     /// <summary>
     /// 制御対象Actorを取得します。
@@ -194,7 +198,8 @@ public sealed class ActorControlController : MonoBehaviour
         GameplayModeType requiredMode =
             eventData.Sequence.RequiredMode;
 
-        if (!m_controlLockSequenceModes.Contains(requiredMode))
+        if (!m_controlLockSequenceModes.Contains(
+            requiredMode))
         {
             return;
         }
@@ -202,16 +207,77 @@ public sealed class ActorControlController : MonoBehaviour
         switch (eventData.EventType)
         {
             case GameplaySequenceEventType.STARTED:
-                AddControlLock(
-                    ActorControlLockReason.CUTSCENE);
+                RegisterControlLockSequence(
+                    eventData.Sequence);
                 break;
 
             case GameplaySequenceEventType.FINISHED:
             case GameplaySequenceEventType.CANCELED:
-                RemoveControlLock(
-                    ActorControlLockReason.CUTSCENE);
+                UnregisterControlLockSequence(
+                    eventData.Sequence);
                 break;
         }
+    }
+
+    /// <summary>
+    /// Actor制御を停止するSequenceを登録します。
+    /// </summary>
+    /// <param name="sequence">
+    /// 開始したSequence。
+    /// </param>
+    private void RegisterControlLockSequence(
+        GameplaySequenceAsset sequence)
+    {
+        if (sequence == null)
+        {
+            return;
+        }
+
+        if (!m_activeControlLockSequences.Add(
+            sequence))
+        {
+            return;
+        }
+
+        AddControlLock(
+            ActorControlLockReason.CUTSCENE);
+    }
+
+    /// <summary>
+    /// Actor制御を停止していたSequenceを解除します。
+    /// </summary>
+    /// <param name="sequence">
+    /// 終了したSequence。
+    /// </param>
+    private void UnregisterControlLockSequence(
+        GameplaySequenceAsset sequence)
+    {
+        if (sequence == null)
+        {
+            return;
+        }
+
+        if (!m_activeControlLockSequences.Remove(
+            sequence))
+        {
+            return;
+        }
+
+        /*
+         * 別の停止対象Sequenceがすでに開始している場合は、
+         * CUTSCENEロックを維持します。
+         *
+         * 同期イベント中に
+         * 「Sequence A終了 → Sequence B開始」
+         * が入れ子で発生しても制御が再開されません。
+         */
+        if (m_activeControlLockSequences.Count > 0)
+        {
+            return;
+        }
+
+        RemoveControlLock(
+            ActorControlLockReason.CUTSCENE);
     }
 
     /// <summary>

@@ -79,6 +79,16 @@ public sealed class PlayerGrindingState
 
         Owner.InputReader.ConsumeJumpPress();
 
+        // 通常移動音からレールグラインド音へ切り替えます。
+        PlayerAudioActionUtility.StopSequential(
+            Owner,
+            PlayerAudioActionID.WALKING,
+            true);
+
+        PlayerAudioActionUtility.PlaySequential(
+            Owner,
+            PlayerAudioActionID.RAIL_GRINDING);
+
         Owner.AnimationPresenter
             .PlayRailGrindAnimation();
     }
@@ -158,6 +168,10 @@ public sealed class PlayerGrindingState
     protected override void OnExitState()
     {
         RestorePlayerCapsuleCollider();
+
+        PlayerAudioActionUtility.StopSequential(
+            Owner,
+            PlayerAudioActionID.RAIL_GRINDING);
 
         Owner.AnimationPresenter
             .StopRailGrindAnimation();

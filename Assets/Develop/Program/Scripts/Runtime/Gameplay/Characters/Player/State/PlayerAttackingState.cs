@@ -19,6 +19,10 @@ public sealed class PlayerAttackingState
     // 攻撃ヒット時のエフェクト
     private EffectHandle m_hitEffectHandle;
 
+    // 今回の攻撃で使用する音声ActionID
+    private PlayerAudioActionID m_attackAudioActionID =
+        PlayerAudioActionID.NONE;
+
     /// <summary>
     /// 現在チャージ攻撃を実行中かを取得します。
     /// </summary>
@@ -76,6 +80,21 @@ public sealed class PlayerAttackingState
         // --------------------------------------------------------
         // 攻撃開始
         // --------------------------------------------------------
+
+        // 通常移動音から攻撃音へ切り替える場合、
+        // 移動側の終了音は鳴らさず即時停止します。
+        PlayerAudioActionUtility.StopSequential(
+            Owner,
+            PlayerAudioActionID.WALKING,
+            true);
+
+        m_attackAudioActionID =
+            PlayerAudioActionUtility.GetAttackActionID(
+                m_isChargeAttack);
+
+        PlayerAudioActionUtility.PlaySequential(
+            Owner,
+            m_attackAudioActionID);
 
         // 連続攻撃本体を生成する。
         m_attack =
@@ -226,6 +245,18 @@ public sealed class PlayerAttackingState
 
         m_attack?.StopAttack();
         m_attack = null;
+
+        // 攻撃継続音を終了音へ遷移させます。
+        if (m_attackAudioActionID !=
+            PlayerAudioActionID.NONE)
+        {
+            PlayerAudioActionUtility.StopSequential(
+                Owner,
+                m_attackAudioActionID);
+
+            m_attackAudioActionID =
+                PlayerAudioActionID.NONE;
+        }
 
         // --------------------------------------------------------
         // 入力整理

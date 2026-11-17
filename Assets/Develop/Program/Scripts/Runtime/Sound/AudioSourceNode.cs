@@ -9,6 +9,9 @@ using UnityEngine.Audio;
 public class AudioSourceNode : MonoBehaviour
 {
     private const float DEFAULT_MIN_DISTANCE = 1.0f;
+    private const float DEFAULT_MAX_DISTANCE = 30.0f;
+    private const float MIN_VALID_DISTANCE = 0.01f;
+    private const float DISTANCE_EPSILON = 0.01f;
     private const float SPATIAL_BLEND_3D = 1.0f;
     private const float SPATIAL_BLEND_2D = 0.0f;
 
@@ -26,6 +29,11 @@ public class AudioSourceNode : MonoBehaviour
     private bool m_isPlaybackActive;
     private bool m_isPaused;
     private int m_playbackVersion;
+
+    // DSP予約再生の開始・終了予定時間
+    private bool m_isScheduledPlayback;
+    private double m_scheduledStartDspTime;
+    private double m_scheduledEndDspTime;
 
     // プール返却と再生終了通知
     private Action<AudioSourceNode> m_onReturnPool;
@@ -91,6 +99,9 @@ public class AudioSourceNode : MonoBehaviour
 
         m_isPlaybackActive = false;
         m_isPaused = false;
+        m_isScheduledPlayback = false;
+        m_scheduledStartDspTime = 0.0;
+        m_scheduledEndDspTime = 0.0;
         m_onReturnPool = returnAction;
         m_onPlaybackFinished = null;
         m_playbackVersion++;
@@ -103,9 +114,27 @@ public class AudioSourceNode : MonoBehaviour
         Source.pitch = data.m_pitch;
         Source.loop = data.m_loop;
         Source.outputAudioMixerGroup = mixerGroup;
-        Source.minDistance = DEFAULT_MIN_DISTANCE;
-        Source.maxDistance = data.m_maxDistance;
-        Source.rolloffMode = AudioRolloffMode.Logarithmic;
+        // プールから再利用されても、前の音の距離減衰設定を引き継がないよう初期化します。
+        // 既存データに未設定の新規フィールドがある場合も従来値で動作させます。
+        float minDistance = data.m_minDistance > 0.0f
+            ? data.m_minDistance : DEFAULT_MIN_DISTANCE;
+        float maxDistance = data.m_maxDistance > 0.0f
+            ? data.m_maxDistance : DEFAULT_MAX_DISTANCE;
+        Source.minDistance = Mathf.Max(MIN_VALID_DISTANCE, minDistance);
+        Source.maxDistance = Mathf.Max(Source.minDistance + DISTANCE_EPSILON, maxDistance);
+        Source.rolloffMode = data.m_rolloffMode;
+        if (data.m_rolloffMode == AudioRolloffMode.Custom)
+        {
+            AnimationCurve curve = data.m_customRolloffCurve;
+            if (curve == null || curve.length == 0)
+            {
+                // 未設定のカーブでは意図せず無音になるため、直線減衰を使用します。
+                curve = AnimationCurve.Linear(0.0f, 1.0f, 1.0f, 0.0f);
+            }
+
+            Source.SetCustomCurve(AudioSourceCurveType.CustomRolloff, curve);
+        }
+
         Source.spatialBlend = data.m_is3D ? SPATIAL_BLEND_3D : SPATIAL_BLEND_2D;
     }
 
@@ -172,6 +201,62 @@ public class AudioSourceNode : MonoBehaviour
     }
 
     /// <summary>
+    /// DSP時間を指定して2D音声を予約します。
+    /// </summary>
+    public void Schedule2D(double dspTime)
+    {
+        ResetTarget();
+        Source.spatialBlend = SPATIAL_BLEND_2D;
+        SchedulePlayback(dspTime);
+    }
+
+    /// <summary>
+    /// DSP時間を指定して3D音声を固定位置で予約します。
+    /// </summary>
+    public void Schedule3DAtPosition(Vector3 position, double dspTime)
+    {
+        ResetTarget();
+        transform.position = position;
+        Source.spatialBlend = SPATIAL_BLEND_3D;
+        SchedulePlayback(dspTime);
+    }
+
+    /// <summary>
+    /// DSP時間を指定して3D追従音声を予約します。
+    /// </summary>
+    public void Schedule3DFollowing(Transform target, double dspTime)
+    {
+        m_followTarget = target;
+        m_isFollowing = true;
+        transform.position = target.position;
+        Source.spatialBlend = SPATIAL_BLEND_3D;
+        SchedulePlayback(dspTime);
+    }
+
+    /// <summary>
+    /// AudioSettings.dspTimeを基準に再生開始を予約します。
+    /// </summary>
+    private void SchedulePlayback(double dspTime)
+    {
+        m_isPlaybackActive = true;
+        m_isScheduledPlayback = true;
+        m_scheduledStartDspTime = dspTime;
+
+        // 非ループ音源の再生時間はクリップ長とPitchで決まります。
+        if (Source.clip != null && Source.clip.frequency > 0 && Mathf.Abs(Source.pitch) > 0.0001f)
+        {
+            double duration = (double)Source.clip.samples / Source.clip.frequency / Mathf.Abs(Source.pitch);
+            m_scheduledEndDspTime = dspTime + duration;
+        }
+        else
+        {
+            m_scheduledEndDspTime = dspTime;
+        }
+
+        Source.PlayScheduled(dspTime);
+    }
+
+    /// <summary>
     /// 再生中の追従先を変更します。
     /// </summary>
     /// <param name="newTarget">新しい追従先。</param>
@@ -220,6 +305,7 @@ public class AudioSourceNode : MonoBehaviour
     private void StartPlayback()
     {
         m_isPlaybackActive = true;
+        m_isScheduledPlayback = false;
         Source.Play();
     }
 
@@ -242,8 +328,16 @@ public class AudioSourceNode : MonoBehaviour
         // Pause中やAudioListenerの一時停止中は自然終了と判定しません。
         if (m_isPaused || (AudioListener.pause && !Source.ignoreListenerPause)) return;
 
-        // 非ループ音声の自然終了を検出します。
-        if (!Source.loop && !Source.isPlaying)
+        // 予約開始前のisPlaying=falseを「自然終了」と誤判定しないようにします。
+        if (m_isScheduledPlayback && AudioSettings.dspTime < m_scheduledStartDspTime)
+        {
+            return;
+        }
+
+        // 予約済み音声は終了予定のDSP時刻まではプールへ返却しません。
+        if (!Source.loop &&
+            (!m_isScheduledPlayback || AudioSettings.dspTime >= m_scheduledEndDspTime) &&
+            !Source.isPlaying)
         {
             FinishPlayback(true);
         }
@@ -259,6 +353,7 @@ public class AudioSourceNode : MonoBehaviour
 
         m_isPlaybackActive = false;
         m_isPaused = false;
+        m_isScheduledPlayback = false;
         Source.Stop();
         Source.clip = null;
         ResetTarget();

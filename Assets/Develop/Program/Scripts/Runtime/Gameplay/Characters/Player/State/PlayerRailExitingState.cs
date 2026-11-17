@@ -11,6 +11,10 @@ public sealed class PlayerRailExitingState
     private PlayerContinuousAttack m_airAttack;
     private bool m_hasStartedAttackWhileHeld;
 
+    // 離脱中の空中攻撃で使用する音声ActionID
+    private PlayerAudioActionID m_attackAudioActionID =
+        PlayerAudioActionID.NONE;
+
     /// <summary>Creates a rail exit state for collision departure.</summary>
     public PlayerRailExitingState()
     {
@@ -75,7 +79,24 @@ public sealed class PlayerRailExitingState
     private void StartAirAttack()
     {
         m_hasStartedAttackWhileHeld = true;
-        m_airAttack = new PlayerContinuousAttack(Owner, true);
+
+        bool isBoostAttack =
+            Owner.IsBoostSuspended &&
+            Owner.SuspendedBoostGaugeRate > 0.0f;
+
+        m_attackAudioActionID =
+            PlayerAudioActionUtility.GetAttackActionID(
+                isBoostAttack);
+
+        PlayerAudioActionUtility.PlaySequential(
+            Owner,
+            m_attackAudioActionID);
+
+        m_airAttack =
+            new PlayerContinuousAttack(
+                Owner,
+                true);
+
         m_airAttack.StartAttack();
     }
 
@@ -93,8 +114,23 @@ public sealed class PlayerRailExitingState
     /// <summary>Stops the air attack and clears its hitboxes.</summary>
     private void StopAirAttack()
     {
-        if (m_airAttack == null) return;
+        if (m_airAttack == null)
+        {
+            return;
+        }
+
         m_airAttack.StopAttack();
         m_airAttack = null;
+
+        if (m_attackAudioActionID !=
+            PlayerAudioActionID.NONE)
+        {
+            PlayerAudioActionUtility.StopSequential(
+                Owner,
+                m_attackAudioActionID);
+
+            m_attackAudioActionID =
+                PlayerAudioActionID.NONE;
+        }
     }
 }

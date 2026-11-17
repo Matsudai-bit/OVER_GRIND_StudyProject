@@ -17,6 +17,7 @@ GameObject:
   - component: {fileID: 8121440969338930524}
   - component: {fileID: 976101956623415880}
   - component: {fileID: -7654990865585477179}
+  - component: {fileID: -7565175862658770409}
   m_Layer: 11
   m_Name: S1_Missile
   m_TagString: Untagged
@@ -94,6 +95,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fbea97daf4856b547ac5e658397ed431, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MissileMotor
+  m_launchSoundId: 0
+  m_engineSoundId: 0
 --- !u!114 &2849404875027574385
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -145,6 +148,9 @@ MonoBehaviour:
   m_launchEffectId: 103
   m_flightParticle: {fileID: 9134995403629554254}
   m_explosionEffectId: 102
+  m_missileAudioSequentialAsset: {fileID: 11400000, guid: b08b536bd0852b34b95d64e686d6521b, type: 2}
+  m_explosionAudioOneShotAsset: {fileID: 11400000, guid: d4416fdfd552d59489942242c5cb1394, type: 2}
+  m_sequentialAudioPlayer: {fileID: -7565175862658770409}
 --- !u!114 &-7654990865585477179
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -157,6 +163,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f47de63f0aebf0b42a1183e1d3c13159, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PooledMissile
+--- !u!114 &-7565175862658770409
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5328733572600670664}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 81af29007c2817c4a838c046144539fe, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SequentialAudioPlayer
+  m_defaultEmissionPoint: {fileID: 980421040564022451}
 --- !u!1 &7688262435127328015
 GameObject:
   m_ObjectHideFlags: 0

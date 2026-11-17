@@ -16,18 +16,25 @@ public sealed class PlayerJumpingState
     {
         m_elapsedTime = 0.0f;
 
+        // 通常移動音は停止しません。
+        // WalkingStateからのジャンプでは移動音を継続したまま、
+        // ジャンプ開始音だけをOneShotで重ねます。
+        PlayerAudioActionUtility.PlayOneShot(
+            Owner,
+            PlayerAudioActionID.JUMPING);
+
         if (Owner.Monitor.HorizontalSpeed > 0.1f)
         {
-            Owner.AnimationPresenter.PlayJumpAnimation( PlayerJumpAnimationType.MOVING);
+            Owner.AnimationPresenter.PlayJumpAnimation(PlayerJumpAnimationType.MOVING);
         }
         else
         {
             Owner.AnimationPresenter.PlayJumpAnimation(PlayerJumpAnimationType.STATIONARY);
         }
 
-            // ジャンプ開始時に一度だけ上方向へ力を与える
-            Owner.Motor.Jump(
-                Owner.MovementParameterAsset.JumpPower);
+        // ジャンプ開始時に一度だけ上方向へ力を与える
+        Owner.Motor.Jump(
+            Owner.MovementParameterAsset.JumpPower);
     }
 
     /// <summary>
