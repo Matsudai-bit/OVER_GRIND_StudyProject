@@ -44,6 +44,8 @@ public class SplineGrindController : MonoBehaviour
     private float collisionExitAssistElapsed;
 
     public bool IsCollisionExiting { get; private set; }
+    /// <summary>Whether the most recent grind ended at the rail endpoint.</summary>
+    public bool DidReachRailEnd { get; private set; }
     public bool IsCollisionExitSeparating => IsCollisionExiting &&
         collisionExitAssistElapsed < collisionExitAssistDuration &&
         Vector3.Dot(transform.position - collisionExitStartPosition, collisionExitSideDirection) <
@@ -282,6 +284,7 @@ public class SplineGrindController : MonoBehaviour
                 speed);
 
         IsGrinding = true;
+        DidReachRailEnd = false;
 
         m_motor.BeginRailMotion();
     }
@@ -513,6 +516,7 @@ public class SplineGrindController : MonoBehaviour
                 exitingRail;
         }
 
+        DidReachRailEnd = isEndOfRail;
         IsGrinding = false;
         currentRail = null;
 

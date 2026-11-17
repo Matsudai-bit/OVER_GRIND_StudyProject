@@ -164,6 +164,21 @@ public sealed class PlayerGrindingState
             return;
         }
 
+        // Return to regular movement at a rail endpoint without starting a jump.
+        if (Owner.GrindController.DidReachRailEnd)
+        {
+            if (Owner.Monitor.IsGrounded)
+            {
+                Owner.RequestRailStateChange<PlayerIdlingState>();
+            }
+            else
+            {
+                Owner.RequestRailStateChange<PlayerJumpAirborneState>();
+            }
+
+            return;
+        }
+
         // UŒ‚“ü—Í‚ğˆÛ‚µ‚½ó‘Ô‚ÅƒŒ[ƒ‹‚ğ”²‚¯‚½ê‡
         if (Owner.InputReader.IsAttackHeld)
         {
