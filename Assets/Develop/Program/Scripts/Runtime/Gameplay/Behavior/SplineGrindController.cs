@@ -12,6 +12,11 @@ public class SplineGrindController : MonoBehaviour
     [SerializeField, Header("Parameter Asset")]
     private SplineGrindControllerParameterAsset m_parameterAsset;
 
+    [SerializeField] private PlayerRailGrindChargeParameterAsset m_chargeParameterAsset;
+
+    /// <summary>レールチャージの設定を取得します。</summary>
+    public PlayerRailGrindChargeParameterAsset ChargeParameterAsset => m_chargeParameterAsset;
+
     [Header("Movement Settings")]
     [SerializeField] private float baseGrindSpeed = 15f; // 基本速度
     [SerializeField] private float maxGrindSpeed = 40f;  // 最高速度
@@ -85,6 +90,26 @@ public class SplineGrindController : MonoBehaviour
     public int Direction => directionFactor;
     /// <summary>ジャンプへ引き継ぐ滑走速度を取得します。</summary>
     public float CurrentSpeed => currentSpeed;
+
+    /// <summary>レール上の移動速度を更新します。</summary>
+    /// <param name="speed">新しい移動速度。</param>
+    public void SetGrindSpeed(float speed)
+    {
+        if (IsGrinding) currentSpeed = Mathf.Max(0.0f, speed);
+    }
+
+    /// <summary>現在のレール接線に沿った進行方向を取得します。</summary>
+    /// <returns>進行方向。レールが無効ならプレイヤーの前方。</returns>
+    public Vector3 GetTravelDirection()
+    {
+        if (currentRail == null || currentRail.Container == null)
+            return transform.forward;
+
+        Vector3 tangent = currentRail.Container.EvaluateTangent(Mathf.Clamp01(currentT));
+        return tangent.sqrMagnitude > 0.0001f
+            ? tangent.normalized * directionFactor
+            : transform.forward;
+    }
     /// <summary>レールからプレイヤー原点までの高さを取得します。</summary>
     public float RideHeight => Mathf.Max(0f, rideHeight);
     private PlayerMonitor m_monitor;

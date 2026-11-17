@@ -24,6 +24,13 @@ public sealed class PlayerGrindingState
     // グラインド開始済みか
     private bool m_hasStarted;
 
+    // レール上で進行中のチャージ。
+    private PlayerRailGrindCharge m_charge;
+    private bool m_hasHandledChargePress;
+    private int m_lastChargePressId;
+    private bool m_isRailDashActive;
+    private float m_speedBeforeCharge;
+
     // ForcesEscapeが無効なレール搭乗中に一時停止したPlayer CapsuleCollider
     private CapsuleCollider m_disabledPlayerCapsuleCollider;
 
@@ -126,6 +133,11 @@ public sealed class PlayerGrindingState
             m_hasStarted = true;
         }
 
+        UpdateRailCharge();
+        UpdateRailDashGauge();
+
+        // レール終端で離脱した場合も接線方向を引き継ぎます。
+        Vector3 travelDirection = Owner.GrindController.GetTravelDirection();
         Owner.GrindController.UpdateGrind(
             Time.fixedDeltaTime);
 
@@ -135,6 +147,13 @@ public sealed class PlayerGrindingState
         }
 
         RestorePlayerCapsuleCollider();
+
+        if (m_charge != null && !Owner.GrindController.IsCollisionExiting)
+        {
+            CompleteChargeDash(travelDirection);
+            Owner.RequestRailStateChange<PlayerBoostDashingState>();
+            return;
+        }
 
         // 障害物との衝突によるレール離脱
         if (Owner.GrindController.IsCollisionExiting)
@@ -167,6 +186,10 @@ public sealed class PlayerGrindingState
     /// </summary>
     protected override void OnExitState()
     {
+        if (m_charge != null)
+            Owner.VGaugePlaceModel.SetGaugeRate(0.0f);
+        m_isRailDashActive = false;
+        m_charge = null;
         RestorePlayerCapsuleCollider();
 
         PlayerAudioActionUtility.StopSequential(
@@ -175,6 +198,86 @@ public sealed class PlayerGrindingState
 
         Owner.AnimationPresenter
             .StopRailGrindAnimation();
+    }
+
+    /// <summary>Cancel the current charge and restore normal rail-jump speed.</summary>
+    public void CancelChargeForRailJump()
+    {
+        if (m_charge == null) return;
+
+        Owner.GrindController.SetGrindSpeed(m_charge.StartSpeed);
+        m_charge = null;
+        Owner.IsBoostSuspended = false;
+        Owner.CarriedBoostGaugeRate = 0.0f;
+        Owner.SuspendedBoostGaugeRate = 0.0f;
+        Owner.SetBoostGaugeDepletionRate(0.0f);
+        Owner.VGaugePlaceModel.SetGaugeRate(0.0f);
+        Owner.InputReader.SuppressRailChargeUntilRelease();
+        Owner.InputReader.DiscardVBoostPendingInput();
+    }
+
+    /// <summary>入力とチャージ量を更新し、解放時はレール速度をダッシュ速度へ変更します。</summary>
+    private void UpdateRailCharge()
+    {
+        var controller = Owner.GrindController;
+        var input = Owner.InputReader;
+        var parameters = controller.ChargeParameterAsset;
+        if (parameters == null || !controller.IsGrinding) return;
+
+        // 搭乗前のStateが開始フラグを消費していても、押下IDは維持されます。
+        if (m_charge == null && input.CanStartRailCharge &&
+            (!m_hasHandledChargePress || m_lastChargePressId != input.VBoostPressId))
+        {
+            m_hasHandledChargePress = true;
+            m_lastChargePressId = input.VBoostPressId;
+            input.ConsumeVBoostStarted();
+            Owner.IsBoostSuspended = false;
+            m_isRailDashActive = false;
+            m_charge = new PlayerRailGrindCharge(parameters, controller.CurrentSpeed);
+        }
+
+        if (m_charge == null) return;
+        if (!input.IsVBoostHeld)
+        {
+            input.ConsumeVBoostReleased();
+            m_speedBeforeCharge = m_charge.StartSpeed;
+            controller.SetGrindSpeed(parameters.DashGrindSpeed);
+            Owner.CarriedBoostGaugeRate = m_charge.ChargeRate;
+            Owner.SuspendedBoostGaugeRate = m_charge.ChargeRate;
+            Owner.SetBoostGaugeDepletionRate(1.0f / parameters.DashDuration);
+            Owner.VGaugePlaceModel.SetGaugeRate(m_charge.ChargeRate);
+            Owner.IsBoostSuspended = true;
+            m_isRailDashActive = true;
+            m_charge = null;
+            return;
+        }
+
+        m_charge.UpdateCharge(controller, Time.fixedDeltaTime);
+        Owner.VGaugePlaceModel.SetGaugeRate(m_charge.ChargeRate);
+    }
+
+    /// <summary>レールダッシュの残量を消費し、終了時に開始前の速度へ戻します。</summary>
+    private void UpdateRailDashGauge()
+    {
+        if (!m_isRailDashActive || !Owner.GrindController.IsGrinding) return;
+
+        // 残量はPlayerStateMachineComponentの物理更新で消費します。
+        Owner.CarriedBoostGaugeRate = Owner.SuspendedBoostGaugeRate;
+        if (Owner.SuspendedBoostGaugeRate > 0.0f) return;
+
+        m_isRailDashActive = false;
+        Owner.GrindController.SetGrindSpeed(m_speedBeforeCharge);
+    }
+
+    /// <summary>蓄えたチャージ量をレール接線方向のブーストダッシュへ渡します。</summary>
+    /// <param name="direction">レール上の進行方向。</param>
+    private void CompleteChargeDash(Vector3 direction)
+    {
+        Owner.BoostDashDirection = direction;
+        Owner.CarriedBoostGaugeRate = m_charge.ChargeRate;
+        Owner.IsBoostSuspended = false;
+        Owner.InputReader.ConsumeVBoostReleased();
+        m_charge = null;
     }
 
     /// <summary>
