@@ -21,6 +21,15 @@ public class MarchingCubesMountain : MonoBehaviour
     [Tooltip("砂山の最大の高さ(m)")]
     public float mountainHeight = 3.0f;
 
+    public enum InitShapeType { Cone, HeightmapTexture, CustomFormula }
+
+    [Header("初期形状のカスタム設定")]
+    
+    public InitShapeType initShapeType = InitShapeType.Cone;
+
+    [Tooltip("HeightmapTextureモード時の入力画像（白＝最高地点、黒＝砂なし）")]
+    public Texture2D initialHeightmap;
+
     [Header("砂の性質")]
     [Tooltip("安息角(度)。これより急な斜面は崩れる")]
     [Range(10f, 60f)] public float reposeAngle = 33f;
@@ -39,6 +48,7 @@ public class MarchingCubesMountain : MonoBehaviour
     public float mouseCarveRadius = 1.0f;
     public bool holdToCarve = false;
 
+
     // ---- データ ----
     private float[,] height;   // 砂の高さ(0以上)。0 = 砂なし
     private float[,] delta;    // 崩し処理用の作業バッファ
@@ -49,10 +59,31 @@ public class MarchingCubesMountain : MonoBehaviour
     private bool colliderDirty;
     private float nextColliderTime;
 
+
+    /// <summary>
+    /// 砂が削られたときに呼ばれる。
+    /// 引数: 削った中心の位置(ワールド) / その場所の表面の法線 / 削り跡の半径(m) / 取り除いた砂の体積(m³)
+    /// </summary>
+    public event System.Action<Vector3, Vector3, float, float> Carved;
+
+    /// <summary>
+    /// 崩れ(安息角)で砂が斜面を滑り落ちたときに呼ばれる。
+    /// 引数: 位置(ワールド) / 滑り落ちる向き(ワールド・水平) / 動いた砂の体積(m³)
+    /// </summary>
+    public event System.Action<Vector3, Vector3, float> SandSlid;
+
+    private const float SlideReportThreshold = 0.004f; // これ以上砂が減った列だけ通知する
+    private const int MaxSlideReportsPerStep = 4;
+
+    /// <summary>シーン内の有効な砂山の一覧（SandDigger が Trigger 判定で使う）</summary>
+    public static readonly List<MarchingCubesMountain> Instances = new List<MarchingCubesMountain>();
+
     private Mesh mesh;
     private MeshCollider meshCollider;
+    private MeshRenderer meshRenderer;
     private readonly List<Vector3> vertices = new List<Vector3>();
     private readonly List<Vector3> normals = new List<Vector3>();
+    private readonly List<Vector2> uvs = new List<Vector2>();
     private readonly List<int> triangles = new List<int>();
     private int[] edgeCache;
 
@@ -70,6 +101,8 @@ public class MarchingCubesMountain : MonoBehaviour
         {0, 4}, {1, 5}, {2, 6}, {3, 7}
     };
 
+    private const float MinEdgeT = 0.05f;
+
     private static readonly Vector3Int[] EdgeBase = new Vector3Int[12];
     private static readonly int[] EdgeAxis = new int[12];
 
@@ -84,6 +117,9 @@ public class MarchingCubesMountain : MonoBehaviour
         }
     }
 
+    void OnEnable() { Instances.Add(this); }
+    void OnDisable() { Instances.Remove(this); }
+
     // ------------------------------------------------------------
 
     void Start()
@@ -92,6 +128,7 @@ public class MarchingCubesMountain : MonoBehaviour
         mesh.indexFormat = IndexFormat.UInt32;
         GetComponent<MeshFilter>().sharedMesh = mesh;
 
+        meshRenderer = GetComponent<MeshRenderer>();
         meshCollider = GetComponent<MeshCollider>();
         if (meshCollider == null) meshCollider = gameObject.AddComponent<MeshCollider>();
 
@@ -102,6 +139,50 @@ public class MarchingCubesMountain : MonoBehaviour
         InitMountain();
         RebuildMesh();
         UpdateCollider();
+    }
+
+    // ---- 外部（SandDigger など）向けの問い合わせ ----
+
+    /// <summary>砂山のワールド空間でのバウンディングボックス</summary>
+    public Bounds WorldBounds
+    {
+        get { return meshRenderer != null ? meshRenderer.bounds : new Bounds(transform.position, Vector3.zero); }
+    }
+
+    /// <summary>サンプル点の間隔（ワールド単位）</summary>
+    public float WorldVoxelSize { get { return voxelSize * Mathf.Abs(transform.lossyScale.x); } }
+
+    /// <summary>
+    /// worldPos の XZ 位置にある砂の表面の点と法線を返す（Y は無視する）。
+    /// グリッドの外、または初期化前なら false。砂山が回転していない前提。
+    /// </summary>
+    public bool TrySampleSurface(Vector3 worldPos, out Vector3 surfacePoint, out Vector3 surfaceNormal)
+    {
+        surfacePoint = worldPos;
+        surfaceNormal = Vector3.up;
+        if (height == null) return false;
+
+        int n = gridSize;
+        float offset = (n - 1) * voxelSize * 0.5f;
+        Vector3 local = transform.InverseTransformPoint(worldPos);
+        float gx = (local.x + offset) / voxelSize;
+        float gz = (local.z + offset) / voxelSize;
+        if (gx < 0f || gz < 0f || gx > n - 1 || gz > n - 1) return false;
+
+        int x0 = Mathf.Min((int)gx, n - 2);
+        int z0 = Mathf.Min((int)gz, n - 2);
+        float fx = gx - x0, fz = gz - z0;
+
+        float h00 = height[x0, z0], h10 = height[x0 + 1, z0];
+        float h01 = height[x0, z0 + 1], h11 = height[x0 + 1, z0 + 1];
+
+        float h = Mathf.Lerp(Mathf.Lerp(h00, h10, fx), Mathf.Lerp(h01, h11, fx), fz);
+        float dhdx = Mathf.Lerp(h10 - h00, h11 - h01, fz) / voxelSize;
+        float dhdz = Mathf.Lerp(h01 - h00, h11 - h10, fx) / voxelSize;
+
+        surfacePoint = transform.TransformPoint(new Vector3(local.x, h - sink, local.z));
+        surfaceNormal = transform.TransformDirection(new Vector3(-dhdx, 1f, -dhdz)).normalized;
+        return true;
     }
 
     // ---- 座標変換 ----
@@ -115,19 +196,37 @@ public class MarchingCubesMountain : MonoBehaviour
     }
 
     // 初期形状：安息角ぴったりの円錐（先端は少し丸める）
-    void InitMountain()
+   void InitMountain()
     {
         int n = gridSize;
         height = new float[n, n];
         delta = new float[n, n];
 
+        switch (initShapeType)
+        {
+            case InitShapeType.HeightmapTexture:
+                InitFromTexture(n);
+                break;
+            case InitShapeType.CustomFormula:
+                InitFromCustomFormula(n);
+                break;
+            case InitShapeType.Cone:
+            default:
+                InitDefaultCone(n);
+                break;
+        }
+
+        ClearBorder();
+    }
+    
+    // 従来の円錐形（デフォルト）
+    void InitDefaultCone(int n)
+    {
         float center = (n - 1) / 2.0f;
         float tanA = Mathf.Tan(reposeAngle * Mathf.Deg2Rad);
-
-        // 裾野の半径(m)：高さ/tan(安息角)。グリッドに収まらなければ高さのほうを下げる
         float maxRadius = (center - 2.0f) * voxelSize;
         float baseRadius = Mathf.Min(mountainHeight / tanA, maxRadius);
-        float peak = baseRadius * tanA + sink; // 頂上の表面が mountainHeight 以下になる
+        float peak = baseRadius * tanA + sink;
 
         for (int x = 0; x < n; x++)
         {
@@ -136,13 +235,58 @@ public class MarchingCubesMountain : MonoBehaviour
                 float dx = (x - center) * voxelSize;
                 float dz = (z - center) * voxelSize;
                 float t = Mathf.Sqrt(dx * dx + dz * dz) / baseRadius;
-                float t2 = Mathf.Sqrt(t * t + 0.0025f);              // 先端を丸める
+                float t2 = Mathf.Sqrt(t * t + 0.0025f);
                 float profile = Mathf.Max(0f, (1f - t2) / (1f - 0.05f));
                 height[x, z] = peak * profile;
             }
         }
+    }
 
-        ClearBorder();
+    // テクスチャ（ハイトマップ）から初期形状を生成
+    // テクスチャ（ハイトマップ）から初期形状を生成
+    void InitFromTexture(int n)
+    {
+        if (initialHeightmap == null)
+        {
+            Debug.LogWarning("[MarchingCubesMountain] 初期ハイトマップテクスチャが設定されていません。円錐で代用します。");
+            InitDefaultCone(n);
+            return;
+        }
+
+        for (int x = 0; x < n; x++)
+        {
+            for (int z = 0; z < n; z++)
+            {
+                float u = (float)x / (n - 1);
+                float v = (float)z / (n - 1);
+
+                float pixelVal = initialHeightmap.GetPixelBilinear(u, v).grayscale;
+
+                // 【修正】+ sink を外し、ピクセルが 0 の場所は完全に高さ 0（床面）になるようにする
+                height[x, z] = pixelVal * mountainHeight;
+            }
+        }
+    }
+
+    // 数式やカスタムロジックで任意の形を作る
+    void InitFromCustomFormula(int n)
+    {
+        float center = (n - 1) / 2.0f;
+
+        for (int x = 0; x < n; x++)
+        {
+            for (int z = 0; z < n; z++)
+            {
+                float dx = (x - center) * voxelSize;
+                float dz = (z - center) * voxelSize;
+
+                // 例：長方形の壁など
+                float shape = Mathf.Max(0f, 1f - Mathf.Abs(dx) / 1.0f) * Mathf.Max(0f, 1f - Mathf.Abs(dz) / 3.0f);
+
+                // 【修正】+ sink を外す
+                height[x, z] = shape * mountainHeight;
+            }
+        }
     }
 
     // グリッドの外周は砂なし（崩れた砂はここから外へ落ちていく扱い）
@@ -185,6 +329,11 @@ public class MarchingCubesMountain : MonoBehaviour
         Vector3 localPos = transform.InverseTransformPoint(worldPoint) + Vector3.up * (radius - depth);
         float k = carveSmoothness * voxelSize;
 
+        // 削る前の表面の法線（エフェクトの向きに使う）
+        Vector3 surfaceNormal;
+        TrySampleSurface(worldPoint, out _, out surfaceNormal);
+        float removed = 0f; // 取り除いた高さの合計（ローカル単位）
+
         float offset = (gridSize - 1) * voxelSize * 0.5f;
         int cx = Mathf.RoundToInt((localPos.x + offset) / voxelSize);
         int cz = Mathf.RoundToInt((localPos.z + offset) / voxelSize);
@@ -209,6 +358,7 @@ public class MarchingCubesMountain : MonoBehaviour
 
                 if (newHeight < height[x, z] - 1e-5f)
                 {
+                    removed += height[x, z] - newHeight;
                     height[x, z] = newHeight;
                     modified = true;
                 }
@@ -219,6 +369,12 @@ public class MarchingCubesMountain : MonoBehaviour
         {
             meshDirty = true; // 実際の再構築は LateUpdate で1回だけ
             if (settleAfterCarve) settling = true;
+            if (Carved != null)
+            {
+                float volume = removed * voxelSize * voxelSize * scale * scale * scale;
+                float footprint = Mathf.Sqrt(Mathf.Max(0f, depth * (2f * radius - depth))) * scale;
+                Carved(worldPoint, surfaceNormal, footprint, volume);
+            }
         }
     }
 
@@ -265,10 +421,32 @@ public class MarchingCubesMountain : MonoBehaviour
 
         if (!moved) return false;
 
-        for (int x = 0; x < n; x++)
-            for (int z = 0; z < n; z++)
-                height[x, z] = Mathf.Max(0f, height[x, z] + delta[x, z]);
+        int reported = 0;
+        float s = Mathf.Abs(transform.lossyScale.x);
 
+        for (int x = 0; x < n; x++)
+        {
+            for (int z = 0; z < n; z++)
+            {
+                float d = delta[x, z];
+
+                // 大きく減った列からランダムに少数だけ「砂が滑った」と通知する
+                if (SandSlid != null && d < -SlideReportThreshold && reported < MaxSlideReportsPerStep
+                    && x > 0 && z > 0 && x < n - 1 && z < n - 1 && Random.value < 0.2f)
+                {
+                    reported++;
+                    Vector3 downhillLocal = new Vector3(
+                        -(H(x + 1, z) - H(x - 1, z)), 0f, -(H(x, z + 1) - H(x, z - 1)));
+                    Vector3 pos = transform.TransformPoint(
+                        new Vector3(GridToLocal(x, 0, z).x, height[x, z] - sink, GridToLocal(x, 0, z).z));
+                    Vector3 dir = transform.TransformDirection(downhillLocal).normalized;
+                    float volume = -d * voxelSize * voxelSize * s * s * s;
+                    SandSlid(pos, dir, volume);
+                }
+
+                height[x, z] = Mathf.Max(0f, height[x, z] + d);
+            }
+        }
         ClearBorder();
         return true;
     }
@@ -314,14 +492,21 @@ public class MarchingCubesMountain : MonoBehaviour
         float va = Density(ax, ay, az);
         float vb = Density(bx, by, bz);
         float t = Mathf.Abs(vb - va) < 1e-6f ? 0.5f : -va / (vb - va);
-        t = Mathf.Clamp01(t);
+        // 頂点がサンプル点ぎりぎりに寄ると極細の三角形ができ、物理が引っかかる原因になるので端から離す
+        t = Mathf.Clamp(t, MinEdgeT, 1f - MinEdgeT);
 
         Vector3 pos = Vector3.Lerp(GridToLocal(ax, ay, az), GridToLocal(bx, by, bz), t);
         Vector3 nrm = Vector3.Lerp(OutwardNormal(ax, az), OutwardNormal(bx, bz), t).normalized;
 
+        float offset = (gridSize - 1) * voxelSize * 0.5f;
+        float totalSize = (gridSize - 1) * voxelSize;
+        float u = totalSize > 0f ? (pos.x + offset) / totalSize : 0.5f;
+        float v = totalSize > 0f ? (pos.z + offset) / totalSize : 0.5f;
+
         int index = vertices.Count;
         vertices.Add(pos);
         normals.Add(nrm);
+        uvs.Add(new Vector2(u, v));
         edgeCache[key] = index;
         return index;
     }
@@ -330,6 +515,7 @@ public class MarchingCubesMountain : MonoBehaviour
     {
         vertices.Clear();
         normals.Clear();
+        uvs.Clear();
         triangles.Clear();
         System.Array.Fill(edgeCache, -1);
 
@@ -387,6 +573,7 @@ public class MarchingCubesMountain : MonoBehaviour
         mesh.Clear();
         mesh.SetVertices(vertices);
         mesh.SetNormals(normals);
+        mesh.SetUVs(0, uvs);
         mesh.SetTriangles(triangles, 0);
         mesh.RecalculateBounds();
     }
