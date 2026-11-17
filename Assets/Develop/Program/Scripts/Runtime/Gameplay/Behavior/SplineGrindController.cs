@@ -9,6 +9,7 @@ using Unity.Mathematics;
 
 public class SplineGrindController : MonoBehaviour
 {
+    private const float SLOPED_RAIL_VERTICAL_COMPONENT_THRESHOLD = 0.01f;
     [SerializeField, Header("Parameter Asset")]
     private SplineGrindControllerParameterAsset m_parameterAsset;
 
@@ -46,6 +47,8 @@ public class SplineGrindController : MonoBehaviour
     public bool IsCollisionExiting { get; private set; }
     /// <summary>Whether the most recent grind ended at the rail endpoint.</summary>
     public bool DidReachRailEnd { get; private set; }
+    /// <summary>Whether the last rail endpoint has a vertical tangent.</summary>
+    public bool DidReachSlopedRailEnd { get; private set; }
     public bool IsCollisionExitSeparating => IsCollisionExiting &&
         collisionExitAssistElapsed < collisionExitAssistDuration &&
         Vector3.Dot(transform.position - collisionExitStartPosition, collisionExitSideDirection) <
@@ -285,6 +288,7 @@ public class SplineGrindController : MonoBehaviour
 
         IsGrinding = true;
         DidReachRailEnd = false;
+        DidReachSlopedRailEnd = false;
 
         m_motor.BeginRailMotion();
     }
@@ -472,6 +476,7 @@ public class SplineGrindController : MonoBehaviour
             m_motor != null
                 ? m_motor.RailVelocity
                 : Vector3.zero;
+        bool isSlopedRailEnd = false;
 
         if (exitingRail != null &&
             exitingRail.Container != null &&
@@ -487,6 +492,9 @@ public class SplineGrindController : MonoBehaviour
                 tangent.normalized *
                 currentSpeed *
                 directionFactor;
+            isSlopedRailEnd =
+                Mathf.Abs(tangent.normalized.y) >
+                SLOPED_RAIL_VERTICAL_COMPONENT_THRESHOLD;
 
             Debug.Log(
     $"[RailExit] " +
@@ -517,6 +525,7 @@ public class SplineGrindController : MonoBehaviour
         }
 
         DidReachRailEnd = isEndOfRail;
+        DidReachSlopedRailEnd = isEndOfRail && isSlopedRailEnd;
         IsGrinding = false;
         currentRail = null;
 

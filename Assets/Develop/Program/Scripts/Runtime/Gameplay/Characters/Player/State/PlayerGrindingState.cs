@@ -164,8 +164,10 @@ public sealed class PlayerGrindingState
             return;
         }
 
-        // Return to regular movement at a rail endpoint without starting a jump.
-        if (Owner.GrindController.DidReachRailEnd)
+        // Keep the original launch and landing behavior at sloped endpoints.
+        // Only a flat endpoint returns directly to regular movement.
+        if (Owner.GrindController.DidReachRailEnd &&
+            !Owner.GrindController.DidReachSlopedRailEnd)
         {
             if (Owner.Monitor.IsGrounded)
             {
