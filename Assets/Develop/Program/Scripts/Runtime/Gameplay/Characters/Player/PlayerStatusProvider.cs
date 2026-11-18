@@ -282,15 +282,17 @@ public sealed class PlayerStatusProvider : MonoBehaviour
                 PlayerConditionFlags.WALKING;
         }
 
-        if (m_stateMachine.IsCurrentState<
-                PlayerJumpingState>())
+        if ((m_stateMachine.IsCurrentState<
+                PlayerJumpingState>() || m_stateMachine.IsCurrentState<PlayerJumpAirborneState>()))
         {
             conditions |=
                 PlayerConditionFlags.JUMPING;
         }
 
         if (m_stateMachine.IsCurrentState<
-                PlayerAttackingState>())
+                PlayerAttackingState>() ||
+            m_stateMachine.IsCurrentState<
+                PlayerChargeAttackingState>())
         {
             conditions |=
                 PlayerConditionFlags.ATTACKING;
@@ -304,7 +306,9 @@ public sealed class PlayerStatusProvider : MonoBehaviour
         }
 
         if (m_stateMachine.IsCurrentState<
-                PlayerVRunningState>())
+                PlayerVRunningState>() ||
+            m_stateMachine.IsCurrentState<
+                PlayerBoostDashingState>())
         {
             conditions |=
                 PlayerConditionFlags.BOOSTING;
@@ -317,8 +321,8 @@ public sealed class PlayerStatusProvider : MonoBehaviour
                 PlayerConditionFlags.GRINDING;
         }
 
-        if (m_stateMachine.IsCurrentState<
-                PlayerRailJumpingState>())
+        if ((m_stateMachine.IsCurrentState<
+                PlayerRailJumpingState>() || m_stateMachine.IsCurrentState<PlayerRailJumpAirborneState>()))
         {
             conditions |=
                 PlayerConditionFlags.RAIL_JUMPING;

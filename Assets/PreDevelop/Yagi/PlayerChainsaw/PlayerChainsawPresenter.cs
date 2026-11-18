@@ -154,12 +154,13 @@ public sealed class PlayerChainsawPresenter : MonoBehaviour
     {
         if (m_stateMachine.IsCurrentState<PlayerIdlingState>()) return PlayerChainsawState.IDLING;
         if (m_stateMachine.IsCurrentState<PlayerWalkingState>()) return PlayerChainsawState.WALKING;
-        if (m_stateMachine.IsCurrentState<PlayerJumpingState>()) return PlayerChainsawState.JUMPING;
+        if ((m_stateMachine.IsCurrentState<PlayerJumpingState>() || m_stateMachine.IsCurrentState<PlayerJumpAirborneState>())) return PlayerChainsawState.JUMPING;
         if (m_stateMachine.IsCurrentState<PlayerVRunningState>()) return PlayerChainsawState.VRUNNING;
         if (m_stateMachine.IsCurrentState<PlayerBoostChargingState>()) return PlayerChainsawState.BOOST_CHARGING;
-        if (m_stateMachine.IsCurrentState<PlayerAttackingState>()) return PlayerChainsawState.ATTACKING;
+        if (m_stateMachine.IsCurrentState<PlayerAttackingState>() ||
+            m_stateMachine.IsCurrentState<PlayerChargeAttackingState>()) return PlayerChainsawState.ATTACKING;
         if (m_stateMachine.IsCurrentState<PlayerGrindingState>()) return PlayerChainsawState.GRINDING;
-        if (m_stateMachine.IsCurrentState<PlayerRailJumpingState>()) return PlayerChainsawState.RAIL_JUMPING;
+        if ((m_stateMachine.IsCurrentState<PlayerRailJumpingState>() || m_stateMachine.IsCurrentState<PlayerRailJumpAirborneState>())) return PlayerChainsawState.RAIL_JUMPING;
         if (m_stateMachine.IsCurrentState<PlayerRailExitingState>()) return PlayerChainsawState.RAIL_EXITING;
         if (m_stateMachine.IsCurrentState<PlayerHitState>()) return PlayerChainsawState.HIT;
         return PlayerChainsawState.DEFAULT;

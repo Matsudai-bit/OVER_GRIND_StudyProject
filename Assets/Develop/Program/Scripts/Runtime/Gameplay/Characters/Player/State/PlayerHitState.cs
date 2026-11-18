@@ -84,7 +84,8 @@ public sealed class PlayerHitState : StateBase<PlayerStateMachineComponent>
         m_recoveryElapsedTime += Time.fixedDeltaTime;
         if (m_recoveryElapsedTime >= m_recoveryDuration)
         {
-            Machine.ChangeState<PlayerIdlingState>();
+            if (Owner.Monitor.IsGrounded) Machine.ChangeState<PlayerIdlingState>();
+            else Machine.ChangeState<PlayerJumpAirborneState>();
         }
     }
 
