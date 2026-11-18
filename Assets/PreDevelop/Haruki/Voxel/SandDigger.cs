@@ -1,316 +1,368 @@
 using UnityEngine;
-using System.Collections.Generic;
 
 /// <summary>
 /// 砂山に接触したとき、その接触点を削るコンポーネント。
-/// 砂山を削らせたいオブジェクト（プレイヤー、ボール、車など）にアタッチする。
-///
-/// 対応するオブジェクト:
-///   ・非Kinematicな Rigidbody + Collider   → OnCollisionEnter / Stay
-///   ・CharacterController                   → OnControllerColliderHit
-///   ・Is Trigger のコライダー               → triggerColliders に登録（物理イベントを使わず、砂の表面との重なりを直接調べる）
-/// ※ Kinematic な Rigidbody は、静的コライダー(砂山)との衝突イベントが来ないので使えない。
-///   Trigger 判定は Rigidbody の種類に関係なく動く。
+/// Rigidbody + Collider、CharacterController、Is Trigger コライダーの3種類に対応します。
 /// </summary>
 public class SandDigger : MonoBehaviour
 {
+    // ---- 定数 ----
+    private const float MIN_DELTA_TIME = 1e-4f;        // ゼロ除算防止用の最小経過時間(秒)
+    private const float MIN_REFERENCE_SPEED = 0.01f;   // 基準速度の最小値(m/s)
+    private const float DEBUG_LOG_INTERVAL = 0.5f;     // デバッグログの出力間隔(秒)
+
+    // ---- Inspector 設定項目 ----
     [Header("削り方")]
     [Tooltip("接触点を中心に削る範囲の半径(m)")]
-    public float digRadius = 0.5f;
+    [SerializeField] private float m_digRadius = 0.5f;
     [Tooltip("1回の接触で掘り下げる深さ(m)")]
-    public float digDepth = 0.08f;
+    [SerializeField] private float m_digDepth = 0.08f;
 
     [Header("発動条件")]
     [Tooltip("この速さ(m/s)未満なら削らない。立っているだけで沈まないようにする")]
-    public float minSpeed = 0.5f;
-    [Tooltip("削る間隔(秒)")]
-    public float digInterval = 0.1f;
+    [SerializeField] private float m_minSpeed = 0.5f;
+    [Tooltip("通常の衝突で削る間隔(秒)")]
+    [SerializeField] private float m_digInterval = 0.1f;
     [Tooltip("1回の衝突イベントで処理する接触点の最大数")]
-    public int maxContactsPerEvent = 4;
+    [SerializeField] private int m_maxContactsPerEvent = 4;
 
     [Header("Trigger コライダーでの判定")]
     [Tooltip("削りに使いたい Is Trigger のコライダーを登録する（子オブジェクトのものも可）。空なら Trigger 判定は行わない")]
-    public Collider[] triggerColliders;
+    [SerializeField] private Collider[] m_triggerColliders;
     [Tooltip("砂の表面を調べる間隔の倍率。1 = 砂のサンプル点と同じ間隔。小さいほど細かく調べるが重くなる")]
-    [Range(0.5f, 2f)] public float triggerSampleStep = 1f;
+    [Range(0.5f, 2f)]
+    [SerializeField] private float m_triggerSampleStep = 1f;
+    [Tooltip("Trigger コライダーで連続して削る間隔(秒)。大きくすると反応間隔を遅くできる")]
+    [Min(0f)]
+    [SerializeField] private float m_triggerDigInterval = 0.25f;
+    [Tooltip("攻撃などで Trigger コライダーが有効になってから、反応し始めるまでの遅延時間(秒)")]
+    [Min(0f)]
+    [SerializeField] private float m_triggerActivationDelay = 0.1f;
+    [Tooltip("Trigger コライダーが砂山と重なり始めてから、実際に削るまでの遅延時間(秒)")]
+    [Min(0f)]
+    [SerializeField] private float m_triggerContactDelay = 0f;
 
     [Header("デバッグ")]
     [Tooltip("ONにすると、衝突・速度・削りの判定結果をConsoleに出す（0.5秒に1回）")]
-    public bool debugLog = false;
+    [SerializeField] private bool m_debugLog = false;
 
     [Header("足元の扱い（引っかかり対策）")]
     [Tooltip("法線の上向き成分(0〜1)がこれ以上の接触は「足元（地面）」とみなす。安息角33°の斜面は約0.84")]
-    [Range(0f, 1f)] public float groundNormalY = 0.6f;
+    [Range(0f, 1f)]
+    [SerializeField] private float m_groundNormalY = 0.6f;
     [Tooltip("足元の接触での深さの倍率。0 にすると歩いても足元は削らない（壁にぶつかった時と着地の衝撃だけ削る）")]
-    [Range(0f, 1f)] public float groundDepthScale = 0.2f;
+    [Range(0f, 1f)]
+    [SerializeField] private float m_groundDepthScale = 0.2f;
     [Tooltip("この速さ(m/s)以上で当たった着地は、足元でも全力で削る")]
-    public float impactSpeed = 4f;
+    [SerializeField] private float m_impactSpeed = 4f;
 
     [Header("衝撃の強さで変化")]
-    public bool scaleByImpactSpeed = true;
+    [Tooltip("速度に応じて削り半径・深さをスケールさせるかどうか")]
+    [SerializeField] private bool m_scaleByImpactSpeed = true;
     [Tooltip("この速さ(m/s)のとき、半径・深さが等倍になる")]
-    public float referenceSpeed = 5f;
+    [SerializeField] private float m_referenceSpeed = 5f;
     [Tooltip("等倍に対する最小/最大の倍率")]
-    public Vector2 scaleRange = new Vector2(0.5f, 3f);
+    [SerializeField] private Vector2 m_scaleRange = new Vector2(0.5f, 3f);
 
-    private Rigidbody rb;
-    private CharacterController controller;
-    private float nextDigTime;
-    private float nextTriggerDigTime;
-    private float nextLogTime;
+    // ---- メンバー変数 ----
+    private Rigidbody m_rigidbody;                     // 自身の Rigidbody キャッシュ
+    private CharacterController m_characterController; // 自身の CharacterController キャッシュ
+    private float m_nextDigTime;                       // 通常の衝突で次に削れる時刻
+    private float m_nextTriggerDigTime;                // Trigger判定で次に削れる時刻
+    private float m_nextLogTime;                       // 次にログ出力可能な時刻
+    private Vector3 m_lastPosition;                    // 前フレームのワールド座標
+    private float m_measuredSpeed;                     // 座標差分から算出した移動速度(m/s)
+    private Collider m_lastCollider;                   // 最後に衝突したコライダーのキャッシュ
+    private MarchingCubesMountain m_lastMountain;      // 最後に衝突した砂山のキャッシュ
+    private readonly SandTriggerScanner m_triggerScanner = new SandTriggerScanner(); // Trigger走査担当
 
-    // Trigger 判定用
-    private Vector3[] triggerLastCenter;
-    private float[] triggerSpeed;
-    private bool warnedMeshCollider;
-    private readonly List<Vector3> overlapPoints = new List<Vector3>();
-    private readonly List<Vector3> overlapNormals = new List<Vector3>();
-
-    // 位置の変化から求めた速さ。MovePosition や transform で動かすスクリプトだと
-    // Rigidbody.linearVelocity が 0 のままなので、その代わりに使う
-    private Vector3 lastPosition;
-    private float measuredSpeed;
-
-    // 同じ砂山に何度も GetComponent しないためのキャッシュ
-    private Collider lastCollider;
-    private MarchingCubesMountain lastMountain;
-
-    void Awake()
+    // ---- Unity ライフサイクル ----
+    private void Awake()
     {
-        rb = GetComponent<Rigidbody>();
-        controller = GetComponent<CharacterController>();
+        m_rigidbody = GetComponent<Rigidbody>();
+        m_characterController = GetComponent<CharacterController>();
     }
 
-    void OnEnable()
+    private void OnEnable()
     {
-        lastPosition = transform.position;
-        measuredSpeed = 0f;
-        ResetTriggerTracking();
+        m_lastPosition = transform.position;
+        m_measuredSpeed = 0f;
+        m_triggerScanner.ResetTracking(m_triggerColliders, Time.time);
     }
 
-    void ResetTriggerTracking()
+    private void FixedUpdate()
     {
-        int count = triggerColliders != null ? triggerColliders.Length : 0;
-        triggerLastCenter = new Vector3[count];
-        triggerSpeed = new float[count];
-        for (int i = 0; i < count; i++)
+        float dt = Mathf.Max(Time.fixedDeltaTime, MIN_DELTA_TIME);
+        Vector3 currentPos = transform.position;
+        m_measuredSpeed = (currentPos - m_lastPosition).magnitude / dt;
+        m_lastPosition = currentPos;
+
+        if (m_triggerColliders == null || m_triggerColliders.Length == 0)
         {
-            if (triggerColliders[i] != null) triggerLastCenter[i] = triggerColliders[i].bounds.center;
-        }
-    }
-
-    void FixedUpdate()
-    {
-        float dt = Mathf.Max(Time.fixedDeltaTime, 1e-4f);
-
-        Vector3 p = transform.position;
-        measuredSpeed = (p - lastPosition).magnitude / dt;
-        lastPosition = p;
-
-        if (triggerColliders == null || triggerColliders.Length == 0) return;
-
-        // Inspector で配列の長さを変えた場合に備える
-        if (triggerLastCenter == null || triggerLastCenter.Length != triggerColliders.Length) ResetTriggerTracking();
-
-        // 各コライダー自身の速さ（剣を振る動きなどは親の速さでは分からない）
-        for (int i = 0; i < triggerColliders.Length; i++)
-        {
-            Collider col = triggerColliders[i];
-            if (col == null) continue;
-            Vector3 c = col.bounds.center;
-            triggerSpeed[i] = (c - triggerLastCenter[i]).magnitude / dt;
-            triggerLastCenter[i] = c;
-        }
-
-        DigWithTriggers();
-    }
-
-    void Log(string message)
-    {
-        if (!debugLog || Time.time < nextLogTime) return;
-        nextLogTime = Time.time + 0.5f;
-        Debug.Log("[SandDigger] " + message, this);
-    }
-
-    MarchingCubesMountain FindMountain(Collider col)
-    {
-        if (col == lastCollider) return lastMountain;
-        lastCollider = col;
-        lastMountain = col.GetComponent<MarchingCubesMountain>();
-        return lastMountain;
-    }
-
-    float CurrentSpeed()
-    {
-        float speed = measuredSpeed;
-        if (controller != null) speed = Mathf.Max(speed, controller.velocity.magnitude);
-        if (rb != null) speed = Mathf.Max(speed, rb.linearVelocity.magnitude);
-        return speed;
-    }
-
-    bool TryGetDigParams(float speed, out float radius, out float depth)
-    {
-        return TryGetDigParams(speed, ref nextDigTime, out radius, out depth);
-    }
-
-    bool TryGetDigParams(float speed, ref float nextTime, out float radius, out float depth)
-    {
-        radius = digRadius;
-        depth = digDepth;
-
-        if (speed < minSpeed)
-        {
-            Log("速さが足りない: " + speed.ToString("F2") + " < minSpeed " + minSpeed);
-            return false;
-        }
-        if (Time.time < nextTime) return false;
-
-        if (scaleByImpactSpeed)
-        {
-            float s = Mathf.Clamp(speed / Mathf.Max(0.01f, referenceSpeed), scaleRange.x, scaleRange.y);
-            radius *= s;
-            depth *= s;
-        }
-
-        nextTime = Time.time + digInterval;
-        return true;
-    }
-
-    // ---- Rigidbody 用 ----
-    void OnCollisionEnter(Collision collision) { HandleCollision(collision, true); }
-    void OnCollisionStay(Collision collision) { HandleCollision(collision, false); }
-
-    // 接触が足元（地面）か壁かで、削る深さの倍率を変える。0 なら削らない
-    float DepthFactor(Vector3 contactNormal, bool isImpact)
-    {
-        bool isGround = Vector3.Dot(contactNormal, Vector3.up) >= groundNormalY;
-        if (!isGround || isImpact) return 1f;
-        return groundDepthScale;
-    }
-
-    void HandleCollision(Collision collision, bool isEnter)
-    {
-        MarchingCubesMountain mountain = FindMountain(collision.collider);
-        if (mountain == null)
-        {
-            Log("砂山ではない物に衝突: " + collision.collider.name);
             return;
         }
 
-        // 衝突直後は relativeVelocity の方が衝撃を正しく表す
-        float speed = Mathf.Max(CurrentSpeed(), collision.relativeVelocity.magnitude);
-        if (!TryGetDigParams(speed, out float radius, out float depth)) return;
-
-        bool isImpact = isEnter && collision.relativeVelocity.magnitude >= impactSpeed;
-
-        int count = Mathf.Min(collision.contactCount, maxContactsPerEvent);
-        int dug = 0;
-        for (int i = 0; i < count; i++)
-        {
-            ContactPoint contact = collision.GetContact(i);
-            float factor = DepthFactor(contact.normal, isImpact);
-            if (factor <= 0f) continue;
-
-            mountain.Carve(contact.point, radius, depth * factor);
-            dug++;
-        }
-        Log("接触点 " + count + " 個中 " + dug + " 個を削った（半径 " + radius.ToString("F2") + "）");
+        m_triggerScanner.UpdateTriggerStates(m_triggerColliders, dt, Time.time);
+        DigWithTriggers();
     }
 
-    // ---- CharacterController 用 ----
-    void OnControllerColliderHit(ControllerColliderHit hit)
+    private void OnCollisionEnter(Collision collision)
     {
-        MarchingCubesMountain mountain = FindMountain(hit.collider);
-        if (mountain == null) return;
+        HandleCollision(collision, true);
+    }
 
-        if (!TryGetDigParams(CurrentSpeed(), out float radius, out float depth)) return;
+    private void OnCollisionStay(Collision collision)
+    {
+        HandleCollision(collision, false);
+    }
 
-        float factor = DepthFactor(hit.normal, false);
-        if (factor <= 0f) return;
+    private void OnControllerColliderHit(ControllerColliderHit hit)
+    {
+        MarchingCubesMountain mountain = GetOrCacheMountain(hit.collider);
+        if (mountain == null)
+        {
+            return;
+        }
 
-        Log("削った: " + hit.point);
+        if (!TryGetDigParams(GetCurrentSpeed(), m_digInterval, ref m_nextDigTime, out float radius, out float depth))
+        {
+            return;
+        }
+
+        float factor = CalculateDepthFactor(hit.normal, false);
+        if (factor <= 0f)
+        {
+            return;
+        }
+
+        LogDebug("削った: " + hit.point);
         mountain.Carve(hit.point, radius, depth * factor);
     }
 
-    // ---- Is Trigger コライダー用 ----
-    // トリガーは接触点が取れないので、「砂の表面の点がコライダーの内側に入っているか」を調べて
-    // 重なっている点を擬似的な接触点として扱う。
-
-    void DigWithTriggers()
+    // ---- 内部処理 ----
+    /// <summary>
+    /// デバッグログが有効な場合、一定間隔でメッセージを出力します。
+    /// </summary>
+    private void LogDebug(string message)
     {
-        for (int i = 0; i < triggerColliders.Length; i++)
+        if (!m_debugLog || Time.time < m_nextLogTime)
         {
-            Collider col = triggerColliders[i];
-            if (col == null || !col.enabled || !col.gameObject.activeInHierarchy) continue;
+            return;
+        }
 
-            // ClosestPoint は凹メッシュコライダーに使えない
-            MeshCollider mc = col as MeshCollider;
-            if (mc != null && !mc.convex)
+        m_nextLogTime = Time.time + DEBUG_LOG_INTERVAL;
+        Debug.Log("[SandDigger] " + message, this);
+    }
+
+    /// <summary>
+    /// コライダーから砂山コンポーネントを取得します（前回分をキャッシュ）。
+    /// </summary>
+    private MarchingCubesMountain GetOrCacheMountain(Collider col)
+    {
+        if (col == null)
+        {
+            return null;
+        }
+
+        if (col == m_lastCollider)
+        {
+            return m_lastMountain;
+        }
+
+        m_lastCollider = col;
+        m_lastMountain = col.GetComponent<MarchingCubesMountain>();
+        return m_lastMountain;
+    }
+
+    /// <summary>
+    /// 現在の移動速度(m/s)を取得します。
+    /// </summary>
+    private float GetCurrentSpeed()
+    {
+        float speed = m_measuredSpeed;
+        if (m_characterController != null)
+        {
+            speed = Mathf.Max(speed, m_characterController.velocity.magnitude);
+        }
+
+        if (m_rigidbody != null)
+        {
+            speed = Mathf.Max(speed, m_rigidbody.linearVelocity.magnitude);
+        }
+
+        return speed;
+    }
+
+    /// <summary>
+    /// 速度とクールタイムを検証し、掘削に使う半径と深さを算出します。
+    /// </summary>
+    /// <returns>
+    /// true：掘削可能です。
+    /// false：速度不足またはクールタイム中のため掘削しません。
+    /// </returns>
+    private bool TryGetDigParams(float speed, float interval, ref float nextAllowedTime, out float radius, out float depth)
+    {
+        radius = m_digRadius;
+        depth = m_digDepth;
+
+        if (speed < m_minSpeed)
+        {
+            LogDebug("速さが足りない: " + speed.ToString("F2") + " < minSpeed " + m_minSpeed);
+            return false;
+        }
+
+        if (Time.time < nextAllowedTime)
+        {
+            return false;
+        }
+
+        if (m_scaleByImpactSpeed)
+        {
+            float scale = Mathf.Clamp(
+                speed / Mathf.Max(MIN_REFERENCE_SPEED, m_referenceSpeed),
+                m_scaleRange.x,
+                m_scaleRange.y
+            );
+            radius *= scale;
+            depth *= scale;
+        }
+
+        nextAllowedTime = Time.time + interval;
+        return true;
+    }
+
+    /// <summary>
+    /// 接触法線が足元か壁かを判定し、掘削深さの倍率を返します。
+    /// </summary>
+    private float CalculateDepthFactor(Vector3 contactNormal, bool isImpact)
+    {
+        bool isGround = Vector3.Dot(contactNormal, Vector3.up) >= m_groundNormalY;
+        if (!isGround || isImpact)
+        {
+            return 1f;
+        }
+
+        return m_groundDepthScale;
+    }
+
+    /// <summary>
+    /// Rigidbody の衝突イベントを処理して砂山を削ります。
+    /// </summary>
+    private void HandleCollision(Collision collision, bool isEnter)
+    {
+        MarchingCubesMountain mountain = GetOrCacheMountain(collision.collider);
+        if (mountain == null)
+        {
+            LogDebug("砂山ではない物に衝突: " + collision.collider.name);
+            return;
+        }
+
+        float relativeSpeed = collision.relativeVelocity.magnitude;
+        float speed = Mathf.Max(GetCurrentSpeed(), relativeSpeed);
+        if (!TryGetDigParams(speed, m_digInterval, ref m_nextDigTime, out float radius, out float depth))
+        {
+            return;
+        }
+
+        bool isImpact = isEnter && relativeSpeed >= m_impactSpeed;
+        int contactCount = Mathf.Min(collision.contactCount, m_maxContactsPerEvent);
+        int dugCount = 0;
+
+        for (int i = 0; i < contactCount; i++)
+        {
+            ContactPoint contact = collision.GetContact(i);
+            float factor = CalculateDepthFactor(contact.normal, isImpact);
+            if (factor <= 0f)
             {
-                if (!warnedMeshCollider)
-                {
-                    warnedMeshCollider = true;
-                    Debug.LogWarning("[SandDigger] " + col.name + " は Convex でない MeshCollider なので Trigger 判定に使えません。", this);
-                }
                 continue;
             }
 
-            Bounds b = col.bounds;
-            for (int m = 0; m < MarchingCubesMountain.Instances.Count; m++)
-            {
-                MarchingCubesMountain mountain = MarchingCubesMountain.Instances[m];
-                if (!mountain.WorldBounds.Intersects(b)) continue;
-
-                CollectOverlap(mountain, col, b);
-                if (overlapPoints.Count == 0) continue;
-
-                float speed = Mathf.Max(CurrentSpeed(), triggerSpeed[i]);
-                if (!TryGetDigParams(speed, ref nextTriggerDigTime, out float radius, out float depth)) continue;
-
-                // 重なった点が多いときは均等に間引く
-                int total = overlapPoints.Count;
-                int use = Mathf.Min(total, Mathf.Max(1, maxContactsPerEvent));
-                int dug = 0;
-                for (int k = 0; k < use; k++)
-                {
-                    int idx = (use == total) ? k : Mathf.FloorToInt((k + 0.5f) * total / use);
-                    float factor = DepthFactor(overlapNormals[idx], false);
-                    if (factor <= 0f) continue;
-
-                    mountain.Carve(overlapPoints[idx], radius, depth * factor);
-                    dug++;
-                }
-                Log("Trigger[" + col.name + "] 重なり " + total + " 点中 " + dug + " 点を削った");
-            }
+            mountain.Carve(contact.point, radius, depth * factor);
+            dugCount++;
         }
+
+        LogDebug("接触点 " + contactCount + " 個中 " + dugCount + " 個を削った（半径 " + radius.ToString("F2") + "）");
     }
 
-    // コライダーの AABB 内を格子状に調べ、砂の表面がコライダーの内側にある点を集める
-    void CollectOverlap(MarchingCubesMountain mountain, Collider col, Bounds b)
+    /// <summary>
+    /// 登録された Trigger コライダーと砂山の重なりを調べて削ります。
+    /// </summary>
+    private void DigWithTriggers()
     {
-        overlapPoints.Clear();
-        overlapNormals.Clear();
+        var mountains = MarchingCubesMountain.Instances;
+        float currentTime = Time.time;
 
-        float step = Mathf.Max(0.01f, mountain.WorldVoxelSize * triggerSampleStep);
-        int nx = Mathf.Min(Mathf.CeilToInt(b.size.x / step) + 1, 40);
-        int nz = Mathf.Min(Mathf.CeilToInt(b.size.z / step) + 1, 40);
-
-        for (int ix = 0; ix < nx; ix++)
+        for (int i = 0; i < m_triggerColliders.Length; i++)
         {
-            float x = nx == 1 ? b.center.x : Mathf.Lerp(b.min.x, b.max.x, ix / (float)(nx - 1));
-            for (int iz = 0; iz < nz; iz++)
+            Collider col = m_triggerColliders[i];
+            if (!m_triggerScanner.IsSupportedCollider(col, this))
             {
-                float z = nz == 1 ? b.center.z : Mathf.Lerp(b.min.z, b.max.z, iz / (float)(nz - 1));
+                continue;
+            }
 
-                if (!mountain.TrySampleSurface(new Vector3(x, b.center.y, z), out Vector3 sp, out Vector3 sn)) continue;
-                if (sp.y < b.min.y || sp.y > b.max.y) continue;
+            // コライダー有効化からの遅延時間を満たしていない場合はスキップ
+            if (!m_triggerScanner.IsActivationDelayElapsed(i, currentTime, m_triggerActivationDelay))
+            {
+                continue;
+            }
 
-                // 内側の点なら ClosestPoint は同じ点を返す
-                Vector3 cp = col.ClosestPoint(sp);
-                if ((cp - sp).sqrMagnitude > 1e-6f) continue;
+            Bounds bounds = col.bounds;
+            bool hasAnyOverlap = false;
 
-                overlapPoints.Add(sp);
-                overlapNormals.Add(sn);
+            for (int m = 0; m < mountains.Count; m++)
+            {
+                MarchingCubesMountain mountain = mountains[m];
+                if (mountain == null || !mountain.WorldBounds.Intersects(bounds))
+                {
+                    continue;
+                }
+
+                m_triggerScanner.CollectOverlapPoints(mountain, col, bounds, m_triggerSampleStep);
+                var points = m_triggerScanner.OverlapPoints;
+                var normals = m_triggerScanner.OverlapNormals;
+                if (points.Count == 0)
+                {
+                    continue;
+                }
+
+                hasAnyOverlap = true;
+
+                // 重なり開始からの遅延時間をチェック
+                if (!m_triggerScanner.UpdateContactAndCheckDelay(i, true, currentTime, m_triggerContactDelay))
+                {
+                    continue;
+                }
+
+                float speed = Mathf.Max(GetCurrentSpeed(), m_triggerScanner.GetTriggerSpeed(i));
+                if (!TryGetDigParams(speed, m_triggerDigInterval, ref m_nextTriggerDigTime, out float radius, out float depth))
+                {
+                    continue;
+                }
+
+                // 重なり点が多い場合は均等に間引いて削る
+                int total = points.Count;
+                int useCount = Mathf.Min(total, Mathf.Max(1, m_maxContactsPerEvent));
+                int dugCount = 0;
+
+                for (int k = 0; k < useCount; k++)
+                {
+                    int idx = (useCount == total) ? k : Mathf.FloorToInt((k + 0.5f) * total / useCount);
+                    float factor = CalculateDepthFactor(normals[idx], false);
+                    if (factor <= 0f)
+                    {
+                        continue;
+                    }
+
+                    mountain.Carve(points[idx], radius, depth * factor);
+                    dugCount++;
+                }
+
+                LogDebug("Trigger[" + col.name + "] 重なり " + total + " 点中 " + dugCount + " 点を削った");
+            }
+
+            if (!hasAnyOverlap)
+            {
+                m_triggerScanner.UpdateContactAndCheckDelay(i, false, currentTime, m_triggerContactDelay);
             }
         }
     }

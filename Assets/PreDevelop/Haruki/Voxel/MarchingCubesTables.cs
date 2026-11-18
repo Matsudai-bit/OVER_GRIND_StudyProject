@@ -1,10 +1,13 @@
-// Marching Cubes ルックアップテーブル（古典的な Bourke 形式・256ケース）
-// 頂点番号: 0(0,0,0) 1(1,0,0) 2(1,1,0) 3(0,1,0) 4(0,0,1) 5(1,0,1) 6(1,1,1) 7(0,1,1)
-// 辺番号  : 0:0-1 1:1-2 2:2-3 3:3-0 4:4-5 5:5-6 6:6-7 7:7-4 8:0-4 9:1-5 10:2-6 11:3-7
-// cubeIndex は「頂点の値 < isoLevel」のビットを立てて作る。各行は3つ1組で三角形を表す（-1終端は省略済み）。
+/// <summary>
+/// Marching Cubes アルゴリズム用のルックアップテーブル（Bourke 形式・256ケース）を提供する静的クラス。
+/// </summary>
 public static class MarchingCubesTables
 {
-    public static readonly sbyte[][] TriTable = new sbyte[][]
+    // ---- 定数 ----
+    // 頂点番号: 0(0,0,0) 1(1,0,0) 2(1,1,0) 3(0,1,0) 4(0,0,1) 5(1,0,1) 6(1,1,1) 7(0,1,1)
+    // 辺番号  : 0:0-1 1:1-2 2:2-3 3:3-0 4:4-5 5:5-6 6:6-7 7:7-4 8:0-4 9:1-5 10:2-6 11:3-7
+    // cubeIndex は「頂点の値 < isoLevel」のビットを立てて作る。各行は3つ1組で三角形を表す（-1終端は省略済み）。
+    private static readonly sbyte[][] TRI_TABLE = new sbyte[][]
     {
         new sbyte[] { }, // 0
         new sbyte[] { 0, 8, 3 }, // 1
@@ -261,6 +264,11 @@ public static class MarchingCubesTables
         new sbyte[] { 1, 3, 8, 9, 1, 8 }, // 252
         new sbyte[] { 0, 9, 1 }, // 253
         new sbyte[] { 0, 3, 8 }, // 254
-        new sbyte[] { }, // 255
+        new sbyte[] { } // 255
     };
+
+    /// <summary>
+    /// 256パターンのキューブ構成に対応する三角形辺インデックス配列。
+    /// </summary>
+    public static sbyte[][] TriTable => TRI_TABLE;
 }
