@@ -10,6 +10,9 @@ public sealed class PlayerMotor : MonoBehaviour
     private PlayerMotorComponentParameterAsset m_parameterAsset;
 
     // 時間パラメータの最小値
+    [SerializeField, Tooltip("段差を登る際の水平移動を通常の移動処理に任せます。")]
+    private bool m_verticalOnlyStep;
+
     private const float MIN_TIME = 0.01f;
 
     // 方向ベクトルの有効判定に使用する閾値
@@ -1572,6 +1575,8 @@ public sealed class PlayerMotor : MonoBehaviour
                     horizontalDirection) +
                 m_stepClearanceSkin,
                 0.0f);
+
+        if (m_verticalOnlyStep) forwardStepDistance = 0f;
 
         Vector3 stepOffset =
             Vector3.up *
