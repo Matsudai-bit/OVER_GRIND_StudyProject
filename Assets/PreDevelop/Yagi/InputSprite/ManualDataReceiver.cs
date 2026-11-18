@@ -26,6 +26,12 @@ public sealed class ManualDataReceiver : MonoBehaviour
     [SerializeField, Header("入力デバイス切替")]
     private InputDeviceTypeSwitcher m_deviceTypeSwitcher;
 
+    [SerializeField, Header("画像の左側のText（任意）")]
+    private TMP_Text m_leftText;
+
+    [SerializeField, Header("本文Textの上書き先（任意）")]
+    private TMP_Text m_bodyTextOverride;
+
     private Image m_commandImage;
     private TMP_Text m_bodyText;
     private Image m_secondCommandImage;
@@ -97,9 +103,19 @@ public sealed class ManualDataReceiver : MonoBehaviour
             return;
         }
 
+        ManualTextData data = m_manualData.GetManual(m_manualIndex);
+        if (m_leftText != null)
+        {
+            m_leftText.richText = true;
+            m_leftText.text = HighlightedTextFormatter.Format(
+                data.LeftBody, data.HighlightColor);
+        }
+
         if (m_bodyText != null)
         {
-            m_bodyText.text = body;
+            m_bodyText.richText = true;
+            m_bodyText.text = HighlightedTextFormatter.Format(
+                body, data.HighlightColor);
         }
 
         ApplyCommandSprite(commandAssetName);
@@ -167,7 +183,9 @@ public sealed class ManualDataReceiver : MonoBehaviour
     {
         if (m_secondBodyText != null)
         {
-            m_secondBodyText.text = body;
+            m_secondBodyText.richText = true;
+            m_secondBodyText.text = HighlightedTextFormatter.Format(
+                body, m_manualData.GetManual(m_manualIndex).HighlightColor);
         }
 
         ApplyCommandSprite(m_secondCommandImage, commandAssetName);
@@ -206,9 +224,11 @@ public sealed class ManualDataReceiver : MonoBehaviour
             ? null
             : commandImageTransform.GetComponent<Image>();
 
-        m_bodyText = bodyTextTransform == null
-            ? null
-            : bodyTextTransform.GetComponent<TMP_Text>();
+        m_bodyText = m_bodyTextOverride != null
+            ? m_bodyTextOverride
+            : bodyTextTransform == null
+                ? null
+                : bodyTextTransform.GetComponent<TMP_Text>();
 
         Transform secondCommandImageTransform =
             transform.Find(SECOND_COMMAND_IMAGE_OBJECT_NAME);
