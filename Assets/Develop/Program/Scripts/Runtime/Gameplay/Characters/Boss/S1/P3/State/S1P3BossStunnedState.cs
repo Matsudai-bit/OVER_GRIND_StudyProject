@@ -6,9 +6,7 @@ using UnityEngine;
 public sealed class S1P3BossStunnedState :
     StateBase<BossController>
 {
-    // 通常のスタン継続時間
-    private const float STUN_DURATION =
-        10.0f;
+  
 
     // Animator Bool名
     private const string STUN_ANIMATION_BOOL_NAME =
@@ -35,6 +33,8 @@ public sealed class S1P3BossStunnedState :
     // Sequenceイベントを購読中か
     private bool m_isSequenceEventRegistered;
 
+    private float m_stunDuration = 0.0f;
+
     /// <summary>
     /// スタンを開始します。
     /// </summary>
@@ -48,7 +48,7 @@ public sealed class S1P3BossStunnedState :
 
             return;
         }
-
+        m_stunDuration = m_references.StateParameterAsset.Stunned.Duration;
         if (Owner.PhaseController.TryGetCurrentPhaseComponent(out S1P3BossStateTransitionRequest request))
         {
             request.ConsumeStunnedRequest();
@@ -100,7 +100,7 @@ public sealed class S1P3BossStunnedState :
             deltaTime;
 
         if (m_elapsedTime <
-            STUN_DURATION)
+            m_stunDuration)
         {
             return;
         }
