@@ -290,14 +290,14 @@ public class ButtonSelector : MonoBehaviour
                 // ƒ{ƒ^ƒ“‚Ì”‚¾‚¯ŒÄ‚Ô
                 for (int i = 0; i < m_buttons.Length; i++)
                 {
-                    m_onCursorExitAction?.Invoke();
+                    //m_onCursorExitAction?.Invoke();
                     m_buttons[i].OnCursorExit();
                 }
             }
             else
             {
                 // 1‰ñ‚¾‚¯ŒÄ‚Ô
-                m_onCursorExitAction?.Invoke();
+                //m_onCursorExitAction?.Invoke();
                 m_buttons[m_selectButtonNumber].OnCursorExit();
             }
         }
@@ -319,7 +319,7 @@ public class ButtonSelector : MonoBehaviour
 
         if (isActiveAndEnabled && m_buttons != null && m_buttons.Length > 0)
         {
-            m_onCursorAction?.Invoke();
+            //m_onCursorAction?.Invoke();
             m_buttons[m_selectButtonNumber].OnCursor();
         }
     }
