@@ -12,6 +12,13 @@ public sealed class HintDataAsset : ScriptableObject
     [SerializeField, Header("Hint一覧")]
     private List<HintTextData> m_hints = new();
 
+    /// <summary>指定番号の Hint データを取得します。</summary>
+    /// <returns>登録済みデータ。範囲外または未設定なら null。</returns>
+    public HintTextData GetHint(int index)
+    {
+        return index >= 0 && index < m_hints.Count ? m_hints[index] : null;
+    }
+
     /// <summary>
     /// 指定した番号のHint内容を取得します。
     /// </summary>
