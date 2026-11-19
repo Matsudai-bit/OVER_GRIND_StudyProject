@@ -330,6 +330,14 @@ public sealed class PlayerAnimationPresenter : MonoBehaviour
     /// <summary>
     /// ジャンプアニメーションを停止します。
     /// </summary>
+    public void ResumeAirborneAnimation(PlayerJumpAnimationType jumpType)
+    {
+        SetBool(AnimatorParameters.IsJumping, true);
+        SetInt(AnimatorParameters.JumpType, (int)jumpType);
+        ResetTrigger(AnimatorParameters.JumpStart);
+    }
+
+    /// <summary>ジャンプ表示と未消費トリガーを終了します。</summary>
     public void StopJumpAnimation()
     {
         SetBool(

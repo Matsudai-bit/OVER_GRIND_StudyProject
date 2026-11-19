@@ -66,20 +66,30 @@ public sealed class HintDataReceiver : MonoBehaviour
 
         if (m_headingText != null && m_headingText == m_bodyText)
         {
-            m_headingText.text = $"{heading}\n{body}";
+            m_headingText.richText = true;
+            m_headingText.text = FormatHintText($"{heading}\n{body}");
             return;
         }
 
         if (m_headingText != null)
         {
-            m_headingText.text = heading;
+            m_headingText.richText = true;
+            m_headingText.text = FormatHintText(heading);
         }
 
         if (m_bodyText != null)
         {
-            m_bodyText.text = m_headingText == null
+            m_bodyText.richText = true;
+            m_bodyText.text = FormatHintText(m_headingText == null
                 ? $"{heading}\n{body}"
-                : body;
+                : body);
         }
+    }
+
+    /// <summary>選択中の Hint の強調色を文章に適用します。</summary>
+    private string FormatHintText(string text)
+    {
+        return HighlightedTextFormatter.Format(
+            text, m_hintData.GetHint(m_hintIndex).HighlightColor);
     }
 }

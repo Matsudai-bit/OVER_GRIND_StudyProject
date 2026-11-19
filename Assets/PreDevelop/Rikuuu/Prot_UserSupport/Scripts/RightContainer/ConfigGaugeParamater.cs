@@ -179,7 +179,9 @@ public class ConfigGaugeParamater : MonoBehaviour
     {
         if (m_valueText != null)
         {
-            m_valueText.text = m_defaultValue.ToString("F1");
+            // %ï\é¶ÇçsÇ§
+            float value = m_defaultValue * 100.0f;
+            m_valueText.text = value.ToString("F0") + "%";
         }
 
         if (m_gaugeImage != null)
