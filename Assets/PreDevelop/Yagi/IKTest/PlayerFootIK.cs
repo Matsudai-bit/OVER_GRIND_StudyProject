@@ -20,6 +20,8 @@ public sealed class PlayerFootIK : MonoBehaviour
     private float m_pelvisOffset;
     private CapsuleCollider m_capsule;
     private PlayerMonitor m_monitor;
+    private PlayerMotor m_motor;
+    private float m_lastStepHeight;
     private Leg m_left, m_right;
 
     /// <summary>モデルの脚チェーンを起動時に解決します。</summary>
@@ -27,6 +29,8 @@ public sealed class PlayerFootIK : MonoBehaviour
     {
         m_capsule = GetComponent<CapsuleCollider>();
         m_monitor = GetComponent<PlayerMonitor>();
+        m_motor = GetComponent<PlayerMotor>();
+        m_lastStepHeight = m_motor ? m_motor.TotalStepHeight : 0f;
         // 実際に描画されるメッシュにバインドされた骨から脚を特定する。
         foreach (var mesh in GetComponentsInChildren<SkinnedMeshRenderer>())
         {
@@ -74,7 +78,15 @@ public sealed class PlayerFootIK : MonoBehaviour
         float left = SampleFoot(m_left, out Vector3 leftNormal);
         float right = SampleFoot(m_right, out Vector3 rightNormal);
         float blend = 1f - Mathf.Exp(-m_blendSpeed * Time.deltaTime);
-        m_pelvisOffset = Mathf.Lerp(m_pelvisOffset, Mathf.Min(0f, Mathf.Min(left, right)), blend);
+        float stepHeight = m_motor ? m_motor.TotalStepHeight : m_lastStepHeight;
+        float stepDelta = stepHeight - m_lastStepHeight;
+        m_lastStepHeight = stepHeight;
+        // 本体が段差移動したフレームは古い足目標を残さず再計算する。
+        float positionBlend = stepDelta > 0f ? 1f : blend;
+        left = m_left.FilterOffset(left, positionBlend);
+        right = m_right.FilterOffset(right, positionBlend);
+        // 同じ補間済み目標から腰と両脚を解く。腰と脚で二重に遅延させない。
+        m_pelvisOffset = Mathf.Min(0f, Mathf.Min(left, right));
         m_pelvisPose = m_pelvis.localPosition;
         m_pelvis.position += Vector3.up * m_pelvisOffset;
         m_pelvisApplied = true;
@@ -88,6 +100,13 @@ public sealed class PlayerFootIK : MonoBehaviour
         RestorePelvis();
         m_left?.Restore();
         m_right?.Restore();
+        m_pelvisOffset = 0f;
+    }
+
+    /// <summary>無効期間の段差移動を再有効化時に持ち越さないようにします。</summary>
+    private void OnEnable()
+    {
+        if (m_motor) m_lastStepHeight = m_motor.TotalStepHeight;
     }
 
     /// <summary>足の持ち上げ量を残しながら地面の高さと傾きを反映します。</summary>
@@ -193,12 +212,18 @@ public sealed class PlayerFootIK : MonoBehaviour
             }
         }
 
+        /// <summary>腰と脚で共通に使う足の高さ補正を一度だけ補間します。</summary>
+        public float FilterOffset(float offset, float blend)
+        {
+            m_offset = Mathf.Lerp(m_offset, offset, blend);
+            return m_offset;
+        }
+
         /// <summary>脚の長さと現在の膝の曲がる方向から目標姿勢を求めます。</summary>
         public void Solve(float offset, Vector3 normal, float blend, Vector3 forward)
         {
-            m_offset = Mathf.Lerp(m_offset, offset, blend);
             m_normal = Vector3.Slerp(m_normal, normal, blend);
-            Vector3 target = Ankle.position + Vector3.up * m_offset;
+            Vector3 target = Ankle.position + Vector3.up * offset;
             Vector3 upper = m_knee.position - m_hip.position;
             Vector3 lower = Ankle.position - m_knee.position;
             Vector3 axis = (target - m_hip.position).normalized;

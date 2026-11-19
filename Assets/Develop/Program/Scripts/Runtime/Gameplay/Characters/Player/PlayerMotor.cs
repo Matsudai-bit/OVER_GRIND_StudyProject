@@ -13,6 +13,9 @@ public sealed class PlayerMotor : MonoBehaviour
     [SerializeField, Tooltip("段差を登る際の水平移動を通常の移動処理に任せます。")]
     private bool m_verticalOnlyStep;
 
+    /// <summary>段差乗り越えで直接加算した高さの累計。表示側の補間補正に使用します。</summary>
+    public float TotalStepHeight { get; private set; }
+
     private const float MIN_TIME = 0.01f;
 
     // 方向ベクトルの有効判定に使用する閾値
@@ -1578,10 +1581,18 @@ public sealed class PlayerMotor : MonoBehaviour
 
         if (m_verticalOnlyStep) forwardStepDistance = 0f;
 
+        // 中心直下に低い床が残っていても、既に持ち上がった本体へ
+        // 床からの段差高さを繰り返し加算しない。
+        float requiredLift = landingHit.point.y + m_stepClearanceSkin -
+            (bottomSphereCenter.y - capsuleRadius);
+        if (requiredLift <= MIN_STEP_HEIGHT)
+        {
+            return FailStep("ALREADY_AT_STEP_HEIGHT: 本体は段差上面の高さに到達しています。");
+        }
+
         Vector3 stepOffset =
             Vector3.up *
-            (stepHeight +
-             m_stepClearanceSkin) +
+            requiredLift +
             horizontalDirection *
             forwardStepDistance;
 
@@ -1596,6 +1607,8 @@ public sealed class PlayerMotor : MonoBehaviour
 
         m_playerRigidbody.position +=
             stepOffset;
+
+        TotalStepHeight += stepOffset.y;
 
         SetStepDebugReason(
             $"SUCCESS: height={stepHeight:F3}m, forward={forwardStepDistance:F3}m, " +

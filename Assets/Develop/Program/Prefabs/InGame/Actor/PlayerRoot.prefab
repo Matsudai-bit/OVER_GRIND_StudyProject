@@ -91,8 +91,8 @@ GameObject:
   - component: {fileID: 3374592850038445444}
   - component: {fileID: 8044960013436657977}
   - component: {fileID: 2881031088874332113}
-  - component: {fileID: 790158014293187126}
   - component: {fileID: 1787836806285476073}
+  - component: {fileID: 5850979841219765348}
   m_Layer: 8
   m_Name: Player
   m_TagString: Player
@@ -385,6 +385,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerMotor
   m_parameterAsset: {fileID: 11400000, guid: f2a00000000000000000000000000003, type: 2}
+  m_verticalOnlyStep: 0
   m_movementReference: {fileID: 3994456450058773638}
   m_collisionLiftPreventionMinSpeed: 16
   m_playerCapsuleCollider: {fileID: 4387842518451101578}
@@ -412,6 +413,7 @@ MonoBehaviour:
     m_dashDistance: 8
     m_dashEndSpeedRate: 0.2
     m_railCollisionIgnoreDuration: 0.1
+  m_attackHitAudioInterval: 0.05
   m_knockbackSpeed: 12
   m_knockbackRate: 1
   m_defaultKnockbackProfile: {fileID: 0}
@@ -795,7 +797,20 @@ MonoBehaviour:
   m_body: {fileID: 4387842518451101578}
   m_leftChain: {fileID: 5662037775429910053}
   m_rightChain: {fileID: 2455120419258202333}
---- !u!114 &790158014293187126
+--- !u!114 &1787836806285476073
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 415096441624393917}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f69b9005c9ecbed45aeafdb07446adaa, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AnimationAudioSequentialEventReceiver
+  m_audioController: {fileID: 5163995539221699533}
+--- !u!114 &5850979841219765348
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -813,19 +828,6 @@ MonoBehaviour:
   m_rightRenderer: {fileID: 8478470568389495354}
   m_materialIndex: 0
   m_rightMaterialIndex: 0
---- !u!114 &1787836806285476073
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 415096441624393917}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f69b9005c9ecbed45aeafdb07446adaa, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::AnimationAudioSequentialEventReceiver
-  m_audioController: {fileID: 5163995539221699533}
 --- !u!1 &1140236127434773408
 GameObject:
   m_ObjectHideFlags: 0
