@@ -50,7 +50,7 @@ public class GameOverManager : MonoBehaviour
 
     private void Start()
     {
-        TimeUp();
+        HitpointZero();
     }
 
     public void HitpointZero()
