@@ -622,6 +622,8 @@ GameObject:
   - component: {fileID: 4472386042927114974}
   - component: {fileID: 4834135989319362794}
   - component: {fileID: 5851140436589297371}
+  - component: {fileID: 5159202674525537629}
+  - component: {fileID: 6914268957525339971}
   m_Layer: 5
   m_Name: Stats
   m_TagString: Untagged
@@ -722,6 +724,33 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &5159202674525537629
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1329930980106196017}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 803fe41f339cef24e9852469fe4ab878, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PauseStatusModel
+--- !u!114 &6914268957525339971
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1329930980106196017}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a25c5a682e8abb54ab1c711546adc288, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PauseStatusView
+  m_model: {fileID: 5159202674525537629}
+  m_remainingTimeText: {fileID: 1715326819621995184}
+  m_retryCountText: {fileID: 2622401020674796639}
 --- !u!1 &1373780362626246134
 GameObject:
   m_ObjectHideFlags: 0
