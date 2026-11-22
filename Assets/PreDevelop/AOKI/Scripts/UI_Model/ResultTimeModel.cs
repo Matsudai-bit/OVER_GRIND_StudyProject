@@ -151,7 +151,7 @@ public class ResultTimeModel : MonoBehaviour, IResultTimeModel
         }
 
         ConvertTotalSeconds(
-            100,
+            elapsedTimer.ElapsedSeconds,
             out int minutes,
             out int seconds,
             out int milliseconds);

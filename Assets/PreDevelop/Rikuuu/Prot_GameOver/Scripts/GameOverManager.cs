@@ -27,6 +27,8 @@ public class GameOverManager : MonoBehaviour
     // ゲームオーバー原因とそのイメージ
     private Dictionary<string, Sprite> m_reasonDictionary = new Dictionary<string, Sprite>();
 
+
+
     private void Awake()
     {
         m_reasonDictionary = new Dictionary<string, Sprite>();
@@ -50,7 +52,7 @@ public class GameOverManager : MonoBehaviour
 
     private void Start()
     {
-        TimeUp();
+        HitpointZero();
     }
 
     public void HitpointZero()

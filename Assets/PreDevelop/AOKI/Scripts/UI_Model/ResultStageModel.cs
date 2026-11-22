@@ -68,9 +68,9 @@ public class ResultStageModel :
 
     private void Awake()
     {
-        SetStageData(
-            m_initialStageIndex,
-            m_initialStageName);
+        //SetStageData(
+        //    m_initialStageIndex,
+        //    m_initialStageName);
     }
 
     /// <summary>

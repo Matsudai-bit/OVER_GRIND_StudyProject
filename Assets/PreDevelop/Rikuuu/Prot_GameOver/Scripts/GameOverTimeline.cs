@@ -21,7 +21,8 @@ public class GameOverTimeline : MonoBehaviour
 
     // スクリプト無効にするためのCanvasGroup
     private CanvasGroup m_afterIntroGroup;
-
+    [SerializeField,Header("ボタンセレクター")]
+    private ButtonSelector m_buttonSelector;
     private void Reset()
     {
         // エディタでアタッチした時だけ呼ばれる。director だけ取得する
@@ -49,6 +50,7 @@ public class GameOverTimeline : MonoBehaviour
         m_director.timeUpdateMode = DirectorUpdateMode.UnscaledGameTime;
         m_director.extrapolationMode = DirectorWrapMode.Hold;
 
+        m_buttonSelector.LockCursor();
         Play();
     }
 
@@ -78,6 +80,8 @@ public class GameOverTimeline : MonoBehaviour
     {
         m_afterIntroGroup.interactable = true;
         m_afterIntroGroup.blocksRaycasts = true;
+
+        m_buttonSelector.UnLockCursor();
 
         Debug.Log("ゲームオーバー演出が終了しました");
     }

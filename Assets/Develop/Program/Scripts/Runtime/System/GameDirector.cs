@@ -291,10 +291,11 @@ public sealed class GameDirector : MonoBehaviour
 
             case GameFlowStateType.ENDING:
                 StopGameProgressTimer();
+                HandleResultStarted();
+
                 break;
 
             case GameFlowStateType.RESULT:
-                HandleResultStarted();
                 break;
 
             case GameFlowStateType.GAME_OVER:
