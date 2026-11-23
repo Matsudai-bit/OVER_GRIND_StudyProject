@@ -28,6 +28,7 @@ public class AudioManager : MonoBehaviour
     [SerializeField] private AudioMixerGroup m_seInGameGroup;
     [SerializeField] private AudioMixerGroup m_seSystemGroup;
     [SerializeField] private AudioMixerGroup m_voiceGroup;
+    [SerializeField] private AudioMixerGroup m_seInGamePlayerGroup;
 
     // AudioSourceの再利用と現在再生中のノード
     private readonly List<AudioSourceNode> m_pool = new List<AudioSourceNode>();
@@ -444,6 +445,7 @@ public class AudioManager : MonoBehaviour
             SoundCategory.BGM => m_bgmGroup,
             SoundCategory.SE_InGame => m_seInGameGroup,
             SoundCategory.Voice => m_voiceGroup,
+            SoundCategory.SE_InGame_Player => m_seInGamePlayerGroup,
             _ => m_seSystemGroup,
         };
     }
