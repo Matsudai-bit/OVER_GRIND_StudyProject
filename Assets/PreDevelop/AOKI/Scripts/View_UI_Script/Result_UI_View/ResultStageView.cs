@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// リザルト画面におけるステージ情報（ステージ番号およびステージ名）の UI 表示・スクランブル演出を担当する View クラスです。
+/// リザルト画面におけるステージ情報の UI 表示・スクランブル演出を担当する View クラスです。
 /// 文字が左から順番に解読・確定していく演出に対応しています。
 /// </summary>
 public class ResultStageView : MonoBehaviour
