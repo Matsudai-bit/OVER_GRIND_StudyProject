@@ -6,7 +6,7 @@ using UnityEngine.UI;
 /// リザルト選択 UI の登場演出と選択時の表示演出を管理します。
 /// </summary>
 [DisallowMultipleComponent]
-public class ResultSelectionInput : MonoBehaviour, IUIInputControllable
+public class ResultSelectionInput : MonoBehaviour
 {
     private const float FADE_OUT_ALPHA = 0.0f;
     private const float FADE_IN_ALPHA = 1.0f;
@@ -29,8 +29,6 @@ public class ResultSelectionInput : MonoBehaviour, IUIInputControllable
     [SerializeField]
     private RectTransform[] m_targetPanels;
 
-    [SerializeField]
-    ButtonSelector m_buttonSelector;
 
     [Header("Next Stage ボタン演出設定")]
     [SerializeField]
@@ -45,8 +43,6 @@ public class ResultSelectionInput : MonoBehaviour, IUIInputControllable
     private float m_slideOffset = -50.0f;
 
     [Header("Stage Select ボタン演出設定")]
-    [SerializeField]
-    private Selectable m_stageSelectButton;
     [SerializeField]
     private RectTransform m_stageSelectVisual;
     [SerializeField]
@@ -117,7 +113,6 @@ public class ResultSelectionInput : MonoBehaviour, IUIInputControllable
     {
         m_hasStarted = true;
         ShowInitialState();
-        SetInputEnabled(false);
     }
 
     private void OnDisable()
@@ -133,27 +128,6 @@ public class ResultSelectionInput : MonoBehaviour, IUIInputControllable
         UpdatePanelInputState();
     }
 
-    /// <summary>
-    /// 背面 UI の入力を許可、または禁止します。
-    /// </summary>
-    /// <param name="isEnabled">入力を許可するか。</param>
-    public void SetInputEnabled(bool isEnabled)
-    {
-        m_isExternalInputEnabled = isEnabled;
-        UpdatePanelInputState();
-
-        if (m_buttonSelector != null)
-        {
-            if (isEnabled)
-            {
-                m_buttonSelector.UnLockCursor();
-            }
-            else
-            {
-                m_buttonSelector.LockCursor();
-            }
-        }
-    }
 
     /// <summary>
     /// 各パネルと演出対象の初期状態を記録します。
@@ -193,16 +167,12 @@ public class ResultSelectionInput : MonoBehaviour, IUIInputControllable
         if (m_nextStageVisual != null)
         {
             m_nsOriginalPosX = m_nextStageVisual.anchoredPosition.x;
+
         }
 
         if (m_stageSelectVisual != null)
         {
             m_ssOriginalScale = m_stageSelectVisual.localScale;
-
-            if (m_stageSelectButton == null)
-            {
-                m_stageSelectButton = m_stageSelectVisual.GetComponentInParent<Selectable>();
-            }
         }
 
         m_isInitialized = true;
@@ -224,9 +194,8 @@ public class ResultSelectionInput : MonoBehaviour, IUIInputControllable
         SetPanelsAlpha(FADE_IN_ALPHA);
         ResetSelectionVisuals();
         UpdatePanelInputState();
-        PlayNextStageDeselectedVisual();
-        PlayStageSelectSelectedVisual();
-        SelectInitialButton();
+        PlayStageSelectDeselectedVisual();
+        PlayNextStageSelectedVisual();
     }
 
     /// <summary>
@@ -309,22 +278,10 @@ public class ResultSelectionInput : MonoBehaviour, IUIInputControllable
         m_isEntrancePlaying = false;
         m_isEntranceCompleted = true;
 
-        SetInputEnabled(true);
-        PlayNextStageDeselectedVisual();
-        PlayStageSelectSelectedVisual();
-        SelectInitialButton();
+        PlayStageSelectDeselectedVisual();
+        PlayNextStageSelectedVisual();
     }
 
-    /// <summary>
-    /// 初期選択ボタン（Stage Select）にフォーカスを合わせます。
-    /// </summary>
-    private void SelectInitialButton()
-    {
-        if (m_stageSelectButton != null)
-        {
-            m_stageSelectButton.Select();
-        }
-    }
 
     /// <summary>
     /// 現在の表示状態に応じてパネルへの入力を切り替えます。
@@ -380,26 +337,29 @@ public class ResultSelectionInput : MonoBehaviour, IUIInputControllable
 
         if (m_nextStageImage != null)
         {
-            m_nextStageImage.sprite = m_nextStageUnselectedSprite;
+            m_nextStageImage.sprite = m_nextStageSelectedSprite;
         }
 
         if (m_nextStageVisual != null)
         {
             m_nextStageVisual.anchoredPosition = new Vector2(
-                m_nsOriginalPosX + m_slideOffset,
+                m_nsOriginalPosX,
                 m_nextStageVisual.anchoredPosition.y);
         }
 
         if (m_stageSelectFrameImage != null)
         {
             Color color = m_stageSelectFrameImage.color;
-            color.a = FADE_IN_ALPHA;
+            color.a = FADE_OUT_ALPHA;
             m_stageSelectFrameImage.color = color;
         }
 
         if (m_stageSelectVisual != null)
         {
-            m_stageSelectVisual.localScale = m_ssOriginalScale;
+            m_stageSelectVisual.localScale = new Vector3(
+                m_ssOriginalScale.x * m_fadeOutScale.x,
+                m_ssOriginalScale.y * m_fadeOutScale.y,
+                m_ssOriginalScale.z);
         }
     }
 
