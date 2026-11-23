@@ -3,22 +3,23 @@ using UnityEngine;
 
 /// <summary>
 /// Trigger コライダーの有効化・速度・接触タイミング追跡および砂表面との重なり点収集を行うクラス。
+/// 行列の事前計算と高さ先行判定により高速に走査します。
 /// </summary>
 public class SandTriggerScanner
 {
     // ---- 定数 ----
-    private const float MIN_SAMPLE_STEP = 0.01f;         // 表面サンプリングの最小間隔(m)
-    private const int MAX_SAMPLES_PER_AXIS = 40;         // 1軸あたりの最大サンプリング分割数
-    private const float CLOSEST_POINT_EPSILON_SQ = 1e-6f; // 内外判定用の距離二乗閾値
+    private const float MIN_SAMPLE_STEP = 0.01f;           // 表面サンプリングの最小間隔(m)
+    private const int MAX_SAMPLES_PER_AXIS = 20;           // 1軸あたりの最大サンプリング分割数
+    private const float CLOSEST_POINT_EPSILON_SQ = 1e-6f;  // 内外判定用の距離二乗閾値
 
     // ---- メンバー変数 ----
-    private Vector3[] m_lastCenters;                     // 前フレームの各コライダー中心座標
-    private float[] m_speeds;                            // 各コライダーの移動速度(m/s)
-    private bool[] m_wasActive;                          // 前フレームでコライダーが有効だったか
-    private float[] m_activatedTimes;                    // コライダーが有効になった時刻
-    private bool[] m_wasOverlapping;                     // 前フレームで砂山と重なっていたか
-    private float[] m_contactStartTimes;                 // 砂山と重なり始めた時刻
-    private bool m_warnedMeshCollider;                   // 凹MeshCollider警告の重複防止フラグ
+    private Vector3[] m_lastCenters;                       // 前フレームの各コライダー中心座標
+    private float[] m_speeds;                              // 各コライダーの移動速度(m/s)
+    private bool[] m_wasActive;                            // 前フレームでコライダーが有効だったか
+    private float[] m_activatedTimes;                      // コライダーが有効になった時刻
+    private bool[] m_wasOverlapping;                       // 前フレームで砂山と重なっていたか
+    private float[] m_contactStartTimes;                   // 砂山と重なり始めた時刻
+    private bool m_warnedMeshCollider;                     // 凹MeshCollider警告の重複防止フラグ
     private readonly List<Vector3> m_overlapPoints = new List<Vector3>();  // 重なった砂表面の座標リスト
     private readonly List<Vector3> m_overlapNormals = new List<Vector3>(); // 重なった砂表面の法線リスト
 
@@ -31,8 +32,6 @@ public class SandTriggerScanner
     /// <summary>
     /// トリガー追跡用の位置・速度・タイマーキャッシュを初期化します。
     /// </summary>
-    /// <param name="triggerColliders">監視対象のコライダー配列。</param>
-    /// <param name="currentTime">現在時刻。</param>
     public void ResetTracking(Collider[] triggerColliders, float currentTime)
     {
         int count = triggerColliders != null ? triggerColliders.Length : 0;
@@ -57,11 +56,7 @@ public class SandTriggerScanner
 
     /// <summary>
     /// 各トリガーコライダーの有効状態と移動速度を更新します。
-    /// 無効から有効へ切り替わったフレームでは速度と遅延タイマーをリセットします。
     /// </summary>
-    /// <param name="triggerColliders">監視対象のコライダー配列。</param>
-    /// <param name="deltaTime">経過時間(秒)。</param>
-    /// <param name="currentTime">現在時刻。</param>
     public void UpdateTriggerStates(Collider[] triggerColliders, float deltaTime, float currentTime)
     {
         if (triggerColliders == null)
@@ -89,7 +84,6 @@ public class SandTriggerScanner
             Vector3 center = col.bounds.center;
             if (!m_wasActive[i])
             {
-                // 出現直後の古い座標との差分で異常速度が出ないよう初期化する
                 m_wasActive[i] = true;
                 m_wasOverlapping[i] = false;
                 m_activatedTimes[i] = currentTime;
@@ -107,8 +101,6 @@ public class SandTriggerScanner
     /// <summary>
     /// 指定インデックスのトリガーコライダーの速度を取得します。
     /// </summary>
-    /// <param name="index">コライダーの配列インデックス。</param>
-    /// <returns>移動速度(m/s)。</returns>
     public float GetTriggerSpeed(int index)
     {
         if (m_speeds == null || index < 0 || index >= m_speeds.Length)
@@ -122,9 +114,6 @@ public class SandTriggerScanner
     /// <summary>
     /// コライダーが有効化されてから指定の遅延時間が経過したかを確認します。
     /// </summary>
-    /// <param name="index">コライダーの配列インデックス。</param>
-    /// <param name="currentTime">現在時刻。</param>
-    /// <param name="activationDelay">必要な遅延時間(秒)。</param>
     /// <returns>
     /// true：遅延時間を経過しており反応可能です。
     /// false：まだ待機中です。
@@ -142,10 +131,6 @@ public class SandTriggerScanner
     /// <summary>
     /// 砂山との重なり状態と重なり遅延時間の経過を更新・判定します。
     /// </summary>
-    /// <param name="index">コライダーの配列インデックス。</param>
-    /// <param name="hasOverlap">現在いずれかの砂山と重なっているか。</param>
-    /// <param name="currentTime">現在時刻。</param>
-    /// <param name="contactDelay">重なり開始後に必要な遅延時間(秒)。</param>
     /// <returns>
     /// true：重なりがあり、かつ遅延時間を経過しています。
     /// false：重なりがないか、遅延時間の待機中です。
@@ -175,8 +160,6 @@ public class SandTriggerScanner
     /// <summary>
     /// コライダーが Trigger 判定に使用可能かを検証します。
     /// </summary>
-    /// <param name="col">検証対象のコライダー。</param>
-    /// <param name="logContext">警告ログ出力時のコンテキストオブジェクト。</param>
     /// <returns>
     /// true：使用可能です。
     /// false：無効または非ConvexなMeshColliderのため使用できません。
@@ -206,10 +189,6 @@ public class SandTriggerScanner
     /// <summary>
     /// コライダーの AABB 内を格子状に走査し、砂表面がコライダー内側にある点を収集します。
     /// </summary>
-    /// <param name="mountain">対象の砂山。</param>
-    /// <param name="col">判定するコライダー。</param>
-    /// <param name="bounds">コライダーのワールド Bounds。</param>
-    /// <param name="sampleStepMultiplier">サンプル間隔の倍率。</param>
     public void CollectOverlapPoints(MarchingCubesMountain mountain, Collider col, Bounds bounds, float sampleStepMultiplier)
     {
         m_overlapPoints.Clear();
@@ -224,32 +203,55 @@ public class SandTriggerScanner
         int nx = Mathf.Min(Mathf.CeilToInt(bounds.size.x / step) + 1, MAX_SAMPLES_PER_AXIS);
         int nz = Mathf.Min(Mathf.CeilToInt(bounds.size.z / step) + 1, MAX_SAMPLES_PER_AXIS);
 
+        float startWorldX = nx == 1 ? bounds.center.x : bounds.min.x;
+        float startWorldZ = nz == 1 ? bounds.center.z : bounds.min.z;
+        float stepWorldX = nx == 1 ? 0f : bounds.size.x / (nx - 1);
+        float stepWorldZ = nz == 1 ? 0f : bounds.size.z / (nz - 1);
+
+        // ループ外で行列を1回だけ計算し、ループ内のTransformアクセスを排除する
+        Transform mountainTransform = mountain.transform;
+        Matrix4x4 worldToLocal = mountainTransform.worldToLocalMatrix;
+        Matrix4x4 localToWorld = mountainTransform.localToWorldMatrix;
+
+        Vector3 localOrigin = worldToLocal.MultiplyPoint3x4(new Vector3(startWorldX, bounds.center.y, startWorldZ));
+        Vector3 localStepX = worldToLocal.MultiplyVector(new Vector3(stepWorldX, 0f, 0f));
+        Vector3 localStepZ = worldToLocal.MultiplyVector(new Vector3(0f, 0f, stepWorldZ));
+
+        float minWorldY = bounds.min.y;
+        float maxWorldY = bounds.max.y;
+
         for (int ix = 0; ix < nx; ix++)
         {
-            float x = nx == 1 ? bounds.center.x : Mathf.Lerp(bounds.min.x, bounds.max.x, ix / (float)(nx - 1));
+            Vector3 rowLocal = localOrigin + localStepX * ix;
             for (int iz = 0; iz < nz; iz++)
             {
-                float z = nz == 1 ? bounds.center.z : Mathf.Lerp(bounds.min.z, bounds.max.z, iz / (float)(nz - 1));
+                Vector3 sampleLocal = rowLocal + localStepZ * iz;
 
-                if (!mountain.TrySampleSurface(new Vector3(x, bounds.center.y, z), out Vector3 surfacePoint, out Vector3 surfaceNormal))
+                // 先に高さだけを取得し、高さ範囲外なら ClosestPoint と法線計算をスキップする
+                if (!mountain.TrySampleLocalHeight(sampleLocal.x, sampleLocal.z, out float localSurfaceY))
                 {
                     continue;
                 }
 
-                if (surfacePoint.y < bounds.min.y || surfacePoint.y > bounds.max.y)
+                Vector3 localPoint = new Vector3(sampleLocal.x, localSurfaceY, sampleLocal.z);
+                Vector3 worldSurfacePoint = localToWorld.MultiplyPoint3x4(localPoint);
+                if (worldSurfacePoint.y < minWorldY || worldSurfacePoint.y > maxWorldY)
                 {
                     continue;
                 }
 
-                // コライダー内側であれば ClosestPoint は同一点を返す
-                Vector3 closest = col.ClosestPoint(surfacePoint);
-                if ((closest - surfacePoint).sqrMagnitude > CLOSEST_POINT_EPSILON_SQ)
+                Vector3 closest = col.ClosestPoint(worldSurfacePoint);
+                if ((closest - worldSurfacePoint).sqrMagnitude > CLOSEST_POINT_EPSILON_SQ)
                 {
                     continue;
                 }
 
-                m_overlapPoints.Add(surfacePoint);
-                m_overlapNormals.Add(surfaceNormal);
+                // 実際に重なった点だけ法線を計算する
+                Vector3 localNormal = mountain.CalculateLocalNormal(sampleLocal.x, sampleLocal.z);
+                Vector3 worldNormal = localToWorld.MultiplyVector(localNormal).normalized;
+
+                m_overlapPoints.Add(worldSurfacePoint);
+                m_overlapNormals.Add(worldNormal);
             }
         }
     }

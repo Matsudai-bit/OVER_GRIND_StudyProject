@@ -3,6 +3,7 @@ using UnityEngine;
 
 /// <summary>
 /// 砂山のハイトマップデータと、削り・崩落シミュレーションを管理するクラス。
+/// ダーティ矩形追跡により、変化している領域のみを計算します。
 /// </summary>
 public class SandHeightField
 {
@@ -39,12 +40,19 @@ public class SandHeightField
     private static readonly int[] NEIGHBOR_Z = { 0, 0, 1, -1, 1, -1, 1, -1 };
 
     // ---- メンバー変数 ----
-    private readonly int m_gridSize;      // XZ方向のサンプル点数
-    private readonly float m_voxelSize;   // サンプル点の間隔（m）
+    private readonly int m_gridSize;        // XZ方向のサンプル点数
+    private readonly float m_voxelSize;     // サンプル点の間隔（m）
     private readonly float m_mountainHeight; // 砂山の最大高さ（m）
-    private readonly float m_sink;        // Zファイト防止のために高さ0面を沈める量
-    private readonly float[,] m_height;   // 各グリッドの砂の高さ（0以上）
-    private readonly float[,] m_delta;    // 崩し処理用の作業バッファ
+    private readonly float m_sink;          // Zファイト防止のために高さ0面を沈める量
+    private readonly float[,] m_height;     // 各グリッドの砂の高さ（0以上）
+    private readonly float[,] m_delta;      // 崩し処理用の作業バッファ
+
+    // 崩れ計算対象のアクティブ矩形範囲
+    private bool m_hasActiveRect;
+    private int m_activeMinX;
+    private int m_activeMaxX;
+    private int m_activeMinZ;
+    private int m_activeMaxZ;
 
     /// <summary>XZ方向のサンプル点数。</summary>
     public int GridSize => m_gridSize;
@@ -76,9 +84,6 @@ public class SandHeightField
     /// <summary>
     /// 指定されたグリッド座標の砂の高さを取得します。
     /// </summary>
-    /// <param name="x">Xインデックス。</param>
-    /// <param name="z">Zインデックス。</param>
-    /// <returns>砂の高さ。</returns>
     public float GetHeight(int x, int z)
     {
         return m_height[x, z];
@@ -87,9 +92,6 @@ public class SandHeightField
     /// <summary>
     /// 範囲外をクランプして指定座標の砂の高さを取得します。
     /// </summary>
-    /// <param name="x">Xインデックス。</param>
-    /// <param name="z">Zインデックス。</param>
-    /// <returns>クランプ後の砂の高さ。</returns>
     public float GetClampedHeight(int x, int z)
     {
         int maxIndex = m_gridSize - 1;
@@ -99,9 +101,6 @@ public class SandHeightField
     /// <summary>
     /// グリッド座標をローカルXZ座標（Yは0）へ変換します。
     /// </summary>
-    /// <param name="x">Xインデックス。</param>
-    /// <param name="z">Zインデックス。</param>
-    /// <returns>ローカル空間のXZ座標。</returns>
     public Vector3 ConvertGridToLocalXZ(int x, int z)
     {
         float offset = (m_gridSize - 1) * m_voxelSize * 0.5f;
@@ -111,9 +110,6 @@ public class SandHeightField
     /// <summary>
     /// 指定された形状タイプで砂山の初期データを生成します。
     /// </summary>
-    /// <param name="shapeType">初期形状の生成方式。</param>
-    /// <param name="heightmapTexture">ハイトマップ画像（HEIGHTMAP_TEXTURE モード時に使用）。</param>
-    /// <param name="reposeAngle">安息角（度）。</param>
     public void InitializeShape(SandShapeType shapeType, Texture2D heightmapTexture, float reposeAngle)
     {
         switch (shapeType)
@@ -130,30 +126,29 @@ public class SandHeightField
                 break;
         }
 
-        ClearBorder();
+        ClearAllBorder();
+        m_hasActiveRect = false;
     }
 
     /// <summary>
-    /// ローカル座標のXZ位置における表面の高さと法線を取得します。
+    /// ローカル座標のXZ位置における表面のローカルY座標のみを高速に取得します。
     /// </summary>
-    /// <param name="localPos">問い合わせるローカル座標。</param>
+    /// <param name="localX">ローカルX座標。</param>
+    /// <param name="localZ">ローカルZ座標。</param>
     /// <param name="surfaceY">算出された表面のローカルY座標。</param>
-    /// <param name="localNormal">算出された表面のローカル法線。</param>
     /// <returns>
-    /// true：グリッド範囲内でサンプリングに成功しました。
+    /// true：グリッド範囲内で取得できました。
     /// false：グリッド範囲外です。
     /// </returns>
-    public bool TrySampleSurface(Vector3 localPos, out float surfaceY, out Vector3 localNormal)
+    public bool TrySampleHeight(float localX, float localZ, out float surfaceY)
     {
         surfaceY = 0f;
-        localNormal = Vector3.up;
 
         int n = m_gridSize;
         float offset = (n - 1) * m_voxelSize * 0.5f;
-        float gx = (localPos.x + offset) / m_voxelSize;
-        float gz = (localPos.z + offset) / m_voxelSize;
+        float gx = (localX + offset) / m_voxelSize;
+        float gz = (localZ + offset) / m_voxelSize;
 
-        // 範囲外チェック
         if (gx < 0f || gz < 0f || gx > n - 1 || gz > n - 1)
         {
             return false;
@@ -169,30 +164,80 @@ public class SandHeightField
         float h01 = m_height[x0, z0 + 1];
         float h11 = m_height[x0 + 1, z0 + 1];
 
-        // バイリニア補間と勾配計算
         float h = Mathf.Lerp(Mathf.Lerp(h00, h10, fx), Mathf.Lerp(h01, h11, fx), fz);
-        float dhdx = Mathf.Lerp(h10 - h00, h11 - h01, fz) / m_voxelSize;
-        float dhdz = Mathf.Lerp(h01 - h00, h11 - h10, fx) / m_voxelSize;
-
         surfaceY = h - m_sink;
-        localNormal = new Vector3(-dhdx, 1f, -dhdz).normalized;
         return true;
     }
 
     /// <summary>
-    /// ローカル空間で球の下側の面を使って砂を削ります。
+    /// ローカル座標のXZ位置における表面のローカル法線を計算します。
     /// </summary>
-    /// <param name="localCenter">削り球の中心（ローカル座標）。</param>
-    /// <param name="localRadius">削り球の半径（ローカル単位）。</param>
-    /// <param name="smoothK">縁のなめらかさ係数。</param>
-    /// <param name="removedHeightSum">取り除かれた高さの合計（ローカル単位）。</param>
+    /// <param name="localX">ローカルX座標。</param>
+    /// <param name="localZ">ローカルZ座標。</param>
+    /// <returns>ローカル空間の表面法線。</returns>
+    public Vector3 CalculateLocalNormal(float localX, float localZ)
+    {
+        int n = m_gridSize;
+        float offset = (n - 1) * m_voxelSize * 0.5f;
+        float gx = Mathf.Clamp((localX + offset) / m_voxelSize, 0f, n - 1);
+        float gz = Mathf.Clamp((localZ + offset) / m_voxelSize, 0f, n - 1);
+
+        int x0 = Mathf.Min((int)gx, n - 2);
+        int z0 = Mathf.Min((int)gz, n - 2);
+        float fx = gx - x0;
+        float fz = gz - z0;
+
+        float h00 = m_height[x0, z0];
+        float h10 = m_height[x0 + 1, z0];
+        float h01 = m_height[x0, z0 + 1];
+        float h11 = m_height[x0 + 1, z0 + 1];
+
+        float dhdx = Mathf.Lerp(h10 - h00, h11 - h01, fz) / m_voxelSize;
+        float dhdz = Mathf.Lerp(h01 - h00, h11 - h10, fx) / m_voxelSize;
+        return new Vector3(-dhdx, 1f, -dhdz).normalized;
+    }
+
+    /// <summary>
+    /// ローカル座標のXZ位置における表面の高さと法線を取得します。
+    /// </summary>
+    /// <returns>
+    /// true：グリッド範囲内でサンプリングに成功しました。
+    /// false：グリッド範囲外です。
+    /// </returns>
+    public bool TrySampleSurface(Vector3 localPos, out float surfaceY, out Vector3 localNormal)
+    {
+        if (!TrySampleHeight(localPos.x, localPos.z, out surfaceY))
+        {
+            localNormal = Vector3.up;
+            return false;
+        }
+
+        localNormal = CalculateLocalNormal(localPos.x, localPos.z);
+        return true;
+    }
+
+    /// <summary>
+    /// ローカル空間で球の下側の面を使って砂を削り、変更されたグリッド範囲を返します。
+    /// </summary>
     /// <returns>
     /// true：1箇所以上の砂が削られました。
     /// false：砂の高さは変化しませんでした。
     /// </returns>
-    public bool Carve(Vector3 localCenter, float localRadius, float smoothK, out float removedHeightSum)
+    public bool Carve(
+        Vector3 localCenter,
+        float localRadius,
+        float smoothK,
+        out float removedHeightSum,
+        out int modifiedMinX,
+        out int modifiedMaxX,
+        out int modifiedMinZ,
+        out int modifiedMaxZ)
     {
         removedHeightSum = 0f;
+        modifiedMinX = int.MaxValue;
+        modifiedMaxX = int.MinValue;
+        modifiedMinZ = int.MaxValue;
+        modifiedMaxZ = int.MinValue;
 
         int n = m_gridSize;
         float offset = (n - 1) * m_voxelSize * 0.5f;
@@ -209,17 +254,22 @@ public class SandHeightField
 
         for (int x = minX; x <= maxX; x++)
         {
+            float dx = (x * m_voxelSize - offset) - localCenter.x;
+            float dxSq = dx * dx;
+            if (dxSq >= radiusSq)
+            {
+                continue;
+            }
+
             for (int z = minZ; z <= maxZ; z++)
             {
-                float dx = (x * m_voxelSize - offset) - localCenter.x;
                 float dz = (z * m_voxelSize - offset) - localCenter.z;
-                float distSq = dx * dx + dz * dz;
+                float distSq = dxSq + dz * dz;
                 if (distSq >= radiusSq)
                 {
                     continue;
                 }
 
-                // 列ごとの球の下側面を算出し、現在の高さと比較して削る
                 float bottom = localCenter.y - Mathf.Sqrt(radiusSq - distSq);
                 float surface = m_height[x, z] - m_sink;
                 float nextSurface = (smoothK > MIN_SMOOTH_K)
@@ -232,34 +282,81 @@ public class SandHeightField
                     removedHeightSum += m_height[x, z] - newHeight;
                     m_height[x, z] = newHeight;
                     modified = true;
+
+                    if (x < modifiedMinX) modifiedMinX = x;
+                    if (x > modifiedMaxX) modifiedMaxX = x;
+                    if (z < modifiedMinZ) modifiedMinZ = z;
+                    if (z > modifiedMaxZ) modifiedMaxZ = z;
                 }
             }
+        }
+
+        if (modified)
+        {
+            ExpandActiveRect(modifiedMinX, modifiedMaxX, modifiedMinZ, modifiedMaxZ);
         }
 
         return modified;
     }
 
     /// <summary>
-    /// 安息角に基づいて砂の崩れを1ステップ進行させます。
+    /// 安息角に基づいてアクティブ領域のみ砂の崩れを1ステップ進行させます。
     /// </summary>
-    /// <param name="reposeAngle">安息角（度）。</param>
-    /// <param name="onSandSlidLocal">砂が滑り落ちた際の通知コールバック（ローカル位置、ローカル方向、減少高さ）。</param>
     /// <returns>
     /// true：砂が動きました。
     /// false：すべての斜面が安定しています。
     /// </returns>
-    public bool SimulateSettleStep(float reposeAngle, Action<Vector3, Vector3, float> onSandSlidLocal)
+    public bool SimulateSettleStep(
+        float reposeAngle,
+        Action<Vector3, Vector3, float> onSandSlidLocal,
+        out int changedMinX,
+        out int changedMaxX,
+        out int changedMinZ,
+        out int changedMaxZ)
     {
+        changedMinX = int.MaxValue;
+        changedMaxX = int.MinValue;
+        changedMinZ = int.MaxValue;
+        changedMaxZ = int.MinValue;
+
+        if (!m_hasActiveRect)
+        {
+            return false;
+        }
+
         int n = m_gridSize;
         float tanAngle = Mathf.Tan(reposeAngle * Mathf.Deg2Rad);
-        bool moved = false;
+        float straightMaxDiff = tanAngle * m_voxelSize;
+        float diagMaxDiff = tanAngle * m_voxelSize * DIAGONAL_FACTOR;
 
-        Array.Clear(m_delta, 0, m_delta.Length);
+        // 走査範囲をアクティブ矩形+1セルに限定（外周境界は除外）
+        int scanMinX = Mathf.Max(1, m_activeMinX - 1);
+        int scanMaxX = Mathf.Min(n - 2, m_activeMaxX + 1);
+        int scanMinZ = Mathf.Max(1, m_activeMinZ - 1);
+        int scanMaxZ = Mathf.Min(n - 2, m_activeMaxZ + 1);
 
-        // 8近傍との高さの差から移動量を計算
-        for (int x = 1; x < n - 1; x++)
+        int clearMinX = scanMinX - 1;
+        int clearMaxX = scanMaxX + 1;
+        int clearMinZ = scanMinZ - 1;
+        int clearMaxZ = scanMaxZ + 1;
+
+        for (int x = clearMinX; x <= clearMaxX; x++)
         {
-            for (int z = 1; z < n - 1; z++)
+            for (int z = clearMinZ; z <= clearMaxZ; z++)
+            {
+                m_delta[x, z] = 0f;
+            }
+        }
+
+        bool moved = false;
+        int nextMinX = int.MaxValue;
+        int nextMaxX = int.MinValue;
+        int nextMinZ = int.MaxValue;
+        int nextMaxZ = int.MinValue;
+
+        for (int x = scanMinX; x <= scanMaxX; x++)
+        {
+            for (int z = scanMinZ; z <= scanMaxZ; z++)
             {
                 float currentHeight = m_height[x, z];
                 if (currentHeight <= 0f)
@@ -271,8 +368,8 @@ public class SandHeightField
                 {
                     int nx = x + NEIGHBOR_X[i];
                     int nz = z + NEIGHBOR_Z[i];
-                    float dist = m_voxelSize * (i < 4 ? 1f : DIAGONAL_FACTOR);
-                    float excess = (currentHeight - m_height[nx, nz]) - tanAngle * dist;
+                    float maxDiff = (i < 4) ? straightMaxDiff : diagMaxDiff;
+                    float excess = (currentHeight - m_height[nx, nz]) - maxDiff;
 
                     if (excess > MIN_EXCESS_HEIGHT)
                     {
@@ -280,6 +377,16 @@ public class SandHeightField
                         m_delta[x, z] -= transfer;
                         m_delta[nx, nz] += transfer;
                         moved = true;
+
+                        if (x < nextMinX) nextMinX = x;
+                        if (x > nextMaxX) nextMaxX = x;
+                        if (z < nextMinZ) nextMinZ = z;
+                        if (z > nextMaxZ) nextMaxZ = z;
+
+                        if (nx < nextMinX) nextMinX = nx;
+                        if (nx > nextMaxX) nextMaxX = nx;
+                        if (nz < nextMinZ) nextMinZ = nz;
+                        if (nz > nextMaxZ) nextMaxZ = nz;
                     }
                 }
             }
@@ -287,29 +394,40 @@ public class SandHeightField
 
         if (!moved)
         {
+            m_hasActiveRect = false;
             return false;
         }
 
         int reportedCount = 0;
+        bool checkSlide = onSandSlidLocal != null;
 
-        // 移動量を高さへ適用し、大きく減った箇所を通知
-        for (int x = 0; x < n; x++)
+        for (int x = clearMinX; x <= clearMaxX; x++)
         {
-            for (int z = 0; z < n; z++)
+            bool isBorderX = (x == 0 || x == n - 1);
+            for (int z = clearMinZ; z <= clearMaxZ; z++)
             {
-                float d = m_delta[x, z];
+                if (isBorderX || z == 0 || z == n - 1)
+                {
+                    m_height[x, z] = 0f;
+                    continue;
+                }
 
-                if (onSandSlidLocal != null
+                float d = m_delta[x, z];
+                if (d == 0f)
+                {
+                    continue;
+                }
+
+                if (checkSlide
                     && d < -SLIDE_REPORT_THRESHOLD
                     && reportedCount < MAX_SLIDE_REPORTS_PER_STEP
-                    && x > 0 && z > 0 && x < n - 1 && z < n - 1
                     && UnityEngine.Random.value < SLIDE_REPORT_PROBABILITY)
                 {
                     reportedCount++;
                     Vector3 downhillLocal = new Vector3(
-                        -(GetClampedHeight(x + 1, z) - GetClampedHeight(x - 1, z)),
+                        -(m_height[x + 1, z] - m_height[x - 1, z]),
                         0f,
-                        -(GetClampedHeight(x, z + 1) - GetClampedHeight(x, z - 1))
+                        -(m_height[x, z + 1] - m_height[x, z - 1])
                     );
                     Vector3 baseLocal = ConvertGridToLocalXZ(x, z);
                     Vector3 posLocal = new Vector3(baseLocal.x, m_height[x, z] - m_sink, baseLocal.z);
@@ -317,11 +435,42 @@ public class SandHeightField
                 }
 
                 m_height[x, z] = Mathf.Max(0f, m_height[x, z] + d);
+
+                if (x < changedMinX) changedMinX = x;
+                if (x > changedMaxX) changedMaxX = x;
+                if (z < changedMinZ) changedMinZ = z;
+                if (z > changedMaxZ) changedMaxZ = z;
             }
         }
 
-        ClearBorder();
+        m_activeMinX = Mathf.Clamp(nextMinX, 1, n - 2);
+        m_activeMaxX = Mathf.Clamp(nextMaxX, 1, n - 2);
+        m_activeMinZ = Mathf.Clamp(nextMinZ, 1, n - 2);
+        m_activeMaxZ = Mathf.Clamp(nextMaxZ, 1, n - 2);
+
         return true;
+    }
+
+    /// <summary>
+    /// 崩れ計算対象のアクティブ矩形を指定範囲で拡張します。
+    /// </summary>
+    private void ExpandActiveRect(int minX, int maxX, int minZ, int maxZ)
+    {
+        if (!m_hasActiveRect)
+        {
+            m_hasActiveRect = true;
+            m_activeMinX = minX;
+            m_activeMaxX = maxX;
+            m_activeMinZ = minZ;
+            m_activeMaxZ = maxZ;
+        }
+        else
+        {
+            if (minX < m_activeMinX) m_activeMinX = minX;
+            if (maxX > m_activeMaxX) m_activeMaxX = maxX;
+            if (minZ < m_activeMinZ) m_activeMinZ = minZ;
+            if (maxZ > m_activeMaxZ) m_activeMaxZ = maxZ;
+        }
     }
 
     /// <summary>
@@ -397,9 +546,9 @@ public class SandHeightField
     }
 
     /// <summary>
-    /// グリッド外周の砂の高さを0に設定します（外周から落ちる扱い）。
+    /// 初期化時にグリッド外周の砂の高さを0に設定します。
     /// </summary>
-    private void ClearBorder()
+    private void ClearAllBorder()
     {
         int n = m_gridSize;
         for (int i = 0; i < n; i++)

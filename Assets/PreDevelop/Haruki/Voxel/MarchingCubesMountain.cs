@@ -5,10 +5,31 @@ using UnityEngine.Rendering;
 
 /// <summary>
 /// オーバーハングや空洞ができないハイトマップベースの砂山コンポーネント。
+/// チャンク分割により、変化した領域のみを部分的にメッシュ・コライダー更新します。
 /// </summary>
 [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
 public class MarchingCubesMountain : MonoBehaviour
 {
+    // ---- チャンク管理用クラス ----
+    private class SandChunk
+    {
+        public GameObject m_gameObject;
+        public MeshFilter m_meshFilter;
+        public MeshRenderer m_meshRenderer;
+        public MeshCollider m_meshCollider;
+        public Mesh m_visualMesh;
+        public Mesh[] m_colliderMeshes;
+        public int m_activeColliderIndex;
+        public int m_startX;
+        public int m_endX;
+        public int m_startZ;
+        public int m_endZ;
+        public bool m_isMeshDirty;
+        public bool m_isColliderDirty;
+        public bool m_colliderDeferredOnce;
+        public float m_nextColliderTime;
+    }
+
     // ---- 定数 ----
     private const int MIN_GRID_SIZE = 3;                      // 最小グリッドサイズ
     private const float MIN_VOXEL_SIZE = 0.01f;               // 最小ボクセルサイズ
@@ -16,10 +37,10 @@ public class MarchingCubesMountain : MonoBehaviour
     private const float MIN_SCALE = 1e-5f;                    // スケールゼロ除算防止用の最小値
     private const float SINK_VOXEL_RATIO = 0.5f;              // ボクセルサイズに対する沈め量の割合
     private const int EXTRA_Y_LAYERS = 4;                     // Y方向の余裕層数
+    private const int CHUNK_CELL_SIZE = 16;                   // 1チャンクあたりのXZセル数
     private const int COLLIDER_MESH_COUNT = 2;                // コライダーダブルバッファ用のメッシュ数
 
     // ---- 静的メンバー ----
-    // シーン内の有効な砂山の一覧
     private static readonly List<MarchingCubesMountain> m_instances = new List<MarchingCubesMountain>();
 
     /// <summary>シーン内の有効な砂山の一覧。</summary>
@@ -56,9 +77,12 @@ public class MarchingCubesMountain : MonoBehaviour
     [SerializeField] private float m_carveSmoothness = 0.5f;
 
     [Header("パフォーマンス・コライダー更新")]
-    [Tooltip("MeshColliderを作り直す最小間隔(秒)。見た目のメッシュは毎フレーム更新される")]
+    [Tooltip("チャンクのMeshColliderを作り直す最小間隔(秒)")]
     [Min(0.05f)]
-    [SerializeField] private float m_colliderUpdateInterval = 0.25f;
+    [SerializeField] private float m_colliderUpdateInterval = 0.2f;
+    [Tooltip("1フレームあたりに再ベイクするコライダーチャンク数の上限（スパイク防止）")]
+    [Range(1, 16)]
+    [SerializeField] private int m_maxColliderUpdatesPerFrame = 2;
     [Tooltip("ONにすると、崩れが完全に落ち着くまでコライダーの再構築を遅らせ、歩行中のかくつきを防ぐ")]
     [SerializeField] private bool m_deferColliderDuringSettle = false;
     [Tooltip("崩れ中(settling)のコライダー更新間隔(秒)。m_deferColliderDuringSettle が OFF の場合に使用")]
@@ -67,18 +91,15 @@ public class MarchingCubesMountain : MonoBehaviour
 
     // ---- 内部データ ----
     private SandHeightField m_heightField;          // ハイトマップ・シミュレーション担当
-    private MarchingCubesMeshBuilder m_meshBuilder; // メッシュ構築担当
-    private Mesh m_mesh;                            // 描画専用メッシュ
-    private readonly Mesh[] m_colliderMeshes = new Mesh[COLLIDER_MESH_COUNT]; // コライダー専用ダブルバッファメッシュ
-    private int m_activeColliderMeshIndex;          // 現在MeshColliderに設定中のバッファインデックス
-    private MeshFilter m_meshFilter;                // メッシュフィルター参照
-    private MeshRenderer m_meshRenderer;            // メッシュレンダラー参照
-    private MeshCollider m_meshCollider;            // メッシュコライダー参照
+    private MarchingCubesMeshBuilder m_meshBuilder; // チャンクメッシュ構築担当
+    private SandChunk[,] m_chunks;                  // チャンクの2次元配列
+    private int m_chunkCount;                       // 1辺のチャンク数
+    private MeshRenderer m_parentMeshRenderer;      // 親メッシュレンダラー（設定継承元）
     private bool m_isSettling;                      // 崩れ処理中フラグ
-    private bool m_isMeshDirty;                     // 描画メッシュ再構築が必要か
-    private bool m_isColliderDirty;                 // コライダー再構築が必要か
-    private bool m_colliderDeferredOnce;            // 描画更新と同フレームでのベイクを1フレームずらすためのフラグ
-    private float m_nextColliderTime;               // 次にコライダーを更新可能な時刻
+    private bool m_hasDirtyChunks;                  // 更新待ちのチャンクがあるか
+    private Bounds m_localBounds;                   // 砂山全体のローカルバウンディングボックス
+    private readonly List<Vector3> m_tempVertices = new List<Vector3>(); // コライダーコピー用の一時バッファ
+    private readonly List<int> m_tempTriangles = new List<int>();        // コライダーコピー用の一時バッファ
 
     // ---- イベント ----
     /// <summary>
@@ -95,7 +116,7 @@ public class MarchingCubesMountain : MonoBehaviour
 
     // ---- 公開プロパティ ----
     /// <summary>砂山のワールド空間でのバウンディングボックス。</summary>
-    public Bounds WorldBounds => m_meshRenderer != null ? m_meshRenderer.bounds : new Bounds(transform.position, Vector3.zero);
+    public Bounds WorldBounds => CalculateWorldBounds();
 
     /// <summary>サンプル点の間隔（ワールド単位）。</summary>
     public float WorldVoxelSize => m_voxelSize * Mathf.Abs(transform.lossyScale.x);
@@ -131,62 +152,74 @@ public class MarchingCubesMountain : MonoBehaviour
 
     private void LateUpdate()
     {
-        bool rebuiltMeshThisFrame = false;
-
-        // 見た目のメッシュ：変更があれば1フレームに1回だけ作り直す
-        if (m_isMeshDirty)
-        {
-            m_meshBuilder.RebuildMesh(m_heightField, m_mesh);
-            m_isMeshDirty = false;
-            m_isColliderDirty = true;
-            rebuiltMeshThisFrame = true;
-        }
-
-        // コライダー：ダブルバッファで安全に更新し、負荷分散のため描画再構築フレームとは1フレームずらす
-        if (!m_isColliderDirty)
+        if (!m_hasDirtyChunks || m_chunks == null)
         {
             return;
         }
 
-        if (m_deferColliderDuringSettle && m_isSettling)
+        bool anyRemainingDirty = false;
+        int colliderUpdatesThisFrame = 0;
+        float currentTime = Time.time;
+
+        for (int cx = 0; cx < m_chunkCount; cx++)
         {
-            return;
+            for (int cz = 0; cz < m_chunkCount; cz++)
+            {
+                SandChunk chunk = m_chunks[cx, cz];
+                bool rebuiltMeshThisFrame = false;
+
+                if (chunk.m_isMeshDirty)
+                {
+                    m_meshBuilder.RebuildChunkMesh(
+                        m_heightField,
+                        chunk.m_startX,
+                        chunk.m_endX,
+                        chunk.m_startZ,
+                        chunk.m_endZ,
+                        chunk.m_visualMesh
+                    );
+                    chunk.m_isMeshDirty = false;
+                    chunk.m_isColliderDirty = true;
+                    rebuiltMeshThisFrame = true;
+                }
+
+                if (chunk.m_isColliderDirty)
+                {
+                    bool canUpdate = !(m_deferColliderDuringSettle && m_isSettling)
+                                  && currentTime >= chunk.m_nextColliderTime
+                                  && colliderUpdatesThisFrame < m_maxColliderUpdatesPerFrame;
+
+                    if (canUpdate)
+                    {
+                        if (rebuiltMeshThisFrame && !chunk.m_colliderDeferredOnce)
+                        {
+                            chunk.m_colliderDeferredOnce = true;
+                        }
+                        else
+                        {
+                            UpdateChunkCollider(chunk);
+                            chunk.m_isColliderDirty = false;
+                            chunk.m_colliderDeferredOnce = false;
+                            float interval = m_isSettling ? m_settleColliderUpdateInterval : m_colliderUpdateInterval;
+                            chunk.m_nextColliderTime = currentTime + interval;
+                            colliderUpdatesThisFrame++;
+                        }
+                    }
+
+                    if (chunk.m_isColliderDirty)
+                    {
+                        anyRemainingDirty = true;
+                    }
+                }
+            }
         }
 
-        float interval = m_isSettling ? m_settleColliderUpdateInterval : m_colliderUpdateInterval;
-        if (Time.time < m_nextColliderTime)
-        {
-            return;
-        }
-
-        if (rebuiltMeshThisFrame && !m_colliderDeferredOnce)
-        {
-            m_colliderDeferredOnce = true;
-            return;
-        }
-
-        UpdateCollider();
-        m_isColliderDirty = false;
-        m_colliderDeferredOnce = false;
-        m_nextColliderTime = Time.time + interval;
+        m_hasDirtyChunks = anyRemainingDirty;
     }
 
     private void OnDestroy()
     {
-        if (m_mesh != null)
-        {
-            Destroy(m_mesh);
-            m_mesh = null;
-        }
-
-        for (int i = 0; i < m_colliderMeshes.Length; i++)
-        {
-            if (m_colliderMeshes[i] != null)
-            {
-                Destroy(m_colliderMeshes[i]);
-                m_colliderMeshes[i] = null;
-            }
-        }
+        DestroyChunks();
     }
 
     // ---- 公開メソッド ----
@@ -199,57 +232,48 @@ public class MarchingCubesMountain : MonoBehaviour
         m_voxelSize = Mathf.Max(MIN_VOXEL_SIZE, m_voxelSize);
         m_mountainHeight = Mathf.Max(MIN_MOUNTAIN_HEIGHT, m_mountainHeight);
 
-        m_meshFilter = GetComponent<MeshFilter>();
-        m_meshRenderer = GetComponent<MeshRenderer>();
-        m_meshCollider = GetComponent<MeshCollider>();
-        if (m_meshCollider == null)
+        DestroyChunks();
+
+        m_parentMeshRenderer = GetComponent<MeshRenderer>();
+        if (m_parentMeshRenderer != null)
         {
-            m_meshCollider = gameObject.AddComponent<MeshCollider>();
+            m_parentMeshRenderer.enabled = false;
         }
 
-        if (m_mesh == null)
+        MeshFilter parentFilter = GetComponent<MeshFilter>();
+        if (parentFilter != null)
         {
-            m_mesh = new Mesh { name = "MarchingCubesMountain_Visual" };
-            m_mesh.indexFormat = IndexFormat.UInt32;
+            parentFilter.sharedMesh = null;
         }
 
-        for (int i = 0; i < COLLIDER_MESH_COUNT; i++)
+        MeshCollider parentCollider = GetComponent<MeshCollider>();
+        if (parentCollider != null)
         {
-            if (m_colliderMeshes[i] == null)
-            {
-                m_colliderMeshes[i] = new Mesh { name = "MarchingCubesMountain_Collider_" + i };
-                m_colliderMeshes[i].indexFormat = IndexFormat.UInt32;
-            }
-        }
-
-        if (m_meshFilter != null)
-        {
-            m_meshFilter.sharedMesh = m_mesh;
+            parentCollider.enabled = false;
         }
 
         float sink = m_voxelSize * SINK_VOXEL_RATIO;
         int ny = Mathf.CeilToInt(m_mountainHeight / m_voxelSize) + EXTRA_Y_LAYERS;
 
+        float totalSizeXZ = (m_gridSize - 1) * m_voxelSize;
+        m_localBounds = new Bounds(
+            new Vector3(0f, (m_mountainHeight - sink) * 0.5f, 0f),
+            new Vector3(totalSizeXZ, m_mountainHeight + sink, totalSizeXZ)
+        );
+
         m_heightField = new SandHeightField(m_gridSize, m_voxelSize, m_mountainHeight, sink);
         m_heightField.InitializeShape(m_initShapeType, m_initialHeightmap, m_reposeAngle);
 
-        m_meshBuilder = new MarchingCubesMeshBuilder(m_gridSize, ny, m_voxelSize);
-        m_meshBuilder.RebuildMesh(m_heightField, m_mesh);
-        UpdateCollider();
+        m_meshBuilder = new MarchingCubesMeshBuilder(m_gridSize, ny, m_voxelSize, CHUNK_CELL_SIZE);
+        CreateChunks();
 
         m_isSettling = false;
-        m_isMeshDirty = false;
-        m_isColliderDirty = false;
-        m_colliderDeferredOnce = false;
-        m_nextColliderTime = Time.time;
+        m_hasDirtyChunks = false;
     }
 
     /// <summary>
     /// 指定されたワールド座標のXZ位置にある砂の表面の点と法線を返します。
     /// </summary>
-    /// <param name="worldPos">問い合わせるワールド座標（Yは無視されます）。</param>
-    /// <param name="surfacePoint">砂表面のワールド座標。</param>
-    /// <param name="surfaceNormal">砂表面のワールド法線。</param>
     /// <returns>
     /// true：グリッド範囲内で表面をサンプリングできました。
     /// false：グリッド範囲外、または初期化前です。
@@ -276,10 +300,39 @@ public class MarchingCubesMountain : MonoBehaviour
     }
 
     /// <summary>
+    /// ローカル座標のXZ位置における表面のローカルY座標のみを高速に取得します。
+    /// </summary>
+    /// <returns>
+    /// true：グリッド範囲内で取得できました。
+    /// false：グリッド範囲外、または初期化前です。
+    /// </returns>
+    public bool TrySampleLocalHeight(float localX, float localZ, out float localSurfaceY)
+    {
+        if (m_heightField == null)
+        {
+            localSurfaceY = 0f;
+            return false;
+        }
+
+        return m_heightField.TrySampleHeight(localX, localZ, out localSurfaceY);
+    }
+
+    /// <summary>
+    /// ローカル座標のXZ位置における表面のローカル法線を計算します。
+    /// </summary>
+    public Vector3 CalculateLocalNormal(float localX, float localZ)
+    {
+        if (m_heightField == null)
+        {
+            return Vector3.up;
+        }
+
+        return m_heightField.CalculateLocalNormal(localX, localZ);
+    }
+
+    /// <summary>
     /// 球の中心をワールド座標に置いて砂を削ります（深さ = 半径）。
     /// </summary>
-    /// <param name="worldPoint">削る中心位置（ワールド座標）。</param>
-    /// <param name="worldRadius">削り球の半径（m）。</param>
     public void Carve(Vector3 worldPoint, float worldRadius)
     {
         Carve(worldPoint, worldRadius, worldRadius);
@@ -288,9 +341,6 @@ public class MarchingCubesMountain : MonoBehaviour
     /// <summary>
     /// 接触点から指定された深さだけ砂を掘り下げます。
     /// </summary>
-    /// <param name="worldPoint">砂表面上の接触点（ワールド座標）。</param>
-    /// <param name="worldRadius">削り球の半径（m）。</param>
-    /// <param name="worldDepth">掘り下げる深さ（m）。</param>
     public void Carve(Vector3 worldPoint, float worldRadius, float worldDepth)
     {
         if (m_heightField == null)
@@ -306,15 +356,27 @@ public class MarchingCubesMountain : MonoBehaviour
             return;
         }
 
-        // 削る前の表面法線を取得
-        TrySampleSurface(worldPoint, out _, out Vector3 surfaceNormal);
+        Vector3 surfaceNormal = Vector3.up;
+        if (Carved != null)
+        {
+            TrySampleSurface(worldPoint, out _, out surfaceNormal);
+        }
 
         Vector3 localPos = transform.InverseTransformPoint(worldPoint) + Vector3.up * (radius - depth);
         float smoothK = m_carveSmoothness * m_voxelSize;
 
-        if (m_heightField.Carve(localPos, radius, smoothK, out float removedHeight))
+        if (m_heightField.Carve(
+            localPos,
+            radius,
+            smoothK,
+            out float removedHeight,
+            out int modMinX,
+            out int modMaxX,
+            out int modMinZ,
+            out int modMaxZ))
         {
-            m_isMeshDirty = true;
+            MarkChunksDirtyInGridRect(modMinX, modMaxX, modMinZ, modMaxZ);
+
             if (m_settleAfterCarve)
             {
                 m_isSettling = true;
@@ -331,6 +393,160 @@ public class MarchingCubesMountain : MonoBehaviour
 
     // ---- 内部処理 ----
     /// <summary>
+    /// チャンクオブジェクトと初期メッシュ・コライダーを生成します。
+    /// </summary>
+    private void CreateChunks()
+    {
+        int cellCount = m_gridSize - 1;
+        m_chunkCount = Mathf.CeilToInt(cellCount / (float)CHUNK_CELL_SIZE);
+        m_chunks = new SandChunk[m_chunkCount, m_chunkCount];
+
+        Material[] materials = m_parentMeshRenderer != null ? m_parentMeshRenderer.sharedMaterials : null;
+        ShadowCastingMode shadowMode = m_parentMeshRenderer != null ? m_parentMeshRenderer.shadowCastingMode : ShadowCastingMode.On;
+        bool receiveShadows = m_parentMeshRenderer == null || m_parentMeshRenderer.receiveShadows;
+        LightProbeUsage lightProbes = m_parentMeshRenderer != null ? m_parentMeshRenderer.lightProbeUsage : LightProbeUsage.BlendProbes;
+        ReflectionProbeUsage reflectionProbes = m_parentMeshRenderer != null ? m_parentMeshRenderer.reflectionProbeUsage : ReflectionProbeUsage.BlendProbes;
+
+        for (int cx = 0; cx < m_chunkCount; cx++)
+        {
+            int startX = cx * CHUNK_CELL_SIZE;
+            int endX = Mathf.Min(startX + CHUNK_CELL_SIZE, cellCount);
+
+            for (int cz = 0; cz < m_chunkCount; cz++)
+            {
+                int startZ = cz * CHUNK_CELL_SIZE;
+                int endZ = Mathf.Min(startZ + CHUNK_CELL_SIZE, cellCount);
+
+                GameObject go = new GameObject($"SandChunk_{cx}_{cz}");
+                go.layer = gameObject.layer;
+                go.transform.SetParent(transform, false);
+
+                MeshFilter mf = go.AddComponent<MeshFilter>();
+                MeshRenderer mr = go.AddComponent<MeshRenderer>();
+                MeshCollider mc = go.AddComponent<MeshCollider>();
+
+                if (materials != null)
+                {
+                    mr.sharedMaterials = materials;
+                }
+                mr.shadowCastingMode = shadowMode;
+                mr.receiveShadows = receiveShadows;
+                mr.lightProbeUsage = lightProbes;
+                mr.reflectionProbeUsage = reflectionProbes;
+
+                Mesh visualMesh = new Mesh { name = $"SandChunk_Visual_{cx}_{cz}" };
+                visualMesh.indexFormat = IndexFormat.UInt32;
+                mf.sharedMesh = visualMesh;
+
+                Mesh[] colliderMeshes = new Mesh[COLLIDER_MESH_COUNT];
+                for (int i = 0; i < COLLIDER_MESH_COUNT; i++)
+                {
+                    colliderMeshes[i] = new Mesh { name = $"SandChunk_Col_{cx}_{cz}_{i}" };
+                    colliderMeshes[i].indexFormat = IndexFormat.UInt32;
+                }
+
+                SandChunk chunk = new SandChunk
+                {
+                    m_gameObject = go,
+                    m_meshFilter = mf,
+                    m_meshRenderer = mr,
+                    m_meshCollider = mc,
+                    m_visualMesh = visualMesh,
+                    m_colliderMeshes = colliderMeshes,
+                    m_startX = startX,
+                    m_endX = endX,
+                    m_startZ = startZ,
+                    m_endZ = endZ,
+                    m_nextColliderTime = Time.time
+                };
+
+                m_meshBuilder.RebuildChunkMesh(m_heightField, startX, endX, startZ, endZ, visualMesh);
+                UpdateChunkCollider(chunk);
+
+                m_chunks[cx, cz] = chunk;
+            }
+        }
+    }
+
+    /// <summary>
+    /// 生成済みのチャンクと動的メッシュをすべて破棄します。
+    /// </summary>
+    private void DestroyChunks()
+    {
+        if (m_chunks == null)
+        {
+            return;
+        }
+
+        for (int cx = 0; cx < m_chunks.GetLength(0); cx++)
+        {
+            for (int cz = 0; cz < m_chunks.GetLength(1); cz++)
+            {
+                SandChunk chunk = m_chunks[cx, cz];
+                if (chunk == null)
+                {
+                    continue;
+                }
+
+                if (chunk.m_visualMesh != null)
+                {
+                    Destroy(chunk.m_visualMesh);
+                }
+
+                if (chunk.m_colliderMeshes != null)
+                {
+                    for (int i = 0; i < chunk.m_colliderMeshes.Length; i++)
+                    {
+                        if (chunk.m_colliderMeshes[i] != null)
+                        {
+                            Destroy(chunk.m_colliderMeshes[i]);
+                        }
+                    }
+                }
+
+                if (chunk.m_gameObject != null)
+                {
+                    Destroy(chunk.m_gameObject);
+                }
+            }
+        }
+
+        m_chunks = null;
+    }
+
+    /// <summary>
+    /// グリッド点の変化範囲（法線影響範囲を含む）に対応するチャンクへダーティフラグを立てます。
+    /// </summary>
+    private void MarkChunksDirtyInGridRect(int gridMinX, int gridMaxX, int gridMinZ, int gridMaxZ)
+    {
+        if (m_chunks == null || gridMinX > gridMaxX || gridMinZ > gridMaxZ)
+        {
+            return;
+        }
+
+        int maxCell = m_gridSize - 2;
+        int cellMinX = Mathf.Clamp(gridMinX - 2, 0, maxCell);
+        int cellMaxX = Mathf.Clamp(gridMaxX + 1, 0, maxCell);
+        int cellMinZ = Mathf.Clamp(gridMinZ - 2, 0, maxCell);
+        int cellMaxZ = Mathf.Clamp(gridMaxZ + 1, 0, maxCell);
+
+        int cMinX = cellMinX / CHUNK_CELL_SIZE;
+        int cMaxX = cellMaxX / CHUNK_CELL_SIZE;
+        int cMinZ = cellMinZ / CHUNK_CELL_SIZE;
+        int cMaxZ = cellMaxZ / CHUNK_CELL_SIZE;
+
+        for (int cx = cMinX; cx <= cMaxX; cx++)
+        {
+            for (int cz = cMinZ; cz <= cMaxZ; cz++)
+            {
+                m_chunks[cx, cz].m_isMeshDirty = true;
+            }
+        }
+
+        m_hasDirtyChunks = true;
+    }
+
+    /// <summary>
     /// 1フレーム分の崩れシミュレーションを実行します。
     /// </summary>
     private void SimulateSettle()
@@ -342,13 +558,27 @@ public class MarchingCubesMountain : MonoBehaviour
         }
 
         bool moved = false;
+        int totalMinX = int.MaxValue;
+        int totalMaxX = int.MinValue;
+        int totalMinZ = int.MaxValue;
+        int totalMaxZ = int.MinValue;
         Action<Vector3, Vector3, float> slideCallback = SandSlid != null ? HandleSandSlidLocal : null;
 
         for (int i = 0; i < m_settleIterationsPerFrame; i++)
         {
-            if (m_heightField.SimulateSettleStep(m_reposeAngle, slideCallback))
+            if (m_heightField.SimulateSettleStep(
+                m_reposeAngle,
+                slideCallback,
+                out int stepMinX,
+                out int stepMaxX,
+                out int stepMinZ,
+                out int stepMaxZ))
             {
                 moved = true;
+                if (stepMinX < totalMinX) totalMinX = stepMinX;
+                if (stepMaxX > totalMaxX) totalMaxX = stepMaxX;
+                if (stepMinZ < totalMinZ) totalMinZ = stepMinZ;
+                if (stepMaxZ > totalMaxZ) totalMaxZ = stepMaxZ;
             }
             else
             {
@@ -358,15 +588,24 @@ public class MarchingCubesMountain : MonoBehaviour
 
         if (moved)
         {
-            m_isMeshDirty = true;
+            MarkChunksDirtyInGridRect(totalMinX, totalMaxX, totalMinZ, totalMaxZ);
         }
         else
         {
             m_isSettling = false;
-            // 崩れ完了時にも未反映のコライダー変更があれば遅延なく更新可能にする
-            if (m_deferColliderDuringSettle && m_isColliderDirty)
+            if (m_deferColliderDuringSettle && m_hasDirtyChunks && m_chunks != null)
             {
-                m_nextColliderTime = Time.time;
+                float now = Time.time;
+                for (int cx = 0; cx < m_chunkCount; cx++)
+                {
+                    for (int cz = 0; cz < m_chunkCount; cz++)
+                    {
+                        if (m_chunks[cx, cz].m_isColliderDirty)
+                        {
+                            m_chunks[cx, cz].m_nextColliderTime = now;
+                        }
+                    }
+                }
             }
         }
     }
@@ -384,30 +623,64 @@ public class MarchingCubesMountain : MonoBehaviour
     }
 
     /// <summary>
-    /// ダブルバッファ用の裏メッシュへ形状をコピーし、null を挟まず MeshCollider へ差し替えます。
+    /// チャンクの描画メッシュからダブルバッファ用の裏メッシュへ形状をコピーし、null を挟まず差し替えます。
     /// </summary>
-    private void UpdateCollider()
+    private void UpdateChunkCollider(SandChunk chunk)
     {
-        if (m_meshCollider == null)
+        if (chunk.m_meshCollider == null)
         {
             return;
         }
 
-        if (m_meshBuilder == null || !m_meshBuilder.HasTriangles)
+        if (chunk.m_visualMesh == null || chunk.m_visualMesh.vertexCount == 0)
         {
-            if (m_meshCollider.sharedMesh != null)
+            if (chunk.m_meshCollider.sharedMesh != null)
             {
-                m_meshCollider.sharedMesh = null;
+                chunk.m_meshCollider.sharedMesh = null;
             }
             return;
         }
 
-        int nextIndex = (m_activeColliderMeshIndex + 1) % COLLIDER_MESH_COUNT;
-        Mesh nextColliderMesh = m_colliderMeshes[nextIndex];
-        m_meshBuilder.CopyCollisionGeometryTo(nextColliderMesh);
+        chunk.m_visualMesh.GetVertices(m_tempVertices);
+        chunk.m_visualMesh.GetTriangles(m_tempTriangles, 0);
 
-        // 異なるメッシュインスタンスを直接代入することで、接触判定を途切れさせずに更新する
-        m_meshCollider.sharedMesh = nextColliderMesh;
-        m_activeColliderMeshIndex = nextIndex;
+        if (m_tempTriangles.Count == 0)
+        {
+            if (chunk.m_meshCollider.sharedMesh != null)
+            {
+                chunk.m_meshCollider.sharedMesh = null;
+            }
+            return;
+        }
+
+        int nextIndex = (chunk.m_activeColliderIndex + 1) % COLLIDER_MESH_COUNT;
+        Mesh nextMesh = chunk.m_colliderMeshes[nextIndex];
+        nextMesh.Clear();
+        nextMesh.SetVertices(m_tempVertices);
+        nextMesh.SetTriangles(m_tempTriangles, 0);
+        nextMesh.RecalculateBounds();
+
+        chunk.m_meshCollider.sharedMesh = nextMesh;
+        chunk.m_activeColliderIndex = nextIndex;
+    }
+
+    /// <summary>
+    /// ローカルバウンディングボックスをワールド空間へ変換します。
+    /// </summary>
+    private Bounds CalculateWorldBounds()
+    {
+        Vector3 center = transform.TransformPoint(m_localBounds.center);
+        Vector3 extents = m_localBounds.extents;
+        Vector3 axisX = transform.TransformVector(extents.x, 0f, 0f);
+        Vector3 axisY = transform.TransformVector(0f, extents.y, 0f);
+        Vector3 axisZ = transform.TransformVector(0f, 0f, extents.z);
+
+        Vector3 worldExtents = new Vector3(
+            Mathf.Abs(axisX.x) + Mathf.Abs(axisY.x) + Mathf.Abs(axisZ.x),
+            Mathf.Abs(axisX.y) + Mathf.Abs(axisY.y) + Mathf.Abs(axisZ.y),
+            Mathf.Abs(axisX.z) + Mathf.Abs(axisY.z) + Mathf.Abs(axisZ.z)
+        );
+
+        return new Bounds(center, worldExtents * 2f);
     }
 }
