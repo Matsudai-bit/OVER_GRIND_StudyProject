@@ -50,6 +50,7 @@ public class CursorSwayAnimator : MonoBehaviour
                                   .SetRelative(true)
                                   .SetEase(Ease.InOutSine)
                                   .SetLoops(-1, LoopType.Yoyo)
+                                  .SetUpdate(true)
                                   .SetLink(cursorRect.gameObject);
     }
 
