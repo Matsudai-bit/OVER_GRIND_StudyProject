@@ -5,7 +5,7 @@ using UnityEngine;
 /// </summary>
 public class ResultRetryPresenter : MonoBehaviour
 {
-    [Header("★ MVP 参照設定")]
+    [Header("MVP 参照設定")]
     [Tooltip("リトライ回数データを保持する Model コンポーネント")]
     [SerializeField] private ResultRetryModel m_retryModel;
 

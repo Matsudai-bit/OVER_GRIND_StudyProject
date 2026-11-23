@@ -46,6 +46,8 @@ public class ResultSelectionInput : MonoBehaviour, IUIInputControllable
 
     [Header("Stage Select ボタン演出設定")]
     [SerializeField]
+    private Selectable m_stageSelectButton;
+    [SerializeField]
     private RectTransform m_stageSelectVisual;
     [SerializeField]
     private Image m_stageSelectFrameImage;
@@ -109,7 +111,6 @@ public class ResultSelectionInput : MonoBehaviour, IUIInputControllable
         {
             ShowInitialState();
         }
-
     }
 
     private void Start()
@@ -117,7 +118,6 @@ public class ResultSelectionInput : MonoBehaviour, IUIInputControllable
         m_hasStarted = true;
         ShowInitialState();
         SetInputEnabled(false);
-
     }
 
     private void OnDisable()
@@ -141,14 +141,17 @@ public class ResultSelectionInput : MonoBehaviour, IUIInputControllable
     {
         m_isExternalInputEnabled = isEnabled;
         UpdatePanelInputState();
-        
-        if (isEnabled)
+
+        if (m_buttonSelector != null)
         {
-            m_buttonSelector.UnLockCursor();
-        }
-        else
-        {
-            m_buttonSelector.LockCursor();
+            if (isEnabled)
+            {
+                m_buttonSelector.UnLockCursor();
+            }
+            else
+            {
+                m_buttonSelector.LockCursor();
+            }
         }
     }
 
@@ -195,6 +198,11 @@ public class ResultSelectionInput : MonoBehaviour, IUIInputControllable
         if (m_stageSelectVisual != null)
         {
             m_ssOriginalScale = m_stageSelectVisual.localScale;
+
+            if (m_stageSelectButton == null)
+            {
+                m_stageSelectButton = m_stageSelectVisual.GetComponentInParent<Selectable>();
+            }
         }
 
         m_isInitialized = true;
@@ -218,6 +226,7 @@ public class ResultSelectionInput : MonoBehaviour, IUIInputControllable
         UpdatePanelInputState();
         PlayNextStageDeselectedVisual();
         PlayStageSelectSelectedVisual();
+        SelectInitialButton();
     }
 
     /// <summary>
@@ -300,10 +309,21 @@ public class ResultSelectionInput : MonoBehaviour, IUIInputControllable
         m_isEntrancePlaying = false;
         m_isEntranceCompleted = true;
 
-        UpdatePanelInputState();
+        SetInputEnabled(true);
         PlayNextStageDeselectedVisual();
         PlayStageSelectSelectedVisual();
-        SetInputEnabled(true);
+        SelectInitialButton();
+    }
+
+    /// <summary>
+    /// 初期選択ボタン（Stage Select）にフォーカスを合わせます。
+    /// </summary>
+    private void SelectInitialButton()
+    {
+        if (m_stageSelectButton != null)
+        {
+            m_stageSelectButton.Select();
+        }
     }
 
     /// <summary>
@@ -414,6 +434,7 @@ public class ResultSelectionInput : MonoBehaviour, IUIInputControllable
             return;
         }
 
+        PlayStageSelectDeselectedVisual();
         PlayNextStageSelectedVisual();
     }
 
@@ -440,6 +461,7 @@ public class ResultSelectionInput : MonoBehaviour, IUIInputControllable
             return;
         }
 
+        PlayNextStageDeselectedVisual();
         PlayStageSelectSelectedVisual();
     }
 
