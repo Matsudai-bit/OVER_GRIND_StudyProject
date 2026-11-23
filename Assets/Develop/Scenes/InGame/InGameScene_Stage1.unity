@@ -279,6 +279,17 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 901471655}
   m_CullTransparentMesh: 1
+--- !u!114 &918607816 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 6957738707587775587, guid: a10fbdeaf926e074bb9169fcf70be411, type: 3}
+  m_PrefabInstance: {fileID: 3346839969594336882}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8222b5fb196ae104cb9d73fa23d19d13, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Health
 --- !u!1 &1004678961 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 835044905500714408, guid: a10fbdeaf926e074bb9169fcf70be411, type: 3}
@@ -451,6 +462,17 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 7484549097801656349, guid: a10fbdeaf926e074bb9169fcf70be411, type: 3}
   m_PrefabInstance: {fileID: 3346839969594336882}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &1643652204 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 5192397946389910793, guid: a10fbdeaf926e074bb9169fcf70be411, type: 3}
+  m_PrefabInstance: {fileID: 3346839969594336882}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d881e51abc983fd4c94c3c2d366fc339, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::StageTimeLimitController
 --- !u!1 &1664248437
 GameObject:
   m_ObjectHideFlags: 0
@@ -1077,6 +1099,22 @@ PrefabInstance:
       propertyPath: m_LocalRotation.z
       value: -7.2136694e-17
       objectReference: {fileID: 0}
+    - target: {fileID: 748686618164393490, guid: a10fbdeaf926e074bb9169fcf70be411, type: 3}
+      propertyPath: m_Sprite
+      value: 
+      objectReference: {fileID: 21300000, guid: aff00a9b6d17fd24c9185c9af8cef785, type: 3}
+    - target: {fileID: 748686618164393490, guid: a10fbdeaf926e074bb9169fcf70be411, type: 3}
+      propertyPath: m_Enabled
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 748686618164393490, guid: a10fbdeaf926e074bb9169fcf70be411, type: 3}
+      propertyPath: m_Maskable
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 748686618164393490, guid: a10fbdeaf926e074bb9169fcf70be411, type: 3}
+      propertyPath: m_RaycastTarget
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 748899576118962036, guid: a10fbdeaf926e074bb9169fcf70be411, type: 3}
       propertyPath: m_LocalRotation.w
       value: 0.9988067
@@ -1681,6 +1719,10 @@ PrefabInstance:
       propertyPath: m_AnchorMax.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 3755270551872639439, guid: a10fbdeaf926e074bb9169fcf70be411, type: 3}
+      propertyPath: m_RaycastTarget
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 3812647477381389529, guid: a10fbdeaf926e074bb9169fcf70be411, type: 3}
       propertyPath: m_LocalRotation.w
       value: -0.00000011879057
@@ -2052,6 +2094,10 @@ PrefabInstance:
     - target: {fileID: 5189354066187776186, guid: a10fbdeaf926e074bb9169fcf70be411, type: 3}
       propertyPath: m_LocalRotation.z
       value: -0.69351995
+      objectReference: {fileID: 0}
+    - target: {fileID: 5192397946389910793, guid: a10fbdeaf926e074bb9169fcf70be411, type: 3}
+      propertyPath: m_timeLimitSeconds
+      value: 300
       objectReference: {fileID: 0}
     - target: {fileID: 5197859360694321872, guid: a10fbdeaf926e074bb9169fcf70be411, type: 3}
       propertyPath: m_RotationOffsets.Array.data[0].x
@@ -2485,6 +2531,10 @@ PrefabInstance:
       propertyPath: m_LocalRotation.z
       value: -0.6787444
       objectReference: {fileID: 0}
+    - target: {fileID: 6957738707587775587, guid: a10fbdeaf926e074bb9169fcf70be411, type: 3}
+      propertyPath: m_maxHealth
+      value: 100
+      objectReference: {fileID: 0}
     - target: {fileID: 7024127826637396693, guid: a10fbdeaf926e074bb9169fcf70be411, type: 3}
       propertyPath: m_LocalPosition.y
       value: -1.3358203e-14
@@ -2617,6 +2667,10 @@ PrefabInstance:
       propertyPath: m_RotationOffset.z
       value: -180
       objectReference: {fileID: 0}
+    - target: {fileID: 7589352236962890916, guid: a10fbdeaf926e074bb9169fcf70be411, type: 3}
+      propertyPath: m_timeMode
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 7714291558001776436, guid: a10fbdeaf926e074bb9169fcf70be411, type: 3}
       propertyPath: m_bindings.Array.data[19].m_constraintComponent
       value: 
@@ -2713,6 +2767,18 @@ PrefabInstance:
       propertyPath: m_LocalRotation.z
       value: -0.006725052
       objectReference: {fileID: 0}
+    - target: {fileID: 8253045918364279823, guid: a10fbdeaf926e074bb9169fcf70be411, type: 3}
+      propertyPath: m_Enabled
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8253045918364279823, guid: a10fbdeaf926e074bb9169fcf70be411, type: 3}
+      propertyPath: m_playerHealth
+      value: 
+      objectReference: {fileID: 918607816}
+    - target: {fileID: 8253045918364279823, guid: a10fbdeaf926e074bb9169fcf70be411, type: 3}
+      propertyPath: m_stageTimeLimit
+      value: 
+      objectReference: {fileID: 1643652204}
     - target: {fileID: 8318406586818539857, guid: a10fbdeaf926e074bb9169fcf70be411, type: 3}
       propertyPath: m_LocalPosition.y
       value: 0.00000062139753

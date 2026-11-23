@@ -59,7 +59,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
-  m_RaycastTarget: 1
+  m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
@@ -128,6 +128,20 @@ MonoBehaviour:
   - {fileID: 912801804408018535}
   - {fileID: 7097190551358598653}
   - {fileID: 61721010798377130}
+  m_onCursorAction:
+    m_PersistentCalls:
+      m_Calls: []
+  m_onCursorExitAction:
+    m_PersistentCalls:
+      m_Calls: []
+  m_onClickAction:
+    m_PersistentCalls:
+      m_Calls: []
+  m_onClickExitAction:
+    m_PersistentCalls:
+      m_Calls: []
+  m_isInvokeOnStart: 0
+  m_isCallCursorExitForAllButtons: 0
   m_cursor: {fileID: 3130633512740480814}
   m_moveAction:
     m_PersistentCalls:
@@ -154,6 +168,7 @@ MonoBehaviour:
   m_isLockedCursorAnimation: 0
   m_navigateActionRef: {fileID: -8784545083839296357, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_enterActionRef: {fileID: 392368643174621059, guid: 052faaac586de48259a63d0c4782560b, type: 3}
+  m_isLockCursor: 0
 --- !u!114 &1856859536702973266
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1775,6 +1790,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b94917a5bc4f36d40bd4669e594d09a6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameOverManager
+  m_playerHealth: {fileID: 0}
+  m_stageTimeLimit: {fileID: 0}
   m_reasonImage: {fileID: 2295703298149503202}
   m_reasonList:
   - reason: HPZERO
