@@ -319,7 +319,7 @@ public class ButtonSelector : MonoBehaviour
 
         if (isActiveAndEnabled && m_buttons != null && m_buttons.Length > 0)
         {
-            //m_onCursorAction?.Invoke();
+            m_onCursorAction?.Invoke();
             m_buttons[m_selectButtonNumber].OnCursor();
         }
     }
