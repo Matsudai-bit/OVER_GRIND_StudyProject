@@ -36,7 +36,7 @@ public sealed class PlayerBossTopSlideController : MonoBehaviour
             (m_grindController != null && m_grindController.IsGrinding) ||
             (m_stateMachine != null &&
              (m_stateMachine.IsCurrentState<PlayerGrindingState>() ||
-              m_stateMachine.IsCurrentState<PlayerRailJumpingState>())))
+              (m_stateMachine.IsCurrentState<PlayerRailJumpingState>() || m_stateMachine.IsCurrentState<PlayerRailJumpAirborneState>()))))
         {
             return;
         }

@@ -203,18 +203,44 @@ public class AudioManager : MonoBehaviour
     /// 指定したTransformに追従するすべての音声を停止します。
     /// </summary>
     /// <param name="target">追従先。</param>
-    public void Stop3DFollowing(Transform target)
+    public void Stop3DFollowing(
+        Transform target)
     {
-        if (target == null) return;
-
-        // 追従先変更後も正しく停止できるよう、現在のノード状態で判定します。
-        for (int i = m_activeNodes.Count - 1; i >= 0; i--)
+        if (target == null)
         {
-            AudioSourceNode node = m_activeNodes[i];
-            if (node != null && node.FollowTarget == target)
+            return;
+        }
+
+        /*
+         * StopAndReturnToPool() 内で m_activeNodes から
+         * ノードが削除されるため、走査中のListを直接変更しません。
+         *
+         * 先に停止対象だけを別Listへ退避してから停止します。
+         */
+        List<AudioSourceNode> targetNodes =
+            new List<AudioSourceNode>();
+
+        foreach (AudioSourceNode node
+                 in m_activeNodes)
+        {
+            if (node == null)
             {
-                node.StopAndReturnToPool();
+                continue;
             }
+
+            if (node.FollowTarget != target)
+            {
+                continue;
+            }
+
+            targetNodes.Add(
+                node);
+        }
+
+        foreach (AudioSourceNode node
+                 in targetNodes)
+        {
+            node.StopAndReturnToPool();
         }
     }
 
@@ -223,13 +249,35 @@ public class AudioManager : MonoBehaviour
     /// </summary>
     public void StopAllInGameSounds()
     {
-        for (int i = m_activeNodes.Count - 1; i >= 0; i--)
+        /*
+         * StopAndReturnToPool() により m_activeNodes が変更されるため、
+         * 停止対象を別Listへ退避してから停止します。
+         */
+        List<AudioSourceNode> targetNodes =
+            new List<AudioSourceNode>();
+
+        foreach (AudioSourceNode node
+                 in m_activeNodes)
         {
-            AudioSourceNode node = m_activeNodes[i];
-            if (node != null && node.Category == SoundCategory.SE_InGame)
+            if (node == null)
             {
-                node.StopAndReturnToPool();
+                continue;
             }
+
+            if (node.Category !=
+                SoundCategory.SE_InGame)
+            {
+                continue;
+            }
+
+            targetNodes.Add(
+                node);
+        }
+
+        foreach (AudioSourceNode node
+                 in targetNodes)
+        {
+            node.StopAndReturnToPool();
         }
     }
 
