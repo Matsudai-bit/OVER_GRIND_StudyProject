@@ -1,12 +1,13 @@
 using DG.Tweening;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 /// <summary>
 /// リザルト選択 UI の登場演出と選択時の表示演出を管理します。
 /// </summary>
 [DisallowMultipleComponent]
-public class ResultSelectionInput : MonoBehaviour
+public class ResultSelectionInput : MonoBehaviour, IUIInputControllable
 {
     private const float FADE_OUT_ALPHA = 0.0f;
     private const float FADE_IN_ALPHA = 1.0f;
@@ -29,8 +30,12 @@ public class ResultSelectionInput : MonoBehaviour
     [SerializeField]
     private RectTransform[] m_targetPanels;
 
+    [SerializeField]
+    ButtonSelector m_buttonSelector;
 
     [Header("Next Stage ボタン演出設定")]
+    [SerializeField]
+    private Selectable m_nextStageButton;
     [SerializeField]
     private RectTransform m_nextStageVisual;
     [SerializeField]
@@ -128,6 +133,15 @@ public class ResultSelectionInput : MonoBehaviour
         UpdatePanelInputState();
     }
 
+    /// <summary>
+    /// 背面 UI の入力を許可、または禁止します。
+    /// </summary>
+    /// <param name="isEnabled">入力を許可するか。</param>
+    public void SetInputEnabled(bool isEnabled)
+    {
+        m_isExternalInputEnabled = isEnabled;
+        UpdatePanelInputState();
+    }
 
     /// <summary>
     /// 各パネルと演出対象の初期状態を記録します。
@@ -168,6 +182,10 @@ public class ResultSelectionInput : MonoBehaviour
         {
             m_nsOriginalPosX = m_nextStageVisual.anchoredPosition.x;
 
+            if (m_nextStageButton == null)
+            {
+                m_nextStageButton = m_nextStageVisual.GetComponentInParent<Selectable>();
+            }
         }
 
         if (m_stageSelectVisual != null)
@@ -193,9 +211,10 @@ public class ResultSelectionInput : MonoBehaviour
         m_isEntranceCompleted = true;
         SetPanelsAlpha(FADE_IN_ALPHA);
         ResetSelectionVisuals();
-        UpdatePanelInputState();
+        SetInputEnabled(true);
         PlayStageSelectDeselectedVisual();
         PlayNextStageSelectedVisual();
+        SelectInitialButton();
     }
 
     /// <summary>
@@ -212,7 +231,7 @@ public class ResultSelectionInput : MonoBehaviour
 
         m_isEntrancePlaying = true;
         m_isEntranceCompleted = false;
-        UpdatePanelInputState();
+        SetInputEnabled(false);
 
         SetPanelsAlpha(FADE_OUT_ALPHA);
         ResetSelectionVisuals();
@@ -278,34 +297,62 @@ public class ResultSelectionInput : MonoBehaviour
         m_isEntrancePlaying = false;
         m_isEntranceCompleted = true;
 
+        SetInputEnabled(true);
         PlayStageSelectDeselectedVisual();
         PlayNextStageSelectedVisual();
+        SelectInitialButton();
     }
 
+    /// <summary>
+    /// 初期選択ボタン（Next Stage）にフォーカスを合わせます。
+    /// </summary>
+    private void SelectInitialButton()
+    {
+        if (m_nextStageButton != null)
+        {
+            m_nextStageButton.Select();
+        }
+    }
 
     /// <summary>
-    /// 現在の表示状態に応じてパネルへの入力を切り替えます。
+    /// 現在の表示状態に応じてパネルへの入力・カーソル・選択状態を切り替えます。
     /// </summary>
     private void UpdatePanelInputState()
     {
-        if (m_targetCanvasGroups == null)
-        {
-            return;
-        }
-
         bool canInteract = CanProcessInput;
 
-        for (int i = 0; i < m_targetCanvasGroups.Length; i++)
+        if (m_targetCanvasGroups != null)
         {
-            CanvasGroup canvasGroup = m_targetCanvasGroups[i];
-            if (canvasGroup == null)
+            for (int i = 0; i < m_targetCanvasGroups.Length; i++)
             {
-                continue;
-            }
+                CanvasGroup canvasGroup = m_targetCanvasGroups[i];
+                if (canvasGroup == null)
+                {
+                    continue;
+                }
 
-            // 元々無効にしていたパネルは入力解放後も無効のままにする
-            canvasGroup.interactable = canInteract && m_originalInteractables[i];
-            canvasGroup.blocksRaycasts = canInteract && m_originalBlocksRaycasts[i];
+                // 元々無効にしていたパネルは入力解放後も無効のままにする
+                canvasGroup.interactable = canInteract && m_originalInteractables[i];
+                canvasGroup.blocksRaycasts = canInteract && m_originalBlocksRaycasts[i];
+            }
+        }
+
+        if (m_buttonSelector != null)
+        {
+            if (canInteract)
+            {
+                m_buttonSelector.UnLockCursor();
+            }
+            else
+            {
+                m_buttonSelector.LockCursor();
+            }
+        }
+
+        // 入力禁止中は EventSystem のフォーカスも外し、Enter などの Submit 反応を防ぐ
+        if (!canInteract && EventSystem.current != null)
+        {
+            EventSystem.current.SetSelectedGameObject(null);
         }
     }
 
