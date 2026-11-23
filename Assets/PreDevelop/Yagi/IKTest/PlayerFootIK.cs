@@ -14,6 +14,14 @@ public sealed class PlayerFootIK : MonoBehaviour
     [SerializeField, Min(.01f)] private float m_blendSpeed = 12f;
     [SerializeField, Min(0f)] private float m_heelLength = .07f;
     [SerializeField, Min(0f)] private float m_soleHalfWidth = .04f;
+    [SerializeField, Range(30f, 150f), Tooltip("伸びた膝を0度とする、IK後の膝の最大曲げ角度。")]
+    private float m_maxKneeBend = 120f;
+    [SerializeField, Range(5f, 60f), Tooltip("アニメーション姿勢から許容する足首の追加回転角度。")]
+    private float m_maxAnkleCorrection = 35f;
+    [SerializeField, Range(5f, 90f), Tooltip("アニメーション姿勢から許容する股関節の追加回転角度。")]
+    private float m_maxHipCorrection = 45f;
+    [SerializeField, Range(1f, 30f), Tooltip("各角度上限に達する手前で補正を弱める範囲。")]
+    private float m_angleFadeRange = 15f;
     private Transform m_pelvis;
     private Vector3 m_pelvisPose;
     private bool m_pelvisApplied;
@@ -92,6 +100,13 @@ public sealed class PlayerFootIK : MonoBehaviour
         m_pelvisApplied = true;
         m_left.Solve(left - m_pelvisOffset, leftNormal, blend, transform.forward);
         m_right.Solve(right - m_pelvisOffset, rightNormal, blend, transform.forward);
+        // 両脚と腰に同じ重みを適用し、片脚だけ解除して腰が沈むことを防ぐ。
+        float safeWeight = Mathf.Min(
+            m_left.GetSafeWeight(m_maxKneeBend, m_maxAnkleCorrection, m_maxHipCorrection, m_angleFadeRange),
+            m_right.GetSafeWeight(m_maxKneeBend, m_maxAnkleCorrection, m_maxHipCorrection, m_angleFadeRange));
+        m_pelvis.localPosition = Vector3.Lerp(m_pelvisPose, m_pelvis.localPosition, safeWeight);
+        m_left.ApplyWeight(safeWeight);
+        m_right.ApplyWeight(safeWeight);
     }
 
     /// <summary>停止時に元の姿勢を戻します。</summary>
@@ -254,6 +269,34 @@ public sealed class PlayerFootIK : MonoBehaviour
             m_knee.localRotation = m_kneePose;
             Ankle.localRotation = m_anklePose;
             m_applied = false;
+        }
+
+        /// <summary>膝の曲げ角と股関節・足首の追加回転から安全な補正の重みを求めます。</summary>
+        public float GetSafeWeight(float kneeLimit, float ankleLimit, float hipLimit, float fadeRange)
+        {
+            if (!m_applied) return 0f;
+            float kneeBend = Vector3.Angle(m_knee.position - m_hip.position, Ankle.position - m_knee.position);
+            float ankleChange = Quaternion.Angle(m_anklePose, Ankle.localRotation);
+            float hipChange = Quaternion.Angle(m_hipPose, m_hip.localRotation);
+            float kneeWeight = GetAngleWeight(kneeBend, kneeLimit, fadeRange);
+            float ankleWeight = GetAngleWeight(ankleChange, ankleLimit, fadeRange);
+            return Mathf.Min(kneeWeight, Mathf.Min(ankleWeight, GetAngleWeight(hipChange, hipLimit, fadeRange)));
+        }
+
+        /// <summary>上限付近では滑らかに補正を弱め、上限以上ではゼロを返します。</summary>
+        private static float GetAngleWeight(float angle, float limit, float fadeRange)
+        {
+            float start = Mathf.Max(0f, limit - fadeRange);
+            return 1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(start, limit, angle));
+        }
+
+        /// <summary>計算した姿勢をアニメーション姿勢へ重み付けして戻します。</summary>
+        public void ApplyWeight(float weight)
+        {
+            if (!m_applied) return;
+            m_hip.localRotation = Quaternion.Slerp(m_hipPose, m_hip.localRotation, weight);
+            m_knee.localRotation = Quaternion.Slerp(m_kneePose, m_knee.localRotation, weight);
+            Ankle.localRotation = Quaternion.Slerp(m_anklePose, Ankle.localRotation, weight);
         }
     }
 }

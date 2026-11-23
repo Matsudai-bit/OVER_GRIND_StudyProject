@@ -93,6 +93,7 @@ GameObject:
   - component: {fileID: 2881031088874332113}
   - component: {fileID: 1787836806285476073}
   - component: {fileID: 5850979841219765348}
+  - component: {fileID: 713829015460912387}
   m_Layer: 8
   m_Name: Player
   m_TagString: Player
@@ -385,7 +386,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerMotor
   m_parameterAsset: {fileID: 11400000, guid: f2a00000000000000000000000000003, type: 2}
-  m_verticalOnlyStep: 0
+  m_verticalOnlyStep: 1
   m_movementReference: {fileID: 3994456450058773638}
   m_collisionLiftPreventionMinSpeed: 16
   m_playerCapsuleCollider: {fileID: 4387842518451101578}
@@ -5512,3 +5513,30 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 9005071864649424752, guid: 53b1481ac4250cd43acc5cfff402a4e4, type: 3}
   m_PrefabInstance: {fileID: 262406724028549611}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &713829015460912387
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 415096441624393917}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3c2e8d6f470c4edcb45d2d6f7308e23a, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerFootIK
+  m_groundLayerMask:
+    serializedVersion: 2
+    m_Bits: 8
+  m_rayStartHeight: 0.45
+  m_rayDistance: 1.1
+  m_footSoleOffset: 0.08
+  m_maxCorrection: 0.3
+  m_contactHeight: 0.18
+  m_blendSpeed: 12
+  m_heelLength: 0.07
+  m_soleHalfWidth: 0.04
+  m_maxKneeBend: 120
+  m_maxAnkleCorrection: 35
+  m_maxHipCorrection: 45
+  m_angleFadeRange: 15
