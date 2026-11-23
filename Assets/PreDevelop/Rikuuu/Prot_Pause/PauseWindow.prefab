@@ -2758,7 +2758,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIWindow
   m_openMode: 0
   m_firstSelectable: {fileID: 0}
-  m_waitForShowCompletion: 0
+  m_waitForShowCompletion: 1
   m_waitForHideCompletion: 1
   m_onShow:
     m_PersistentCalls:
@@ -2822,10 +2822,34 @@ MonoBehaviour:
         m_CallState: 2
   m_onInputEnabled:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 7175064016619054194}
+        m_TargetAssemblyTypeName: PauseFadeManager, Assembly-CSharp
+        m_MethodName: SetInputEnabled
+        m_Mode: 6
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 1
+        m_CallState: 2
   m_onInputDisabled:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 7175064016619054194}
+        m_TargetAssemblyTypeName: PauseFadeManager, Assembly-CSharp
+        m_MethodName: SetInputEnabled
+        m_Mode: 6
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!1 &7152809612799986383
 GameObject:
   m_ObjectHideFlags: 0

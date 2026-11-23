@@ -128,6 +128,20 @@ MonoBehaviour:
   - {fileID: 912801804408018535}
   - {fileID: 7097190551358598653}
   - {fileID: 61721010798377130}
+  m_onCursorAction:
+    m_PersistentCalls:
+      m_Calls: []
+  m_onCursorExitAction:
+    m_PersistentCalls:
+      m_Calls: []
+  m_onClickAction:
+    m_PersistentCalls:
+      m_Calls: []
+  m_onClickExitAction:
+    m_PersistentCalls:
+      m_Calls: []
+  m_isInvokeOnStart: 0
+  m_isCallCursorExitForAllButtons: 0
   m_cursor: {fileID: 3130633512740480814}
   m_moveAction:
     m_PersistentCalls:
@@ -154,6 +168,7 @@ MonoBehaviour:
   m_isLockedCursorAnimation: 0
   m_navigateActionRef: {fileID: -8784545083839296357, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_enterActionRef: {fileID: 392368643174621059, guid: 052faaac586de48259a63d0c4782560b, type: 3}
+  m_isLockCursor: 0
 --- !u!114 &1856859536702973266
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -256,6 +271,7 @@ MonoBehaviour:
   m_gameOverLogo: {fileID: 6792606981447113790}
   m_backGroundFlame: {fileID: 8387207787594692681}
   m_afterIntroObject: {fileID: 7404218896196140606}
+  m_buttonSelector: {fileID: 4880156786005433651}
 --- !u!320 &6221528985469095776
 PlayableDirector:
   m_ObjectHideFlags: 0
@@ -268,7 +284,7 @@ PlayableDirector:
   m_PlayableAsset: {fileID: 11400000, guid: be9d8f309e9efd843a3e88b41e68a6f1, type: 2}
   m_InitialState: 0
   m_WrapMode: 0
-  m_DirectorUpdateMode: 1
+  m_DirectorUpdateMode: 2
   m_InitialTime: 0
   m_SceneBindings:
   - key: {fileID: -5397231969654992567, guid: be9d8f309e9efd843a3e88b41e68a6f1, type: 2}
@@ -539,7 +555,43 @@ MonoBehaviour:
         m_CallState: 2
   m_onClickAction:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 0}
+        m_TargetAssemblyTypeName: SceneNavigator, Assembly-CSharp
+        m_MethodName: ChangeTransitionInEffect
+        m_Mode: 2
+        m_Arguments:
+          m_ObjectArgument: {fileID: 4850721005755377521, guid: e5ee7460be3a26344b0b6ddd753e3700, type: 3}
+          m_ObjectArgumentAssemblyTypeName: SceneTransitionEffect, Assembly-CSharp
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+      - m_Target: {fileID: 0}
+        m_TargetAssemblyTypeName: SceneNavigator, Assembly-CSharp
+        m_MethodName: ChangeTransitionOutEffect
+        m_Mode: 2
+        m_Arguments:
+          m_ObjectArgument: {fileID: 8713407394917058467, guid: 45d4f5741c0df74469a650ff3812b906, type: 3}
+          m_ObjectArgumentAssemblyTypeName: SceneTransitionEffect, Assembly-CSharp
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+      - m_Target: {fileID: 0}
+        m_TargetAssemblyTypeName: SceneNavigator, Assembly-CSharp
+        m_MethodName: ChangeScene
+        m_Mode: 5
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: StageSelectScene
+          m_BoolArgument: 0
+        m_CallState: 2
   m_onClickExitAction:
     m_PersistentCalls:
       m_Calls: []
@@ -620,8 +672,8 @@ RectTransform:
   m_GameObject: {fileID: 4116222010056307172}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
+  m_LocalScale: {x: 0.42, y: 0.42, z: 0.42}
+  m_ConstrainProportionsScale: 1
   m_Children:
   - {fileID: 6241287470981716733}
   - {fileID: 8391529457712915848}
@@ -791,7 +843,55 @@ MonoBehaviour:
         m_CallState: 2
   m_onClickAction:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 0}
+        m_TargetAssemblyTypeName: GameDirector, Assembly-CSharp
+        m_MethodName: RestartFromCheckpoint
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: InGameScene_Stage1
+          m_BoolArgument: 0
+        m_CallState: 2
+      - m_Target: {fileID: 0}
+        m_TargetAssemblyTypeName: SceneNavigator, Assembly-CSharp
+        m_MethodName: ChangeTransitionInEffect
+        m_Mode: 2
+        m_Arguments:
+          m_ObjectArgument: {fileID: 4850721005755377521, guid: e5ee7460be3a26344b0b6ddd753e3700, type: 3}
+          m_ObjectArgumentAssemblyTypeName: SceneTransitionEffect, Assembly-CSharp
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+      - m_Target: {fileID: 0}
+        m_TargetAssemblyTypeName: SceneNavigator, Assembly-CSharp
+        m_MethodName: ChangeTransitionOutEffect
+        m_Mode: 2
+        m_Arguments:
+          m_ObjectArgument: {fileID: 8713407394917058467, guid: 45d4f5741c0df74469a650ff3812b906, type: 3}
+          m_ObjectArgumentAssemblyTypeName: SceneTransitionEffect, Assembly-CSharp
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+      - m_Target: {fileID: 0}
+        m_TargetAssemblyTypeName: SceneNavigator, Assembly-CSharp
+        m_MethodName: ChangeScene
+        m_Mode: 5
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: InGameScene_Stage1
+          m_BoolArgument: 0
+        m_CallState: 2
   m_onClickExitAction:
     m_PersistentCalls:
       m_Calls: []
@@ -1379,7 +1479,55 @@ MonoBehaviour:
         m_CallState: 2
   m_onClickAction:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 0}
+        m_TargetAssemblyTypeName: GameDirector, Assembly-CSharp
+        m_MethodName: RestartInGame
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: InGameScene_Stage1
+          m_BoolArgument: 0
+        m_CallState: 2
+      - m_Target: {fileID: 0}
+        m_TargetAssemblyTypeName: SceneNavigator, Assembly-CSharp
+        m_MethodName: ChangeTransitionInEffect
+        m_Mode: 2
+        m_Arguments:
+          m_ObjectArgument: {fileID: 4850721005755377521, guid: e5ee7460be3a26344b0b6ddd753e3700, type: 3}
+          m_ObjectArgumentAssemblyTypeName: SceneTransitionEffect, Assembly-CSharp
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+      - m_Target: {fileID: 0}
+        m_TargetAssemblyTypeName: SceneNavigator, Assembly-CSharp
+        m_MethodName: ChangeTransitionOutEffect
+        m_Mode: 2
+        m_Arguments:
+          m_ObjectArgument: {fileID: 8713407394917058467, guid: 45d4f5741c0df74469a650ff3812b906, type: 3}
+          m_ObjectArgumentAssemblyTypeName: SceneTransitionEffect, Assembly-CSharp
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+      - m_Target: {fileID: 0}
+        m_TargetAssemblyTypeName: SceneNavigator, Assembly-CSharp
+        m_MethodName: ChangeScene
+        m_Mode: 5
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: InGameScene_Stage1
+          m_BoolArgument: 0
+        m_CallState: 2
   m_onClickExitAction:
     m_PersistentCalls:
       m_Calls: []
