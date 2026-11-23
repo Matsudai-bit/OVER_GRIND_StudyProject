@@ -19,6 +19,9 @@ public sealed class TimelineAudioSequentialController : MonoBehaviour
     [SerializeField, Header("終了検知対象のPlayableDirector")]
     private PlayableDirector m_director;
 
+    [SerializeField, Header("Timeline Signal用の単発音声一覧")]
+    private AudioOneShotAsset[] m_oneShotAssets;
+
     // このTimelineから開始した再生だけを保持します。
     private AudioSequentialHandle m_currentHandle;
 
@@ -60,6 +63,30 @@ public sealed class TimelineAudioSequentialController : MonoBehaviour
         }
 
         m_currentHandle = m_audioPlayer.Play(m_audioAsset, m_emissionPoint);
+    }
+
+    /// <summary>
+    /// Timeline Signalから登録順の単発音声を再生します。
+    /// </summary>
+    /// <param name="index">単発音声一覧のインデックス。</param>
+    public void PlayOneShot(int index)
+    {
+        if (m_audioPlayer == null || m_oneShotAssets == null ||
+            index < 0 || index >= m_oneShotAssets.Length || m_oneShotAssets[index] == null)
+        {
+            Debug.LogWarning($"[TimelineAudioSequentialController] 単発音声の設定が不正です: {index}", this);
+            return;
+        }
+
+        m_audioPlayer.PlayOneShot(m_oneShotAssets[index], m_emissionPoint);
+    }
+
+    /// <summary>
+    /// Timeline Signalから単発音声一覧の先頭を再生します。
+    /// </summary>
+    public void PlayOneShot()
+    {
+        PlayOneShot(0);
     }
 
     /// <summary>

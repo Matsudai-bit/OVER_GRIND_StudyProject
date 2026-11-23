@@ -2,6 +2,7 @@ using UnityEngine;
 
 /// <summary>
 /// ステージ1フェーズ1の歩行を実行します。
+/// AnimationEventに同期して移動と攻撃判定を制御します。
 /// </summary>
 public sealed class S1P1BossWalkState :
     StateBase<BossController>
@@ -41,6 +42,9 @@ public sealed class S1P1BossWalkState :
     // 移動中に進行不能になったか
     private bool m_hasMovementFailed;
 
+    // AnimationEvent購読中か
+    private bool m_isAnimationEventRegistered;
+
     /// <summary>
     /// 歩行を開始します。
     /// </summary>
@@ -48,12 +52,24 @@ public sealed class S1P1BossWalkState :
     {
         ResetRuntimeState();
 
-        if (!TryGetParameters() ||
+        if (Owner == null ||
             Owner.Navigation == null ||
             Owner.Motor == null ||
             Owner.AnimationController == null)
         {
             SetImmediateFailed();
+
+            return;
+        }
+
+        if (!TryGetParameters())
+        {
+            Debug.LogError(
+                $"[{nameof(S1P1BossWalkState)}] " +
+                "歩行パラメータを取得できませんでした。");
+
+            SetImmediateFailed();
+
             return;
         }
 
@@ -61,29 +77,43 @@ public sealed class S1P1BossWalkState :
         {
             Debug.LogError(
                 $"[{nameof(S1P1BossWalkState)}] " +
-                "歩行Animationの再生時間を取得できませんでした.");
+                "歩行Animationの再生時間を取得できませんでした。");
 
             SetImmediateFailed();
+
             return;
         }
 
-        if (!ApplyAttackSetting())
+        if (!TryApplyAttackSetting())
         {
             Debug.LogError(
                 $"[{nameof(S1P1BossWalkState)}] " +
-                "歩行攻撃の設定を取得できませんでした.");
+                "歩行攻撃の設定を取得できませんでした。");
 
             SetImmediateFailed();
+
             return;
         }
+
+        /*
+         * Animation開始前にEventを購読します。
+         * 開始直後のAnimationEvent取りこぼしを防ぎます。
+         */
+        RegisterAnimationEvent();
+
+        /*
+         * AnimationEvent側ではRUNNINGのみ受け付けるため、
+         * Animationを開始する前にRUNNINGへ変更します。
+         */
+        Owner.SetStateExecutionStatus(
+            StateExecutionStatus.RUNNING);
 
         Owner.AnimationController.SetBool(
             WALK_PARAMETER_ID,
             true);
 
-        // State開始後はAnimation終了までRUNNINGを維持する
-        Owner.SetStateExecutionStatus(
-            StateExecutionStatus.RUNNING);
+        Owner.AnimationController.SetTrigger(
+            m_animationTriggerID);
     }
 
     /// <summary>
@@ -91,20 +121,30 @@ public sealed class S1P1BossWalkState :
     /// </summary>
     protected override void OnFixedUpdate()
     {
-        if (!m_isAnimationStarted ||
+        if (Owner == null ||
+            Owner.GetStateExecutionStatus() !=
+                StateExecutionStatus.RUNNING ||
+            !m_isAnimationStarted ||
             m_parameters == null ||
             m_hasMovementFailed)
         {
             return;
         }
 
-        // Animation中に進行不能になっても、
-        // State自体はAnimation終了までRUNNINGを維持する
+        /*
+         * Animation中に進行不能になった場合、
+         * 移動だけを停止します。
+         *
+         * StateはAnimation終了までRUNNINGを維持し、
+         * ANIMATION_END受信時にFAILEDへ変更します。
+         */
         if (!CanMoveForward())
         {
-            m_hasMovementFailed = true;
+            m_hasMovementFailed =
+                true;
 
-            Owner.Motor.StopHorizontalMovement();
+            Owner.Motor?
+                .StopHorizontalMovement();
 
             return;
         }
@@ -119,11 +159,14 @@ public sealed class S1P1BossWalkState :
 
         float speedRate =
             Mathf.Clamp01(
-                m_parameters.MoveEasingCurve.Evaluate(
-                    normalizedTime));
+                m_parameters
+                    .MoveEasingCurve
+                    .Evaluate(
+                        normalizedTime));
 
-        Owner.Motor.MoveForwardWithSpeedRate(
-            speedRate);
+        Owner.Motor?
+            .MoveForwardWithSpeedRate(
+                speedRate);
     }
 
     /// <summary>
@@ -131,39 +174,148 @@ public sealed class S1P1BossWalkState :
     /// </summary>
     protected override void OnExitState()
     {
+        Owner?.Motor?
+            .StopHorizontalMovement();
 
-        Owner.Motor?.StopHorizontalMovement();
+        UnregisterAnimationEvent();
 
-        if (m_animationEventReceiver != null)
-        {
-            m_animationEventReceiver.AttackEventReceived -=
-                HandleAttackEvent;
-        }
+        DisableAttackHitboxes();
 
-        if (m_attackIdentifier != null)
-        {
-            Owner.AttackHitboxRegistry?.DisableHitboxes(
-                m_attackIdentifier);
-        }
+        Owner?.AnimationController?
+            .SetBool(
+                WALK_PARAMETER_ID,
+                false);
 
-        Owner.AnimationController?.SetBool(
-            WALK_PARAMETER_ID,
-            false);
-
-        // 外部要因によってAnimation終了前に
-        // Stateを抜けた場合のみFAILEDにする
-        if (Owner.GetStateExecutionStatus() ==
-            StateExecutionStatus.RUNNING)
+        /*
+         * Animation終了前に外部要因で
+         * Stateを抜けた場合のみFAILEDとします。
+         */
+        if (Owner != null &&
+            Owner.GetStateExecutionStatus() ==
+                StateExecutionStatus.RUNNING)
         {
             Owner.SetStateExecutionStatus(
                 StateExecutionStatus.FAILED);
         }
 
-        m_references = null;
-        m_parameters = null;
-        m_animationEventReceiver = null;
+        m_references =
+            null;
+
+        m_parameters =
+            null;
+
+        m_attackIdentifier =
+            null;
+
+        m_animationEventReceiver =
+            null;
 
         ResetRuntimeState();
+    }
+
+    /// <summary>
+    /// 攻撃AnimationEventを処理します。
+    /// </summary>
+    /// <param name="attackEventData">
+    /// 攻撃イベント情報。
+    /// </param>
+    private void HandleAttackEvent(
+        AttackEventData attackEventData)
+    {
+        if (attackEventData == null ||
+            Owner == null ||
+            Owner.GetStateExecutionStatus() !=
+                StateExecutionStatus.RUNNING)
+        {
+            return;
+        }
+
+        switch (attackEventData.AttackEventType)
+        {
+            case AttackEventType.ANIMATION_START:
+                StartMovement();
+                break;
+
+            case AttackEventType.HITBOX_ENABLE:
+                EnableAttackHitboxes();
+                break;
+
+            case AttackEventType.HITBOX_DISABLE:
+                DisableAttackHitboxes();
+                break;
+
+            case AttackEventType.ANIMATION_END:
+                FinishWalk();
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Animationに同期した移動を開始します。
+    /// </summary>
+    private void StartMovement()
+    {
+        if (m_isAnimationStarted)
+        {
+            return;
+        }
+
+        m_animationElapsedTime =
+            0.0f;
+
+        m_isAnimationStarted =
+            true;
+
+        Owner?.Motor?
+            .StopHorizontalMovement();
+    }
+
+    /// <summary>
+    /// Animation終了に合わせて歩行状態を終了します。
+    /// </summary>
+    private void FinishWalk()
+    {
+        if (!m_isAnimationStarted ||
+            Owner == null ||
+            Owner.GetStateExecutionStatus() !=
+                StateExecutionStatus.RUNNING)
+        {
+            return;
+        }
+
+        m_isAnimationStarted =
+            false;
+
+        Owner.Motor?
+            .StopHorizontalMovement();
+
+        /*
+         * HITBOX_DISABLEを取りこぼした場合でも
+         * Animation終了時には必ず攻撃判定を停止します。
+         */
+        DisableAttackHitboxes();
+
+        /*
+         * 移動に失敗していた場合は
+         * 正常終了ではないためクールタイムを開始しません。
+         */
+        if (m_hasMovementFailed)
+        {
+            Owner.SetStateExecutionStatus(
+                StateExecutionStatus.FAILED);
+
+            return;
+        }
+
+        /*
+         * SUCCEEDEDへ変更すると
+         * Behavior側が次の行動判定へ進む可能性があるため、
+         * 必ず先にクールタイムを登録します。
+         */
+        StartCoolTime();
+
+        Owner.SetStateExecutionStatus(
+            StateExecutionStatus.SUCCEEDED);
     }
 
     /// <summary>
@@ -171,10 +323,23 @@ public sealed class S1P1BossWalkState :
     /// </summary>
     private void ResetRuntimeState()
     {
-        m_animationElapsedTime = 0.0f;
-        m_animationDuration = 0.0f;
-        m_isAnimationStarted = false;
-        m_hasMovementFailed = false;
+        m_animationElapsedTime =
+            0.0f;
+
+        m_animationDuration =
+            0.0f;
+
+        m_isAnimationStarted =
+            false;
+
+        m_hasMovementFailed =
+            false;
+
+        m_isAnimationEventRegistered =
+            false;
+
+        m_animationTriggerID =
+            0;
     }
 
     /// <summary>
@@ -186,13 +351,16 @@ public sealed class S1P1BossWalkState :
     /// </returns>
     private bool TryGetAnimationDuration()
     {
-        if (m_parameters.WalkAnimationClip == null)
+        if (m_parameters == null ||
+            m_parameters.WalkAnimationClip == null)
         {
             return false;
         }
 
         m_animationDuration =
-            m_parameters.WalkAnimationClip.length;
+            m_parameters
+                .WalkAnimationClip
+                .length;
 
         return m_animationDuration >
                Mathf.Epsilon;
@@ -201,56 +369,52 @@ public sealed class S1P1BossWalkState :
     /// <summary>
     /// 現在フェーズの歩行パラメータを取得します。
     /// </summary>
+    /// <returns>
+    /// true：取得できました。
+    /// false：必要な設定がありません。
+    /// </returns>
     private bool TryGetParameters()
     {
-        if (Owner.PhaseController == null ||
-            !Owner.PhaseController.TryGetCurrentPhaseComponent(
-                out m_references) ||
+        if (Owner == null ||
+            Owner.PhaseController == null)
+        {
+            return false;
+        }
+
+        if (!Owner.PhaseController
+                .TryGetCurrentPhaseComponent(
+                    out m_references))
+        {
+            return false;
+        }
+
+        if (m_references == null ||
             m_references.StateParameterAsset == null ||
-            !m_references.StateParameterAsset.HasRequiredParameters())
+            !m_references
+                .StateParameterAsset
+                .HasRequiredParameters())
         {
             return false;
         }
 
         m_parameters =
-            m_references.StateParameterAsset.Walk;
+            m_references
+                .StateParameterAsset
+                .Walk;
 
         return m_parameters != null;
     }
 
     /// <summary>
-    /// 正常終了した歩行のクールタイムを開始します。
-    /// </summary>
-    private void StartCoolTimeIfSucceeded()
-    {
-        if (Owner.GetStateExecutionStatus() !=
-            StateExecutionStatus.SUCCEEDED ||
-            m_references == null ||
-            m_references.DecisionParameterAsset == null)
-        {
-            return;
-        }
-
-        BossStateCoolTimeManager coolTimeManager =
-            Owner.GetComponent<BossStateCoolTimeManager>();
-
-        if (coolTimeManager == null)
-        {
-            return;
-        }
-
-        coolTimeManager.StartCoolTime<S1P1BossWalkState>(
-            m_references.DecisionParameterAsset
-                .Walk
-                .CoolTime);
-    }
-
-    /// <summary>
     /// ボスの前方へ直進できるか確認します。
     /// </summary>
+    /// <returns>
+    /// true：直進できます。
+    /// false：直進できません。
+    /// </returns>
     private bool CanMoveForward()
     {
-        if (Owner.Navigation == null ||
+        if (Owner?.Navigation == null ||
             m_parameters == null)
         {
             return false;
@@ -262,13 +426,24 @@ public sealed class S1P1BossWalkState :
     }
 
     /// <summary>
-    /// 歩行攻撃の設定を適用します。
+    /// 歩行攻撃の設定を取得します。
     /// </summary>
-    private bool ApplyAttackSetting()
+    /// <returns>
+    /// true：設定を取得できました。
+    /// false：設定が不足しています。
+    /// </returns>
+    private bool TryApplyAttackSetting()
     {
+        if (Owner == null ||
+            Owner.AnimationController == null)
+        {
+            return false;
+        }
+
         S1P1BossAttackSettings attackSettings =
             Owner.GetComponentInChildren<
-                S1P1BossAttackSettings>(true);
+                S1P1BossAttackSettings>(
+                    true);
 
         if (attackSettings == null)
         {
@@ -285,8 +460,7 @@ public sealed class S1P1BossWalkState :
 
         if (string.IsNullOrEmpty(
                 animationTriggerName) ||
-            m_attackIdentifier == null ||
-            Owner.AnimationController == null)
+            m_attackIdentifier == null)
         {
             return false;
         }
@@ -304,91 +478,129 @@ public sealed class S1P1BossWalkState :
             Animator.StringToHash(
                 animationTriggerName);
 
-        m_animationEventReceiver.AttackEventReceived +=
-            HandleAttackEvent;
-
-        Owner.AnimationController.SetTrigger(
-            m_animationTriggerID);
-
         return true;
     }
 
     /// <summary>
-    /// 攻撃AnimationEventを処理します。
+    /// AnimationEventを購読します。
     /// </summary>
-    private void HandleAttackEvent(
-        AttackEventData attackEventData)
+    private void RegisterAnimationEvent()
     {
-        if (attackEventData == null)
+        if (m_isAnimationEventRegistered ||
+            m_animationEventReceiver == null)
         {
             return;
         }
 
-        switch (attackEventData.AttackEventType)
-        {
-            case AttackEventType.ANIMATION_START:
-                StartMovement();
-                break;
+        m_animationEventReceiver
+            .AttackEventReceived +=
+            HandleAttackEvent;
 
-            case AttackEventType.HITBOX_ENABLE:
-                Owner.EnableAttackHitboxes(
-                    m_attackIdentifier);
-                break;
-
-            case AttackEventType.HITBOX_DISABLE:
-                Owner.AttackHitboxRegistry?.DisableHitboxes(
-                    m_attackIdentifier);
-                break;
-
-            case AttackEventType.ANIMATION_END:
-                FinishWalk();
-                break;
-        }
+        m_isAnimationEventRegistered =
+            true;
     }
 
     /// <summary>
-    /// Animationに同期した移動を開始します。
+    /// AnimationEventの購読を解除します。
     /// </summary>
-    private void StartMovement()
+    private void UnregisterAnimationEvent()
     {
-        m_animationElapsedTime = 0.0f;
-        m_isAnimationStarted = true;
-
-        Owner.Motor?.StopHorizontalMovement();
-    }
-
-    /// <summary>
-    /// Animation終了に合わせて歩行状態を終了します。
-    /// </summary>
-    private void FinishWalk()
-    {
-        if (!m_isAnimationStarted)
+        if (!m_isAnimationEventRegistered ||
+            m_animationEventReceiver == null)
         {
             return;
         }
 
-        m_isAnimationStarted = false;
+        m_animationEventReceiver
+            .AttackEventReceived -=
+            HandleAttackEvent;
 
-        Owner.Motor?.StopHorizontalMovement();
-
-        StartCoolTimeIfSucceeded();
-
-        // Animation終了時点で初めて結果を確定する
-        StateExecutionStatus result =
-            m_hasMovementFailed
-                ? StateExecutionStatus.FAILED
-                : StateExecutionStatus.SUCCEEDED;
-
-        Owner.SetStateExecutionStatus(
-            result);
+        m_isAnimationEventRegistered =
+            false;
     }
 
     /// <summary>
-    /// Animation開始前の致命的な設定不備として終了します。
+    /// 歩行中の攻撃判定を有効化します。
+    /// </summary>
+    private void EnableAttackHitboxes()
+    {
+        if (Owner == null ||
+            m_attackIdentifier == null)
+        {
+            return;
+        }
+
+        Owner.EnableAttackHitboxes(
+            m_attackIdentifier);
+    }
+
+    /// <summary>
+    /// 歩行中の攻撃判定を無効化します。
+    /// </summary>
+    private void DisableAttackHitboxes()
+    {
+        if (Owner == null ||
+            m_attackIdentifier == null)
+        {
+            return;
+        }
+
+        Owner.AttackHitboxRegistry?
+            .DisableHitboxes(
+                m_attackIdentifier);
+    }
+
+    /// <summary>
+    /// 正常終了した歩行のクールタイムを開始します。
+    /// </summary>
+    private void StartCoolTime()
+    {
+        if (Owner == null ||
+            m_references == null ||
+            m_references.DecisionParameterAsset == null)
+        {
+            return;
+        }
+
+        BossStateCoolTimeManager coolTimeManager =
+            Owner.GetComponent<
+                BossStateCoolTimeManager>();
+
+        if (coolTimeManager == null)
+        {
+            return;
+        }
+
+        coolTimeManager
+            .StartCoolTime<
+                S1P1BossWalkState>(
+                m_references
+                    .DecisionParameterAsset
+                    .Walk
+                    .CoolTime);
+    }
+
+    /// <summary>
+    /// Animation開始前の設定不備として終了します。
     /// </summary>
     private void SetImmediateFailed()
     {
-        Owner.Motor?.StopHorizontalMovement();
+        UnregisterAnimationEvent();
+
+        DisableAttackHitboxes();
+
+        Owner?.Motor?
+            .StopHorizontalMovement();
+
+        Owner?.AnimationController?
+            .SetBool(
+                WALK_PARAMETER_ID,
+                false);
+
+        if (Owner == null)
+        {
+            return;
+        }
 
         Owner.SetStateExecutionStatus(
             StateExecutionStatus.FAILED);

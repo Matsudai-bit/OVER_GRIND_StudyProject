@@ -52,8 +52,12 @@ public sealed class PlayerRailJumpingState : StateBase<PlayerStateMachineCompone
     // State遷移要求済みか
     private bool m_isTransitionPending;
 
+    private PlayerJumpApexTracker m_apex;
+    private bool m_hasTransferredToAirborne;
+    private bool m_isAirborneContinuationActive;
+
     // 空中攻撃
-    private PlayerContinuousAttack m_airAttack;
+    private PlayerAirAttackingState m_airAttack;
 
     // 同じ長押し入力による空中攻撃の再開始を防止する
     private bool m_hasStartedAttackWhileHeld;
@@ -115,8 +119,14 @@ public sealed class PlayerRailJumpingState : StateBase<PlayerStateMachineCompone
     /// </summary>
     protected override void OnStartState()
     {
+        m_apex = new PlayerJumpApexTracker(Owner.transform.position.y);
+        m_airAttack = new PlayerAirAttackingState(Owner);
         PlayerRailJumpParameters parameters = Owner.RailJumpParameters;
         SplineGrindController grindController = Owner.GrindController;
+
+        PlayerAudioActionUtility.PlaySequential(
+            Owner,
+            PlayerAudioActionID.RAIL_JUMPING);
 
         InitializeRailJump(grindController, parameters);
 
@@ -145,7 +155,8 @@ public sealed class PlayerRailJumpingState : StateBase<PlayerStateMachineCompone
         }
 
         m_hasStartedAttackWhileHeld = false;
-        StopAirAttack();
+        StopAirAttack(
+            resumeRailJumpAudio: true);
     }
 
     /// <summary>
@@ -153,8 +164,17 @@ public sealed class PlayerRailJumpingState : StateBase<PlayerStateMachineCompone
     /// </summary>
     protected override void OnFixedUpdate()
     {
+        if (m_hasTransferredToAirborne && !m_isAirborneContinuationActive) return;
         if (m_isTransitionPending)
         {
+            return;
+        }
+
+        if (!m_hasTransferredToAirborne &&
+            m_apex.UpdateApex(Owner.transform.position.y, Owner.Motor.VerticalVelocity))
+        {
+            m_hasTransferredToAirborne = true;
+            Machine.ChangeState<PlayerRailJumpAirborneState>(this);
             return;
         }
 
@@ -171,19 +191,21 @@ public sealed class PlayerRailJumpingState : StateBase<PlayerStateMachineCompone
 
         bool hasLanded = HasLanded();
 
-        if (m_airAttack != null &&
+        if (m_airAttack.IsActive &&
             hasLanded &&
             Owner.Motor.VerticalVelocity <= 0.0f)
         {
-            StopAirAttack();
+            StopAirAttack(
+                resumeRailJumpAudio: false);
         }
 
         TryStartAirAttack();
 
-        if (m_airAttack != null &&
+        if (m_airAttack.IsActive &&
             !m_airAttack.UpdateAttack(deltaTime))
         {
-            StopAirAttack();
+            StopAirAttack(
+                resumeRailJumpAudio: true);
         }
 
         if (Owner.AttackController.IsHittingAnyTarget())
@@ -230,7 +252,23 @@ public sealed class PlayerRailJumpingState : StateBase<PlayerStateMachineCompone
     /// </summary>
     protected override void OnExitState()
     {
-        StopAirAttack();
+        if (!m_hasTransferredToAirborne) FinishRailJump();
+    }
+    /// <summary>滞空中の物理更新を継続します。</summary>
+    internal void BeginAirborne() { m_isAirborneContinuationActive = true; }
+    /// <summary>引き継いだ物理更新を行います。</summary>
+    internal void UpdateAirbornePhysics() => OnFixedUpdate();
+    /// <summary>滞空中の入力更新を継続します。</summary>
+    internal void UpdateAirborne(float deltaTime) => OnUpdate(deltaTime);
+    /// <summary>ジャンプ全体の終了処理を実行します。</summary>
+    internal void FinishRailJump()
+    {
+        StopAirAttack(
+            resumeRailJumpAudio: false);
+
+        PlayerAudioActionUtility.StopSequential(
+            Owner,
+            PlayerAudioActionID.RAIL_JUMPING);
 
         // Rail Collision IgnoreはGuardが分離確認後に復元する。
 
@@ -390,7 +428,7 @@ public sealed class PlayerRailJumpingState : StateBase<PlayerStateMachineCompone
     private void TryStartAirAttack()
     {
         if (m_hasStartedAttackWhileHeld ||
-            m_airAttack != null ||
+            m_airAttack.IsActive ||
             Owner.Monitor.IsGrounded ||
             !Owner.InputReader.IsAttackHeld)
         {
@@ -404,8 +442,12 @@ public sealed class PlayerRailJumpingState : StateBase<PlayerStateMachineCompone
 
         m_hasStartedAttackWhileHeld = true;
 
-        m_airAttack =
-            new PlayerContinuousAttack(Owner, true);
+        // レールジャンプ音から攻撃音へ切り替えるため、
+        // レールジャンプ側の終了音は鳴らしません。
+        PlayerAudioActionUtility.StopSequential(
+            Owner,
+            PlayerAudioActionID.RAIL_JUMPING,
+            true);
 
         m_airAttack.StartAttack();
     }
@@ -437,7 +479,7 @@ public sealed class PlayerRailJumpingState : StateBase<PlayerStateMachineCompone
             return false;
         }
 
-        return m_airAttack == null ||
+        return !m_airAttack.IsActive ||
                Owner.Monitor.HasGroundSupport();
     }
 
@@ -461,7 +503,7 @@ public sealed class PlayerRailJumpingState : StateBase<PlayerStateMachineCompone
     /// <returns>遷移要求を行った場合はtrue。</returns>
     private bool TryReturnToRail()
     {
-        if (m_airAttack != null)
+        if (m_airAttack.IsActive)
         {
             return false;
         }
@@ -481,7 +523,8 @@ public sealed class PlayerRailJumpingState : StateBase<PlayerStateMachineCompone
             return false;
         }
 
-        StopAirAttack();
+        StopAirAttack(
+            resumeRailJumpAudio: false);
 
         m_isTransitionPending = true;
 
@@ -496,7 +539,8 @@ public sealed class PlayerRailJumpingState : StateBase<PlayerStateMachineCompone
     /// </summary>
     private void TransitionToGroundState()
     {
-        StopAirAttack();
+        StopAirAttack(
+            resumeRailJumpAudio: false);
 
         m_isTransitionPending = true;
 
@@ -730,9 +774,10 @@ public sealed class PlayerRailJumpingState : StateBase<PlayerStateMachineCompone
     /// <summary>
     /// 空中攻撃を終了します。
     /// </summary>
-    private void StopAirAttack()
+    private void StopAirAttack(
+        bool resumeRailJumpAudio)
     {
-        if (m_airAttack == null)
+        if (m_airAttack == null || !m_airAttack.IsActive)
         {
             return;
         }
@@ -743,9 +788,16 @@ public sealed class PlayerRailJumpingState : StateBase<PlayerStateMachineCompone
         }
 
         m_airAttack.StopAttack();
-        m_airAttack = null;
 
-        Owner.AnimationPresenter.PlayJumpAnimation(
+        if (resumeRailJumpAudio &&
+            !m_isTransitionPending)
+        {
+            PlayerAudioActionUtility.PlaySequential(
+                Owner,
+                PlayerAudioActionID.RAIL_JUMPING);
+        }
+
+        Owner.AnimationPresenter.ResumeAirborneAnimation(
             PlayerJumpAnimationType.RAIL);
     }
 

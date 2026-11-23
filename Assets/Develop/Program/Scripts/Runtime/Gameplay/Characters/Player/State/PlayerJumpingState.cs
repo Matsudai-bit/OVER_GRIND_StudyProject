@@ -8,6 +8,8 @@ public sealed class PlayerJumpingState
 {
     // ジャンプ開始からの経過時間
     private float m_elapsedTime;
+    private PlayerJumpApexTracker m_apex;
+    private bool m_isHandingOff;
 
     /// <summary>
     /// 状態開始時に呼ばれます。
@@ -15,19 +17,27 @@ public sealed class PlayerJumpingState
     protected override void OnStartState()
     {
         m_elapsedTime = 0.0f;
+        m_apex = new PlayerJumpApexTracker(Owner.transform.position.y);
+
+        // 通常移動音は停止しません。
+        // WalkingStateからのジャンプでは移動音を継続したまま、
+        // ジャンプ開始音だけをOneShotで重ねます。
+        PlayerAudioActionUtility.PlayOneShot(
+            Owner,
+            PlayerAudioActionID.JUMPING);
 
         if (Owner.Monitor.HorizontalSpeed > 0.1f)
         {
-            Owner.AnimationPresenter.PlayJumpAnimation( PlayerJumpAnimationType.MOVING);
+            Owner.AnimationPresenter.PlayJumpAnimation(PlayerJumpAnimationType.MOVING);
         }
         else
         {
             Owner.AnimationPresenter.PlayJumpAnimation(PlayerJumpAnimationType.STATIONARY);
         }
 
-            // ジャンプ開始時に一度だけ上方向へ力を与える
-            Owner.Motor.Jump(
-                Owner.MovementParameterAsset.JumpPower);
+        // ジャンプ開始時に一度だけ上方向へ力を与える
+        Owner.Motor.Jump(
+            Owner.MovementParameterAsset.JumpPower);
     }
 
     /// <summary>
@@ -35,6 +45,8 @@ public sealed class PlayerJumpingState
     /// </summary>
     protected override void OnFixedUpdate()
     {
+        if (m_isHandingOff) return;
+
         // 通常ジャンプ中の攻撃入力を着地後へ持ち越しません。
         Owner.InputReader.ConsumeAttackInput();
         Debug.Log(
@@ -66,22 +78,10 @@ public sealed class PlayerJumpingState
 
         // 上昇中はジャンプ状態を継続する。
         // 下降に入ったら、ジャンプ状態を終了する。
-        if (Owner.Motor.VerticalVelocity <= 0.0f)
+        if (m_apex.UpdateApex(Owner.transform.position.y, Owner.Motor.VerticalVelocity))
         {
-            // Vブーストを中断した状態でジャンプした場合は、
-            // 着地を待たずにVブースト状態へ復帰するのではなく、
-            // ここでは従来通り下降開始を基準に状態を切り替える。
-            //
-            // IsBoostSuspendedの場合は、ジャンプによる中断から
-            // Vブーストへ復帰する。
-            if (Owner.IsBoostSuspended)
-            {
-                Machine.ChangeState<PlayerVRunningState>();
-                return;
-            }
-
-            Machine.ChangeState<PlayerIdlingState>();
-            return;
+            m_isHandingOff = true;
+            Machine.ChangeState<PlayerJumpAirborneState>(true);
         }
     }
 
@@ -90,6 +90,6 @@ public sealed class PlayerJumpingState
     /// </summary>
     protected override void OnExitState()
     {
-        Owner.AnimationPresenter.StopJumpAnimation();
+        if (!m_isHandingOff) Owner.AnimationPresenter.StopJumpAnimation();
     }
 }

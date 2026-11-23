@@ -15,6 +15,7 @@ GameObject:
   - component: {fileID: 613718020925736206}
   - component: {fileID: 3606216643542856026}
   - component: {fileID: 6445032632822895797}
+  - component: {fileID: -8011693527268831281}
   m_Layer: 7
   m_Name: DreadOil
   m_TagString: Untagged
@@ -35,7 +36,7 @@ Transform:
   m_LocalScale: {x: 4, y: 4, z: 4}
   m_ConstrainProportionsScale: 1
   m_Children:
-  - {fileID: 7804196737689728754}
+  - {fileID: 3368162721427552771}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!33 &1897531469968326877
@@ -107,6 +108,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 421f51514aacbed44abcce37c47b16c4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::S1P3OilController
+  m_sequentialAudioPlayer: {fileID: -8011693527268831281}
+  m_dropSound: {fileID: 11400000, guid: 00dc8ebe3de7e444298a6e1e39a8b914, type: 2}
   m_attackHitbox: {fileID: 613718020925736206}
 --- !u!114 &613718020925736206
 MonoBehaviour:
@@ -174,6 +177,19 @@ SphereCollider:
   serializedVersion: 3
   m_Radius: 0.79
   m_Center: {x: 0.000000059604645, y: 0, z: -0.00000008940697}
+--- !u!114 &-8011693527268831281
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5829273103474463151}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 81af29007c2817c4a838c046144539fe, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SequentialAudioPlayer
+  m_defaultEmissionPoint: {fileID: 0}
 --- !u!1001 &2969182064212680168
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -251,8 +267,8 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 23768fc57f1c5484ba9b460e8f7017af, type: 3}
---- !u!4 &7804196737689728754 stripped
+--- !u!4 &3368162721427552771 stripped
 Transform:
-  m_CorrespondingSourceObject: {fileID: -4216859302048453862, guid: 23768fc57f1c5484ba9b460e8f7017af, type: 3}
+  m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 23768fc57f1c5484ba9b460e8f7017af, type: 3}
   m_PrefabInstance: {fileID: 2969182064212680168}
   m_PrefabAsset: {fileID: 0}

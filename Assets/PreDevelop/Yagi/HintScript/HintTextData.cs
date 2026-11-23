@@ -16,6 +16,9 @@ public sealed class HintTextData : ScriptableObject
     [TextArea(2, 6)]
     private string m_body;
 
+    [SerializeField, Header("強調色（[[文字]]）")]
+    private Color m_highlightColor = Color.yellow;
+
     /// <summary>
     /// Hintの見出しを取得します。
     /// </summary>
@@ -25,4 +28,7 @@ public sealed class HintTextData : ScriptableObject
     /// Hintの本文を取得します。
     /// </summary>
     public string Body => m_body;
+
+    /// <summary>強調部分に適用する色。</summary>
+    public Color HighlightColor => m_highlightColor;
 }

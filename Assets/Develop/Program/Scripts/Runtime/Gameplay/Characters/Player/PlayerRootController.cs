@@ -74,6 +74,16 @@ public sealed class PlayerRootController : MonoBehaviour
     [SerializeField]
     private EffectEmitter m_effectEmitter;
 
+    // Playerのシーケンス音声を再生・停止するController
+    [SerializeField, Header("Audio")]
+    private AnimationAudioSequentialController
+        m_audioSequentialController;
+
+    // PlayerAudioActionIDとAudioSequentialAssetの対応表
+    [SerializeField]
+    private PlayerAudioSequentialTableAsset
+        m_audioSequentialTableAsset;
+
     // Scene内のParameterModelに付いているコンポーネントを設定します。
     [SerializeField, Header("Parameter Model")]
     private VGaugePlaceModel m_vGaugePlaceModel;
@@ -131,7 +141,7 @@ public sealed class PlayerRootController : MonoBehaviour
             return;
         }
 
-   
+
 
 
         m_stateMachineComponent.Initialize(
@@ -150,6 +160,8 @@ public sealed class PlayerRootController : MonoBehaviour
     m_speedPlaceModel,
     m_statusProvider,
     m_effectEmitter,
+    m_audioSequentialController,
+    m_audioSequentialTableAsset,
     m_health);
         m_statusProvider.Initialize(
        m_monitor,
@@ -160,7 +172,7 @@ public sealed class PlayerRootController : MonoBehaviour
         {
             m_isInitialized = false;
             enabled = false;
-         
+
             return;
         }
 
@@ -286,6 +298,13 @@ public sealed class PlayerRootController : MonoBehaviour
         {
             m_splineGrindController =
                 GetComponent<SplineGrindController>();
+        }
+
+        if (m_audioSequentialController == null)
+        {
+            m_audioSequentialController =
+                GetComponent<
+                    AnimationAudioSequentialController>();
         }
 
         ResolveParameterModels();
@@ -448,6 +467,28 @@ public sealed class PlayerRootController : MonoBehaviour
                 this);
 
             isValid = false;
+        }
+
+        // Audioはゲーム進行に必須ではないため、
+        // 未設定でもPlayer自体の初期化は継続します。
+        if (m_audioSequentialController == null)
+        {
+            Debug.LogWarning(
+                $"[{nameof(PlayerRootController)}] " +
+                $"{nameof(AnimationAudioSequentialController)}" +
+                "が見つかりません。" +
+                "Player Stateのシーケンス音声は再生されません。",
+                this);
+        }
+
+        if (m_audioSequentialTableAsset == null)
+        {
+            Debug.LogWarning(
+                $"[{nameof(PlayerRootController)}] " +
+                $"{nameof(PlayerAudioSequentialTableAsset)}" +
+                "が設定されていません。" +
+                "ActionIDから音声データを取得できません。",
+                this);
         }
 
         return isValid;
