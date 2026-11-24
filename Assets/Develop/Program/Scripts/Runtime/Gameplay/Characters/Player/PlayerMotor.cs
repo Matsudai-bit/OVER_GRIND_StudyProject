@@ -902,6 +902,137 @@ public sealed class PlayerMotor : MonoBehaviour
     }
 
     /// <summary>
+    /// 空中で入力方向へ水平移動します。
+    /// 垂直速度・接地面補正・段差処理には干渉しません。
+    /// </summary>
+    /// <param name="moveInput">移動入力。</param>
+    /// <param name="parameters">空中移動用パラメータ。</param>
+    /// <param name="deltaTime">物理更新時間。</param>
+    /// <param name="applyObstacleAvoidance">
+    /// true：進行方向の障害物を考慮します。
+    /// false：障害物回避を行いません。
+    /// </param>
+    public void MoveAir(
+        Vector2 moveInput,
+        PlayerMoveParameters parameters,
+        float deltaTime,
+        bool applyObstacleAvoidance = true)
+    {
+        if (!m_isInitialized ||
+            deltaTime <= 0.0f)
+        {
+            return;
+        }
+
+        Vector2 normalizedInput =
+            Vector2.ClampMagnitude(
+                moveInput,
+                1.0f);
+
+        if (normalizedInput.sqrMagnitude <=
+            DIRECTION_SQR_THRESHOLD)
+        {
+            return;
+        }
+
+        Vector3 moveDirection =
+            CalculateCameraRelativeDirection(
+                normalizedInput);
+
+        moveDirection.y = 0.0f;
+
+        if (moveDirection.sqrMagnitude <=
+            DIRECTION_SQR_THRESHOLD)
+        {
+            return;
+        }
+
+        moveDirection.Normalize();
+
+        float maxMoveSpeed =
+            Mathf.Max(
+                parameters.MaxMoveSpeed,
+                0.0f);
+
+        float inputMagnitude =
+            normalizedInput.magnitude;
+
+        Vector3 targetHorizontalVelocity =
+            moveDirection *
+            (maxMoveSpeed * inputMagnitude);
+
+        Vector3 currentVelocity =
+            m_playerRigidbody.linearVelocity;
+
+        Vector3 currentHorizontalVelocity =
+            new Vector3(
+                currentVelocity.x,
+                0.0f,
+                currentVelocity.z);
+
+        // 進行方向と逆へ入力された場合は、
+        // いったん現在速度を落としてから新しい方向へ加速します。
+        if (ShouldBrakeForReverseInput(
+                currentHorizontalVelocity,
+                moveDirection))
+        {
+            float brakeAcceleration =
+                CalculateAcceleration(
+                    maxMoveSpeed,
+                    parameters.TimeToStop) *
+                Mathf.Max(
+                    1.0f,
+                    parameters.ReverseBrakeMultiplier);
+
+            Vector3 brakingVelocity =
+                Vector3.MoveTowards(
+                    currentHorizontalVelocity,
+                    Vector3.zero,
+                    brakeAcceleration *
+                    deltaTime);
+
+            ApplyAirHorizontalVelocity(
+                brakingVelocity,
+                deltaTime,
+                applyObstacleAvoidance);
+
+            RotateTowardsMoveDirection(
+                moveDirection,
+                parameters.RotationSpeed,
+                deltaTime);
+
+            m_currentMaxMoveSpeed =
+                maxMoveSpeed;
+
+            return;
+        }
+
+        float acceleration =
+            CalculateAcceleration(
+                maxMoveSpeed,
+                parameters.TimeToMaxSpeed);
+
+        Vector3 nextHorizontalVelocity =
+            Vector3.MoveTowards(
+                currentHorizontalVelocity,
+                targetHorizontalVelocity,
+                acceleration * deltaTime);
+
+        ApplyAirHorizontalVelocity(
+            nextHorizontalVelocity,
+            deltaTime,
+            applyObstacleAvoidance);
+
+        RotateTowardsMoveDirection(
+            moveDirection,
+            parameters.RotationSpeed,
+            deltaTime);
+
+        m_currentMaxMoveSpeed =
+            maxMoveSpeed;
+    }
+
+    /// <summary>
     /// 現在の進行方向に対して入力が逆向きか判定します。
     /// </summary>
     /// <param name="horizontalVelocity">現在の水平速度。</param>
@@ -1315,6 +1446,40 @@ public sealed class PlayerMotor : MonoBehaviour
 
         m_playerRigidbody.linearVelocity =
             nextMoveVelocity;
+    }
+
+    /// <summary>
+    /// 空中用の水平速度をRigidbodyへ適用します。
+    /// Y速度は現在値を維持し、地面補正や段差処理は行いません。
+    /// </summary>
+    /// <param name="horizontalVelocity">適用する水平速度。</param>
+    /// <param name="deltaTime">物理更新時間。</param>
+    /// <param name="applyObstacleAvoidance">
+    /// true：進行方向の障害物を考慮します。
+    /// false：障害物回避を行いません。
+    /// </param>
+    private void ApplyAirHorizontalVelocity(
+        Vector3 horizontalVelocity,
+        float deltaTime,
+        bool applyObstacleAvoidance)
+    {
+        horizontalVelocity.y = 0.0f;
+
+        Vector3 nextHorizontalVelocity =
+            applyObstacleAvoidance
+                ? ClampVelocityForObstacles(
+                    horizontalVelocity,
+                    deltaTime)
+                : horizontalVelocity;
+
+        Vector3 currentVelocity =
+            m_playerRigidbody.linearVelocity;
+
+        m_playerRigidbody.linearVelocity =
+            new Vector3(
+                nextHorizontalVelocity.x,
+                currentVelocity.y,
+                nextHorizontalVelocity.z);
     }
 
     /// <summary>

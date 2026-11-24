@@ -148,6 +148,15 @@ public class AudioSourceNode : MonoBehaviour
     }
 
     /// <summary>
+    /// AudioListenerによる一括ポーズの対象から除外するか設定します。
+    /// </summary>
+    /// <param name="ignore">true：ポーズ中も再生します。</param>
+    public void SetIgnoreListenerPause(bool ignore)
+    {
+        Source.ignoreListenerPause = ignore;
+    }
+
+    /// <summary>
     /// 今回の再生に限りループ設定を上書きします。
     /// </summary>
     /// <param name="loop">ループの有効・無効。</param>
