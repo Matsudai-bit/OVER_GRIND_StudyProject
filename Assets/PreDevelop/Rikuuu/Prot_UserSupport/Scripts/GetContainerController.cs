@@ -60,7 +60,7 @@ public sealed class GetContainerController : MonoBehaviour
 
         // 参照を条件として渡します。アンロード後は null 判定になり false を返します。
         m_windowNavigator.SetCloseCondition(
-            () => controller != null && controller.IsLeft);
+            () => controller != null && controller.CanCloseMenu);
 
         m_routine = null;
     }

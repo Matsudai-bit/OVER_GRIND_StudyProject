@@ -1,5 +1,6 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.InputSystem;
 
 public class UserSupportManager : MonoBehaviour
@@ -36,6 +37,10 @@ public class UserSupportManager : MonoBehaviour
     [Header("オプション関連")]
     [SerializeField]
     private GameObject[] m_optionItems;
+
+    [Header("ページ切り替え時に呼ぶ処理")]
+    [SerializeField]
+    private UnityEvent m_onChangePageEvent;
 
     [Header("入力判定関連")]
     // ページ切り替えキーが押される判定
@@ -81,7 +86,9 @@ public class UserSupportManager : MonoBehaviour
         // ページの切り替え
         if(WasPressedChangeKey())
         {
-         
+            // 関数を呼び出す
+            m_onChangePageEvent?.Invoke();
+
             if(m_choseState != ChoseState.MANUAL)
             {
                 // マニュアルページにする
@@ -106,21 +113,27 @@ public class UserSupportManager : MonoBehaviour
         switch (openTargetType)
         {
             case MenuOpenTargetType.MANUAL:
-                if (m_choseState == ChoseState.MANUAL) { break; }
+                if (m_choseState == ChoseState.MANUAL) 
+                { 
+                    break; 
+                }
+                
                 // マニュアルページにする
                 m_choseState = ChoseState.MANUAL;
-
                 // 切り替え関数を実行する
                 ChangeToManualPage();
                 break;
+
             case MenuOpenTargetType.OPTIONS:
-                if (m_choseState == ChoseState.OPTION) { break; }
+                if (m_choseState == ChoseState.OPTION) 
+                { 
+                    break; 
+                }
+
                 // オプションページにする
                 m_choseState = ChoseState.OPTION;
-
                 // 切り替え関数を実行する
                 ChangeToOptionPage();
-
                 break;
         }
     }

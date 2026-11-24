@@ -3,6 +3,8 @@ using UnityEngine.Events;
 using UnityEngine.InputSystem;
 using UnityEngine.Playables;
 
+using System.Collections;
+
 /// <summary>
 /// ポーズ画面の表示演出と入力の有効状態を管理します。
 /// </summary>
@@ -71,6 +73,13 @@ public class PauseFadeManager : MonoBehaviour, IUIInputControllable
     [SerializeField]
     private UnityEvent m_onFadeOutCompleted = new UnityEvent();
 
+    [Header("ポーズ状態の同期")]
+    [SerializeField]
+    private PauseChangedEvent m_pauseChangedEvent;
+    // InGameUIController と同じものを指定する
+    [SerializeField]
+    private UIWindowManager m_pauseWindowManager;
+
     // フェードの進行状態
     private bool m_isFadingIn;
     private bool m_isFadingOut;
@@ -83,6 +92,11 @@ public class PauseFadeManager : MonoBehaviour, IUIInputControllable
 
     // UIOverlaySceneManager によって許可された入力状態
     private bool m_isKeyInputEnabled;
+
+    // 最後に届いた要求が「開く」か
+    private bool m_wantOpen;
+    // 開き直しの待機中か（コルーチンは UIWindowManager 側で動かす）
+    private bool m_isReopenPending;
 
     /// <summary>
     /// 表示中、または表示開始済みかを取得します。
@@ -98,6 +112,9 @@ public class PauseFadeManager : MonoBehaviour, IUIInputControllable
     {
         SetupDirector(m_fadeInDirector);
         SetupDirector(m_fadeOutDirector);
+
+        m_buttonSelector.LockCursor();
+        m_buttonSelector.ResetCursor();
     }
 
     private void OnEnable()
@@ -131,6 +148,12 @@ public class PauseFadeManager : MonoBehaviour, IUIInputControllable
             m_inputRef.action.Enable();
         }
 
+        // ポーズ状態の変更通知を受け取る
+        if (m_pauseChangedEvent != null)
+        {
+            m_pauseChangedEvent.RegisterListener(OnPauseChanged);
+        }
+
         UpdateUIInputState();
 
         if (m_playFadeInOnEnable)
@@ -155,6 +178,13 @@ public class PauseFadeManager : MonoBehaviour, IUIInputControllable
         {
             m_inputRef.action.performed -= OnPause;
             // InputAction は他のコンポーネントと共有される可能性があるため無効化しない
+        }
+
+        // ポーズ状態の変更通知を解除する（追加）
+        // 開き直しの待機は UIWindowManager 側で動くため、ここでは止めない
+        if (m_pauseChangedEvent != null)
+        {
+            m_pauseChangedEvent.UnregisterListener(OnPauseChanged);
         }
 
         // 非アクティブ中に選択を受け付けない
@@ -230,11 +260,84 @@ public class PauseFadeManager : MonoBehaviour, IUIInputControllable
 
         if (canInteract)
         {
-            m_buttonSelector.UnLockCursor();
+            if (m_buttonSelector.IsLockCursor)
+            {
+                m_buttonSelector.UnLockCursor();
+            }
         }
         else
         {
             m_buttonSelector.LockCursor();
+        }
+    }
+
+    /// <summary>
+    /// ポーズ状態の変更通知を受け取ります。
+    /// </summary>
+    private void OnPauseChanged(PauseChangedEventData eventData)
+    {
+        // 最後に届いた要求を覚えておく
+        m_wantOpen = eventData.IsPaused;
+
+        // フェードアウト中に「開く」要求が来たら、
+        if (eventData.IsPaused && m_isFadingOut)
+        {
+            // フェードアウトを最後まで進めて、開き直す
+            ForceFinishFadeOut();
+
+            if (!m_isReopenPending && m_pauseWindowManager != null)
+            {
+                m_isReopenPending = true;
+                m_pauseWindowManager.StartCoroutine(ReopenNextFrame());
+            }
+        }
+    }
+
+    /// <summary>
+    /// フェードアウトを終了位置まで進めて、完了処理を実行します。
+    /// </summary>
+    private void ForceFinishFadeOut()
+    {
+        if (!m_isFadingOut)
+        {
+            return;
+        }
+
+        m_ignoreStopped = true;
+
+        if (m_fadeOutDirector != null)
+        {
+            // 最終状態を反映してから止める
+            m_fadeOutDirector.time = m_fadeOutDirector.duration;
+            m_fadeOutDirector.Evaluate();
+            m_fadeOutDirector.Stop();
+        }
+
+        m_ignoreStopped = false;
+
+        // 通常の完了処理（NotifyHideCompleted まで流す）
+        CompleteFadeOut();
+    }
+
+    /// <summary>
+    /// 閉じ処理が落ち着いた次のフレームで、ウィンドウを開き直します。
+    /// </summary>
+    private IEnumerator ReopenNextFrame()
+    {
+        // timeScale が 0 でもフレームは進む
+        yield return null;
+        m_isReopenPending = false;
+
+        // 途中でまた閉じる要求が来ていたら何もしない
+        // すでに別の経路（InGameUIController）で開いていたら何もしない
+        if (!m_wantOpen || m_isShown || IsPlaying)
+        {
+            yield break;
+        }
+
+        if (m_pauseWindowManager != null)
+        {
+            m_pauseWindowManager.OpenInitialWindow();
         }
     }
 
@@ -302,6 +405,8 @@ public class PauseFadeManager : MonoBehaviour, IUIInputControllable
         {
             return;
         }
+
+        Debug.Log($"[Pause] FadeIn START t={Time.unscaledTime:F2} duration={(m_fadeInDirector != null ? m_fadeInDirector.duration : -1):F2}");
 
         m_isShown = true;
         m_isDisplayCompleted = false;
@@ -415,6 +520,8 @@ public class PauseFadeManager : MonoBehaviour, IUIInputControllable
     /// </summary>
     private void CompleteFadeIn()
     {
+        Debug.Log($"[Pause] FadeIn COMPLETE t={Time.unscaledTime:F2}");
+
         m_isFadingIn = false;
         m_isDisplayCompleted = true;
 
@@ -423,7 +530,7 @@ public class PauseFadeManager : MonoBehaviour, IUIInputControllable
             m_window.NotifyShowCompleted();
         }
 
-        UpdateUIInputState();
+        //UpdateUIInputState();
     }
 
     /// <summary>
