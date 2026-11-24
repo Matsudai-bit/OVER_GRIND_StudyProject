@@ -10,7 +10,7 @@ using UnityEngine;
 public sealed class StageSceneContext : ScriptableObject
 {
     private const int DEFAULT_STAGE_NUMBER = 0;
-    private const int MIN_STAGE_NUMBER = 1;
+    private const int MIN_STAGE_NUMBER = 0;
     private const int MIN_RETRY_COUNT = 0;
 
     // 次回ステージSceneの開始方法
