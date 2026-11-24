@@ -106,6 +106,10 @@ public sealed class PlayerRootController : MonoBehaviour
     [SerializeField]
     private Health m_health;
 
+    // プレイヤー死亡通知イベント
+    [SerializeField, Header("Event")]
+    private PlayerDiedEvent m_playerDiedEvent;
+
     /// <summary>
     /// プレイヤー状況提供機能を取得します。
     /// </summary>
@@ -162,7 +166,8 @@ public sealed class PlayerRootController : MonoBehaviour
     m_effectEmitter,
     m_audioSequentialController,
     m_audioSequentialTableAsset,
-    m_health);
+    m_health,
+    m_playerDiedEvent);
         m_statusProvider.Initialize(
        m_monitor,
        m_motor,
@@ -305,6 +310,12 @@ public sealed class PlayerRootController : MonoBehaviour
             m_audioSequentialController =
                 GetComponent<
                     AnimationAudioSequentialController>();
+        }
+
+        if (m_health == null)
+        {
+            m_health =
+                GetComponent<Health>();
         }
 
         ResolveParameterModels();
@@ -467,6 +478,25 @@ public sealed class PlayerRootController : MonoBehaviour
                 this);
 
             isValid = false;
+        }
+
+        if (m_health == null)
+        {
+            Debug.LogError(
+                $"[{nameof(PlayerRootController)}] " +
+                $"{nameof(Health)}が見つかりません。",
+                this);
+
+            isValid = false;
+        }
+
+        if (m_playerDiedEvent == null)
+        {
+            Debug.LogWarning(
+                $"[{nameof(PlayerRootController)}] " +
+                $"{nameof(PlayerDiedEvent)}が設定されていません。" +
+                "プレイヤー死亡通知は発火しません。",
+                this);
         }
 
         // Audioはゲーム進行に必須ではないため、

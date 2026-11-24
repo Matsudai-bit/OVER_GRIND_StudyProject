@@ -120,6 +120,8 @@ public sealed class S1P1BossWalkState :
 
         Owner.AnimationController.SetTrigger(
             m_animationTriggerID);
+
+        
     }
 
     /// <summary>

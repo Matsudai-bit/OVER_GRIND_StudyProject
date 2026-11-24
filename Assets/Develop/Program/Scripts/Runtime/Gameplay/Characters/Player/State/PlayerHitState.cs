@@ -32,6 +32,7 @@ public sealed class PlayerHitState : StateBase<PlayerStateMachineComponent>
             .StopAllGameplaySequentialImmediate(
                 Owner);
 
+
         if (Owner.GrindController.IsGrinding)
         {
             Owner.GrindController.StopGrind();
@@ -72,6 +73,7 @@ public sealed class PlayerHitState : StateBase<PlayerStateMachineComponent>
             bool hasLanded = Owner.Monitor.IsGrounded && Owner.Motor.VerticalVelocity <= 0.0f;
             if (!hasLanded && !Owner.HasHitEnvironment && m_elapsedTime < m_duration)
             {
+             
                 return;
             }
 
@@ -84,9 +86,14 @@ public sealed class PlayerHitState : StateBase<PlayerStateMachineComponent>
         m_recoveryElapsedTime += Time.fixedDeltaTime;
         if (m_recoveryElapsedTime >= m_recoveryDuration)
         {
+
+            Owner.NotifyDownStateEntered();
+
             if (Owner.Monitor.IsGrounded) Machine.ChangeState<PlayerIdlingState>();
             else Machine.ChangeState<PlayerJumpAirborneState>();
         }
+
+      
     }
 
     /// <summary>被弾中の先行入力と無敵状態を解除します。</summary>
@@ -96,6 +103,7 @@ public sealed class PlayerHitState : StateBase<PlayerStateMachineComponent>
         Owner.InputReader.DiscardInput();
         Owner.EndHitReaction();
         Owner.AnimationPresenter.StopHitAnimation();
-
+        // PlayerHitStateをダウン状態として扱い、
+        // HPが0の場合のみPlayer死亡イベントを発火します。
     }
 }
