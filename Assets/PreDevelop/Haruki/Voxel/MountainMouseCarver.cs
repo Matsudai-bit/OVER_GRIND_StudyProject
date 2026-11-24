@@ -61,7 +61,7 @@ public class MountainMouseCarver : MonoBehaviour
         }
 
         Ray ray = activeCamera.ScreenPointToRay(Mouse.current.position.ReadValue());
-        if (Physics.Raycast(ray, out RaycastHit hit) && hit.collider.gameObject == m_targetMountain.gameObject)
+        if (Physics.Raycast(ray, out RaycastHit hit) && hit.collider.transform.IsChildOf(m_targetMountain.transform))
         {
             m_targetMountain.Carve(hit.point, m_carveRadius);
         }

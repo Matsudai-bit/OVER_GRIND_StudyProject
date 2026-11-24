@@ -3,7 +3,8 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// ハイトマップデータから Marching Cubes 法によってメッシュを構築するクラス。
+/// ハイトマップデータからチャンク単位で Marching Cubes メッシュを構築するクラス。
+/// 長方形グリッドおよびX/Z別ボクセル間隔に対応します。
 /// </summary>
 public class MarchingCubesMeshBuilder
 {
@@ -33,17 +34,18 @@ public class MarchingCubesMeshBuilder
     private static readonly int[] EDGE_AXIS = new int[12];
 
     // ---- メンバー変数 ----
-    private readonly int m_gridSize;                      // XZ方向のサンプル点数
+    private readonly int m_gridSizeX;                     // 全体X方向のサンプル点数
+    private readonly int m_gridSizeZ;                     // 全体Z方向のサンプル点数
     private readonly int m_ny;                            // Y方向のサンプル層数
-    private readonly float m_voxelSize;                   // サンプル点の間隔
+    private readonly float m_voxelSizeX;                  // X方向のサンプル点間隔
+    private readonly float m_voxelSizeY;                  // Y方向の層間隔
+    private readonly float m_voxelSizeZ;                  // Z方向のサンプル点間隔
+    private readonly int m_strideZ;                       // チャンクキャッシュ用のZストライド
     private readonly int[] m_edgeCache;                   // 共有頂点インデックスのキャッシュ
     private readonly List<Vector3> m_vertices = new List<Vector3>();
     private readonly List<Vector3> m_normals = new List<Vector3>();
     private readonly List<Vector2> m_uvs = new List<Vector2>();
     private readonly List<int> m_triangles = new List<int>();
-
-    /// <summary>生成された三角形インデックスが存在するかどうか。</summary>
-    public bool HasTriangles => m_triangles.Count > 0;
 
     static MarchingCubesMeshBuilder()
     {
@@ -59,23 +61,46 @@ public class MarchingCubesMeshBuilder
     /// <summary>
     /// MarchingCubesMeshBuilder を初期化します。
     /// </summary>
-    /// <param name="gridSize">XZ方向のサンプル点数。</param>
+    /// <param name="gridSizeX">全体X方向のサンプル点数。</param>
+    /// <param name="gridSizeZ">全体Z方向のサンプル点数。</param>
     /// <param name="ny">Y方向のサンプル層数。</param>
-    /// <param name="voxelSize">サンプル点の間隔。</param>
-    public MarchingCubesMeshBuilder(int gridSize, int ny, float voxelSize)
+    /// <param name="voxelSizeX">X方向のサンプル点間隔。</param>
+    /// <param name="voxelSizeY">Y方向の層間隔。</param>
+    /// <param name="voxelSizeZ">Z方向のサンプル点間隔。</param>
+    /// <param name="maxChunkCellsX">1チャンクあたりのX最大セル数。</param>
+    /// <param name="maxChunkCellsZ">1チャンクあたりのZ最大セル数。</param>
+    public MarchingCubesMeshBuilder(
+        int gridSizeX,
+        int gridSizeZ,
+        int ny,
+        float voxelSizeX,
+        float voxelSizeY,
+        float voxelSizeZ,
+        int maxChunkCellsX,
+        int maxChunkCellsZ)
     {
-        m_gridSize = gridSize;
+        m_gridSizeX = gridSizeX;
+        m_gridSizeZ = gridSizeZ;
         m_ny = ny;
-        m_voxelSize = voxelSize;
-        m_edgeCache = new int[m_gridSize * m_ny * m_gridSize * 3];
+        m_voxelSizeX = voxelSizeX;
+        m_voxelSizeY = voxelSizeY;
+        m_voxelSizeZ = voxelSizeZ;
+
+        int strideX = maxChunkCellsX + 1;
+        m_strideZ = maxChunkCellsZ + 1;
+        m_edgeCache = new int[strideX * m_ny * m_strideZ * 3];
     }
 
     /// <summary>
-    /// ハイトマップデータからメッシュを再構築し、指定された描画用 Mesh へ適用します。
+    /// 指定されたセル範囲（チャンク）のみのメッシュを構築し、対象 Mesh へ適用します。
     /// </summary>
-    /// <param name="heightField">参照するハイトマップデータ。</param>
-    /// <param name="targetMesh">更新対象の Mesh。</param>
-    public void RebuildMesh(SandHeightField heightField, Mesh targetMesh)
+    public void RebuildChunkMesh(
+        SandHeightField heightField,
+        int startX,
+        int endX,
+        int startZ,
+        int endZ,
+        Mesh targetMesh)
     {
         if (heightField == null || targetMesh == null)
         {
@@ -88,15 +113,17 @@ public class MarchingCubesMeshBuilder
         m_triangles.Clear();
         Array.Fill(m_edgeCache, -1);
 
-        int n = m_gridSize;
-        float invVoxel = 1f / m_voxelSize;
+        float invVoxelY = 1f / m_voxelSizeY;
         float sink = heightField.Sink;
+        float totalSizeX = (m_gridSizeX - 1) * m_voxelSizeX;
+        float totalSizeZ = (m_gridSizeZ - 1) * m_voxelSizeZ;
+        float halfSizeX = totalSizeX * 0.5f;
+        float halfSizeZ = totalSizeZ * 0.5f;
 
-        for (int x = 0; x < n - 1; x++)
+        for (int x = startX; x < endX; x++)
         {
-            for (int z = 0; z < n - 1; z++)
+            for (int z = startZ; z < endZ; z++)
             {
-                // 4列の表面高さ範囲から調査対象のY層を絞り込む
                 float s00 = heightField.GetHeight(x, z) - sink;
                 float s10 = heightField.GetHeight(x + 1, z) - sink;
                 float s01 = heightField.GetHeight(x, z + 1) - sink;
@@ -105,8 +132,8 @@ public class MarchingCubesMeshBuilder
                 float sMin = Mathf.Min(Mathf.Min(s00, s10), Mathf.Min(s01, s11));
                 float sMax = Mathf.Max(Mathf.Max(s00, s10), Mathf.Max(s01, s11));
 
-                int yLo = Mathf.Max(0, Mathf.FloorToInt(sMin * invVoxel) + LAYER_GROUND_OFFSET - 1);
-                int yHi = Mathf.Min(m_ny - 2, Mathf.FloorToInt(sMax * invVoxel) + LAYER_GROUND_OFFSET + 1);
+                int yLo = Mathf.Max(0, Mathf.FloorToInt(sMin * invVoxelY) + LAYER_GROUND_OFFSET - 1);
+                int yHi = Mathf.Min(m_ny - 2, Mathf.FloorToInt(sMax * invVoxelY) + LAYER_GROUND_OFFSET + 1);
 
                 for (int y = yLo; y <= yHi; y++)
                 {
@@ -114,7 +141,8 @@ public class MarchingCubesMeshBuilder
                     for (int i = 0; i < 8; i++)
                     {
                         Vector3Int c = CORNER_OFFSETS[i];
-                        if (EvaluateDensity(heightField, x + c.x, y + c.y, z + c.z) < 0f)
+                        float density = (heightField.GetHeight(x + c.x, z + c.z) - sink) - ((y + c.y - LAYER_GROUND_OFFSET) * m_voxelSizeY);
+                        if (density < 0f)
                         {
                             cubeIndex |= 1 << i;
                         }
@@ -128,9 +156,9 @@ public class MarchingCubesMeshBuilder
 
                     for (int k = 0; k < triRow.Length; k += 3)
                     {
-                        int i0 = GetOrCreateEdgeVertex(heightField, x, y, z, triRow[k]);
-                        int i1 = GetOrCreateEdgeVertex(heightField, x, y, z, triRow[k + 1]);
-                        int i2 = GetOrCreateEdgeVertex(heightField, x, y, z, triRow[k + 2]);
+                        int i0 = GetOrCreateEdgeVertex(heightField, startX, startZ, x, y, z, triRow[k], sink, halfSizeX, halfSizeZ, totalSizeX, totalSizeZ);
+                        int i1 = GetOrCreateEdgeVertex(heightField, startX, startZ, x, y, z, triRow[k + 1], sink, halfSizeX, halfSizeZ, totalSizeX, totalSizeZ);
+                        int i2 = GetOrCreateEdgeVertex(heightField, startX, startZ, x, y, z, triRow[k + 2], sink, halfSizeX, halfSizeZ, totalSizeX, totalSizeZ);
 
                         if (i0 == i1 || i1 == i2 || i0 == i2)
                         {
@@ -159,45 +187,14 @@ public class MarchingCubesMeshBuilder
         }
 
         targetMesh.Clear();
-        targetMesh.SetVertices(m_vertices);
-        targetMesh.SetNormals(m_normals);
-        targetMesh.SetUVs(0, m_uvs);
-        targetMesh.SetTriangles(m_triangles, 0);
-        targetMesh.RecalculateBounds();
-    }
-
-    /// <summary>
-    /// 直近のメッシュ構築結果から、コライダーに必要な頂点座標と三角形インデックスのみをコピーします。
-    /// </summary>
-    /// <param name="targetColliderMesh">コピー先のコライダー専用 Mesh。</param>
-    public void CopyCollisionGeometryTo(Mesh targetColliderMesh)
-    {
-        if (targetColliderMesh == null)
+        if (m_vertices.Count > 0)
         {
-            return;
+            targetMesh.SetVertices(m_vertices);
+            targetMesh.SetNormals(m_normals);
+            targetMesh.SetUVs(0, m_uvs);
+            targetMesh.SetTriangles(m_triangles, 0);
+            targetMesh.RecalculateBounds();
         }
-
-        targetColliderMesh.Clear();
-        targetColliderMesh.SetVertices(m_vertices);
-        targetColliderMesh.SetTriangles(m_triangles, 0);
-        targetColliderMesh.RecalculateBounds();
-    }
-
-    /// <summary>
-    /// 層インデックスをローカルY座標へ変換します。
-    /// </summary>
-    private float ConvertLayerToLocalY(int y)
-    {
-        return (y - LAYER_GROUND_OFFSET) * m_voxelSize;
-    }
-
-    /// <summary>
-    /// 3次元グリッド座標をローカル座標へ変換します。
-    /// </summary>
-    private Vector3 ConvertGridToLocal(int x, int y, int z)
-    {
-        float offset = (m_gridSize - 1) * m_voxelSize * 0.5f;
-        return new Vector3(x * m_voxelSize - offset, ConvertLayerToLocalY(y), z * m_voxelSize - offset);
     }
 
     /// <summary>
@@ -205,23 +202,27 @@ public class MarchingCubesMeshBuilder
     /// </summary>
     private Vector3 CalculateOutwardNormal(SandHeightField heightField, int x, int z)
     {
-        float dhdx = (heightField.GetClampedHeight(x + 1, z) - heightField.GetClampedHeight(x - 1, z)) / (2f * m_voxelSize);
-        float dhdz = (heightField.GetClampedHeight(x, z + 1) - heightField.GetClampedHeight(x, z - 1)) / (2f * m_voxelSize);
+        float dhdx = (heightField.GetClampedHeight(x + 1, z) - heightField.GetClampedHeight(x - 1, z)) / (2f * m_voxelSizeX);
+        float dhdz = (heightField.GetClampedHeight(x, z + 1) - heightField.GetClampedHeight(x, z - 1)) / (2f * m_voxelSizeZ);
         return new Vector3(-dhdx, 1f, -dhdz);
     }
 
     /// <summary>
-    /// 指定されたグリッド点における密度（表面高さ - Y座標）を評価します。
+    /// チャンクローカルキャッシュから辺上の頂点を取得、または新規生成します。
     /// </summary>
-    private float EvaluateDensity(SandHeightField heightField, int x, int y, int z)
-    {
-        return (heightField.GetHeight(x, z) - heightField.Sink) - ConvertLayerToLocalY(y);
-    }
-
-    /// <summary>
-    /// 辺上の頂点をキャッシュから取得、または新規生成してインデックスを返します。
-    /// </summary>
-    private int GetOrCreateEdgeVertex(SandHeightField heightField, int x, int y, int z, int edgeIndex)
+    private int GetOrCreateEdgeVertex(
+        SandHeightField heightField,
+        int startX,
+        int startZ,
+        int x,
+        int y,
+        int z,
+        int edgeIndex,
+        float sink,
+        float halfSizeX,
+        float halfSizeZ,
+        float totalSizeX,
+        float totalSizeZ)
     {
         Vector3Int bs = EDGE_BASE[edgeIndex];
         int ax = x + bs.x;
@@ -229,7 +230,9 @@ public class MarchingCubesMeshBuilder
         int az = z + bs.z;
         int axis = EDGE_AXIS[edgeIndex];
 
-        int key = ((ax * m_ny + ay) * m_gridSize + az) * 3 + axis;
+        int lx = ax - startX;
+        int lz = az - startZ;
+        int key = ((lx * m_ny + ay) * m_strideZ + lz) * 3 + axis;
         int cachedIndex = m_edgeCache[key];
         if (cachedIndex >= 0)
         {
@@ -240,22 +243,23 @@ public class MarchingCubesMeshBuilder
         int by = ay + (axis == 1 ? 1 : 0);
         int bz = az + (axis == 2 ? 1 : 0);
 
-        float va = EvaluateDensity(heightField, ax, ay, az);
-        float vb = EvaluateDensity(heightField, bx, by, bz);
+        float va = (heightField.GetHeight(ax, az) - sink) - ((ay - LAYER_GROUND_OFFSET) * m_voxelSizeY);
+        float vb = (heightField.GetHeight(bx, bz) - sink) - ((by - LAYER_GROUND_OFFSET) * m_voxelSizeY);
         float t = Mathf.Abs(vb - va) < DENSITY_EPSILON ? 0.5f : -va / (vb - va);
         t = Mathf.Clamp(t, MIN_EDGE_T, 1f - MIN_EDGE_T);
 
-        Vector3 pos = Vector3.Lerp(ConvertGridToLocal(ax, ay, az), ConvertGridToLocal(bx, by, bz), t);
+        Vector3 posA = new Vector3(ax * m_voxelSizeX - halfSizeX, (ay - LAYER_GROUND_OFFSET) * m_voxelSizeY, az * m_voxelSizeZ - halfSizeZ);
+        Vector3 posB = new Vector3(bx * m_voxelSizeX - halfSizeX, (by - LAYER_GROUND_OFFSET) * m_voxelSizeY, bz * m_voxelSizeZ - halfSizeZ);
+        Vector3 pos = Vector3.Lerp(posA, posB, t);
+
         Vector3 normal = Vector3.Lerp(
             CalculateOutwardNormal(heightField, ax, az),
             CalculateOutwardNormal(heightField, bx, bz),
             t
         ).normalized;
 
-        float totalSize = (m_gridSize - 1) * m_voxelSize;
-        float offset = totalSize * 0.5f;
-        float u = totalSize > 0f ? (pos.x + offset) / totalSize : 0.5f;
-        float v = totalSize > 0f ? (pos.z + offset) / totalSize : 0.5f;
+        float u = totalSizeX > 0f ? (pos.x + halfSizeX) / totalSizeX : 0.5f;
+        float v = totalSizeZ > 0f ? (pos.z + halfSizeZ) / totalSizeZ : 0.5f;
 
         int index = m_vertices.Count;
         m_vertices.Add(pos);

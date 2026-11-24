@@ -27,18 +27,16 @@ public static class SandParticleFactory
     }
 
     // ---- 定数 ----
-    private const int GRAIN_MAX_PARTICLES = 3000;      // 砂粒パーティクルの最大数
-    private const int DUST_MAX_PARTICLES = 800;        // 砂ぼこりパーティクルの最大数
+    private const int GRAIN_MAX_PARTICLES = 1200;      // 砂粒パーティクルの最大数
+    private const int DUST_MAX_PARTICLES = 600;        // 砂ぼこりパーティクルの最大数
     private const float DUST_GRAVITY_MODIFIER = -0.03f; // 砂ぼこりの重力係数（わずかに浮く）
     private const float NOISE_OCTAVE_NORM = 0.9375f;   // 4オクターブパーリンノイズの正規化係数
     private const float MIN_FADE_SPAN = 0.01f;         // フェード範囲の最小幅
+    private const int GRAIN_MAX_COLLISION_SHAPES = 32; // 砂粒衝突判定の最大シェイプ数
 
     /// <summary>
     /// 白い円形のアルファテクスチャを生成します。
     /// </summary>
-    /// <param name="size">テクスチャサイズ(px)。</param>
-    /// <param name="hardness">輪郭の硬さ(0〜1)。</param>
-    /// <returns>生成された Texture2D。</returns>
     public static Texture2D CreateRoundTexture(int size, float hardness)
     {
         Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
@@ -67,9 +65,6 @@ public static class SandParticleFactory
     /// <summary>
     /// ノイズで輪郭を崩した煙の塊をタイル状に並べたテクスチャシートを生成します。
     /// </summary>
-    /// <param name="tileSize">1タイルのサイズ(px)。</param>
-    /// <param name="tiles">1辺のタイル分割数。</param>
-    /// <returns>生成された Texture2D。</returns>
     public static Texture2D CreatePuffSheet(int tileSize, int tiles)
     {
         int totalSize = tileSize * tiles;
@@ -97,7 +92,6 @@ public static class SandParticleFactory
                         float dy = v * 2f - 1f;
                         float dist = Mathf.Sqrt(dx * dx + dy * dy);
 
-                        // 4オクターブのフラクタルノイズ
                         float noise = 0f;
                         float amp = 0.5f;
                         float freq = 2.5f;
@@ -128,11 +122,6 @@ public static class SandParticleFactory
     /// <summary>
     /// パーティクル用の半透明マテリアルを生成します。
     /// </summary>
-    /// <param name="tex">割り当てるテクスチャ。</param>
-    /// <param name="isDust">砂ぼこり用マテリアルかどうか。</param>
-    /// <param name="softSettings">ソフトパーティクル設定。</param>
-    /// <param name="logContext">警告ログ出力時のコンテキスト。</param>
-    /// <returns>生成された Material。シェーダーが見つからない場合は null。</returns>
     public static Material CreateParticleMaterial(
         Texture2D tex,
         bool isDust,
@@ -154,13 +143,12 @@ public static class SandParticleFactory
         if (mat.HasProperty("_MainTex")) mat.SetTexture("_MainTex", tex);
         if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", Color.white);
 
-        // URP の Particles/Unlit を半透明(アルファブレンド)に設定
         if (mat.HasProperty("_Surface"))
         {
             mat.SetFloat("_Surface", 1f);
             mat.SetFloat("_Blend", 0f);
-            mat.SetFloat("_SrcBlend", 5f);       // SrcAlpha
-            mat.SetFloat("_DstBlend", 10f);      // OneMinusSrcAlpha
+            mat.SetFloat("_SrcBlend", 5f);
+            mat.SetFloat("_DstBlend", 10f);
             mat.SetFloat("_SrcBlendAlpha", 1f);
             mat.SetFloat("_DstBlendAlpha", 10f);
             mat.SetFloat("_ZWrite", 0f);
@@ -178,7 +166,7 @@ public static class SandParticleFactory
     }
 
     /// <summary>
-    /// 砂粒用の ParticleSystem を構築します。
+    /// 砂粒用の ParticleSystem を構築します（低負荷の衝突設定）。
     /// </summary>
     public static ParticleSystem CreateGrainSystem(Transform parent, Material mat, bool enableCollision, LayerMask collisionMask)
     {
@@ -201,8 +189,8 @@ public static class SandParticleFactory
         col.dampen = 0.5f;
         col.bounce = 0.25f;
         col.lifetimeLoss = 0.1f;
-        col.quality = ParticleSystemCollisionQuality.Medium;
-        col.maxCollisionShapes = 256;
+        col.quality = ParticleSystemCollisionQuality.Low;
+        col.maxCollisionShapes = GRAIN_MAX_COLLISION_SHAPES;
         col.radiusScale = 1f;
 
         ps.Play();
@@ -216,7 +204,6 @@ public static class SandParticleFactory
     {
         ParticleSystem ps = CreateBaseSystem("SandDust", parent, mat, DUST_MAX_PARTICLES, DUST_GRAVITY_MODIFIER);
 
-        // サイズ変化カーブ
         AnimationCurve sizeCurve = new AnimationCurve(
             new Keyframe(0f, 0.25f),
             new Keyframe(0.2f, 0.8f),
@@ -230,7 +217,6 @@ public static class SandParticleFactory
         size.enabled = true;
         size.size = new ParticleSystem.MinMaxCurve(1f, sizeCurve);
 
-        // アルファフェードカーブ
         var color = ps.colorOverLifetime;
         color.enabled = true;
         Gradient gradient = new Gradient();
@@ -246,13 +232,11 @@ public static class SandParticleFactory
         );
         color.color = gradient;
 
-        // 空気抵抗による減速
         var limit = ps.limitVelocityOverLifetime;
         limit.enabled = true;
         limit.limit = new ParticleSystem.MinMaxCurve(0.3f);
         limit.dampen = 0.1f;
 
-        // 渦（ノイズ）
         var noise = ps.noise;
         noise.enabled = turbulence > 0f;
         noise.strength = new ParticleSystem.MinMaxCurve(turbulence);
