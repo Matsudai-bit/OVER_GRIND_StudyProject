@@ -6,6 +6,9 @@
 public sealed class S1P1BossTurnState :
     StateBase<BossController>
 {
+    // State中に使用するAnimation Timeline管理
+    private AnimationTimelineController m_animationTimelineController;
+
     // 1回の方向転換で回転する角度
     private const float TURN_ANGLE = 45.0f;
 
@@ -75,6 +78,8 @@ public sealed class S1P1BossTurnState :
     /// </summary>
     protected override void OnStartState()
     {
+        CacheAnimationTimelineController();
+
         ResetRuntimeState();
 
         if (!TryGetReferences() ||
@@ -201,6 +206,8 @@ public sealed class S1P1BossTurnState :
     /// </summary>
     protected override void OnExitState()
     {
+        StopAnimationTimelines();
+
         Owner.Motor?.StopHorizontalMovement();
 
         if (m_animationEventReceiver != null)
@@ -577,5 +584,35 @@ public sealed class S1P1BossTurnState :
 
         Owner.SetStateExecutionStatus(
             StateExecutionStatus.FAILED);
+    }
+
+    /// <summary>
+    /// 現在フェーズのAnimation Timeline管理を保持します。
+    /// </summary>
+    private void CacheAnimationTimelineController()
+    {
+        m_animationTimelineController =
+            null;
+
+        if (Owner?.PhaseController == null)
+        {
+            return;
+        }
+
+        Owner.PhaseController
+            .TryGetCurrentPhaseComponent(
+                out m_animationTimelineController);
+    }
+
+    /// <summary>
+    /// State中に再生されたAnimation Timelineを停止します。
+    /// </summary>
+    private void StopAnimationTimelines()
+    {
+        m_animationTimelineController?
+            .StopAll();
+
+        m_animationTimelineController =
+            null;
     }
 }

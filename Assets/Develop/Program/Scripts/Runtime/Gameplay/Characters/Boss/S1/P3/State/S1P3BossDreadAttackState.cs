@@ -9,6 +9,9 @@ using UnityEngine;
 public sealed class S1P3BossDreadAttackState :
     StateBase<BossController>
 {
+    // State中に使用するAnimation Timeline管理
+    private AnimationTimelineController m_animationTimelineController;
+
     // AnimationEvent・飛翔体イベント待機による永久停止を防ぐ上限時間
     private const float MAX_STATE_DURATION = 30.0f;
 
@@ -70,6 +73,8 @@ public sealed class S1P3BossDreadAttackState :
     /// </summary>
     protected override void OnStartState()
     {
+        CacheAnimationTimelineController();
+
         ResetRuntimeState();
 
         if (!TryGetReferences())
@@ -169,6 +174,8 @@ public sealed class S1P3BossDreadAttackState :
     /// </summary>
     protected override void OnExitState()
     {
+        StopAnimationTimelines();
+
         UnsubscribeAnimationEvent();
         UnsubscribeOilEvents();
 
@@ -935,5 +942,35 @@ public sealed class S1P3BossDreadAttackState :
 
         m_isAnimationEventSubscribed =
             false;
+    }
+
+    /// <summary>
+    /// 現在フェーズのAnimation Timeline管理を保持します。
+    /// </summary>
+    private void CacheAnimationTimelineController()
+    {
+        m_animationTimelineController =
+            null;
+
+        if (Owner?.PhaseController == null)
+        {
+            return;
+        }
+
+        Owner.PhaseController
+            .TryGetCurrentPhaseComponent(
+                out m_animationTimelineController);
+    }
+
+    /// <summary>
+    /// State中に再生されたAnimation Timelineを停止します。
+    /// </summary>
+    private void StopAnimationTimelines()
+    {
+        m_animationTimelineController?
+            .StopAll();
+
+        m_animationTimelineController =
+            null;
     }
 }

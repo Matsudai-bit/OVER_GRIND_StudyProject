@@ -8,6 +8,9 @@ using UnityEngine;
 public sealed class S1P3BossChargingAttackState :
     StateBase<BossController>
 {
+    // State中に使用するAnimation Timeline管理
+    private AnimationTimelineController m_animationTimelineController;
+
     // フェーズ3で行う突進回数
     private const int CHARGE_COUNT = 3;
 
@@ -61,6 +64,8 @@ public sealed class S1P3BossChargingAttackState :
     /// </summary>
     protected override void OnStartState()
     {
+        CacheAnimationTimelineController();
+
         m_stateElapsedTime =
             0.0f;
 
@@ -597,6 +602,8 @@ public sealed class S1P3BossChargingAttackState :
     /// </summary>
     protected override void OnExitState()
     {
+        StopAnimationTimelines();
+
 
         ReleaseChargeExecutor();
 
@@ -696,5 +703,35 @@ public sealed class S1P3BossChargingAttackState :
 
         Owner.SetStateExecutionStatus(
             StateExecutionStatus.FAILED);
+    }
+
+    /// <summary>
+    /// 現在フェーズのAnimation Timeline管理を保持します。
+    /// </summary>
+    private void CacheAnimationTimelineController()
+    {
+        m_animationTimelineController =
+            null;
+
+        if (Owner?.PhaseController == null)
+        {
+            return;
+        }
+
+        Owner.PhaseController
+            .TryGetCurrentPhaseComponent(
+                out m_animationTimelineController);
+    }
+
+    /// <summary>
+    /// State中に再生されたAnimation Timelineを停止します。
+    /// </summary>
+    private void StopAnimationTimelines()
+    {
+        m_animationTimelineController?
+            .StopAll();
+
+        m_animationTimelineController =
+            null;
     }
 }

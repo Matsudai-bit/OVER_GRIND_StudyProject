@@ -8,6 +8,9 @@
 public sealed class S1P2BossMoveState :
     StateBase<BossController>
 {
+    // State中に使用するAnimation Timeline管理
+    private AnimationTimelineController m_animationTimelineController;
+
     // 移動・追加攻撃待機による永久停止を防ぐ上限時間
     private const float MAX_STATE_DURATION = 20.0f;
 
@@ -53,6 +56,8 @@ public sealed class S1P2BossMoveState :
     /// </summary>
     protected override void OnStartState()
     {
+        CacheAnimationTimelineController();
+
         ResetRuntimeState();
 
         if (!TryGetReferences())
@@ -264,6 +269,8 @@ public sealed class S1P2BossMoveState :
     /// </summary>
     protected override void OnExitState()
     {
+        StopAnimationTimelines();
+
         /*
          * State終了時には必ず
          * 移動中の攻撃判定を無効化します。
@@ -724,4 +731,34 @@ public sealed class S1P2BossMoveState :
     }
 
 
+
+    /// <summary>
+    /// 現在フェーズのAnimation Timeline管理を保持します。
+    /// </summary>
+    private void CacheAnimationTimelineController()
+    {
+        m_animationTimelineController =
+            null;
+
+        if (Owner?.PhaseController == null)
+        {
+            return;
+        }
+
+        Owner.PhaseController
+            .TryGetCurrentPhaseComponent(
+                out m_animationTimelineController);
+    }
+
+    /// <summary>
+    /// State中に再生されたAnimation Timelineを停止します。
+    /// </summary>
+    private void StopAnimationTimelines()
+    {
+        m_animationTimelineController?
+            .StopAll();
+
+        m_animationTimelineController =
+            null;
+    }
 }
