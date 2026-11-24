@@ -66,12 +66,6 @@ public class ContainerController : MonoBehaviour
         m_backActionRef?.action.Enable();
     }
 
-    private void OnDisable()
-    {
-        // –³Œø‚É‚·‚é
-        //m_backActionRef?.action.Disable();
-    }
-
     private void Start()
     {
         // ‘I‘ğó‘Ô‚Ì‰Šú‰»

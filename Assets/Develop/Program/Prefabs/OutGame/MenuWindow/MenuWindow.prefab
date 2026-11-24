@@ -424,15 +424,17 @@ MonoBehaviour:
   - ElementType: 1
     Content: LeftRight
   - ElementType: 2
-    Content: +
+    Content: ' + '
   - ElementType: 1
     Content: Charge
   - ElementType: 2
     Content: "\u9577\u62BC\u3057"
   - ElementType: 2
     Content: ' -> '
+  - ElementType: 1
+    Content: Charge
   - ElementType: 2
-    Content: "\u96E2\u3059"
+    Content: "\u3092\u96E2\u3059"
   m_parentObject: {fileID: 8847514102306311526}
   m_image: {fileID: 1538981737402405604, guid: 4be4ae10406baed45b5542917964ba8c, type: 3}
   m_text: {fileID: 7765580297506360851, guid: 8e97bce84a0aa2540b421595f7f1874f, type: 3}
@@ -2461,6 +2463,8 @@ MonoBehaviour:
   m_elements:
   - ElementType: 1
     Content: Move
+  - ElementType: 2
+    Content: " \u3067\u79FB\u52D5"
   m_parentObject: {fileID: 8847514102306311526}
   m_image: {fileID: 1538981737402405604, guid: 4be4ae10406baed45b5542917964ba8c, type: 3}
   m_text: {fileID: 7765580297506360851, guid: 8e97bce84a0aa2540b421595f7f1874f, type: 3}
@@ -3167,6 +3171,8 @@ MonoBehaviour:
   m_elements:
   - ElementType: 1
     Content: Jump
+  - ElementType: 2
+    Content: " \u3067\u30B8\u30E3\u30F3\u30D7"
   m_parentObject: {fileID: 8847514102306311526}
   m_image: {fileID: 1538981737402405604, guid: 4be4ae10406baed45b5542917964ba8c, type: 3}
   m_text: {fileID: 7765580297506360851, guid: 8e97bce84a0aa2540b421595f7f1874f, type: 3}
@@ -4097,6 +4103,8 @@ MonoBehaviour:
     Content: "\u52A9\u8D70\u3092\u3064\u3051\u306A\u304C\u3089"
   - ElementType: 1
     Content: Attack
+  - ElementType: 2
+    Content: " \u3067\u653B\u6483"
   m_parentObject: {fileID: 8847514102306311526}
   m_image: {fileID: 1538981737402405604, guid: 4be4ae10406baed45b5542917964ba8c, type: 3}
   m_text: {fileID: 7765580297506360851, guid: 8e97bce84a0aa2540b421595f7f1874f, type: 3}
@@ -5012,8 +5020,10 @@ MonoBehaviour:
     Content: Charge
   - ElementType: 2
     Content: ' -> '
+  - ElementType: 1
+    Content: Charge
   - ElementType: 2
-    Content: "\u96E2\u3059"
+    Content: "\u3092\u96E2\u3059"
   m_parentObject: {fileID: 8847514102306311526}
   m_image: {fileID: 1538981737402405604, guid: 4be4ae10406baed45b5542917964ba8c, type: 3}
   m_text: {fileID: 7765580297506360851, guid: 8e97bce84a0aa2540b421595f7f1874f, type: 3}
@@ -6241,6 +6251,81 @@ MonoBehaviour:
   m_optionItems:
   - {fileID: 4965002345994829426}
   - {fileID: 7812222455193371469}
+  m_onChangePageEvent:
+    m_PersistentCalls:
+      m_Calls:
+      - m_Target: {fileID: 3911048132064533222}
+        m_TargetAssemblyTypeName: ParentButton, Assembly-CSharp
+        m_MethodName: OnCursorExit
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+      - m_Target: {fileID: 4754605198882715882}
+        m_TargetAssemblyTypeName: ParentButton, Assembly-CSharp
+        m_MethodName: OnCursorExit
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+      - m_Target: {fileID: 2099863977213539430}
+        m_TargetAssemblyTypeName: ParentButton, Assembly-CSharp
+        m_MethodName: OnCursorExit
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+      - m_Target: {fileID: 4426717388249914620}
+        m_TargetAssemblyTypeName: ParentButton, Assembly-CSharp
+        m_MethodName: OnCursorExit
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+      - m_Target: {fileID: 5961532442828966816}
+        m_TargetAssemblyTypeName: ButtonSelector, Assembly-CSharp
+        m_MethodName: ResetCursor
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+      - m_Target: {fileID: 3051745278091280041}
+        m_TargetAssemblyTypeName: ButtonSelector, Assembly-CSharp
+        m_MethodName: ResetCursor
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
   m_changePageLeftActionRef: {fileID: 5876077813198355539, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_changePageRightActionRef: {fileID: -427132046596296841, guid: 052faaac586de48259a63d0c4782560b, type: 3}
 --- !u!1 &7360955294254224136
