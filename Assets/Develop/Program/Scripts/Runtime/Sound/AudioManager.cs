@@ -28,7 +28,19 @@ public class AudioManager : MonoBehaviour
     [SerializeField] private AudioMixerGroup m_seInGameGroup;
     [SerializeField] private AudioMixerGroup m_seSystemGroup;
     [SerializeField] private AudioMixerGroup m_voiceGroup;
-    [SerializeField] private AudioMixerGroup m_seInGamePlayerGroup;
+
+    [Header("ポーズ中も再生する音声カテゴリ")]
+    [SerializeField] private bool m_keepBgmPlayingDuringPause = true;
+    [SerializeField] private bool m_keepSystemSePlayingDuringPause = true;
+    [SerializeField] private bool m_keepVoicePlayingDuringPause = false;
+
+    // AudioListener.pauseをこのマネージャーで管理します。
+    private bool m_isInGameAudioPaused;
+
+    /// <summary>
+    /// インゲーム音声を一時停止しているか取得します。
+    /// </summary>
+    public bool IsInGameAudioPaused => m_isInGameAudioPaused;
 
     // AudioSourceの再利用と現在再生中のノード
     private readonly List<AudioSourceNode> m_pool = new List<AudioSourceNode>();
@@ -47,9 +59,48 @@ public class AudioManager : MonoBehaviour
         InitializePool();
     }
 
+    private void OnDisable()
+    {
+        // 無効化後にAudioListener.pauseが残ることを防止します。
+        if (Instance == this) ResumeInGameAudio();
+    }
+
     private void OnDestroy()
     {
-        if (Instance == this) Instance = null;
+        if (Instance != this) return;
+
+        ResumeInGameAudio();
+        Instance = null;
+    }
+
+    /// <summary>
+    /// インゲーム音声を一時停止します。DSP予約再生も停止中の時刻を維持します。
+    /// </summary>
+    public void PauseInGameAudio()
+    {
+        if (m_isInGameAudioPaused) return;
+
+        // 再生済みのノードにもカテゴリ別の除外設定を反映します。
+        foreach (AudioSourceNode node in m_activeNodes)
+        {
+            if (node == null) continue;
+            node.SetIgnoreListenerPause(ShouldIgnoreListenerPause(node.Category));
+        }
+
+        m_isInGameAudioPaused = true;
+        AudioListener.pause = true;
+    }
+
+    /// <summary>
+    /// インゲーム音声の一時停止を解除し、停止位置から再開します。
+    /// </summary>
+    public void ResumeInGameAudio()
+    {
+        if (!m_isInGameAudioPaused) return;
+
+        // 一時停止前の再生位置とDSP予約時間が維持されます。
+        AudioListener.pause = false;
+        m_isInGameAudioPaused = false;
     }
 
     /// <summary>
@@ -204,44 +255,18 @@ public class AudioManager : MonoBehaviour
     /// 指定したTransformに追従するすべての音声を停止します。
     /// </summary>
     /// <param name="target">追従先。</param>
-    public void Stop3DFollowing(
-        Transform target)
+    public void Stop3DFollowing(Transform target)
     {
-        if (target == null)
-        {
-            return;
-        }
+        if (target == null) return;
 
-        /*
-         * StopAndReturnToPool() 内で m_activeNodes から
-         * ノードが削除されるため、走査中のListを直接変更しません。
-         *
-         * 先に停止対象だけを別Listへ退避してから停止します。
-         */
-        List<AudioSourceNode> targetNodes =
-            new List<AudioSourceNode>();
-
-        foreach (AudioSourceNode node
-                 in m_activeNodes)
+        // 追従先変更後も正しく停止できるよう、現在のノード状態で判定します。
+        for (int i = m_activeNodes.Count - 1; i >= 0; i--)
         {
-            if (node == null)
+            AudioSourceNode node = m_activeNodes[i];
+            if (node != null && node.FollowTarget == target)
             {
-                continue;
+                node.StopAndReturnToPool();
             }
-
-            if (node.FollowTarget != target)
-            {
-                continue;
-            }
-
-            targetNodes.Add(
-                node);
-        }
-
-        foreach (AudioSourceNode node
-                 in targetNodes)
-        {
-            node.StopAndReturnToPool();
         }
     }
 
@@ -250,35 +275,37 @@ public class AudioManager : MonoBehaviour
     /// </summary>
     public void StopAllInGameSounds()
     {
-        /*
-         * StopAndReturnToPool() により m_activeNodes が変更されるため、
-         * 停止対象を別Listへ退避してから停止します。
-         */
-        List<AudioSourceNode> targetNodes =
-            new List<AudioSourceNode>();
-
-        foreach (AudioSourceNode node
-                 in m_activeNodes)
+        for (int i = m_activeNodes.Count - 1; i >= 0; i--)
         {
-            if (node == null)
+            AudioSourceNode node = m_activeNodes[i];
+            if (node != null && node.Category == SoundCategory.SE_InGame)
             {
-                continue;
+                node.StopAndReturnToPool();
             }
-
-            if (node.Category !=
-                SoundCategory.SE_InGame)
-            {
-                continue;
-            }
-
-            targetNodes.Add(
-                node);
         }
+    }
 
-        foreach (AudioSourceNode node
-                 in targetNodes)
+    /// <summary>
+    /// ポーズ中も音を鳴らすカテゴリかを判定します。
+    /// </summary>
+    /// <param name="category">音声カテゴリ。</param>
+    /// <returns>true：ポーズ対象外。false：ポーズ対象。</returns>
+    private bool ShouldIgnoreListenerPause(SoundCategory category)
+    {
+        switch (category)
         {
-            node.StopAndReturnToPool();
+            case SoundCategory.BGM:
+                return m_keepBgmPlayingDuringPause;
+
+            case SoundCategory.SE_System:
+                return m_keepSystemSePlayingDuringPause;
+
+            case SoundCategory.Voice:
+                return m_keepVoicePlayingDuringPause;
+
+            case SoundCategory.SE_InGame:
+            default:
+                return false;
         }
     }
 
@@ -371,6 +398,10 @@ public class AudioManager : MonoBehaviour
         if (node == null) return null;
 
         node.Setup(data, GetMixerGroup(data.m_category), ReturnNodeToPool);
+
+        // AudioSourceNodeはプールで再利用されるため、再生ごとに設定します。
+        // ポーズ中に新たに再生するUI音も例外なく鳴らせるようにします。
+        node.SetIgnoreListenerPause(ShouldIgnoreListenerPause(data.m_category));
         if (loopOverride.HasValue) node.SetLoop(loopOverride.Value);
         node.SetVolumeMultiplier(initialVolumeMultiplier);
 
@@ -445,7 +476,6 @@ public class AudioManager : MonoBehaviour
             SoundCategory.BGM => m_bgmGroup,
             SoundCategory.SE_InGame => m_seInGameGroup,
             SoundCategory.Voice => m_voiceGroup,
-            SoundCategory.SE_InGame_Player => m_seInGamePlayerGroup,
             _ => m_seSystemGroup,
         };
     }

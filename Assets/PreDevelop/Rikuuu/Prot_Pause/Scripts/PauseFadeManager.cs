@@ -220,6 +220,7 @@ public class PauseFadeManager : MonoBehaviour, IUIInputControllable
     /// </summary>
     public void OnWindowOpened()
     {
+        AudioManager.Instance.PauseInGameAudio();
         Time.timeScale = 0.0f;
     }
 
@@ -229,6 +230,8 @@ public class PauseFadeManager : MonoBehaviour, IUIInputControllable
     public void OnWindowClosed()
     {
         Time.timeScale = 1.0f;
+        AudioManager.Instance.ResumeInGameAudio();
+
     }
 
     /// <summary>
