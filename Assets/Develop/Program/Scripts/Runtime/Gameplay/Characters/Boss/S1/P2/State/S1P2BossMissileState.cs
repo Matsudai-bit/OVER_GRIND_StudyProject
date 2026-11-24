@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 /// <summary>
 /// ステージ1フェーズ2のミサイル攻撃を実行します。
@@ -6,6 +6,9 @@ using UnityEngine;
 public sealed class S1P2BossMissileState :
     StateBase<BossController>
 {
+    // AnimationEventやExecutor待機による永久停止を防ぐ上限時間
+    private const float MAX_STATE_DURATION = 30.0f;
+
     // S1P2固有参照
     private S1P2BossReferences m_references;
 
@@ -38,6 +41,9 @@ public sealed class S1P2BossMissileState :
 
     // AnimationEvent受信
     private AnimationEventReceiver m_animationEventReceiver;
+
+    // State開始からの経過時間
+    private float m_stateElapsedTime;
 
     /// <summary>
     /// ミサイル攻撃を開始します。
@@ -87,6 +93,9 @@ public sealed class S1P2BossMissileState :
 
         Owner.SetStateExecutionStatus(
             StateExecutionStatus.RUNNING);
+
+        Owner.AnimationController.SetTrigger(
+            m_animationTriggerID);
     }
 
     /// <summary>
@@ -102,6 +111,23 @@ public sealed class S1P2BossMissileState :
             Owner.GetStateExecutionStatus() !=
                 StateExecutionStatus.RUNNING)
         {
+            return;
+        }
+
+        m_stateElapsedTime +=
+            Mathf.Max(
+                0.0f,
+                deltaTime);
+
+        if (m_stateElapsedTime >=
+            MAX_STATE_DURATION)
+        {
+            Debug.LogError(
+                $"[{nameof(S1P2BossMissileState)}] " +
+                "ミサイル攻撃がタイムアウトしました。");
+
+            RequestFailedIdleState();
+
             return;
         }
 
@@ -473,9 +499,6 @@ public sealed class S1P2BossMissileState :
         m_animationEventReceiver.AttackEventReceived +=
             HandleAttackEvent;
 
-        Owner.AnimationController.SetTrigger(
-            m_animationTriggerID);
-
         return true;
     }
 
@@ -509,6 +532,9 @@ public sealed class S1P2BossMissileState :
 
         m_isAnimationCompleted =
             false;
+
+        m_stateElapsedTime =
+            0.0f;
     }
 
     /// <summary>

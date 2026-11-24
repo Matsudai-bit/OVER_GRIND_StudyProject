@@ -1,52 +1,58 @@
-using System.Collections.Generic;
+ï»¿using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// ƒXƒe[ƒW1ƒtƒF[ƒY2‚Ì•ö‰ó‰‰o‚ğÄ¶‚µA
-/// ©g‚Öƒ~ƒTƒCƒ‹‚ğ˜A‘±”­Ë‚µ‚Ä‚©‚çŸƒtƒF[ƒY‚ÖˆÚs‚µ‚Ü‚·B
+/// ã‚¹ãƒ†ãƒ¼ã‚¸1ãƒ•ã‚§ãƒ¼ã‚º2ã®å´©å£Šæ¼”å‡ºã‚’å†ç”Ÿã—ã€
+/// è‡ªèº«ã¸ãƒŸã‚µã‚¤ãƒ«ã‚’é€£ç¶šç™ºå°„ã—ã¦ã‹ã‚‰æ¬¡ãƒ•ã‚§ãƒ¼ã‚ºã¸ç§»è¡Œã—ã¾ã™ã€‚
 /// </summary>
 public sealed class S1P2BossCollapsingState :
     StateBase<BossController>
 {
-    // •ö‰ó‚É”­Ë‚·‚éƒ~ƒTƒCƒ‹”
+    // å´©å£Šæ™‚ã«ç™ºå°„ã™ã‚‹ãƒŸã‚µã‚¤ãƒ«æ•°
     private const int COLLAPSE_MISSILE_COUNT = 6;
 
-    // S1P2ŒÅ—LQÆ
+    // Sequenceã‚„Executorå¾…æ©Ÿã«ã‚ˆã‚‹æ°¸ä¹…åœæ­¢ã‚’é˜²ãä¸Šé™æ™‚é–“
+    private const float MAX_STATE_DURATION = 30.0f;
+
+    // S1P2å›ºæœ‰å‚ç…§
     private S1P2BossReferences m_references;
 
-    // ƒ~ƒTƒCƒ‹UŒ‚QÆ
+    // ãƒŸã‚µã‚¤ãƒ«æ”»æ’ƒå‚ç…§
     private S1BossMissileReferences m_missileReferences;
 
-    // ƒ~ƒTƒCƒ‹Às§Œä
+    // ãƒŸã‚µã‚¤ãƒ«å®Ÿè¡Œåˆ¶å¾¡
     private S1P2BossMissileExecutor m_missileExecutor;
 
-    // 1”­”­Ë—pƒ~ƒTƒCƒ‹ƒpƒ‰ƒ[ƒ^
+    // 1ç™ºç™ºå°„ç”¨ãƒŸã‚µã‚¤ãƒ«ãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿
     private S1P2BossMissileStateParameters
         m_singleShotMissileParameters;
 
-    // Ÿ‚Ég—p‚·‚é©ŒÈUŒ‚‘ÎÛIndex
+    // æ¬¡ã«ä½¿ç”¨ã™ã‚‹è‡ªå·±æ”»æ’ƒå¯¾è±¡Index
     private int m_nextTargetIndex;
 
-    // ”­ËÏ‚İƒ~ƒTƒCƒ‹”
+    // ç™ºå°„æ¸ˆã¿ãƒŸã‚µã‚¤ãƒ«æ•°
     private int m_launchedMissileCount;
 
-    // Ÿ’e”­Ë‚Ü‚Å‚ÌŒo‰ßŠÔ
+    // æ¬¡å¼¾ç™ºå°„ã¾ã§ã®çµŒéæ™‚é–“
     private float m_launchElapsedTime;
 
-    // Executor‚ª1”­•ª‚ğÀs’†‚©
+    // ExecutorãŒ1ç™ºåˆ†ã‚’å®Ÿè¡Œä¸­ã‹
     private bool m_isMissileExecuting;
 
-    // ‘Sƒ~ƒTƒCƒ‹‚Ì”­Ë‚ªŠ®—¹‚µ‚½‚©
+    // å…¨ãƒŸã‚µã‚¤ãƒ«ã®ç™ºå°„ãŒå®Œäº†ã—ãŸã‹
     private bool m_isMissileSequenceCompleted;
 
-    // •ö‰óSequence‚ªŠ®—¹‚µ‚½‚©
+    // å´©å£ŠSequenceãŒå®Œäº†ã—ãŸã‹
     private bool m_isSequenceCompleted;
 
-    // Sequence•ÏXƒCƒxƒ“ƒg‚ğw“Ç’†‚©
+    // Sequenceå¤‰æ›´ã‚¤ãƒ™ãƒ³ãƒˆã‚’è³¼èª­ä¸­ã‹
     private bool m_isSequenceEventRegistered;
 
+    // Stateé–‹å§‹ã‹ã‚‰ã®çµŒéæ™‚é–“
+    private float m_stateElapsedTime;
+
     /// <summary>
-    /// •ö‰ó‰‰o‚ğŠJn‚µ‚Ü‚·B
+    /// å´©å£Šæ¼”å‡ºã‚’é–‹å§‹ã—ã¾ã™ã€‚
     /// </summary>
     protected override void OnStartState()
     {
@@ -60,8 +66,8 @@ public sealed class S1P2BossCollapsingState :
         }
 
         /*
-         * ’Êí‚ÌP2ƒ~ƒTƒCƒ‹İ’è‚ğ—¬—p‚µ‚Â‚ÂA
-         * Executor1‰ñ‚ ‚½‚è‚Ì”­Ë”‚¾‚¯1”­‚ÉŒÅ’è‚µ‚Ü‚·B
+         * é€šå¸¸ã®P2ãƒŸã‚µã‚¤ãƒ«è¨­å®šã‚’æµç”¨ã—ã¤ã¤ã€
+         * Executor1å›ã‚ãŸã‚Šã®ç™ºå°„æ•°ã ã‘1ç™ºã«å›ºå®šã—ã¾ã™ã€‚
          */
         m_singleShotMissileParameters =
             m_references
@@ -74,7 +80,7 @@ public sealed class S1P2BossCollapsingState :
         {
             Debug.LogError(
                 $"[{nameof(S1P2BossCollapsingState)}] " +
-                "•ö‰ó—pƒ~ƒTƒCƒ‹ƒpƒ‰ƒ[ƒ^‚ğ¶¬‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½B");
+                "å´©å£Šç”¨ãƒŸã‚µã‚¤ãƒ«ãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿ã‚’ç”Ÿæˆã§ãã¾ã›ã‚“ã§ã—ãŸã€‚");
 
             SetFailed();
 
@@ -82,8 +88,8 @@ public sealed class S1P2BossCollapsingState :
         }
 
         /*
-         * SequenceŠJn’Ê’m‚ğæ‚è‚±‚Ú‚³‚È‚¢‚æ‚¤A
-         * Raise‚æ‚èæ‚Éw“Ç‚µ‚Ü‚·B
+         * Sequenceé–‹å§‹é€šçŸ¥ã‚’å–ã‚Šã“ã¼ã•ãªã„ã‚ˆã†ã€
+         * Raiseã‚ˆã‚Šå…ˆã«è³¼èª­ã—ã¾ã™ã€‚
          */
         m_references.SequenceChangedEvent.RegisterListener(
             HandleSequenceChanged);
@@ -94,13 +100,13 @@ public sealed class S1P2BossCollapsingState :
         Owner.SetStateExecutionStatus(
             StateExecutionStatus.RUNNING);
 
-        // •ö‰ó‰‰o‚ğŠJn‚µ‚Ü‚·B
+        // å´©å£Šæ¼”å‡ºã‚’é–‹å§‹ã—ã¾ã™ã€‚
         m_references.SequenceRequestEvent.Raise(
             m_references.DestructionSequenceAsset);
 
         /*
-         * •ö‰ó‰‰oŠJn‚Æ“¯‚É
-         * 1”­–Ú‚Ì©ŒÈUŒ‚ƒ~ƒTƒCƒ‹‚ğ”­Ë‚µ‚Ü‚·B
+         * å´©å£Šæ¼”å‡ºé–‹å§‹ã¨åŒæ™‚ã«
+         * 1ç™ºç›®ã®è‡ªå·±æ”»æ’ƒãƒŸã‚µã‚¤ãƒ«ã‚’ç™ºå°„ã—ã¾ã™ã€‚
          */
         if (!StartNextMissile())
         {
@@ -109,16 +115,52 @@ public sealed class S1P2BossCollapsingState :
     }
 
     /// <summary>
-    /// ©ŒÈUŒ‚ƒ~ƒTƒCƒ‹‚Ì˜A‘±”­Ë‚ğXV‚µ‚Ü‚·B
+    /// è‡ªå·±æ”»æ’ƒãƒŸã‚µã‚¤ãƒ«ã®é€£ç¶šç™ºå°„ã‚’æ›´æ–°ã—ã¾ã™ã€‚
     /// </summary>
-    /// <param name="deltaTime">Œo‰ßŠÔB</param>
+    /// <param name="deltaTime">çµŒéæ™‚é–“ã€‚</param>
     protected override void OnUpdate(
         float deltaTime)
     {
         if (Owner == null ||
             Owner.GetStateExecutionStatus() !=
-                StateExecutionStatus.RUNNING ||
-            m_isMissileSequenceCompleted)
+                StateExecutionStatus.RUNNING)
+        {
+            return;
+        }
+
+        m_stateElapsedTime +=
+            Mathf.Max(
+                0.0f,
+                deltaTime);
+
+        if (m_stateElapsedTime >=
+            MAX_STATE_DURATION)
+        {
+            Debug.LogWarning(
+                $"[{nameof(S1P2BossCollapsingState)}] " +
+                "å´©å£ŠçŠ¶æ…‹ãŒã‚¿ã‚¤ãƒ ã‚¢ã‚¦ãƒˆã—ãŸãŸã‚ã€" +
+                "ãƒ•ã‚§ãƒ¼ã‚ºç§»è¡Œã‚’å¼·åˆ¶çš„ã«ç¶šè¡Œã—ã¾ã™ã€‚");
+
+            /*
+             * ãƒ•ã‚§ãƒ¼ã‚ºç§»è¡ŒStateã§FAILEDã®ã¾ã¾åœæ­¢ã—ãªã„ã‚ˆã†ã€
+             * å¾…æ©Ÿæ¡ä»¶ã‚’æº€ãŸã—ãŸæ‰±ã„ã«ã—ã¦æ¬¡ãƒ•ã‚§ãƒ¼ã‚ºã¸é€²ã‚ã¾ã™ã€‚
+             */
+            m_isMissileSequenceCompleted =
+                true;
+
+            m_isSequenceCompleted =
+                true;
+
+            TryCompleteCollapse();
+
+            return;
+        }
+
+        /*
+         * ãƒŸã‚µã‚¤ãƒ«å®Œäº†å¾Œã‚‚Sequenceå®Œäº†é€šçŸ¥ã¯å¾…æ©Ÿã—ã¾ã™ã€‚
+         * ãŸã ã—ä¸Šè¨˜ã‚¿ã‚¤ãƒ ã‚¢ã‚¦ãƒˆç›£è¦–ã¯ç¶™ç¶šã—ã¾ã™ã€‚
+         */
+        if (m_isMissileSequenceCompleted)
         {
             return;
         }
@@ -131,8 +173,8 @@ public sealed class S1P2BossCollapsingState :
         }
 
         /*
-         * Œ»İ‚Ì1”­•ª‚ÌExecutor‚ª“®ì’†‚È‚ç
-         * Š®—¹‚·‚é‚Ü‚ÅXV‚µ‚Ü‚·B
+         * ç¾åœ¨ã®1ç™ºåˆ†ã®ExecutorãŒå‹•ä½œä¸­ãªã‚‰
+         * å®Œäº†ã™ã‚‹ã¾ã§æ›´æ–°ã—ã¾ã™ã€‚
          */
         if (m_isMissileExecuting)
         {
@@ -155,8 +197,8 @@ public sealed class S1P2BossCollapsingState :
                 false;
 
             /*
-             * w’è”‚ğŒ‚‚¿I‚¦‚Ä‚¢‚ê‚Î
-             * ƒ~ƒTƒCƒ‹‘¤‚Ìˆ—‚ÍŠ®—¹‚Å‚·B
+             * æŒ‡å®šæ•°ã‚’æ’ƒã¡çµ‚ãˆã¦ã„ã‚Œã°
+             * ãƒŸã‚µã‚¤ãƒ«å´ã®å‡¦ç†ã¯å®Œäº†ã§ã™ã€‚
              */
             if (m_launchedMissileCount >=
                 COLLAPSE_MISSILE_COUNT)
@@ -174,8 +216,8 @@ public sealed class S1P2BossCollapsingState :
         }
 
         /*
-         * Ÿ‚Ì”­Ë‚Ü‚Å‚Í’Êíƒ~ƒTƒCƒ‹‚Æ“¯‚¶
-         * LaunchInterval‚ğg—p‚µ‚Ü‚·B
+         * æ¬¡ã®ç™ºå°„ã¾ã§ã¯é€šå¸¸ãƒŸã‚µã‚¤ãƒ«ã¨åŒã˜
+         * LaunchIntervalã‚’ä½¿ç”¨ã—ã¾ã™ã€‚
          */
         m_launchElapsedTime +=
             Mathf.Max(
@@ -198,7 +240,7 @@ public sealed class S1P2BossCollapsingState :
     }
 
     /// <summary>
-    /// StateI—¹ˆ—‚ğs‚¢‚Ü‚·B
+    /// Stateçµ‚äº†å‡¦ç†ã‚’è¡Œã„ã¾ã™ã€‚
     /// </summary>
     protected override void OnExitState()
     {
@@ -228,11 +270,11 @@ public sealed class S1P2BossCollapsingState :
     }
 
     /// <summary>
-    /// Ÿ‚Ì©ŒÈUŒ‚ƒ~ƒTƒCƒ‹‚ğ1”­ŠJn‚µ‚Ü‚·B
+    /// æ¬¡ã®è‡ªå·±æ”»æ’ƒãƒŸã‚µã‚¤ãƒ«ã‚’1ç™ºé–‹å§‹ã—ã¾ã™ã€‚
     /// </summary>
     /// <returns>
-    /// trueFŠJn‚Å‚«‚Ü‚µ‚½B
-    /// falseFŠJn‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½B
+    /// trueï¼šé–‹å§‹ã§ãã¾ã—ãŸã€‚
+    /// falseï¼šé–‹å§‹ã§ãã¾ã›ã‚“ã§ã—ãŸã€‚
     /// </returns>
     private bool StartNextMissile()
     {
@@ -252,14 +294,14 @@ public sealed class S1P2BossCollapsingState :
         {
             Debug.LogError(
                 $"[{nameof(S1P2BossCollapsingState)}] " +
-                "©ŒÈUŒ‚ƒ~ƒTƒCƒ‹‚Ì‘ÎÛ‚ğæ“¾‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½B");
+                "è‡ªå·±æ”»æ’ƒãƒŸã‚µã‚¤ãƒ«ã®å¯¾è±¡ã‚’å–å¾—ã§ãã¾ã›ã‚“ã§ã—ãŸã€‚");
 
             return false;
         }
 
         /*
-         * Executor©‘Ì‚É‚Íè‚ğ‰Á‚¦‚¸A
-         * 1”­‚²‚Æ‚É‘ÎÛTransform‚ğw’è‚µ‚ÄÄ—˜—p‚µ‚Ü‚·B
+         * Executorè‡ªä½“ã«ã¯æ‰‹ã‚’åŠ ãˆãšã€
+         * 1ç™ºã”ã¨ã«å¯¾è±¡Transformã‚’æŒ‡å®šã—ã¦å†åˆ©ç”¨ã—ã¾ã™ã€‚
          */
         if (!m_missileExecutor.PrepareAttack(
                 m_missileReferences,
@@ -268,7 +310,7 @@ public sealed class S1P2BossCollapsingState :
         {
             Debug.LogError(
                 $"[{nameof(S1P2BossCollapsingState)}] " +
-                "©ŒÈUŒ‚ƒ~ƒTƒCƒ‹‚ğ€”õ‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½B");
+                "è‡ªå·±æ”»æ’ƒãƒŸã‚µã‚¤ãƒ«ã‚’æº–å‚™ã§ãã¾ã›ã‚“ã§ã—ãŸã€‚");
 
             return false;
         }
@@ -277,7 +319,7 @@ public sealed class S1P2BossCollapsingState :
         {
             Debug.LogError(
                 $"[{nameof(S1P2BossCollapsingState)}] " +
-                "©ŒÈUŒ‚ƒ~ƒTƒCƒ‹‚ğ”­Ë‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½B");
+                "è‡ªå·±æ”»æ’ƒãƒŸã‚µã‚¤ãƒ«ã‚’ç™ºå°„ã§ãã¾ã›ã‚“ã§ã—ãŸã€‚");
 
             return false;
         }
@@ -291,12 +333,12 @@ public sealed class S1P2BossCollapsingState :
     }
 
     /// <summary>
-    /// Ÿ‚Éƒ~ƒTƒCƒ‹‚ğ“–‚Ä‚éƒ{ƒX•”ˆÊ‚ğæ“¾‚µ‚Ü‚·B
+    /// æ¬¡ã«ãƒŸã‚µã‚¤ãƒ«ã‚’å½“ã¦ã‚‹ãƒœã‚¹éƒ¨ä½ã‚’å–å¾—ã—ã¾ã™ã€‚
     /// </summary>
-    /// <param name="target">æ“¾‚µ‚½‘ÎÛB</param>
+    /// <param name="target">å–å¾—ã—ãŸå¯¾è±¡ã€‚</param>
     /// <returns>
-    /// trueFæ“¾‚Å‚«‚Ü‚µ‚½B
-    /// falseFæ“¾‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½B
+    /// trueï¼šå–å¾—ã§ãã¾ã—ãŸã€‚
+    /// falseï¼šå–å¾—ã§ãã¾ã›ã‚“ã§ã—ãŸã€‚
     /// </returns>
     private bool TryGetNextMissileTarget(
         out Transform target)
@@ -315,8 +357,8 @@ public sealed class S1P2BossCollapsingState :
         }
 
         /*
-         * null‚ğ”ò‚Î‚µ‚Â‚ÂA
-         * ƒŠƒXƒg––”ö‚Ü‚Å“’B‚µ‚½‚çæ“ª‚Ö–ß‚è‚Ü‚·B
+         * nullã‚’é£›ã°ã—ã¤ã¤ã€
+         * ãƒªã‚¹ãƒˆæœ«å°¾ã¾ã§åˆ°é”ã—ãŸã‚‰å…ˆé ­ã¸æˆ»ã‚Šã¾ã™ã€‚
          */
         int searchCount =
             0;
@@ -352,9 +394,9 @@ public sealed class S1P2BossCollapsingState :
     }
 
     /// <summary>
-    /// Sequence•ÏX’Ê’m‚ğˆ—‚µ‚Ü‚·B
+    /// Sequenceå¤‰æ›´é€šçŸ¥ã‚’å‡¦ç†ã—ã¾ã™ã€‚
     /// </summary>
-    /// <param name="eventData">Sequence•ÏXî•ñB</param>
+    /// <param name="eventData">Sequenceå¤‰æ›´æƒ…å ±ã€‚</param>
     private void HandleSequenceChanged(
         GameplaySequenceChangedEventData eventData)
     {
@@ -385,7 +427,7 @@ public sealed class S1P2BossCollapsingState :
     }
 
     /// <summary>
-    /// •ö‰óSequenceŠ®—¹‚ğˆ—‚µ‚Ü‚·B
+    /// å´©å£ŠSequenceå®Œäº†ã‚’å‡¦ç†ã—ã¾ã™ã€‚
     /// </summary>
     private void HandleSequenceFinished()
     {
@@ -396,8 +438,8 @@ public sealed class S1P2BossCollapsingState :
     }
 
     /// <summary>
-    /// Sequence‚Æƒ~ƒTƒCƒ‹‚Ì—¼•û‚ªŠ®—¹‚µ‚½ê‡‚É
-    /// ŸƒtƒF[ƒY‚ÖˆÚs‚µ‚Ü‚·B
+    /// Sequenceã¨ãƒŸã‚µã‚¤ãƒ«ã®ä¸¡æ–¹ãŒå®Œäº†ã—ãŸå ´åˆã«
+    /// æ¬¡ãƒ•ã‚§ãƒ¼ã‚ºã¸ç§»è¡Œã—ã¾ã™ã€‚
     /// </summary>
     private void TryCompleteCollapse()
     {
@@ -408,9 +450,9 @@ public sealed class S1P2BossCollapsingState :
         }
 
         /*
-         * AdvancePhase‚ÅŒ»İPhase Root‚ª
-         * –³Œø‰»‚³‚ê‚é‰Â”\«‚ª‚ ‚é‚½‚ßA
-         * æ‚Éw“Ç‚ğ‰ğœ‚µ‚Ü‚·B
+         * AdvancePhaseã§ç¾åœ¨Phase RootãŒ
+         * ç„¡åŠ¹åŒ–ã•ã‚Œã‚‹å¯èƒ½æ€§ãŒã‚ã‚‹ãŸã‚ã€
+         * å…ˆã«è³¼èª­ã‚’è§£é™¤ã—ã¾ã™ã€‚
          */
         UnregisterSequenceEvent();
 
@@ -428,11 +470,11 @@ public sealed class S1P2BossCollapsingState :
     }
 
     /// <summary>
-    /// •K—v‚ÈQÆ‚ğæ“¾‚µ‚Ü‚·B
+    /// å¿…è¦ãªå‚ç…§ã‚’å–å¾—ã—ã¾ã™ã€‚
     /// </summary>
     /// <returns>
-    /// trueFæ“¾‚Å‚«‚Ü‚µ‚½B
-    /// falseFæ“¾‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½B
+    /// trueï¼šå–å¾—ã§ãã¾ã—ãŸã€‚
+    /// falseï¼šå–å¾—ã§ãã¾ã›ã‚“ã§ã—ãŸã€‚
     /// </returns>
     private bool TryGetReferences()
     {
@@ -469,7 +511,7 @@ public sealed class S1P2BossCollapsingState :
         {
             Debug.LogError(
                 $"[{nameof(S1P2BossCollapsingState)}] " +
-                "•ö‰óƒ~ƒTƒCƒ‹‚Ì‘ÎÛ’n“_‚ªİ’è‚³‚ê‚Ä‚¢‚Ü‚¹‚ñB");
+                "å´©å£ŠãƒŸã‚µã‚¤ãƒ«ã®å¯¾è±¡åœ°ç‚¹ãŒè¨­å®šã•ã‚Œã¦ã„ã¾ã›ã‚“ã€‚");
 
             return false;
         }
@@ -494,7 +536,7 @@ public sealed class S1P2BossCollapsingState :
         {
             Debug.LogError(
                 $"[{nameof(S1P2BossCollapsingState)}] " +
-                "—LŒø‚È•ö‰óƒ~ƒTƒCƒ‹‘ÎÛ’n“_‚ª‚ ‚è‚Ü‚¹‚ñB");
+                "æœ‰åŠ¹ãªå´©å£ŠãƒŸã‚µã‚¤ãƒ«å¯¾è±¡åœ°ç‚¹ãŒã‚ã‚Šã¾ã›ã‚“ã€‚");
 
             return false;
         }
@@ -509,7 +551,7 @@ public sealed class S1P2BossCollapsingState :
     }
 
     /// <summary>
-    /// Sequence•ÏXƒCƒxƒ“ƒg‚Ìw“Ç‚ğ‰ğœ‚µ‚Ü‚·B
+    /// Sequenceå¤‰æ›´ã‚¤ãƒ™ãƒ³ãƒˆã®è³¼èª­ã‚’è§£é™¤ã—ã¾ã™ã€‚
     /// </summary>
     private void UnregisterSequenceEvent()
     {
@@ -525,10 +567,13 @@ public sealed class S1P2BossCollapsingState :
 
         m_isSequenceEventRegistered =
             false;
+
+        m_stateElapsedTime =
+            0.0f;
     }
 
     /// <summary>
-    /// State‚ğ¸”só‘Ô‚É‚µ‚Ü‚·B
+    /// Stateã‚’å¤±æ•—çŠ¶æ…‹ã«ã—ã¾ã™ã€‚
     /// </summary>
     private void SetFailed()
     {
@@ -546,7 +591,7 @@ public sealed class S1P2BossCollapsingState :
     }
 
     /// <summary>
-    /// Àsó‘Ô‚ğ‰Šú‰»‚µ‚Ü‚·B
+    /// å®Ÿè¡Œæ™‚çŠ¶æ…‹ã‚’åˆæœŸåŒ–ã—ã¾ã™ã€‚
     /// </summary>
     private void ResetRuntimeState()
     {

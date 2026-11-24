@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -10,6 +10,9 @@ public sealed class S1P3BossChargingAttackState :
 {
     // フェーズ3で行う突進回数
     private const int CHARGE_COUNT = 3;
+
+    // 連続突進が物理的に進行できない場合の上限時間
+    private const float MAX_STATE_DURATION = 60.0f;
 
     // プレイヤー
     private Transform m_playerTransform;
@@ -50,11 +53,17 @@ public sealed class S1P3BossChargingAttackState :
     // 突進攻撃の旋回方向Int ID
     private int m_animationTurnDirectionIntID;
 
+    // State開始からの経過時間
+    private float m_stateElapsedTime;
+
     /// <summary>
     /// 連続突進を開始します。
     /// </summary>
     protected override void OnStartState()
     {
+        m_stateElapsedTime =
+            0.0f;
+
         if (!TryInitializeReferences())
         {
             SetFailed();
@@ -110,6 +119,21 @@ public sealed class S1P3BossChargingAttackState :
             Owner.GetStateExecutionStatus() !=
                 StateExecutionStatus.RUNNING)
         {
+            return;
+        }
+
+        m_stateElapsedTime +=
+            Time.fixedDeltaTime;
+
+        if (m_stateElapsedTime >=
+            MAX_STATE_DURATION)
+        {
+            Debug.LogError(
+                $"[{nameof(S1P3BossChargingAttackState)}] " +
+                "連続突進攻撃がタイムアウトしました。");
+
+            SetFailed();
+
             return;
         }
 
@@ -416,6 +440,22 @@ public sealed class S1P3BossChargingAttackState :
                 Owner.AnimationController.SetBool(
                     m_animationActiveBoolID,
                     false);
+            }
+
+            if (m_animationPhaseIntID !=
+                newPhaseIntID)
+            {
+                Owner.AnimationController.SetInteger(
+                    m_animationPhaseIntID,
+                    -1);
+            }
+
+            if (m_animationTurnDirectionIntID !=
+                newTurnDirectionIntID)
+            {
+                Owner.AnimationController.SetInteger(
+                    m_animationTurnDirectionIntID,
+                    0);
             }
         }
 

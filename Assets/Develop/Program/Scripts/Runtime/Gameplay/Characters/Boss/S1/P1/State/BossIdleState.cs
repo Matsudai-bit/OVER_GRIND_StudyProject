@@ -1,4 +1,4 @@
-/// <summary>
+﻿/// <summary>
 /// ボスを一定時間待機させます。
 /// </summary>
 public sealed class BossIdleState : StateBase<BossController>

@@ -1,58 +1,64 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
 /// <summary>
-/// ƒXƒe[ƒW1ƒtƒF[ƒY2‚ÌˆÚ“®‚µ‚È‚ª‚çs‚¤
-/// ƒ~ƒTƒCƒ‹UŒ‚‚ğÀs‚µ‚Ü‚·B
+/// ã‚¹ãƒ†ãƒ¼ã‚¸1ãƒ•ã‚§ãƒ¼ã‚º2ã®ç§»å‹•ã—ãªãŒã‚‰è¡Œã†
+/// ãƒŸã‚µã‚¤ãƒ«æ”»æ’ƒã‚’å®Ÿè¡Œã—ã¾ã™ã€‚
 /// </summary>
 public sealed class S1P2BossMoveMissileState :
     StateBase<BossController>
 {
-    // S1P2ŒÅ—LQÆ
+    // è¤‡åˆå‡¦ç†å¾…æ©Ÿã«ã‚ˆã‚‹æ°¸ä¹…åœæ­¢ã‚’é˜²ãä¸Šé™æ™‚é–“
+    private const float MAX_STATE_DURATION = 30.0f;
+
+    // S1P2å›ºæœ‰å‚ç…§
     private S1P2BossReferences m_references;
 
-    // ‹¤’ÊƒtƒF[ƒYQÆ
+    // å…±é€šãƒ•ã‚§ãƒ¼ã‚ºå‚ç…§
     private BossPhaseReferences m_commonReferences;
 
-    // ˆÚ“®QÆ
+    // ç§»å‹•å‚ç…§
     private S1P2MoveStateReferences m_moveReferences;
 
-    // ƒ~ƒTƒCƒ‹QÆ
+    // ãƒŸã‚µã‚¤ãƒ«å‚ç…§
     private S1BossMissileReferences m_missileReferences;
 
-    // ƒ~ƒTƒCƒ‹ƒpƒ‰ƒ[ƒ^
+    // ãƒŸã‚µã‚¤ãƒ«ãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿
     private S1P2BossMissileStateParameters m_missileParameters;
 
-    // ˆÚ“®ƒpƒ‰ƒ[ƒ^
+    // ç§»å‹•ãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿
     private S1P2BossMoveStateParameters m_moveParameters;
 
-    // ˆÚ“®§Œä
+    // ç§»å‹•åˆ¶å¾¡
     private S1P2BossMoveController m_moveController;
 
-    // ƒ~ƒTƒCƒ‹§Œä
+    // ãƒŸã‚µã‚¤ãƒ«åˆ¶å¾¡
     private S1P2BossMissileExecutor m_missileExecutor;
 
-    // ê—pAnimation Trigger ID
+    // å°‚ç”¨Animation Trigger ID
     private int m_animationTriggerID;
 
-    // AnimationEventóM
+    // AnimationEventå—ä¿¡
     private AnimationEventReceiver m_animationEventReceiver;
 
-    // ˆÚ“®Š®—¹
+    // ç§»å‹•å®Œäº†
     private bool m_isMoveCompleted;
 
-    // ƒ~ƒTƒCƒ‹”­ËŠJnÏ‚İ
+    // ãƒŸã‚µã‚¤ãƒ«ç™ºå°„é–‹å§‹æ¸ˆã¿
     private bool m_hasStartedMissileLaunch;
 
-    // ƒ~ƒTƒCƒ‹”­ËŠ®—¹
+    // ãƒŸã‚µã‚¤ãƒ«ç™ºå°„å®Œäº†
     private bool m_isMissileCompleted;
 
-    // AnimationŠ®—¹
+    // Animationå®Œäº†
     private bool m_isAnimationCompleted;
 
     private EffectHandle m_effectHandle;
 
+    // Stateé–‹å§‹ã‹ã‚‰ã®çµŒéæ™‚é–“
+    private float m_stateElapsedTime;
+
     /// <summary>
-    /// ˆÚ“®ƒ~ƒTƒCƒ‹UŒ‚‚ğŠJn‚µ‚Ü‚·B
+    /// ç§»å‹•ãƒŸã‚µã‚¤ãƒ«æ”»æ’ƒã‚’é–‹å§‹ã—ã¾ã™ã€‚
     /// </summary>
     protected override void OnStartState()
     {
@@ -71,7 +77,7 @@ public sealed class S1P2BossMoveMissileState :
         {
             Debug.LogWarning(
                 $"[{nameof(S1P2BossMoveMissileState)}] " +
-                "ˆÚ“®Œo˜H‚ğ¶¬‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½B");
+                "ç§»å‹•çµŒè·¯ã‚’ç”Ÿæˆã§ãã¾ã›ã‚“ã§ã—ãŸã€‚");
 
             SetFailed();
 
@@ -79,14 +85,14 @@ public sealed class S1P2BossMoveMissileState :
         }
 
         /*
-         * Trigger‚ğ”­‰Î‚·‚é‘O‚É
-         * AnimationEvent‚ğw“Ç‚µ‚Ü‚·B
+         * Triggerã‚’ç™ºç«ã™ã‚‹å‰ã«
+         * AnimationEventã‚’è³¼èª­ã—ã¾ã™ã€‚
          */
         if (!TryGetAnimationSetting())
         {
             Debug.LogError(
                 $"[{nameof(S1P2BossMoveMissileState)}] " +
-                "Animationİ’è‚ğæ“¾‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½B");
+                "Animationè¨­å®šã‚’å–å¾—ã§ãã¾ã›ã‚“ã§ã—ãŸã€‚");
 
             SetFailed();
 
@@ -102,17 +108,22 @@ public sealed class S1P2BossMoveMissileState :
         {
             Debug.LogError(
                 $"[{nameof(S1P2BossMoveMissileState)}] " +
-                "ˆÚ“®‚ğŠJn‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½B");
+                "ç§»å‹•ã‚’é–‹å§‹ã§ãã¾ã›ã‚“ã§ã—ãŸã€‚");
 
             SetFailed();
 
             return;
         }
-        m_effectHandle = m_commonReferences.EffectEmitter.Play(EffectId.S1P2_BOSS_SMOKE);
+        if (m_commonReferences?.EffectEmitter != null)
+        {
+            m_effectHandle =
+                m_commonReferences.EffectEmitter.Play(
+                    EffectId.S1P2_BOSS_SMOKE);
+        }
 
         /*
-         * ƒ~ƒTƒCƒ‹‚Í‚±‚±‚Å‚Í€”õ‚Ì‚İs‚¢‚Ü‚·B
-         * ÀÛ‚Ì”­ËŠJn‚ÍAnimationEvent‚ğ‘Ò‚¿‚Ü‚·B
+         * ãƒŸã‚µã‚¤ãƒ«ã¯ã“ã“ã§ã¯æº–å‚™ã®ã¿è¡Œã„ã¾ã™ã€‚
+         * å®Ÿéš›ã®ç™ºå°„é–‹å§‹ã¯AnimationEventã‚’å¾…ã¡ã¾ã™ã€‚
          */
         if (!m_missileExecutor.PrepareAttack(
                 m_missileReferences,
@@ -121,7 +132,7 @@ public sealed class S1P2BossMoveMissileState :
         {
             Debug.LogError(
                 $"[{nameof(S1P2BossMoveMissileState)}] " +
-                "ƒ~ƒTƒCƒ‹UŒ‚‚ğ€”õ‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½B");
+                "ãƒŸã‚µã‚¤ãƒ«æ”»æ’ƒã‚’æº–å‚™ã§ãã¾ã›ã‚“ã§ã—ãŸã€‚");
 
             SetFailed();
 
@@ -134,16 +145,17 @@ public sealed class S1P2BossMoveMissileState :
         Owner.AnimationController.SetTrigger(
             m_animationTriggerID);
 
-        // ˆÚ“®‰¹‚ÌÄ¶
-        m_commonReferences.AudioEmitter.PlaySequence(AudioCueId.MOVE_0);
+        // ç§»å‹•éŸ³ã®å†ç”Ÿ
+        m_commonReferences?.AudioEmitter?.PlaySequence(
+                AudioCueId.MOVE_0);
         
     }
 
     /// <summary>
-    /// ƒ~ƒTƒCƒ‹˜A‘±”­Ë‚ğXV‚µ‚Ü‚·B
+    /// ãƒŸã‚µã‚¤ãƒ«é€£ç¶šç™ºå°„ã‚’æ›´æ–°ã—ã¾ã™ã€‚
     /// </summary>
     /// <param name="deltaTime">
-    /// ‘OƒtƒŒ[ƒ€‚©‚ç‚ÌŒo‰ßŠÔB
+    /// å‰ãƒ•ãƒ¬ãƒ¼ãƒ ã‹ã‚‰ã®çµŒéæ™‚é–“ã€‚
     /// </param>
     protected override void OnUpdate(
         float deltaTime)
@@ -155,9 +167,26 @@ public sealed class S1P2BossMoveMissileState :
             return;
         }
 
+        m_stateElapsedTime +=
+            Mathf.Max(
+                0.0f,
+                deltaTime);
+
+        if (m_stateElapsedTime >=
+            MAX_STATE_DURATION)
+        {
+            Debug.LogError(
+                $"[{nameof(S1P2BossMoveMissileState)}] " +
+                "ç§»å‹•ãƒŸã‚µã‚¤ãƒ«æ”»æ’ƒãŒã‚¿ã‚¤ãƒ ã‚¢ã‚¦ãƒˆã—ã¾ã—ãŸã€‚");
+
+            SetFailed();
+
+            return;
+        }
+
         /*
-         * AnimationEvent‚Å”­Ë‚ª‹–‰Â‚³‚ê‚é‚Ü‚Å‚Í
-         * Executor‚ğXV‚µ‚Ü‚¹‚ñB
+         * AnimationEventã§ç™ºå°„ãŒè¨±å¯ã•ã‚Œã‚‹ã¾ã§ã¯
+         * Executorã‚’æ›´æ–°ã—ã¾ã›ã‚“ã€‚
          */
         if (!m_hasStartedMissileLaunch ||
             m_isMissileCompleted)
@@ -194,7 +223,7 @@ public sealed class S1P2BossMoveMissileState :
     }
 
     /// <summary>
-    /// Œo˜HˆÚ“®‚ğXV‚µ‚Ü‚·B
+    /// çµŒè·¯ç§»å‹•ã‚’æ›´æ–°ã—ã¾ã™ã€‚
     /// </summary>
     protected override void OnFixedUpdate()
     {
@@ -233,8 +262,8 @@ public sealed class S1P2BossMoveMissileState :
         }
 
         /*
-         * ˆÚ“®‚Ì‚İI—¹‚³‚¹‚Ü‚·B
-         * ƒ~ƒTƒCƒ‹”­Ë‚âAnimation‚ÍŒp‘±‚µ‚Ü‚·B
+         * ç§»å‹•ã®ã¿çµ‚äº†ã•ã›ã¾ã™ã€‚
+         * ãƒŸã‚µã‚¤ãƒ«ç™ºå°„ã‚„Animationã¯ç¶™ç¶šã—ã¾ã™ã€‚
          */
         m_isMoveCompleted =
             true;
@@ -248,7 +277,7 @@ public sealed class S1P2BossMoveMissileState :
     }
 
     /// <summary>
-    /// ˆÚ“®ƒ~ƒTƒCƒ‹UŒ‚‚ğI—¹‚µ‚Ü‚·B
+    /// ç§»å‹•ãƒŸã‚µã‚¤ãƒ«æ”»æ’ƒã‚’çµ‚äº†ã—ã¾ã™ã€‚
     /// </summary>
     protected override void OnExitState()
     {
@@ -260,6 +289,11 @@ public sealed class S1P2BossMoveMissileState :
 
         Owner?.Motor?
             .StopHorizontalMovement();
+
+        m_effectHandle.Stop();
+
+        m_commonReferences?.AudioEmitter?.StopSequence(
+                AudioCueId.MOVE_0);
 
         if (Owner != null &&
             Owner.GetStateExecutionStatus() ==
@@ -298,10 +332,10 @@ public sealed class S1P2BossMoveMissileState :
     }
 
     /// <summary>
-    /// UŒ‚AnimationEvent‚ğˆ—‚µ‚Ü‚·B
+    /// æ”»æ’ƒAnimationEventã‚’å‡¦ç†ã—ã¾ã™ã€‚
     /// </summary>
     /// <param name="attackEventData">
-    /// UŒ‚ƒCƒxƒ“ƒgî•ñB
+    /// æ”»æ’ƒã‚¤ãƒ™ãƒ³ãƒˆæƒ…å ±ã€‚
     /// </param>
     private void HandleAttackEvent(
         AttackEventData attackEventData)
@@ -330,14 +364,14 @@ public sealed class S1P2BossMoveMissileState :
     }
 
     /// <summary>
-    /// AnimationEvent‚ğ‹N“_‚É
-    /// ‘Sƒ~ƒTƒCƒ‹‚Ì˜A‘±”­Ë‚ğŠJn‚µ‚Ü‚·B
+    /// AnimationEventã‚’èµ·ç‚¹ã«
+    /// å…¨ãƒŸã‚µã‚¤ãƒ«ã®é€£ç¶šç™ºå°„ã‚’é–‹å§‹ã—ã¾ã™ã€‚
     /// </summary>
     private void StartMissileLaunch()
     {
         /*
-         * HITBOX_ENABLE‚ª•¡”‰ñ”­¶‚µ‚Ä‚à
-         * ”­Ëˆ—‚Í1‰ñ‚µ‚©ŠJn‚µ‚Ü‚¹‚ñB
+         * HITBOX_ENABLEãŒè¤‡æ•°å›ç™ºç”Ÿã—ã¦ã‚‚
+         * ç™ºå°„å‡¦ç†ã¯1å›ã—ã‹é–‹å§‹ã—ã¾ã›ã‚“ã€‚
          */
         if (m_hasStartedMissileLaunch)
         {
@@ -362,8 +396,8 @@ public sealed class S1P2BossMoveMissileState :
             true;
 
         /*
-         * LaunchSite‚ª1‚Â‚¾‚¯‚Ìê‡‚È‚ÇA
-         * BeginLaunch’¼Œã‚ÉŠ®—¹‚·‚éê‡‚É‚à‘Î‰‚µ‚Ü‚·B
+         * LaunchSiteãŒ1ã¤ã ã‘ã®å ´åˆãªã©ã€
+         * BeginLaunchç›´å¾Œã«å®Œäº†ã™ã‚‹å ´åˆã«ã‚‚å¯¾å¿œã—ã¾ã™ã€‚
          */
         if (!m_missileExecutor.IsCompleted)
         {
@@ -377,7 +411,7 @@ public sealed class S1P2BossMoveMissileState :
     }
 
     /// <summary>
-    /// UŒ‚AnimationI—¹‚ğˆ—‚µ‚Ü‚·B
+    /// æ”»æ’ƒAnimationçµ‚äº†ã‚’å‡¦ç†ã—ã¾ã™ã€‚
     /// </summary>
     private void HandleAnimationEnd()
     {
@@ -387,13 +421,11 @@ public sealed class S1P2BossMoveMissileState :
         TryCompleteState();
     }
     /// <summary>
-    /// ˆÚ“®Eƒ~ƒTƒCƒ‹EAnimation‚ª
-    /// ‚·‚×‚ÄI—¹‚µ‚½ê‡‚ÉState‚ğŠ®—¹‚µ‚Ü‚·B
+    /// ç§»å‹•ãƒ»ãƒŸã‚µã‚¤ãƒ«ãƒ»AnimationãŒ
+    /// ã™ã¹ã¦çµ‚äº†ã—ãŸå ´åˆã«Stateã‚’å®Œäº†ã—ã¾ã™ã€‚
     /// </summary>
     private void TryCompleteState()
     {
-        m_commonReferences.AudioEmitter.StopSequence(AudioCueId.MOVE_0);
-
         if (!m_isMoveCompleted ||
             !m_isMissileCompleted ||
             !m_isAnimationCompleted)
@@ -401,12 +433,15 @@ public sealed class S1P2BossMoveMissileState :
             return;
         }
 
+        m_commonReferences?.AudioEmitter?.StopSequence(
+                AudioCueId.MOVE_0);
+
         Owner.Motor?
             .StopHorizontalMovement();
 
         /*
-         * SUCCEEDED‚Ö•ÏX‚·‚é‘O‚É
-         * •K‚¸ƒN[ƒ‹ƒ^ƒCƒ€‚ğŠJn‚µ‚Ü‚·B
+         * SUCCEEDEDã¸å¤‰æ›´ã™ã‚‹å‰ã«
+         * å¿…ãšã‚¯ãƒ¼ãƒ«ã‚¿ã‚¤ãƒ ã‚’é–‹å§‹ã—ã¾ã™ã€‚
          */
         StartMissileCoolTime();
 
@@ -414,11 +449,11 @@ public sealed class S1P2BossMoveMissileState :
             StateExecutionStatus.SUCCEEDED);
     }
     /// <summary>
-    /// •K—v‚ÈQÆ‚Æƒpƒ‰ƒ[ƒ^‚ğæ“¾‚µ‚Ü‚·B
+    /// å¿…è¦ãªå‚ç…§ã¨ãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿ã‚’å–å¾—ã—ã¾ã™ã€‚
     /// </summary>
     /// <returns>
-    /// trueFæ“¾‚Å‚«‚Ü‚µ‚½B
-    /// falseFæ“¾‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½B
+    /// trueï¼šå–å¾—ã§ãã¾ã—ãŸã€‚
+    /// falseï¼šå–å¾—ã§ãã¾ã›ã‚“ã§ã—ãŸã€‚
     /// </returns>
     private bool TryGetReferences()
     {
@@ -449,7 +484,7 @@ public sealed class S1P2BossMoveMissileState :
         }
 
         /*
-         * ˆÚ“®
+         * ç§»å‹•
          */
         m_moveReferences =
             m_references.MoveStateReferences;
@@ -474,7 +509,7 @@ public sealed class S1P2BossMoveMissileState :
         }
 
         /*
-         * ƒ~ƒTƒCƒ‹
+         * ãƒŸã‚µã‚¤ãƒ«
          */
         m_missileReferences =
             m_references.MissileReferences;
@@ -502,11 +537,11 @@ public sealed class S1P2BossMoveMissileState :
     }
 
     /// <summary>
-    /// ˆÚ“®ƒ~ƒTƒCƒ‹ê—pAnimationİ’è‚ğæ“¾‚µ‚Ü‚·B
+    /// ç§»å‹•ãƒŸã‚µã‚¤ãƒ«å°‚ç”¨Animationè¨­å®šã‚’å–å¾—ã—ã¾ã™ã€‚
     /// </summary>
     /// <returns>
-    /// trueFæ“¾‚Å‚«‚Ü‚µ‚½B
-    /// falseFæ“¾‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½B
+    /// trueï¼šå–å¾—ã§ãã¾ã—ãŸã€‚
+    /// falseï¼šå–å¾—ã§ãã¾ã›ã‚“ã§ã—ãŸã€‚
     /// </returns>
     private bool TryGetAnimationSetting()
     {
@@ -553,7 +588,7 @@ public sealed class S1P2BossMoveMissileState :
                 animationTriggerName);
 
         /*
-         * Trigger‚æ‚èæ‚ÉAnimationEvent‚ğw“Ç‚µ‚Ü‚·B
+         * Triggerã‚ˆã‚Šå…ˆã«AnimationEventã‚’è³¼èª­ã—ã¾ã™ã€‚
          */
         m_animationEventReceiver.AttackEventReceived +=
             HandleAttackEvent;
@@ -562,7 +597,7 @@ public sealed class S1P2BossMoveMissileState :
     }
 
     /// <summary>
-    /// AnimationEvent‚Ìw“Ç‚ğ‰ğœ‚µ‚Ü‚·B
+    /// AnimationEventã®è³¼èª­ã‚’è§£é™¤ã—ã¾ã™ã€‚
     /// </summary>
     private void UnregisterAnimationEvent()
     {
@@ -576,7 +611,7 @@ public sealed class S1P2BossMoveMissileState :
     }
 
     /// <summary>
-    /// Runtimeó‘Ô‚ğ‰Šú‰»‚µ‚Ü‚·B
+    /// RuntimeçŠ¶æ…‹ã‚’åˆæœŸåŒ–ã—ã¾ã™ã€‚
     /// </summary>
     private void ResetRuntimeState()
     {
@@ -591,10 +626,13 @@ public sealed class S1P2BossMoveMissileState :
 
         m_isAnimationCompleted =
             false;
+
+        m_stateElapsedTime =
+            0.0f;
     }
 
     /// <summary>
-    /// State‚ğ¸”sI—¹‚µ‚Ü‚·B
+    /// Stateã‚’å¤±æ•—çµ‚äº†ã—ã¾ã™ã€‚
     /// </summary>
     private void SetFailed()
     {
@@ -605,6 +643,11 @@ public sealed class S1P2BossMoveMissileState :
         Owner?.Motor?
             .StopHorizontalMovement();
 
+        m_effectHandle.Stop();
+
+        m_commonReferences?.AudioEmitter?.StopSequence(
+                AudioCueId.MOVE_0);
+
         if (Owner == null)
         {
             return;
@@ -614,8 +657,8 @@ public sealed class S1P2BossMoveMissileState :
             StateExecutionStatus.FAILED);
     }
     /// <summary>
-    /// ˆÚ“®ƒ~ƒTƒCƒ‹UŒ‚‚Åg—p‚µ‚½
-    /// ƒ~ƒTƒCƒ‹UŒ‚‚ÌƒN[ƒ‹ƒ^ƒCƒ€‚ğŠJn‚µ‚Ü‚·B
+    /// ç§»å‹•ãƒŸã‚µã‚¤ãƒ«æ”»æ’ƒã§ä½¿ç”¨ã—ãŸ
+    /// ãƒŸã‚µã‚¤ãƒ«æ”»æ’ƒã®ã‚¯ãƒ¼ãƒ«ã‚¿ã‚¤ãƒ ã‚’é–‹å§‹ã—ã¾ã™ã€‚
     /// </summary>
     private void StartMissileCoolTime()
     {

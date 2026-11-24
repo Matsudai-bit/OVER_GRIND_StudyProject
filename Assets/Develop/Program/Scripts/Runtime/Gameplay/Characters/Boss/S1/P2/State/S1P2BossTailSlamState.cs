@@ -1,23 +1,32 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
 /// <summary>
-/// ƒXƒe[ƒW1ƒtƒF[ƒY2‚ÌK”ö’@‚«‚Â‚¯UŒ‚‚ğ
-/// ’P“Æ‚ÌState‚Æ‚µ‚ÄÀs‚µ‚Ü‚·B
+/// ã‚¹ãƒ†ãƒ¼ã‚¸1ãƒ•ã‚§ãƒ¼ã‚º2ã®å°»å°¾å©ãã¤ã‘æ”»æ’ƒã‚’
+/// å˜ç‹¬ã®Stateã¨ã—ã¦å®Ÿè¡Œã—ã¾ã™ã€‚
 /// </summary>
 public sealed class S1P2BossTailSlamState :
     StateBase<BossController>
 {
-    // ƒtƒF[ƒY2ŒÅ—LQÆ
+    // Executorå¾…æ©Ÿã«ã‚ˆã‚‹æ°¸ä¹…åœæ­¢ã‚’é˜²ãä¸Šé™æ™‚é–“
+    private const float MAX_STATE_DURATION = 15.0f;
+
+    // ãƒ•ã‚§ãƒ¼ã‚º2å›ºæœ‰å‚ç…§
     private S1P2BossReferences m_references;
 
-    // K”ö’@‚«‚Â‚¯UŒ‚Às§Œä
+    // å°»å°¾å©ãã¤ã‘æ”»æ’ƒå®Ÿè¡Œåˆ¶å¾¡
     private S1P2BossTailSlamExecutor m_tailSlamExecutor;
 
+    // Stateé–‹å§‹ã‹ã‚‰ã®çµŒéæ™‚é–“
+    private float m_stateElapsedTime;
+
     /// <summary>
-    /// K”ö’@‚«‚Â‚¯UŒ‚‚ğŠJn‚µ‚Ü‚·B
+    /// å°»å°¾å©ãã¤ã‘æ”»æ’ƒã‚’é–‹å§‹ã—ã¾ã™ã€‚
     /// </summary>
     protected override void OnStartState()
     {
+        m_stateElapsedTime =
+            0.0f;
+
         if (!TryGetReferences())
         {
             SetFailed();
@@ -26,12 +35,12 @@ public sealed class S1P2BossTailSlamState :
         }
 
         /*
-         * ’P“Æ‚ÌK”öUŒ‚State‚Å‚Í
-         * UŒ‚’†‚ÌBossˆÚ“®‚ğ’â~‚µ‚Ü‚·B
+         * å˜ç‹¬ã®å°»å°¾æ”»æ’ƒStateã§ã¯
+         * æ”»æ’ƒä¸­ã®Bossç§»å‹•ã‚’åœæ­¢ã—ã¾ã™ã€‚
          *
-         * MoveState‚©‚çExecutor‚ğg—p‚·‚éê‡‚ÍA
-         * MoveState‘¤‚ªˆÚ“®‚ğŒp‘±‚·‚é‚½‚ßA
-         * Executor©g‚ÍˆÚ“®‚ğ’â~‚µ‚Ü‚¹‚ñB
+         * MoveStateã‹ã‚‰Executorã‚’ä½¿ç”¨ã™ã‚‹å ´åˆã¯ã€
+         * MoveStateå´ãŒç§»å‹•ã‚’ç¶™ç¶šã™ã‚‹ãŸã‚ã€
+         * Executorè‡ªèº«ã¯ç§»å‹•ã‚’åœæ­¢ã—ã¾ã›ã‚“ã€‚
          */
         Owner.Motor?
             .StopHorizontalMovement();
@@ -51,16 +60,16 @@ public sealed class S1P2BossTailSlamState :
 
         Debug.LogError(
             $"[{nameof(S1P2BossTailSlamState)}] " +
-            "K”ö’@‚«‚Â‚¯UŒ‚‚ğŠJn‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½.");
+            "å°»å°¾å©ãã¤ã‘æ”»æ’ƒã‚’é–‹å§‹ã§ãã¾ã›ã‚“ã§ã—ãŸ.");
 
         SetFailed();
     }
 
     /// <summary>
-    /// K”ö’@‚«‚Â‚¯UŒ‚‚ÌŠ®—¹ó‘Ô‚ğŠÄ‹‚µ‚Ü‚·B
+    /// å°»å°¾å©ãã¤ã‘æ”»æ’ƒã®å®Œäº†çŠ¶æ…‹ã‚’ç›£è¦–ã—ã¾ã™ã€‚
     /// </summary>
     /// <param name="deltaTime">
-    /// ‘OƒtƒŒ[ƒ€‚©‚ç‚ÌŒo‰ßŠÔB
+    /// å‰ãƒ•ãƒ¬ãƒ¼ãƒ ã‹ã‚‰ã®çµŒéæ™‚é–“ã€‚
     /// </param>
     protected override void OnUpdate(
         float deltaTime)
@@ -69,6 +78,23 @@ public sealed class S1P2BossTailSlamState :
             Owner.GetStateExecutionStatus() !=
                 StateExecutionStatus.RUNNING)
         {
+            return;
+        }
+
+        m_stateElapsedTime +=
+            Mathf.Max(
+                0.0f,
+                deltaTime);
+
+        if (m_stateElapsedTime >=
+            MAX_STATE_DURATION)
+        {
+            Debug.LogError(
+                $"[{nameof(S1P2BossTailSlamState)}] " +
+                "å°»å°¾å©ãã¤ã‘æ”»æ’ƒãŒã‚¿ã‚¤ãƒ ã‚¢ã‚¦ãƒˆã—ã¾ã—ãŸã€‚");
+
+            SetFailed();
+
             return;
         }
 
@@ -95,16 +121,10 @@ public sealed class S1P2BossTailSlamState :
     }
 
     /// <summary>
-    /// K”ö’@‚«‚Â‚¯UŒ‚‚ğI—¹‚µ‚Ü‚·B
+    /// å°»å°¾å©ãã¤ã‘æ”»æ’ƒã‚’çµ‚äº†ã—ã¾ã™ã€‚
     /// </summary>
     protected override void OnExitState()
     {
-        /*
-         * QÆ‚ğ”jŠü‚·‚é‘O‚É
-         * ƒN[ƒ‹ƒ^ƒCƒ€‚ğŠJn‚µ‚Ü‚·B
-         */
-        StartCoolTimeIfSucceeded();
-
         m_tailSlamExecutor?.Cancel();
 
         Owner?.Motor?
@@ -126,14 +146,12 @@ public sealed class S1P2BossTailSlamState :
     }
 
     /// <summary>
-    /// ³íI—¹‚µ‚½K”ö’@‚«‚Â‚¯UŒ‚‚Ì
-    /// ƒN[ƒ‹ƒ^ƒCƒ€‚ğŠJn‚µ‚Ü‚·B
+    /// æ­£å¸¸çµ‚äº†ã—ãŸå°»å°¾å©ãã¤ã‘æ”»æ’ƒã®
+    /// ã‚¯ãƒ¼ãƒ«ã‚¿ã‚¤ãƒ ã‚’é–‹å§‹ã—ã¾ã™ã€‚
     /// </summary>
-    private void StartCoolTimeIfSucceeded()
+    private void StartCoolTime()
     {
         if (Owner == null ||
-            Owner.GetStateExecutionStatus() !=
-                StateExecutionStatus.SUCCEEDED ||
             m_references?.DecisionParameterAsset == null)
         {
             return;
@@ -157,11 +175,11 @@ public sealed class S1P2BossTailSlamState :
     }
 
     /// <summary>
-    /// ƒtƒF[ƒY2ŒÅ—LQÆ‚ğæ“¾‚µ‚Ü‚·B
+    /// ãƒ•ã‚§ãƒ¼ã‚º2å›ºæœ‰å‚ç…§ã‚’å–å¾—ã—ã¾ã™ã€‚
     /// </summary>
     /// <returns>
-    /// trueF•K—v‚ÈQÆ‚ğæ“¾‚Å‚«‚Ü‚µ‚½B
-    /// falseFQÆ‚ª•s‘«‚µ‚Ä‚¢‚Ü‚·B
+    /// trueï¼šå¿…è¦ãªå‚ç…§ã‚’å–å¾—ã§ãã¾ã—ãŸã€‚
+    /// falseï¼šå‚ç…§ãŒä¸è¶³ã—ã¦ã„ã¾ã™ã€‚
     /// </returns>
     private bool TryGetReferences()
     {
@@ -179,8 +197,8 @@ public sealed class S1P2BossTailSlamState :
         {
             Debug.LogError(
                 $"[{nameof(S1P2BossTailSlamState)}] " +
-                $"{nameof(S1P2BossReferences)}‚ğ" +
-                "æ“¾‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½.");
+                $"{nameof(S1P2BossReferences)}ã‚’" +
+                "å–å¾—ã§ãã¾ã›ã‚“ã§ã—ãŸ.");
 
             return false;
         }
@@ -189,8 +207,8 @@ public sealed class S1P2BossTailSlamState :
         {
             Debug.LogError(
                 $"[{nameof(S1P2BossTailSlamState)}] " +
-                $"{nameof(S1P2BossTailSlamReference)}‚ª" +
-                "İ’è‚³‚ê‚Ä‚¢‚Ü‚¹‚ñ.");
+                $"{nameof(S1P2BossTailSlamReference)}ãŒ" +
+                "è¨­å®šã•ã‚Œã¦ã„ã¾ã›ã‚“.");
 
             return false;
         }
@@ -201,7 +219,7 @@ public sealed class S1P2BossTailSlamState :
         {
             Debug.LogError(
                 $"[{nameof(S1P2BossTailSlamState)}] " +
-                "K”ö‚ÌÚ’n”»’èSensor‚ªİ’è‚³‚ê‚Ä‚¢‚Ü‚¹‚ñ.");
+                "å°»å°¾ã®æ¥åœ°åˆ¤å®šSensorãŒè¨­å®šã•ã‚Œã¦ã„ã¾ã›ã‚“.");
 
             return false;
         }
@@ -210,7 +228,7 @@ public sealed class S1P2BossTailSlamState :
     }
 
     /// <summary>
-    /// K”ö’@‚«‚Â‚¯UŒ‚‚ğ³íI—¹‚µ‚Ü‚·B
+    /// å°»å°¾å©ãã¤ã‘æ”»æ’ƒã‚’æ­£å¸¸çµ‚äº†ã—ã¾ã™ã€‚
     /// </summary>
     private void CompleteTailSlam()
     {
@@ -224,12 +242,17 @@ public sealed class S1P2BossTailSlamState :
         Owner.Motor?
             .StopHorizontalMovement();
 
+        /*
+         * SUCCEEDEDã¸å¤‰æ›´ã™ã‚‹å‰ã«ã‚¯ãƒ¼ãƒ«ã‚¿ã‚¤ãƒ ã‚’ç™»éŒ²ã—ã¾ã™ã€‚
+         */
+        StartCoolTime();
+
         Owner.SetStateExecutionStatus(
             StateExecutionStatus.SUCCEEDED);
     }
 
     /// <summary>
-    /// State‚ğ¸”sI—¹‚µ‚Ü‚·B
+    /// Stateã‚’å¤±æ•—çµ‚äº†ã—ã¾ã™ã€‚
     /// </summary>
     private void SetFailed()
     {

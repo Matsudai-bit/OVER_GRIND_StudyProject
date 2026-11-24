@@ -1,60 +1,72 @@
-using System.Collections.Generic;
+ï»¿using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// ƒXƒe[ƒW1ƒtƒF[ƒY3‚ÌƒhƒŒƒbƒgUŒ‚‚ğÀs‚µ‚Ü‚·B
-/// AnimationEvent‚ÌHITBOX_ENABLE‚²‚Æ‚É
-/// ƒIƒCƒ‹‚ğ1”­‚¸‚Â”­Ë‚µ‚Ü‚·B
+/// ã‚¹ãƒ†ãƒ¼ã‚¸1ãƒ•ã‚§ãƒ¼ã‚º3ã®ãƒ‰ãƒ¬ãƒƒãƒˆæ”»æ’ƒã‚’å®Ÿè¡Œã—ã¾ã™ã€‚
+/// AnimationEventã®HITBOX_ENABLEã”ã¨ã«
+/// ã‚ªã‚¤ãƒ«ã‚’1ç™ºãšã¤ç™ºå°„ã—ã¾ã™ã€‚
 /// </summary>
 public sealed class S1P3BossDreadAttackState :
     StateBase<BossController>
 {
-    // ƒtƒF[ƒY3QÆ
+    // AnimationEventãƒ»é£›ç¿”ä½“ã‚¤ãƒ™ãƒ³ãƒˆå¾…æ©Ÿã«ã‚ˆã‚‹æ°¸ä¹…åœæ­¢ã‚’é˜²ãä¸Šé™æ™‚é–“
+    private const float MAX_STATE_DURATION = 30.0f;
+
+    // ãƒ•ã‚§ãƒ¼ã‚º3å‚ç…§
     private BossPhaseReferences m_commonReferences;
     private S1P3BossReferences m_references;
 
-    // ƒhƒŒƒbƒgUŒ‚ŒÅ—LQÆ
+    // ãƒ‰ãƒ¬ãƒƒãƒˆæ”»æ’ƒå›ºæœ‰å‚ç…§
     private DreadAttackStateReferences m_stateReferences;
 
-    // ƒhƒŒƒbƒgUŒ‚ƒpƒ‰ƒ[ƒ^
+    // ãƒ‰ãƒ¬ãƒƒãƒˆæ”»æ’ƒãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿
     private S1P3BossDreadAttackStateParameters m_parameters;
 
-    // UŒ‚ID
+    // æ”»æ’ƒID
     private AttackIdentifier m_attackIdentifier;
 
     // Animator Bool ID
     private int m_animationBoolID;
 
-    // ƒIƒCƒ‹‚Éİ’è‚·‚éƒ_ƒ[ƒW
+    // Animator Boolã‚’åˆæœŸåŒ–æ¸ˆã¿ã‹
+    private bool m_isAnimationInitialized;
+
+    // ã‚ªã‚¤ãƒ«ã«è¨­å®šã™ã‚‹ãƒ€ãƒ¡ãƒ¼ã‚¸
     private int m_projectileDamage;
 
-    // ¶¬‚µ‚½ƒIƒCƒ‹
+    // ç”Ÿæˆã—ãŸã‚ªã‚¤ãƒ«
     private readonly List<S1P3OilController> m_spawnedOils =
         new();
 
-    // Ÿ‚Ég—p‚·‚é”­Ë’n“_Index
+    // æ¬¡ã«ä½¿ç”¨ã™ã‚‹ç™ºå°„åœ°ç‚¹Index
     private int m_nextLaunchPointIndex;
 
-    // ”­Ë‚µ‚½ƒIƒCƒ‹”
+    // ç™ºå°„ã—ãŸã‚ªã‚¤ãƒ«æ•°
     private int m_launchedOilCount;
 
-    // ’…’e‚µ‚½ƒIƒCƒ‹”
+    // ç€å¼¾ã—ãŸã‚ªã‚¤ãƒ«æ•°
     private int m_landedOilCount;
 
-    // ‘S’e”­ËÏ‚İ‚©
+    // å…¨å¼¾ç™ºå°„æ¸ˆã¿ã‹
     private bool m_hasFinishedLaunching;
 
-    // ‘S’e’…’eŒã‚Ì‘Ò‹@’†‚©
+    // å…¨å¼¾ç€å¼¾å¾Œã®å¾…æ©Ÿä¸­ã‹
     private bool m_isWaitingFinish;
 
-    // ó‘ÔI—¹‘Ò‹@ŠÔ
+    // çŠ¶æ…‹çµ‚äº†å¾…æ©Ÿæ™‚é–“
     private float m_finishElapsedTime;
 
-    // AnimationEventw“Ç’†‚©
+    // AnimationEventè³¼èª­ä¸­ã‹
     private bool m_isAnimationEventSubscribed;
 
+    // ä½¿ç”¨ä¸­ã®AnimationEventReceiver
+    private AnimationEventReceiver m_animationEventReceiver;
+
+    // Stateé–‹å§‹ã‹ã‚‰ã®çµŒéæ™‚é–“
+    private float m_stateElapsedTime;
+
     /// <summary>
-    /// ƒhƒŒƒbƒgUŒ‚‚ğŠJn‚µ‚Ü‚·B
+    /// ãƒ‰ãƒ¬ãƒƒãƒˆæ”»æ’ƒã‚’é–‹å§‹ã—ã¾ã™ã€‚
     /// </summary>
     protected override void OnStartState()
     {
@@ -91,8 +103,8 @@ public sealed class S1P3BossDreadAttackState :
             StateExecutionStatus.RUNNING);
 
         /*
-         * Trigger‚Å‚Í‚È‚­Bool‚Å
-         * ƒhƒŒƒbƒgUŒ‚Animation‚ğŠJn‚µ‚Ü‚·B
+         * Triggerã§ã¯ãªãBoolã§
+         * ãƒ‰ãƒ¬ãƒƒãƒˆæ”»æ’ƒAnimationã‚’é–‹å§‹ã—ã¾ã™ã€‚
          */
         Owner.AnimationController.SetBool(
             m_animationBoolID,
@@ -100,21 +112,48 @@ public sealed class S1P3BossDreadAttackState :
     }
 
     /// <summary>
-    /// ‘S’e’…’eŒã‚ÌI—¹‘Ò‹@‚ğXV‚µ‚Ü‚·B
+    /// å…¨å¼¾ç€å¼¾å¾Œã®çµ‚äº†å¾…æ©Ÿã‚’æ›´æ–°ã—ã¾ã™ã€‚
     /// </summary>
     /// <param name="deltaTime">
-    /// Œo‰ßŠÔB
+    /// çµŒéæ™‚é–“ã€‚
     /// </param>
     protected override void OnUpdate(
         float deltaTime)
     {
+        if (Owner == null ||
+            Owner.GetStateExecutionStatus() !=
+                StateExecutionStatus.RUNNING)
+        {
+            return;
+        }
+
+        m_stateElapsedTime +=
+            Mathf.Max(
+                0.0f,
+                deltaTime);
+
+        if (m_stateElapsedTime >=
+            MAX_STATE_DURATION)
+        {
+            Debug.LogError(
+                $"[{nameof(S1P3BossDreadAttackState)}] " +
+                "ãƒ‰ãƒ¬ãƒƒãƒˆæ”»æ’ƒãŒã‚¿ã‚¤ãƒ ã‚¢ã‚¦ãƒˆã—ã¾ã—ãŸã€‚");
+
+            CancelFlyingOils();
+            FailState();
+
+            return;
+        }
+
         if (!m_isWaitingFinish)
         {
             return;
         }
 
         m_finishElapsedTime +=
-            deltaTime;
+            Mathf.Max(
+                0.0f,
+                deltaTime);
 
         if (m_finishElapsedTime <
             m_parameters.FinishDelay)
@@ -126,14 +165,15 @@ public sealed class S1P3BossDreadAttackState :
     }
 
     /// <summary>
-    /// ƒhƒŒƒbƒgUŒ‚‚ğI—¹‚µ‚Ü‚·B
+    /// ãƒ‰ãƒ¬ãƒƒãƒˆæ”»æ’ƒã‚’çµ‚äº†ã—ã¾ã™ã€‚
     /// </summary>
     protected override void OnExitState()
     {
         UnsubscribeAnimationEvent();
         UnsubscribeOilEvents();
 
-        if (Owner?.AnimationController != null)
+        if (m_isAnimationInitialized &&
+            Owner?.AnimationController != null)
         {
             Owner.AnimationController.SetBool(
                 m_animationBoolID,
@@ -141,8 +181,8 @@ public sealed class S1P3BossDreadAttackState :
         }
 
         /*
-         * “r’†I—¹‚µ‚½ê‡‚Í
-         * ”òs’†‚ÌƒIƒCƒ‹‚ğ’â~‚µ‚Ü‚·B
+         * é€”ä¸­çµ‚äº†ã—ãŸå ´åˆã¯
+         * é£›è¡Œä¸­ã®ã‚ªã‚¤ãƒ«ã‚’åœæ­¢ã—ã¾ã™ã€‚
          */
         if (Owner != null &&
             Owner.GetStateExecutionStatus() ==
@@ -170,13 +210,16 @@ public sealed class S1P3BossDreadAttackState :
 
         m_attackIdentifier =
             null;
+
+        m_animationEventReceiver =
+            null;
     }
 
     /// <summary>
-    /// UŒ‚AnimationEvent‚ğˆ—‚µ‚Ü‚·B
+    /// æ”»æ’ƒAnimationEventã‚’å‡¦ç†ã—ã¾ã™ã€‚
     /// </summary>
     /// <param name="attackEventData">
-    /// UŒ‚ƒCƒxƒ“ƒgî•ñB
+    /// æ”»æ’ƒã‚¤ãƒ™ãƒ³ãƒˆæƒ…å ±ã€‚
     /// </param>
     private void HandleAttackEvent(
         AttackEventData attackEventData)
@@ -197,17 +240,17 @@ public sealed class S1P3BossDreadAttackState :
 
             case AttackEventType.ANIMATION_END:
                 /*
-                 * ƒhƒŒƒbƒgUŒ‚‚ÍAnimationI—¹‚Å‚Í
-                 * State‚ğI—¹‚µ‚Ü‚¹‚ñB
-                 * ‘SƒIƒCƒ‹’…’e‚ğ‘Ò‚¿‚Ü‚·B
+                 * ãƒ‰ãƒ¬ãƒƒãƒˆæ”»æ’ƒã¯Animationçµ‚äº†ã§ã¯
+                 * Stateã‚’çµ‚äº†ã—ã¾ã›ã‚“ã€‚
+                 * å…¨ã‚ªã‚¤ãƒ«ç€å¼¾ã‚’å¾…ã¡ã¾ã™ã€‚
                  */
                 break;
         }
     }
 
     /// <summary>
-    /// Ÿ‚Ì”­Ë’n“_‚©‚çƒIƒCƒ‹‚ğ1”­”­Ë‚µ‚Ü‚·B
-    /// HITBOX_ENABLE 1‰ñ‚É‚Â‚«1”­‚¾‚¯”­Ë‚µ‚Ü‚·B
+    /// æ¬¡ã®ç™ºå°„åœ°ç‚¹ã‹ã‚‰ã‚ªã‚¤ãƒ«ã‚’1ç™ºç™ºå°„ã—ã¾ã™ã€‚
+    /// HITBOX_ENABLE 1å›ã«ã¤ã1ç™ºã ã‘ç™ºå°„ã—ã¾ã™ã€‚
     /// </summary>
     private void LaunchNextOil()
     {
@@ -232,7 +275,7 @@ public sealed class S1P3BossDreadAttackState :
             launchPoints.Count == 0)
         {
             Debug.LogError(
-                "ƒhƒŒƒbƒgUŒ‚‚Ì”­Ë’n“_‚ªİ’è‚³‚ê‚Ä‚¢‚Ü‚¹‚ñB");
+                "ãƒ‰ãƒ¬ãƒƒãƒˆæ”»æ’ƒã®ç™ºå°„åœ°ç‚¹ãŒè¨­å®šã•ã‚Œã¦ã„ã¾ã›ã‚“ã€‚");
 
             FailState();
 
@@ -240,8 +283,8 @@ public sealed class S1P3BossDreadAttackState :
         }
 
         /*
-         * ”­Ë”‚ª”­Ë’n“_”‚æ‚è‘½‚¢ê‡‚É‚à‘Î‰‚·‚é‚½‚ßA
-         * ”­Ë’n“_‚ğzŠÂ‚µ‚Äg—p‚µ‚Ü‚·B
+         * ç™ºå°„æ•°ãŒç™ºå°„åœ°ç‚¹æ•°ã‚ˆã‚Šå¤šã„å ´åˆã«ã‚‚å¯¾å¿œã™ã‚‹ãŸã‚ã€
+         * ç™ºå°„åœ°ç‚¹ã‚’å¾ªç’°ã—ã¦ä½¿ç”¨ã—ã¾ã™ã€‚
          */
         int searchCount =
             0;
@@ -276,7 +319,7 @@ public sealed class S1P3BossDreadAttackState :
             if (oilController == null)
             {
                 Debug.LogError(
-                    "ƒhƒŒƒbƒgUŒ‚‚ÌƒIƒCƒ‹‚ğ¶¬‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½B");
+                    "ãƒ‰ãƒ¬ãƒƒãƒˆæ”»æ’ƒã®ã‚ªã‚¤ãƒ«ã‚’ç”Ÿæˆã§ãã¾ã›ã‚“ã§ã—ãŸã€‚");
 
                 FailState();
 
@@ -295,7 +338,7 @@ public sealed class S1P3BossDreadAttackState :
                     oilController.gameObject);
 
                 Debug.LogError(
-                    "ƒhƒŒƒbƒgUŒ‚‚ÌƒIƒCƒ‹‚ğ‰Šú‰»‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½B");
+                    "ãƒ‰ãƒ¬ãƒƒãƒˆæ”»æ’ƒã®ã‚ªã‚¤ãƒ«ã‚’åˆæœŸåŒ–ã§ãã¾ã›ã‚“ã§ã—ãŸã€‚");
 
                 FailState();
 
@@ -316,8 +359,8 @@ public sealed class S1P3BossDreadAttackState :
             oilController.Launch();
 
             /*
-             * w’è”‚ğŒ‚‚¿I‚¦‚½‚ç
-             * ”­ËAnimation‚ÌBool‚ğOFF‚É‚µ‚Ü‚·B
+             * æŒ‡å®šæ•°ã‚’æ’ƒã¡çµ‚ãˆãŸã‚‰
+             * ç™ºå°„Animationã®Boolã‚’OFFã«ã—ã¾ã™ã€‚
              */
             if (m_launchedOilCount >=
                 m_parameters.LaunchCount)
@@ -329,13 +372,13 @@ public sealed class S1P3BossDreadAttackState :
         }
 
         Debug.LogError(
-            "—LŒø‚ÈƒhƒŒƒbƒgUŒ‚‚Ì”­Ë’n“_‚ª‚ ‚è‚Ü‚¹‚ñB");
+            "æœ‰åŠ¹ãªãƒ‰ãƒ¬ãƒƒãƒˆæ”»æ’ƒã®ç™ºå°„åœ°ç‚¹ãŒã‚ã‚Šã¾ã›ã‚“ã€‚");
 
         FailState();
     }
 
     /// <summary>
-    /// ‘SƒIƒCƒ‹‚Ì”­ËŠ®—¹‚ğˆ—‚µ‚Ü‚·B
+    /// å…¨ã‚ªã‚¤ãƒ«ã®ç™ºå°„å®Œäº†ã‚’å‡¦ç†ã—ã¾ã™ã€‚
     /// </summary>
     private void FinishLaunching()
     {
@@ -353,8 +396,8 @@ public sealed class S1P3BossDreadAttackState :
         }
 
         /*
-         * ”­Ë‰ñ”•ª‚ÌAnimationEvent‚ğó‚¯æ‚Á‚½‚½‚ßA
-         * Bool‚ğOFF‚É‚µ‚Ä”­ËAnimation‚ğI—¹‚³‚¹‚Ü‚·B
+         * ç™ºå°„å›æ•°åˆ†ã®AnimationEventã‚’å—ã‘å–ã£ãŸãŸã‚ã€
+         * Boolã‚’OFFã«ã—ã¦ç™ºå°„Animationã‚’çµ‚äº†ã•ã›ã¾ã™ã€‚
          */
         Owner.AnimationController.SetBool(
             m_animationBoolID,
@@ -362,10 +405,10 @@ public sealed class S1P3BossDreadAttackState :
     }
 
     /// <summary>
-    /// ƒIƒCƒ‹’…’e‚ğˆ—‚µ‚Ü‚·B
+    /// ã‚ªã‚¤ãƒ«ç€å¼¾ã‚’å‡¦ç†ã—ã¾ã™ã€‚
     /// </summary>
     /// <param name="oilController">
-    /// ’…’e‚µ‚½ƒIƒCƒ‹B
+    /// ç€å¼¾ã—ãŸã‚ªã‚¤ãƒ«ã€‚
     /// </param>
     private void HandleOilLanded(
         S1P3OilController oilController)
@@ -384,9 +427,9 @@ public sealed class S1P3BossDreadAttackState :
         m_landedOilCount++;
 
         /*
-         * ‘S’e‚Ì”­Ë‚ªI‚í‚Á‚Ä‚¨‚èA
-         * ‚©‚Â”­Ë‚µ‚½‘SƒIƒCƒ‹‚ª’…’e‚µ‚½ê‡‚Ì‚İ
-         * I—¹‘Ò‹@‚ÖˆÚs‚µ‚Ü‚·B
+         * å…¨å¼¾ã®ç™ºå°„ãŒçµ‚ã‚ã£ã¦ãŠã‚Šã€
+         * ã‹ã¤ç™ºå°„ã—ãŸå…¨ã‚ªã‚¤ãƒ«ãŒç€å¼¾ã—ãŸå ´åˆã®ã¿
+         * çµ‚äº†å¾…æ©Ÿã¸ç§»è¡Œã—ã¾ã™ã€‚
          */
         if (!m_hasFinishedLaunching ||
             m_landedOilCount <
@@ -403,16 +446,16 @@ public sealed class S1P3BossDreadAttackState :
     }
 
     /// <summary>
-    /// ƒIƒCƒ‹”òs¸”s‚ğˆ—‚µ‚Ü‚·B
+    /// ã‚ªã‚¤ãƒ«é£›è¡Œå¤±æ•—ã‚’å‡¦ç†ã—ã¾ã™ã€‚
     /// </summary>
     /// <param name="oilController">
-    /// ¸”s‚µ‚½ƒIƒCƒ‹B
+    /// å¤±æ•—ã—ãŸã‚ªã‚¤ãƒ«ã€‚
     /// </param>
     private void HandleOilFlightFailed(
         S1P3OilController oilController)
     {
         Debug.LogError(
-            "ƒhƒŒƒbƒgUŒ‚‚ÌƒIƒCƒ‹”òs‚É¸”s‚µ‚Ü‚µ‚½B");
+            "ãƒ‰ãƒ¬ãƒƒãƒˆæ”»æ’ƒã®ã‚ªã‚¤ãƒ«é£›è¡Œã«å¤±æ•—ã—ã¾ã—ãŸã€‚");
 
         CancelFlyingOils();
 
@@ -420,7 +463,7 @@ public sealed class S1P3BossDreadAttackState :
     }
 
     /// <summary>
-    /// ƒhƒŒƒbƒgUŒ‚‚ğ³íI—¹‚µ‚Ü‚·B
+    /// ãƒ‰ãƒ¬ãƒƒãƒˆæ”»æ’ƒã‚’æ­£å¸¸çµ‚äº†ã—ã¾ã™ã€‚
     /// </summary>
     private void FinishAttack()
     {
@@ -433,8 +476,8 @@ public sealed class S1P3BossDreadAttackState :
             false;
 
         /*
-         * SUCCEEDED‚æ‚èæ‚É
-         * ƒN[ƒ‹ƒ^ƒCƒ€‚ğŠJn‚µ‚Ü‚·B
+         * SUCCEEDEDã‚ˆã‚Šå…ˆã«
+         * ã‚¯ãƒ¼ãƒ«ã‚¿ã‚¤ãƒ ã‚’é–‹å§‹ã—ã¾ã™ã€‚
          */
         StartCoolTime();
 
@@ -443,11 +486,11 @@ public sealed class S1P3BossDreadAttackState :
     }
 
     /// <summary>
-    /// •K—v‚ÈQÆ‚ğæ“¾‚µ‚Ü‚·B
+    /// å¿…è¦ãªå‚ç…§ã‚’å–å¾—ã—ã¾ã™ã€‚
     /// </summary>
     /// <returns>
-    /// trueFæ“¾‚µ‚Ü‚µ‚½B
-    /// falseF•K—v‚ÈQÆ‚ª‚ ‚è‚Ü‚¹‚ñB
+    /// trueï¼šå–å¾—ã—ã¾ã—ãŸã€‚
+    /// falseï¼šå¿…è¦ãªå‚ç…§ãŒã‚ã‚Šã¾ã›ã‚“ã€‚
     /// </returns>
     private bool TryGetReferences()
     {
@@ -462,8 +505,8 @@ public sealed class S1P3BossDreadAttackState :
                     out m_commonReferences))
         {
             Debug.LogError(
-                $"{nameof(BossPhaseReferences)}‚ª" +
-                "Œ©‚Â‚©‚è‚Ü‚¹‚ñB");
+                $"{nameof(BossPhaseReferences)}ãŒ" +
+                "è¦‹ã¤ã‹ã‚Šã¾ã›ã‚“ã€‚");
 
             return false;
         }
@@ -471,8 +514,8 @@ public sealed class S1P3BossDreadAttackState :
         if (m_commonReferences == null)
         {
             Debug.LogError(
-                $"{nameof(BossPhaseReferences)}‚ª" +
-                "İ’è‚³‚ê‚Ä‚¢‚Ü‚¹‚ñB");
+                $"{nameof(BossPhaseReferences)}ãŒ" +
+                "è¨­å®šã•ã‚Œã¦ã„ã¾ã›ã‚“ã€‚");
 
             return false;
         }
@@ -482,8 +525,8 @@ public sealed class S1P3BossDreadAttackState :
                     out m_references))
         {
             Debug.LogError(
-                $"{nameof(S1P3BossReferences)}‚ª" +
-                "Œ©‚Â‚©‚è‚Ü‚¹‚ñB");
+                $"{nameof(S1P3BossReferences)}ãŒ" +
+                "è¦‹ã¤ã‹ã‚Šã¾ã›ã‚“ã€‚");
 
             return false;
         }
@@ -495,8 +538,8 @@ public sealed class S1P3BossDreadAttackState :
         if (m_stateReferences == null)
         {
             Debug.LogError(
-                $"{nameof(DreadAttackStateReferences)}‚ª" +
-                "İ’è‚³‚ê‚Ä‚¢‚Ü‚¹‚ñB");
+                $"{nameof(DreadAttackStateReferences)}ãŒ" +
+                "è¨­å®šã•ã‚Œã¦ã„ã¾ã›ã‚“ã€‚");
 
             return false;
         }
@@ -514,8 +557,8 @@ public sealed class S1P3BossDreadAttackState :
         if (m_parameters == null)
         {
             Debug.LogError(
-                $"{nameof(S1P3BossDreadAttackStateParameters)}‚ª" +
-                "İ’è‚³‚ê‚Ä‚¢‚Ü‚¹‚ñB");
+                $"{nameof(S1P3BossDreadAttackStateParameters)}ãŒ" +
+                "è¨­å®šã•ã‚Œã¦ã„ã¾ã›ã‚“ã€‚");
 
             return false;
         }
@@ -523,7 +566,7 @@ public sealed class S1P3BossDreadAttackState :
         if (m_commonReferences.PlayerTransform == null)
         {
             Debug.LogError(
-                "PlayerTransform‚ªİ’è‚³‚ê‚Ä‚¢‚Ü‚¹‚ñB");
+                "PlayerTransformãŒè¨­å®šã•ã‚Œã¦ã„ã¾ã›ã‚“ã€‚");
 
             return false;
         }
@@ -531,8 +574,8 @@ public sealed class S1P3BossDreadAttackState :
         if (m_references.AttackSettingsProvider == null)
         {
             Debug.LogError(
-                $"{nameof(S1BossPhaseAttackSettingsProvider)}‚ª" +
-                "İ’è‚³‚ê‚Ä‚¢‚Ü‚¹‚ñB");
+                $"{nameof(S1BossPhaseAttackSettingsProvider)}ãŒ" +
+                "è¨­å®šã•ã‚Œã¦ã„ã¾ã›ã‚“ã€‚");
 
             return false;
         }
@@ -540,7 +583,7 @@ public sealed class S1P3BossDreadAttackState :
         if (m_stateReferences.OilPrefab == null)
         {
             Debug.LogError(
-                "ƒIƒCƒ‹Prefab‚ªİ’è‚³‚ê‚Ä‚¢‚Ü‚¹‚ñB");
+                "ã‚ªã‚¤ãƒ«PrefabãŒè¨­å®šã•ã‚Œã¦ã„ã¾ã›ã‚“ã€‚");
 
             return false;
         }
@@ -552,7 +595,7 @@ public sealed class S1P3BossDreadAttackState :
             launchPoints.Count == 0)
         {
             Debug.LogError(
-                "ƒhƒŒƒbƒgUŒ‚‚Ì”­Ë’n“_‚ªİ’è‚³‚ê‚Ä‚¢‚Ü‚¹‚ñB");
+                "ãƒ‰ãƒ¬ãƒƒãƒˆæ”»æ’ƒã®ç™ºå°„åœ°ç‚¹ãŒè¨­å®šã•ã‚Œã¦ã„ã¾ã›ã‚“ã€‚");
 
             return false;
         }
@@ -577,7 +620,7 @@ public sealed class S1P3BossDreadAttackState :
         if (!hasValidLaunchPoint)
         {
             Debug.LogError(
-                "—LŒø‚ÈƒhƒŒƒbƒgUŒ‚‚Ì”­Ë’n“_‚ª‚ ‚è‚Ü‚¹‚ñB");
+                "æœ‰åŠ¹ãªãƒ‰ãƒ¬ãƒƒãƒˆæ”»æ’ƒã®ç™ºå°„åœ°ç‚¹ãŒã‚ã‚Šã¾ã›ã‚“ã€‚");
 
             return false;
         }
@@ -586,11 +629,11 @@ public sealed class S1P3BossDreadAttackState :
     }
 
     /// <summary>
-    /// UŒ‚ID‚ÆAnimator Bool‚ğæ“¾‚µ‚Ü‚·B
+    /// æ”»æ’ƒIDã¨Animator Boolã‚’å–å¾—ã—ã¾ã™ã€‚
     /// </summary>
     /// <returns>
-    /// trueFæ“¾‚µ‚Ü‚µ‚½B
-    /// falseFæ“¾‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½B
+    /// trueï¼šå–å¾—ã—ã¾ã—ãŸã€‚
+    /// falseï¼šå–å¾—ã§ãã¾ã›ã‚“ã§ã—ãŸã€‚
     /// </returns>
     private bool TryGetAttackSetting()
     {
@@ -602,15 +645,15 @@ public sealed class S1P3BossDreadAttackState :
         if (attackSettings == null)
         {
             Debug.LogError(
-                $"{nameof(S1P3BossAttackSettings)}‚ª" +
-                "Œ©‚Â‚©‚è‚Ü‚¹‚ñB");
+                $"{nameof(S1P3BossAttackSettings)}ãŒ" +
+                "è¦‹ã¤ã‹ã‚Šã¾ã›ã‚“ã€‚");
 
             return false;
         }
 
         /*
-         * AttackSettings‘¤‚Ì•¶š—ñ‚Í
-         * Trigger–¼‚Å‚Í‚È‚­Bool–¼‚Æ‚µ‚Äˆµ‚¢‚Ü‚·B
+         * AttackSettingså´ã®æ–‡å­—åˆ—ã¯
+         * Triggeråã§ã¯ãªãBoolåã¨ã—ã¦æ‰±ã„ã¾ã™ã€‚
          */
         if (!attackSettings.TryGetAttackSetting(
                 S1P3BossAttackType.DREAD_ATTACK,
@@ -618,8 +661,8 @@ public sealed class S1P3BossDreadAttackState :
                 out string animationBoolName))
         {
             Debug.LogError(
-                $"{S1P3BossAttackType.DREAD_ATTACK}‚Ì" +
-                "UŒ‚İ’è‚ª‚ ‚è‚Ü‚¹‚ñB");
+                $"{S1P3BossAttackType.DREAD_ATTACK}ã®" +
+                "æ”»æ’ƒè¨­å®šãŒã‚ã‚Šã¾ã›ã‚“ã€‚");
 
             return false;
         }
@@ -627,9 +670,16 @@ public sealed class S1P3BossDreadAttackState :
         if (m_attackIdentifier == null ||
             string.IsNullOrEmpty(
                 animationBoolName) ||
-            Owner.AnimationController == null ||
+            Owner.AnimationController == null)
+        {
+            return false;
+        }
+
+        m_animationEventReceiver =
             Owner.AnimationController
-                .CurrentAnimationEventReceiver == null)
+                .CurrentAnimationEventReceiver;
+
+        if (m_animationEventReceiver == null)
         {
             return false;
         }
@@ -638,18 +688,21 @@ public sealed class S1P3BossDreadAttackState :
             Animator.StringToHash(
                 animationBoolName);
 
+        m_isAnimationInitialized =
+            true;
+
         return true;
     }
 
     /// <summary>
-    /// ƒhƒŒƒbƒg”òãÄ•¨‚Ìƒ_ƒ[ƒW‚ğæ“¾‚µ‚Ü‚·B
+    /// ãƒ‰ãƒ¬ãƒƒãƒˆé£›ç¿”ç‰©ã®ãƒ€ãƒ¡ãƒ¼ã‚¸ã‚’å–å¾—ã—ã¾ã™ã€‚
     /// </summary>
     /// <param name="damage">
-    /// æ“¾‚µ‚½ƒ_ƒ[ƒWB
+    /// å–å¾—ã—ãŸãƒ€ãƒ¡ãƒ¼ã‚¸ã€‚
     /// </param>
     /// <returns>
-    /// trueFæ“¾‚µ‚Ü‚µ‚½B
-    /// falseFæ“¾‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½B
+    /// trueï¼šå–å¾—ã—ã¾ã—ãŸã€‚
+    /// falseï¼šå–å¾—ã§ãã¾ã›ã‚“ã§ã—ãŸã€‚
     /// </returns>
     private bool TryGetProjectileDamage(
         out int damage)
@@ -665,7 +718,7 @@ public sealed class S1P3BossDreadAttackState :
         if (parameterAsset == null)
         {
             Debug.LogError(
-                "UŒ‚ƒ_ƒ[ƒWƒpƒ‰ƒ[ƒ^‚ªİ’è‚³‚ê‚Ä‚¢‚Ü‚¹‚ñB");
+                "æ”»æ’ƒãƒ€ãƒ¡ãƒ¼ã‚¸ãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿ãŒè¨­å®šã•ã‚Œã¦ã„ã¾ã›ã‚“ã€‚");
 
             return false;
         }
@@ -676,8 +729,8 @@ public sealed class S1P3BossDreadAttackState :
                     attackParameter))
         {
             Debug.LogError(
-                $"{m_attackIdentifier.name}‚Ì" +
-                "ƒ_ƒ[ƒWƒpƒ‰ƒ[ƒ^‚ª‚ ‚è‚Ü‚¹‚ñB");
+                $"{m_attackIdentifier.name}ã®" +
+                "ãƒ€ãƒ¡ãƒ¼ã‚¸ãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿ãŒã‚ã‚Šã¾ã›ã‚“ã€‚");
 
             return false;
         }
@@ -715,14 +768,14 @@ public sealed class S1P3BossDreadAttackState :
         }
 
         Debug.LogError(
-            $"{S1BossHitboxId.DREAD_PROJECTILE}‚Ì" +
-            "ƒ_ƒ[ƒWİ’è‚ª‚ ‚è‚Ü‚¹‚ñB");
+            $"{S1BossHitboxId.DREAD_PROJECTILE}ã®" +
+            "ãƒ€ãƒ¡ãƒ¼ã‚¸è¨­å®šãŒã‚ã‚Šã¾ã›ã‚“ã€‚");
 
         return false;
     }
 
     /// <summary>
-    /// AnimationEvent‚ğw“Ç‚µ‚Ü‚·B
+    /// AnimationEventã‚’è³¼èª­ã—ã¾ã™ã€‚
     /// </summary>
     private void SubscribeAnimationEvent()
     {
@@ -731,9 +784,12 @@ public sealed class S1P3BossDreadAttackState :
             return;
         }
 
-        Owner.AnimationController
-            .CurrentAnimationEventReceiver
-            .AttackEventReceived +=
+        if (m_animationEventReceiver == null)
+        {
+            return;
+        }
+
+        m_animationEventReceiver.AttackEventReceived +=
             HandleAttackEvent;
 
         m_isAnimationEventSubscribed =
@@ -741,29 +797,34 @@ public sealed class S1P3BossDreadAttackState :
     }
 
     /// <summary>
-    /// AnimationEvent‚Ìw“Ç‚ğ‰ğœ‚µ‚Ü‚·B
+    /// AnimationEventã®è³¼èª­ã‚’è§£é™¤ã—ã¾ã™ã€‚
     /// </summary>
     private void UnsubscribeAnimationEvent()
     {
         if (!m_isAnimationEventSubscribed ||
-            Owner?.AnimationController == null ||
-            Owner.AnimationController
-                .CurrentAnimationEventReceiver == null)
+            m_animationEventReceiver == null)
         {
             return;
         }
 
-        Owner.AnimationController
-            .CurrentAnimationEventReceiver
-            .AttackEventReceived -=
+        m_animationEventReceiver.AttackEventReceived -=
             HandleAttackEvent;
 
         m_isAnimationEventSubscribed =
             false;
+
+        m_isAnimationInitialized =
+            false;
+
+        m_animationEventReceiver =
+            null;
+
+        m_stateElapsedTime =
+            0.0f;
     }
 
     /// <summary>
-    /// ƒIƒCƒ‹ƒCƒxƒ“ƒg‚Ìw“Ç‚ğ‰ğœ‚µ‚Ü‚·B
+    /// ã‚ªã‚¤ãƒ«ã‚¤ãƒ™ãƒ³ãƒˆã®è³¼èª­ã‚’è§£é™¤ã—ã¾ã™ã€‚
     /// </summary>
     private void UnsubscribeOilEvents()
     {
@@ -784,7 +845,7 @@ public sealed class S1P3BossDreadAttackState :
     }
 
     /// <summary>
-    /// ”òs’†‚ÌƒIƒCƒ‹‚ğ’â~‚µ‚Ü‚·B
+    /// é£›è¡Œä¸­ã®ã‚ªã‚¤ãƒ«ã‚’åœæ­¢ã—ã¾ã™ã€‚
     /// </summary>
     private void CancelFlyingOils()
     {
@@ -797,7 +858,7 @@ public sealed class S1P3BossDreadAttackState :
     }
 
     /// <summary>
-    /// ƒhƒŒƒbƒgUŒ‚‚ÌƒN[ƒ‹ƒ^ƒCƒ€‚ğŠJn‚µ‚Ü‚·B
+    /// ãƒ‰ãƒ¬ãƒƒãƒˆæ”»æ’ƒã®ã‚¯ãƒ¼ãƒ«ã‚¿ã‚¤ãƒ ã‚’é–‹å§‹ã—ã¾ã™ã€‚
     /// </summary>
     private void StartCoolTime()
     {
@@ -827,11 +888,16 @@ public sealed class S1P3BossDreadAttackState :
     }
 
     /// <summary>
-    /// ó‘Ô‚ğ¸”sI—¹‚µ‚Ü‚·B
+    /// çŠ¶æ…‹ã‚’å¤±æ•—çµ‚äº†ã—ã¾ã™ã€‚
     /// </summary>
     private void FailState()
     {
-        if (Owner?.AnimationController != null)
+        UnsubscribeAnimationEvent();
+        UnsubscribeOilEvents();
+        CancelFlyingOils();
+
+        if (m_isAnimationInitialized &&
+            Owner?.AnimationController != null)
         {
             Owner.AnimationController.SetBool(
                 m_animationBoolID,
@@ -843,7 +909,7 @@ public sealed class S1P3BossDreadAttackState :
     }
 
     /// <summary>
-    /// Àsî•ñ‚ğ‰Šú‰»‚µ‚Ü‚·B
+    /// å®Ÿè¡Œæ™‚æƒ…å ±ã‚’åˆæœŸåŒ–ã—ã¾ã™ã€‚
     /// </summary>
     private void ResetRuntimeState()
     {

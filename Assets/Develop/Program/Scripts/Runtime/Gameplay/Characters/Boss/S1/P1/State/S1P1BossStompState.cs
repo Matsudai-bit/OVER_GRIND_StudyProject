@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 /// <summary>
 /// ステージ1フェーズ1の踏みつけ攻撃を実行します。
@@ -8,6 +8,9 @@ using UnityEngine;
 public sealed class S1P1BossStompState :
     StateBase<BossController>
 {
+    // AnimationEvent待機による永久停止を防ぐ上限時間
+    private const float MAX_STATE_DURATION = 15.0f;
+
     // 攻撃ID
     private AttackIdentifier m_attackIdentifier;
 
@@ -25,6 +28,9 @@ public sealed class S1P1BossStompState :
 
     // AnimationEvent購読中か
     private bool m_isAnimationEventRegistered;
+
+    // State開始からの経過時間
+    private float m_stateElapsedTime;
 
     /// <summary>
     /// 踏みつけ攻撃を開始します。
@@ -74,6 +80,38 @@ public sealed class S1P1BossStompState :
          */
         Owner.AnimationController.SetTrigger(
             m_animationTriggerID);
+    }
+
+    /// <summary>
+    /// AnimationEvent待機のタイムアウトを監視します。
+    /// </summary>
+    /// <param name="deltaTime">前フレームからの経過時間。</param>
+    protected override void OnUpdate(
+        float deltaTime)
+    {
+        if (Owner == null ||
+            Owner.GetStateExecutionStatus() !=
+                StateExecutionStatus.RUNNING)
+        {
+            return;
+        }
+
+        m_stateElapsedTime +=
+            Mathf.Max(
+                0.0f,
+                deltaTime);
+
+        if (m_stateElapsedTime <
+            MAX_STATE_DURATION)
+        {
+            return;
+        }
+
+        Debug.LogError(
+            $"[{nameof(S1P1BossStompState)}] " +
+            "AnimationEvent待機がタイムアウトしました。");
+
+        SetFailed();
     }
 
     /// <summary>
@@ -402,6 +440,9 @@ public sealed class S1P1BossStompState :
 
         m_isAnimationEventRegistered =
             false;
+
+        m_stateElapsedTime =
+            0.0f;
     }
 
     /// <summary>

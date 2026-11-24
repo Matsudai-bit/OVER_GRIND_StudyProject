@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 /// <summary>
 /// ステージ1フェーズ1の方向転換を実行します。
@@ -8,6 +8,9 @@ public sealed class S1P1BossTurnState :
 {
     // 1回の方向転換で回転する角度
     private const float TURN_ANGLE = 45.0f;
+
+    // AnimationEvent待機の猶予時間
+    private const float ANIMATION_TIMEOUT_MARGIN = 2.0f;
 
     // Animator Trigger名
     private const string TURN_RIGHT_PARAMETER_NAME =
@@ -64,6 +67,9 @@ public sealed class S1P1BossTurnState :
     // AnimationEvent受信
     private AnimationEventReceiver m_animationEventReceiver;
 
+    // State開始からの経過時間
+    private float m_stateElapsedTime;
+
     /// <summary>
     /// 方向転換を開始します。
     /// </summary>
@@ -114,11 +120,47 @@ public sealed class S1P1BossTurnState :
     }
 
     /// <summary>
+    /// AnimationEvent待機のタイムアウトを監視します。
+    /// </summary>
+    /// <param name="deltaTime">前フレームからの経過時間。</param>
+    protected override void OnUpdate(
+        float deltaTime)
+    {
+        if (Owner == null ||
+            Owner.GetStateExecutionStatus() !=
+                StateExecutionStatus.RUNNING)
+        {
+            return;
+        }
+
+        m_stateElapsedTime +=
+            Mathf.Max(
+                0.0f,
+                deltaTime);
+
+        if (m_stateElapsedTime <
+            m_animationDuration +
+            ANIMATION_TIMEOUT_MARGIN)
+        {
+            return;
+        }
+
+        Debug.LogError(
+            $"[{nameof(S1P1BossTurnState)}] " +
+            "方向転換Animationがタイムアウトしました。");
+
+        SetImmediateFailed();
+    }
+
+    /// <summary>
     /// Animationに同期して方向転換を更新します。
     /// </summary>
     protected override void OnFixedUpdate()
     {
-        if (!m_isAnimationStarted ||
+        if (Owner == null ||
+            Owner.GetStateExecutionStatus() !=
+                StateExecutionStatus.RUNNING ||
+            !m_isAnimationStarted ||
             m_parameters == null ||
             Owner.Motor == null ||
             m_animationDuration <= Mathf.Epsilon)
@@ -159,8 +201,6 @@ public sealed class S1P1BossTurnState :
     /// </summary>
     protected override void OnExitState()
     {
-        StartCoolTimeIfSucceeded();
-
         Owner.Motor?.StopHorizontalMovement();
 
         if (m_animationEventReceiver != null)
@@ -249,7 +289,10 @@ public sealed class S1P1BossTurnState :
     private void HandleAnimationEvent(
         AttackEventData attackEventData)
     {
-        if (attackEventData == null)
+        if (attackEventData == null ||
+            Owner == null ||
+            Owner.GetStateExecutionStatus() !=
+                StateExecutionStatus.RUNNING)
         {
             return;
         }
@@ -280,8 +323,21 @@ public sealed class S1P1BossTurnState :
     /// </summary>
     private void FinishTurning()
     {
+        if (Owner == null ||
+            Owner.GetStateExecutionStatus() !=
+                StateExecutionStatus.RUNNING)
+        {
+            return;
+        }
+
         if (!m_isAnimationStarted)
         {
+            Debug.LogError(
+                $"[{nameof(S1P1BossTurnState)}] " +
+                "ANIMATION_STARTを受信する前にANIMATION_ENDを受信しました。");
+
+            SetImmediateFailed();
+
             return;
         }
 
@@ -291,6 +347,11 @@ public sealed class S1P1BossTurnState :
         // 最終的に必ず45度回転した状態にする
         Owner.Motor?.MoveRotation(
             m_targetRotation);
+
+        /*
+         * SUCCEEDEDへ変更する前にクールタイムを登録します。
+         */
+        StartCoolTime();
 
         Owner.SetStateExecutionStatus(
             StateExecutionStatus.SUCCEEDED);
@@ -339,10 +400,9 @@ public sealed class S1P1BossTurnState :
     /// <summary>
     /// 正常終了した方向転換のクールタイムを開始します。
     /// </summary>
-    private void StartCoolTimeIfSucceeded()
+    private void StartCoolTime()
     {
-        if (Owner.GetStateExecutionStatus() !=
-                StateExecutionStatus.SUCCEEDED ||
+        if (Owner == null ||
             m_references == null ||
             m_references.DecisionParameterAsset == null)
         {
@@ -503,6 +563,9 @@ public sealed class S1P1BossTurnState :
 
         m_isAnimationStarted =
             false;
+
+        m_stateElapsedTime =
+            0.0f;
     }
 
     /// <summary>
