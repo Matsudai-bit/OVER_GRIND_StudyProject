@@ -296,6 +296,7 @@ public sealed class GameDirector : MonoBehaviour
                 break;
 
             case GameFlowStateType.RESULT:
+                Time.timeScale = 0.0f;
                 break;
 
             case GameFlowStateType.GAME_OVER:
