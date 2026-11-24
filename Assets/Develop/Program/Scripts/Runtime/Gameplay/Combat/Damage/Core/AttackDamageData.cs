@@ -16,6 +16,8 @@ public struct AttackDamageData
     [SerializeField]
     private AttackPowerType m_attackPowerType;
 
+    private int m_attackSessionId;
+
     private Vector3 m_sourceFacingDirection;
     private bool m_hasSourceFacingDirection;
 
@@ -33,6 +35,7 @@ public struct AttackDamageData
         m_damage = Mathf.Max(0, damage);
         m_attackIdentifier = attackIdentifier;
         m_attackPowerType = attackPowerType;
+        m_attackSessionId = 0;
         m_sourceFacingDirection = Vector3.zero;
         m_hasSourceFacingDirection = false;
     }
@@ -45,6 +48,9 @@ public struct AttackDamageData
 
     /// <summary>攻撃の威力種別を取得します。</summary>
     public AttackPowerType PowerType => m_attackPowerType;
+
+    /// <summary>同じ攻撃が続いている間は変わらない識別子を取得します。</summary>
+    public int AttackSessionId => m_attackSessionId;
 
     /// <summary>
     /// 攻撃IDを維持したままダメージ量を変更した情報を生成します。
@@ -60,6 +66,7 @@ public struct AttackDamageData
 
         result.m_sourceFacingDirection = m_sourceFacingDirection;
         result.m_hasSourceFacingDirection = m_hasSourceFacingDirection;
+        result.m_attackSessionId = m_attackSessionId;
         return result;
     }
 
@@ -78,6 +85,17 @@ public struct AttackDamageData
 
         result.m_sourceFacingDirection = m_sourceFacingDirection;
         result.m_hasSourceFacingDirection = m_hasSourceFacingDirection;
+        result.m_attackSessionId = m_attackSessionId;
+        return result;
+    }
+
+    /// <summary>攻撃中の識別子を追加した情報を生成します。</summary>
+    /// <param name="sessionId">攻撃開始から終了まで共通の識別子。</param>
+    /// <returns>攻撃識別子を保持したダメージ情報。</returns>
+    public AttackDamageData WithAttackSessionId(int sessionId)
+    {
+        AttackDamageData result = this;
+        result.m_attackSessionId = sessionId;
         return result;
     }
 
