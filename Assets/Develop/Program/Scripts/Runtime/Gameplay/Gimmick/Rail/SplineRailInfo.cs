@@ -11,6 +11,25 @@ public class SplineRailInfo : MonoBehaviour
     [SerializeField] private float railSpeedMultiplier = 1.0f; // レール固有の速度倍率
     [SerializeField] private bool forcedEscape = true;         // 加速パネル付きレールか
 
+
+    [SerializeField, Header("Direction Settings")]
+    private bool m_lockBoardingDirection = false;
+
+    [SerializeField]
+    private bool m_useReverseDirection = false;
+
+    /// <summary>
+    /// 搭乗時の進行方向を固定するか取得します。
+    /// </summary>
+    public bool LockBoardingDirection =>
+        m_lockBoardingDirection;
+
+    /// <summary>
+    /// 固定方向としてSpline逆方向を使用するか取得します。
+    /// </summary>
+    public bool UseReverseDirection =>
+        m_useReverseDirection;
+
     public float SpeedMultiplier => railSpeedMultiplier;
     public bool ForcesEscape => forcedEscape;
 

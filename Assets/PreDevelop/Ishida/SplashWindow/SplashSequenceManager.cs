@@ -113,7 +113,10 @@ public sealed class SplashSequenceManager : MonoBehaviour
     private void Start()
     {
         StartCoroutine(PlayLogoSequence());
+        // GameFlowの初期化はGameFlowController側で行う
+        Cursor.visible = false;
     }
+
 
     private void OnDisable()
     {

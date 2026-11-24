@@ -30,11 +30,28 @@ public sealed class PlayerIdlingState
     /// </summary>
     protected override void OnFixedUpdate()
     {
-        if (Owner.InputReader.ConsumeAttackInput() && Owner.Monitor.IsGrounded)
+        if (!Owner.Monitor.IsGrounded)
         {
-            Machine.ChangeState<PlayerAttackingState>();
+            Machine.ChangeState<PlayerJumpAirborneState>();
             return;
         }
+
+        // ダッシュ後に移動入力を離しても、残量があればチャージ攻撃を開始する。
+        if (Owner.IsBoostSuspended &&
+            Owner.SuspendedBoostGaugeRate > 0.0f &&
+            Owner.Monitor.IsGrounded &&
+            Owner.InputReader.IsAttackHeld &&
+            Owner.InputReader.ConsumeAttackInput())
+        {
+            Machine.ChangeState<PlayerChargeAttackingState>();
+            return;
+        }
+
+        //if (Owner.InputReader.ConsumeAttackInput() && Owner.Monitor.IsGrounded)
+        //{
+        //    Machine.ChangeState<PlayerAttackingState>();
+        //    return;
+        //}
 
         if (Owner.Monitor.CanStartJump &&
             Owner.InputReader.HasJumpInput)
@@ -90,7 +107,7 @@ public sealed class PlayerIdlingState
             !wasPressedWhileMoving &&
             Owner.InputReader.ConsumeVBoostStarted())
         {
-            Machine.ChangeState<PlayerBoostChargingState>();
+            Machine.ChangeState<PlayerStaticChargeState>();
             return;
         }
 

@@ -93,11 +93,59 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 322cc2299df137841b8c7cd0ac0f45f9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::StageSceneTransitionController
+  m_beforeLoadingAction:
+    m_PersistentCalls:
+      m_Calls: []
   m_stageSceneContext: {fileID: 11400000, guid: 68aee590d64e33541bfc28f5095591a1, type: 2}
   m_sceneTransitionInEffect: {fileID: 4850721005755377521, guid: e5ee7460be3a26344b0b6ddd753e3700, type: 3}
   m_sceneTransitionOutEffect: {fileID: 8713407394917058467, guid: 45d4f5741c0df74469a650ff3812b906, type: 3}
   m_useLoadingScene: 1
   m_stageSelectSceneName: StageSelectScene
+--- !u!1 &1126004316081317404
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 5787029929364301120}
+  - component: {fileID: 4722743056920458850}
+  m_Layer: 0
+  m_Name: BossGameplayControl
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &5787029929364301120
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1126004316081317404}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -31.8668, y: 47.52878, z: 78.22}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 3268620928704596805}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &4722743056920458850
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1126004316081317404}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e78f9ed6bbf388f4aad6207711812960, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BossGameplayControl
+  m_bossController: {fileID: 0}
 --- !u!1 &5423053070208108494
 GameObject:
   m_ObjectHideFlags: 0
@@ -144,6 +192,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EffectService
   m_catalog: {fileID: 11400000, guid: a827003547665774b88a7bafc3b2bcc4, type: 2}
   m_poolRoot: {fileID: 2954684022958182768}
+  m_allowRuntimeInstantiation: 1
+  m_logPoolExhaustion: 0
 --- !u!1 &6446733144404748372
 GameObject:
   m_ObjectHideFlags: 0
@@ -222,13 +272,63 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 2954684022958182768}
+  - {fileID: 5787029929364301120}
   - {fileID: 3977629895768355443}
   - {fileID: 1846644471828035093}
   - {fileID: 8607873579644353239}
   - {fileID: 786732865061838607}
   - {fileID: 8140071050155036950}
+  - {fileID: 3801916896088109850}
+  - {fileID: 5036374461752786205}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &7783760130070428284
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3801916896088109850}
+  - component: {fileID: 5757081569939743093}
+  m_Layer: 0
+  m_Name: InputDeviceTypeSwitcher
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &3801916896088109850
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7783760130070428284}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 3268620928704596805}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &5757081569939743093
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7783760130070428284}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 95bceab0261ce2f45aa1ff0ed72734be, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::InputDeviceTypeSwitcher
+  m_spriteManager: {fileID: 11400000, guid: a37042e925357f14cba0f49615a6025a, type: 2}
+  m_initialInputDeviceType: 0
+  m_magnitudeThreshold: 0.1
 --- !u!1 &7876178926423395954
 GameObject:
   m_ObjectHideFlags: 0
@@ -277,6 +377,57 @@ MonoBehaviour:
   m_playOnStart: 0
   m_fadeInDuration: 3
   m_fadeOutDuration: 2
+--- !u!1 &7885683803218091319
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 5036374461752786205}
+  - component: {fileID: 5241037013989558125}
+  m_Layer: 0
+  m_Name: RunStats
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &5036374461752786205
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7885683803218091319}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 3268620928704596805}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &5241037013989558125
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7885683803218091319}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dedc8073c6ed534418d4791204984cbc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DebugRuntimeStats
+  m_isVisible: 1
+  m_displayRect:
+    serializedVersion: 2
+    x: 10
+    y: 10
+    width: 320
+    height: 310
 --- !u!1001 &6143222029470531293
 PrefabInstance:
   m_ObjectHideFlags: 0

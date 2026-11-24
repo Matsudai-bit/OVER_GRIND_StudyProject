@@ -524,7 +524,7 @@
                 {
                     "name": "",
                     "id": "a1851b31-a8a2-4864-a620-9d60f10a495c",
-                    "path": "<Keyboard>/ctrl",
+                    "path": "<Keyboard>/shift",
                     "interactions": "",
                     "processors": "",
                     "groups": "",
@@ -1200,6 +1200,17 @@
                 },
                 {
                     "name": "",
+                    "id": "3ea07e7d-d204-4230-b0f2-68f05cd471e5",
+                    "path": "<XInputController>/leftTrigger",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "TabLeft",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
                     "id": "146dbc4e-98ef-470a-98a3-7a3f60e2f695",
                     "path": "<Gamepad>/rightShoulder",
                     "interactions": "",
@@ -1219,6 +1230,17 @@
                     "action": "TabRight",
                     "isComposite": false,
                     "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "673cb47a-d470-414a-b915-15454e3d830a",
+                    "path": "<Gamepad>/rightTrigger",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "TabRight",
+                    "isComposite": false,
+                    "isPartOfComposite": false
                 }
             ]
         },
@@ -1227,9 +1249,18 @@
             "id": "94023a67-1c75-4bbb-b9d3-d60208344477",
             "actions": [
                 {
-                    "name": "EscapeAction",
+                    "name": "AttackCommand1",
                     "type": "Button",
                     "id": "a05a368d-8eaa-47f8-b243-36f13442a49a",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "AttackCommand2",
+                    "type": "Button",
+                    "id": "4e780135-44a4-473e-9217-834aff268e29",
                     "expectedControlType": "",
                     "processors": "",
                     "interactions": "",
@@ -1239,23 +1270,67 @@
             "bindings": [
                 {
                     "name": "",
-                    "id": "11f1ce79-278a-476b-8d2b-750cbd0398a6",
-                    "path": "<Gamepad>/buttonEast",
+                    "id": "47dd6d30-67b0-4a1e-bead-0846752d16a5",
+                    "path": "<Gamepad>/leftTrigger",
                     "interactions": "",
                     "processors": "",
-                    "groups": ";Gamepad",
-                    "action": "EscapeAction",
+                    "groups": "",
+                    "action": "AttackCommand1",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },
                 {
                     "name": "",
-                    "id": "a541f7f0-ca4a-4ad9-80ba-c00821cb88d0",
-                    "path": "<Keyboard>/space",
+                    "id": "a7622621-fe85-4f24-a7ab-65680fdaf05f",
+                    "path": "<Gamepad>/leftShoulder",
                     "interactions": "",
                     "processors": "",
-                    "groups": ";Keyboard&Mouse",
-                    "action": "EscapeAction",
+                    "groups": "",
+                    "action": "AttackCommand1",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "4c1eb905-bdb7-4be4-83e0-5243444238f5",
+                    "path": "<Mouse>/leftButton",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "AttackCommand1",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "5a1353e1-5a1e-49d6-bf5a-c1fed893dc90",
+                    "path": "<Gamepad>/rightShoulder",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "AttackCommand2",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "ae43dcd5-955e-4d3b-90c3-5c3ac94bfca4",
+                    "path": "<Gamepad>/rightTrigger",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "AttackCommand2",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "cd53f0ef-88e5-45cf-ab78-2689e67d0db7",
+                    "path": "<Keyboard>/w",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "AttackCommand2",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }

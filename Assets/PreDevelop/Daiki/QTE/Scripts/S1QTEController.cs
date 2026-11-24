@@ -283,7 +283,23 @@ public sealed class S1QTEController : MonoBehaviour
 
         TryStartHolding();
     }
+    /// <summary>
+    /// Timelineが長押しループ開始地点以降まで進んでいるか取得します。
+    /// </summary>
+    public bool HasReachedHoldLoopStart
+    {
+        get
+        {
+            if (!m_isQteActive ||
+                m_playableDirector == null)
+            {
+                return false;
+            }
 
+            return m_playableDirector.time >=
+                   m_holdLoopStartTime;
+        }
+    }
     /// <summary>
     /// 2つ目の入力解除を処理します。
     /// </summary>

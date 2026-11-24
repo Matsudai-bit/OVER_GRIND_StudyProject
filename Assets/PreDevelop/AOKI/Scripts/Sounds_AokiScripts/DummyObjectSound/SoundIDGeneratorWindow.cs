@@ -33,7 +33,10 @@ public sealed class SoundIDGeneratorWindow : EditorWindow
         public float volume = 1.0f;
         public float pitch = 1.0f;
         public bool is3D = false;
+        public float minDistance = 1.0f;
         public float maxDistance = 30.0f;
+        public AudioRolloffMode rolloffMode = AudioRolloffMode.Logarithmic;
+        public AnimationCurve customRolloffCurve = AnimationCurve.Linear(0.0f, 1.0f, 1.0f, 0.0f);
         public bool loop = false;
     }
 
@@ -49,7 +52,10 @@ public sealed class SoundIDGeneratorWindow : EditorWindow
         public float volume;
         public float pitch;
         public bool is3D;
+        public float minDistance;
         public float maxDistance;
+        public AudioRolloffMode rolloffMode;
+        public AnimationCurve customRolloffCurve;
         public bool loop;
     }
 
@@ -131,6 +137,9 @@ public sealed class SoundIDGeneratorWindow : EditorWindow
 
     // 更新対象の3D最大距離
     private float m_updateMaxDistance = 30.0f;
+    private float m_updateMinDistance = 1.0f;
+    private AudioRolloffMode m_updateRolloffMode = AudioRolloffMode.Logarithmic;
+    private AnimationCurve m_updateCustomRolloffCurve = AnimationCurve.Linear(0.0f, 1.0f, 1.0f, 0.0f);
 
     // 一括編集対象の登録済みAudioID
     private readonly HashSet<AudioID> m_selectedExistingIDs =
@@ -142,6 +151,9 @@ public sealed class SoundIDGeneratorWindow : EditorWindow
     private bool m_bulkApplyPitch = false;
     private bool m_bulkApplyIs3D = true;
     private bool m_bulkApplyMaxDistance = false;
+    private bool m_bulkApplyMinDistance = false;
+    private bool m_bulkApplyRolloffMode = false;
+    private bool m_bulkApplyCustomRolloffCurve = false;
     private bool m_bulkApplyLoop = true;
 
     // 一括設定値
@@ -150,6 +162,9 @@ public sealed class SoundIDGeneratorWindow : EditorWindow
     private float m_bulkPitch = 1.0f;
     private bool m_bulkIs3D = false;
     private float m_bulkMaxDistance = 30.0f;
+    private float m_bulkMinDistance = 1.0f;
+    private AudioRolloffMode m_bulkRolloffMode = AudioRolloffMode.Logarithmic;
+    private AnimationCurve m_bulkCustomRolloffCurve = AnimationCurve.Linear(0.0f, 1.0f, 1.0f, 0.0f);
     private bool m_bulkLoop = false;
 
     // 最後に選択した更新対象ID
@@ -377,12 +392,7 @@ public sealed class SoundIDGeneratorWindow : EditorWindow
 
             using (new EditorGUI.DisabledScope(!item.is3D))
             {
-                item.maxDistance =
-                    Mathf.Max(
-                        0.0f,
-                        EditorGUILayout.FloatField(
-                            "3D最大距離",
-                            item.maxDistance));
+                DrawAddRolloffSettings(item);
             }
 
             EditorGUILayout.EndHorizontal();
@@ -410,6 +420,25 @@ public sealed class SoundIDGeneratorWindow : EditorWindow
     /// <summary>
     /// 追加予定スロットの複数選択UIを描画します。
     /// </summary>
+    /// <summary>
+    /// 新規サウンドの3D距離減衰設定を表示します。
+    /// </summary>
+    private static void DrawAddRolloffSettings(AddItem item)
+    {
+        item.rolloffMode = (AudioRolloffMode)EditorGUILayout.EnumPopup("Rolloff", item.rolloffMode);
+        item.minDistance = Mathf.Max(0.01f, EditorGUILayout.FloatField("Min Distance", item.minDistance));
+        if (item.rolloffMode != AudioRolloffMode.Logarithmic)
+        {
+            item.maxDistance = Mathf.Max(item.minDistance + 0.01f,
+                EditorGUILayout.FloatField("Max Distance", item.maxDistance));
+        }
+        if (item.rolloffMode == AudioRolloffMode.Custom)
+        {
+            item.customRolloffCurve = EditorGUILayout.CurveField("Custom Curve",
+                item.customRolloffCurve);
+        }
+    }
+
     private void DrawAddSelectionControls()
     {
         if (m_addList.Count == 0)
@@ -469,6 +498,9 @@ public sealed class SoundIDGeneratorWindow : EditorWindow
         DrawBulkPitchSetting();
         DrawBulk3DSetting();
         DrawBulkMaxDistanceSetting();
+        DrawBulkMinDistanceSetting();
+        DrawBulkRolloffSetting();
+        DrawBulkCustomCurveSetting();
         DrawBulkLoopSetting();
 
         EditorGUILayout.Space(6.0f);
@@ -598,6 +630,51 @@ public sealed class SoundIDGeneratorWindow : EditorWindow
         EditorGUILayout.EndHorizontal();
     }
 
+    /// <summary>
+    /// Min Distanceの一括変更欄を表示します。
+    /// </summary>
+    private void DrawBulkMinDistanceSetting()
+    {
+        EditorGUILayout.BeginHorizontal();
+        m_bulkApplyMinDistance = EditorGUILayout.ToggleLeft("Min Distanceを変更",
+            m_bulkApplyMinDistance, GUILayout.Width(145.0f));
+        using (new EditorGUI.DisabledScope(!m_bulkApplyMinDistance))
+        {
+            m_bulkMinDistance = Mathf.Max(0.01f, EditorGUILayout.FloatField(m_bulkMinDistance));
+        }
+        EditorGUILayout.EndHorizontal();
+    }
+
+    /// <summary>
+    /// Rolloff方式の一括変更欄を表示します。
+    /// </summary>
+    private void DrawBulkRolloffSetting()
+    {
+        EditorGUILayout.BeginHorizontal();
+        m_bulkApplyRolloffMode = EditorGUILayout.ToggleLeft("Rolloffを変更",
+            m_bulkApplyRolloffMode, GUILayout.Width(145.0f));
+        using (new EditorGUI.DisabledScope(!m_bulkApplyRolloffMode))
+        {
+            m_bulkRolloffMode = (AudioRolloffMode)EditorGUILayout.EnumPopup(m_bulkRolloffMode);
+        }
+        EditorGUILayout.EndHorizontal();
+    }
+
+    /// <summary>
+    /// Customカーブの一括変更欄を表示します。
+    /// </summary>
+    private void DrawBulkCustomCurveSetting()
+    {
+        EditorGUILayout.BeginHorizontal();
+        m_bulkApplyCustomRolloffCurve = EditorGUILayout.ToggleLeft("Custom Curveを変更",
+            m_bulkApplyCustomRolloffCurve, GUILayout.Width(145.0f));
+        using (new EditorGUI.DisabledScope(!m_bulkApplyCustomRolloffCurve))
+        {
+            m_bulkCustomRolloffCurve = EditorGUILayout.CurveField(m_bulkCustomRolloffCurve);
+        }
+        EditorGUILayout.EndHorizontal();
+    }
+
     private void DrawBulkLoopSetting()
     {
         EditorGUILayout.BeginHorizontal();
@@ -691,6 +768,9 @@ public sealed class SoundIDGeneratorWindow : EditorWindow
         if (m_bulkApplyPitch) item.pitch = m_bulkPitch;
         if (m_bulkApplyIs3D) item.is3D = m_bulkIs3D;
         if (m_bulkApplyMaxDistance) item.maxDistance = m_bulkMaxDistance;
+        if (m_bulkApplyMinDistance) item.minDistance = m_bulkMinDistance;
+        if (m_bulkApplyRolloffMode) item.rolloffMode = m_bulkRolloffMode;
+        if (m_bulkApplyCustomRolloffCurve) item.customRolloffCurve = CopyCurve(m_bulkCustomRolloffCurve);
         if (m_bulkApplyLoop) item.loop = m_bulkLoop;
     }
 
@@ -701,7 +781,20 @@ public sealed class SoundIDGeneratorWindow : EditorWindow
         if (m_bulkApplyPitch) data.m_pitch = m_bulkPitch;
         if (m_bulkApplyIs3D) data.m_is3D = m_bulkIs3D;
         if (m_bulkApplyMaxDistance) data.m_maxDistance = m_bulkMaxDistance;
+        if (m_bulkApplyMinDistance) data.m_minDistance = m_bulkMinDistance;
+        if (m_bulkApplyRolloffMode) data.m_rolloffMode = m_bulkRolloffMode;
+        if (m_bulkApplyCustomRolloffCurve) data.m_customRolloffCurve = CopyCurve(m_bulkCustomRolloffCurve);
         if (m_bulkApplyLoop) data.m_loop = m_bulkLoop;
+    }
+
+    /// <summary>
+    /// 共有参照によるカーブの意図しない変更を防止します。
+    /// </summary>
+    private static AnimationCurve CopyCurve(AnimationCurve curve)
+    {
+        return curve == null || curve.length == 0
+            ? AnimationCurve.Linear(0.0f, 1.0f, 1.0f, 0.0f)
+            : new AnimationCurve(curve.keys);
     }
 
     private int GetSelectedAddItemCount()
@@ -1005,12 +1098,20 @@ public sealed class SoundIDGeneratorWindow : EditorWindow
 
         using (new EditorGUI.DisabledScope(!m_updateIs3D))
         {
-            m_updateMaxDistance =
-                Mathf.Max(
-                    0.0f,
-                    EditorGUILayout.FloatField(
-                        "3D最大距離:",
-                        m_updateMaxDistance));
+            m_updateRolloffMode = (AudioRolloffMode)EditorGUILayout.EnumPopup(
+                "Rolloff:", m_updateRolloffMode);
+            m_updateMinDistance = Mathf.Max(0.01f,
+                EditorGUILayout.FloatField("Min Distance:", m_updateMinDistance));
+            if (m_updateRolloffMode != AudioRolloffMode.Logarithmic)
+            {
+                m_updateMaxDistance = Mathf.Max(m_updateMinDistance + 0.01f,
+                    EditorGUILayout.FloatField("Max Distance:", m_updateMaxDistance));
+            }
+            if (m_updateRolloffMode == AudioRolloffMode.Custom)
+            {
+                m_updateCustomRolloffCurve = EditorGUILayout.CurveField(
+                    "Custom Curve:", m_updateCustomRolloffCurve);
+            }
         }
 
         m_updateLoop =
@@ -1351,6 +1452,9 @@ public sealed class SoundIDGeneratorWindow : EditorWindow
         m_updatePitch = 1.0f;
         m_updateIs3D = false;
         m_updateMaxDistance = 30.0f;
+        m_updateMinDistance = 1.0f;
+        m_updateRolloffMode = AudioRolloffMode.Logarithmic;
+        m_updateCustomRolloffCurve = AnimationCurve.Linear(0.0f, 1.0f, 1.0f, 0.0f);
         m_updateLoop = false;
     }
 
@@ -1636,7 +1740,10 @@ public sealed class SoundIDGeneratorWindow : EditorWindow
                     volume = item.volume,
                     pitch = item.pitch,
                     is3D = item.is3D,
+                    minDistance = item.minDistance,
                     maxDistance = item.maxDistance,
+                    rolloffMode = item.rolloffMode,
+                    customRolloffCurve = CopyCurve(item.customRolloffCurve),
                     loop = item.loop
                 });
         }
@@ -1731,7 +1838,10 @@ public sealed class SoundIDGeneratorWindow : EditorWindow
             data.m_volume = entry.volume;
             data.m_pitch = entry.pitch;
             data.m_is3D = entry.is3D;
-            data.m_maxDistance = entry.maxDistance;
+            data.m_minDistance = Mathf.Max(0.01f, entry.minDistance);
+            data.m_maxDistance = Mathf.Max(data.m_minDistance + 0.01f, entry.maxDistance);
+            data.m_rolloffMode = entry.rolloffMode;
+            data.m_customRolloffCurve = CopyCurve(entry.customRolloffCurve);
             data.m_loop = entry.loop;
         }
 
@@ -2131,6 +2241,9 @@ public sealed class SoundIDGeneratorWindow : EditorWindow
         m_updatePitch = data.m_pitch;
         m_updateIs3D = data.m_is3D;
         m_updateMaxDistance = data.m_maxDistance;
+        m_updateMinDistance = data.m_minDistance;
+        m_updateRolloffMode = data.m_rolloffMode;
+        m_updateCustomRolloffCurve = CopyCurve(data.m_customRolloffCurve);
         m_updateLoop = data.m_loop;
     }
 
@@ -2145,6 +2258,9 @@ public sealed class SoundIDGeneratorWindow : EditorWindow
         m_updatePitch = 1.0f;
         m_updateIs3D = false;
         m_updateMaxDistance = 30.0f;
+        m_updateMinDistance = 1.0f;
+        m_updateRolloffMode = AudioRolloffMode.Logarithmic;
+        m_updateCustomRolloffCurve = AnimationCurve.Linear(0.0f, 1.0f, 1.0f, 0.0f);
         m_updateLoop = false;
     }
 
@@ -2195,7 +2311,10 @@ public sealed class SoundIDGeneratorWindow : EditorWindow
         data.m_volume = m_updateVolume;
         data.m_pitch = m_updatePitch;
         data.m_is3D = m_updateIs3D;
-        data.m_maxDistance = m_updateMaxDistance;
+        data.m_minDistance = m_updateMinDistance;
+        data.m_maxDistance = Mathf.Max(m_updateMinDistance + 0.01f, m_updateMaxDistance);
+        data.m_rolloffMode = m_updateRolloffMode;
+        data.m_customRolloffCurve = CopyCurve(m_updateCustomRolloffCurve);
         data.m_loop = m_updateLoop;
 
         EditorUtility.SetDirty(database);

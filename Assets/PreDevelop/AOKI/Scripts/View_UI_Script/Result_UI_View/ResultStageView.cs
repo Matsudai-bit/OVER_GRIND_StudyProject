@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// リザルト画面におけるステージ情報（ステージ番号およびステージ名）の UI 表示・スクランブル演出を担当する View クラスです。
+/// リザルト画面におけるステージ情報の UI 表示・スクランブル演出を担当する View クラスです。
 /// 文字が左から順番に解読・確定していく演出に対応しています。
 /// </summary>
 public class ResultStageView : MonoBehaviour
@@ -76,6 +76,7 @@ public class ResultStageView : MonoBehaviour
     private void Awake()
     {
         SetupStageComponents(0);
+        HideAllObjects();
     }
 
     private void OnDisable()
@@ -84,54 +85,64 @@ public class ResultStageView : MonoBehaviour
     }
 
     /// <summary>
-    /// 指定された stageIndex に基づいてアクティブな GameObject を切り替え、UI コンポーネントを最新の状態で自動取得します。
+    /// 指定された stageIndex に基づいて対象の GameObject を選択し、UI コンポーネントを最新の状態で自動取得します。
+    /// （この時点では表示状態にしません）
     /// </summary>
     /// <param name="stageIndex">対象のステージインデックス。</param>
     private void SetupStageComponents(int stageIndex)
     {
-        m_currentNumberObj = GetActiveObject(m_stageNumberObject, m_stageNumberObjects, stageIndex);
+        HideAllObjects();
+
+        m_currentNumberObj = GetTargetObject(m_stageNumberObject, m_stageNumberObjects, stageIndex);
         CacheNumberComponents(m_currentNumberObj);
 
-        m_currentNameObj = GetActiveObject(m_stageNameObject, m_stageNameObjects, stageIndex);
+        m_currentNameObj = GetTargetObject(m_stageNameObject, m_stageNameObjects, stageIndex);
         CacheNameComponents(m_currentNameObj);
     }
 
     /// <summary>
-    /// 単一指定または配列から、対象インデックスに該当するアクティブな GameObject を取得します。
+    /// 単一指定または配列から、対象インデックスに該当する GameObject を取得します。
     /// </summary>
     /// <param name="singleObj">単一指定の GameObject。</param>
     /// <param name="arrayObjs">複数切替用の GameObject 配列。</param>
     /// <param name="targetIndex">対象のインデックス。</param>
-    /// <returns>アクティブに設定された GameObject。</returns>
-    private GameObject GetActiveObject(GameObject singleObj, GameObject[] arrayObjs, int targetIndex)
+    /// <returns>選択された GameObject。</returns>
+    private GameObject GetTargetObject(GameObject singleObj, GameObject[] arrayObjs, int targetIndex)
     {
         if (arrayObjs != null && arrayObjs.Length > 0)
         {
-            GameObject selectedObj = null;
-
-            for (int i = 0; i < arrayObjs.Length; i++)
+            if (targetIndex >= 0 && targetIndex < arrayObjs.Length && arrayObjs[targetIndex] != null)
             {
-                if (arrayObjs[i] == null) continue;
-
-                bool isActive = (i == targetIndex);
-                arrayObjs[i].SetActive(isActive);
-
-                if (isActive)
-                {
-                    selectedObj = arrayObjs[i];
-                }
+                return arrayObjs[targetIndex];
             }
-
-            if (selectedObj != null) return selectedObj;
         }
 
-        if (singleObj != null)
+        return singleObj;
+    }
+
+    /// <summary>
+    /// 登録されているすべてのステージ番号・ステージ名オブジェクトを非表示にします。
+    /// </summary>
+    private void HideAllObjects()
+    {
+        if (m_stageNumberObject != null) m_stageNumberObject.SetActive(false);
+        if (m_stageNameObject != null) m_stageNameObject.SetActive(false);
+
+        if (m_stageNumberObjects != null)
         {
-            singleObj.SetActive(true);
-            return singleObj;
+            for (int i = 0; i < m_stageNumberObjects.Length; i++)
+            {
+                if (m_stageNumberObjects[i] != null) m_stageNumberObjects[i].SetActive(false);
+            }
         }
 
-        return null;
+        if (m_stageNameObjects != null)
+        {
+            for (int i = 0; i < m_stageNameObjects.Length; i++)
+            {
+                if (m_stageNameObjects[i] != null) m_stageNameObjects[i].SetActive(false);
+            }
+        }
     }
 
     /// <summary>
@@ -199,17 +210,13 @@ public class ResultStageView : MonoBehaviour
         SetupStageComponents(stageIndex);
 
         // 遅延時間中の非表示制御および待機
-        if (m_hideDuringDelay && delay > 0f)
+        if (delay > 0f)
         {
-            SetObjectsVisibility(false);
-            yield return new WaitForSecondsRealtime(delay);
-            SetObjectsVisibility(true);
-        }
-        else if (delay > 0f)
-        {
+            SetObjectsVisibility(!m_hideDuringDelay);
             yield return new WaitForSecondsRealtime(delay);
         }
 
+        SetObjectsVisibility(true);
         ExecutePlay(stageNumberText, stageNameText);
         m_playCoroutine = null;
     }
@@ -295,7 +302,7 @@ public class ResultStageView : MonoBehaviour
     public void Hide()
     {
         StopPlayCoroutine();
-        SetObjectsVisibility(false);
+        HideAllObjects();
     }
 
     /// <summary>

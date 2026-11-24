@@ -8,10 +8,17 @@ using UnityEngine;
 public sealed class HintDataAssetEditor : Editor
 {
     private SerializedProperty m_hintsProperty;
+    private GUIStyle m_previewStyle;
 
     private void OnEnable()
     {
         m_hintsProperty = serializedObject.FindProperty("m_hints");
+        m_previewStyle = new GUIStyle(EditorStyles.label)
+        {
+            richText = true,
+            wordWrap = true,
+            padding = new RectOffset(6, 6, 6, 6)
+        };
     }
 
     /// <summary>
@@ -53,21 +60,14 @@ public sealed class HintDataAssetEditor : Editor
                 continue;
             }
 
-            SerializedObject hintObject =
-                new SerializedObject(hintTextData);
-            hintObject.Update();
-
-            SerializedProperty heading =
-                hintObject.FindProperty("m_heading");
-            SerializedProperty body =
-                hintObject.FindProperty("m_body");
-
-            EditorGUI.BeginDisabledGroup(true);
             EditorGUILayout.LabelField("見出し");
-            EditorGUILayout.TextArea(heading.stringValue, GUILayout.MinHeight(24.0f));
+            GUILayout.Label(HighlightedTextFormatter.Format(
+                hintTextData.Heading, hintTextData.HighlightColor), m_previewStyle,
+                GUILayout.MinHeight(24.0f));
             EditorGUILayout.LabelField("本文");
-            EditorGUILayout.TextArea(body.stringValue, GUILayout.MinHeight(40.0f));
-            EditorGUI.EndDisabledGroup();
+            GUILayout.Label(HighlightedTextFormatter.Format(
+                hintTextData.Body, hintTextData.HighlightColor), m_previewStyle,
+                GUILayout.MinHeight(40.0f));
 
             EditorGUILayout.EndVertical();
         }

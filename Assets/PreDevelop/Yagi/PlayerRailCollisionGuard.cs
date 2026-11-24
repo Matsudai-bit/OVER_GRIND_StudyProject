@@ -451,13 +451,13 @@ public sealed class PlayerRailCollisionGuard
                 m_playerCollider,
                 railCollider,
                 isIgnoring);
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-            Debug.Log(
-                $"[RailCollisionGuard] " +
-                $"Player={m_playerCollider.name}, " +
-                $"Rail={railCollider.name}, " +
-                $"Ignore={Physics.GetIgnoreCollision(m_playerCollider, railCollider)}");
-#endif
+//#if UNITY_EDITOR || DEVELOPMENT_BUILD
+//            Debug.Log(
+//                $"[RailCollisionGuard] " +
+//                $"Player={m_playerCollider.name}, " +
+//                $"Rail={railCollider.name}, " +
+//                $"Ignore={Physics.GetIgnoreCollision(m_playerCollider, railCollider)}");
+//#endif
         }
     }
 

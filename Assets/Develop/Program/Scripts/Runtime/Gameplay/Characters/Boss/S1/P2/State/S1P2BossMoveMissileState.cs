@@ -133,6 +133,10 @@ public sealed class S1P2BossMoveMissileState :
 
         Owner.AnimationController.SetTrigger(
             m_animationTriggerID);
+
+        // à⁄ìÆâπÇÃçƒê∂
+        m_commonReferences.AudioEmitter.PlaySequence(AudioCueId.MOVE_0);
+        
     }
 
     /// <summary>
@@ -388,6 +392,8 @@ public sealed class S1P2BossMoveMissileState :
     /// </summary>
     private void TryCompleteState()
     {
+        m_commonReferences.AudioEmitter.StopSequence(AudioCueId.MOVE_0);
+
         if (!m_isMoveCompleted ||
             !m_isMissileCompleted ||
             !m_isAnimationCompleted)

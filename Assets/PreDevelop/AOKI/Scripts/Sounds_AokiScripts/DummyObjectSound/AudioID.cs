@@ -1,5 +1,5 @@
 ﻿// 自動生成用ファイルです。直接編集しないでください。
-// Next AudioID Value: 113
+// Next AudioID Value: 114
 
 public enum AudioID
 {
@@ -113,4 +113,5 @@ public enum AudioID
     SE_BOSS1_ATK_STOMP_LEG_I = 110,
     SE_BOSS1_ATK_STOMP_TAIL = 111,
     SE_BOSS1_ATK_STOMP_TAIL_I = 112,
+    SE_BOSS1_ATK_BOSS_TURBO_PRE_L = 113,
 }

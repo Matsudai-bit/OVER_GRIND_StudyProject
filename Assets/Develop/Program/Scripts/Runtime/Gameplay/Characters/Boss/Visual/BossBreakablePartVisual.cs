@@ -9,6 +9,18 @@ using UnityEngine;
 public sealed class BossBreakablePartVisual :
     MonoBehaviour
 {
+    [Header("破壊演出")]
+    [SerializeField, Header("生成座標")]
+    private Transform spawnTransform;
+    [SerializeField, Header("破壊音声")]
+    private AudioID audioID;
+    [SerializeField]
+    private AudioEmitter        m_audioEmitter;
+    [SerializeField, Header("破壊エフェクト")]
+    private EffectDefinition m_effectDefinition;
+    [SerializeField]
+    private EffectEmitter m_effectEmitter;
+
     [Header("破壊時表示")]
 
     // 破壊時に適用する見た目処理
@@ -147,6 +159,9 @@ public sealed class BossBreakablePartVisual :
                 BossBreakablePartBrokenVisualAction
                     .ENABLE_BROKEN_MESH))
         {
+            m_effectEmitter.PlayAt(EffectId.BOSS_BREAK_WEAKPOINT, spawnTransform.position, new());
+            if (AudioManager.Instance != null)
+                AudioManager.Instance.Play3DAtPosition(audioID, spawnTransform.position);
             SetBrokenMeshActive(
                 true);
         }

@@ -78,7 +78,19 @@ MonoBehaviour:
         m_CallState: 2
   m_onClickAction:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 4456834428724903773}
+        m_TargetAssemblyTypeName: GameQuitter, Assembly-CSharp
+        m_MethodName: QuitGame
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
   m_onClickExitAction:
     m_PersistentCalls:
       m_Calls: []
@@ -501,6 +513,7 @@ RectTransform:
   - {fileID: 8580769457894745818}
   - {fileID: 3103100684883732085}
   - {fileID: 4924530559361111983}
+  - {fileID: 6789867732901317529}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
@@ -669,6 +682,20 @@ MonoBehaviour:
   - {fileID: 4988982223577729856}
   - {fileID: 1713285839466691854}
   - {fileID: 6728442726435277167}
+  m_onCursorAction:
+    m_PersistentCalls:
+      m_Calls: []
+  m_onCursorExitAction:
+    m_PersistentCalls:
+      m_Calls: []
+  m_onClickAction:
+    m_PersistentCalls:
+      m_Calls: []
+  m_onClickExitAction:
+    m_PersistentCalls:
+      m_Calls: []
+  m_isInvokeOnStart: 0
+  m_isCallCursorExitForAllButtons: 0
   m_cursor: {fileID: 2897377053751499568}
   m_moveAction:
     m_PersistentCalls:
@@ -685,9 +712,17 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
+  m_stopMoveAction:
+    m_PersistentCalls:
+      m_Calls: []
   m_keepSelectionWhenLocked: 0
+  m_resetCursorPositionOnLock: 0
+  m_lockOnStart: 0
+  m_isVerticalNavigation: 1
+  m_isLockedCursorAnimation: 0
   m_navigateActionRef: {fileID: 0}
   m_enterActionRef: {fileID: 0}
+  m_isLockCursor: 0
 --- !u!114 &5923693673046404804
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -700,6 +735,52 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a52340f466d4bde4aa7f3ad60ac9bde7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TitleButtonManager
+  m_buttonSelector: {fileID: 0}
+  m_uIOverlaySceneManager: {fileID: 0}
+--- !u!1 &4469447850101000655
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6789867732901317529}
+  - component: {fileID: 4456834428724903773}
+  m_Layer: 0
+  m_Name: GameQuitter
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &6789867732901317529
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4469447850101000655}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -0.000030517578, y: 1, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 3031997210473542063}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &4456834428724903773
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4469447850101000655}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: caa2cf79d45f23946b629e69f3a9c640, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GameQuitter
 --- !u!1 &4642607443962809114
 GameObject:
   m_ObjectHideFlags: 0

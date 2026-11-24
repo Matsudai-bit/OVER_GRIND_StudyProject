@@ -1,233 +1,70 @@
-using System;
 using UnityEngine;
 
-/// <summary>
-/// ƒvƒŒƒCƒ„[‚ÌVƒu[ƒXƒgó‘Ô‚ðŠÇ—‚µ‚Ü‚·B
-/// ‰ð•ú’¼Œã‚Ìuƒu[ƒXƒgƒ_ƒbƒVƒ…v‚ÆA‚»‚ÌŒã‚Ìu’ÊíˆÚ“®v‚Ì
-/// 2ƒtƒF[ƒY‚Å\¬‚³‚êAƒ`ƒƒ[ƒW‚µ‚½ƒQ[ƒW‚ðÁ”ï‚µ‚«‚é‚Ü‚ÅŒp‘±‚µ‚Ü‚·B
-/// ƒQ[ƒW‚ÌÁ”ïŽ©‘Ì‚ÍPlayerStateMachineComponent‘¤‚Å
-/// State‚ÉŠÖŒW‚È‚­i’†’f’†‚àjs‚í‚ê‚Ü‚·B
-/// </summary>
-public sealed class PlayerVRunningState
-    : StateBase<PlayerStateMachineComponent>
+/// <summary>ãƒ€ãƒƒã‚·ãƒ¥å¾Œã¨ä¸­æ–­å¾©å¸°å¾Œã®é€šå¸¸ãƒ–ãƒ¼ã‚¹ãƒˆç§»å‹•ã‚’ç®¡ç†ã—ã¾ã™ã€‚</summary>
+public sealed class PlayerVRunningState : PlayerBoostRunningStateBase
 {
-    /// <summary>
-    /// Vƒu[ƒXƒg“à•”ƒtƒF[ƒYB
-    /// </summary>
-    private enum VBoostPhase
-    {
-        // ƒu[ƒXƒgƒ_ƒbƒVƒ…iŒÅ’è0.5•bAˆ³“|“I‚È‚‘¬ˆÚ“®j
-        BOOST_DASH,
-
-        // ’ÊíˆÚ“®iƒ_ƒbƒVƒ…I—¹ŒãAƒQ[ƒW‚ðÁ”ï‚µ‚«‚é‚Ü‚ÅŒp‘±j
-        NORMAL_MOVE
-    }
-
-    // Œ»Ý‚Ìƒu[ƒXƒgƒtƒF[ƒY
-    private VBoostPhase m_currentPhase;
-
-    // Œ»ÝƒtƒF[ƒY‚ÌŒo‰ßŽžŠÔiƒ_ƒbƒVƒ…I—¹”»’è—pj
-    private float m_elapsedTime;
-
-    // ƒ_ƒbƒVƒ…’†‚ÉŽg—p‚·‚éˆÚ“®ƒpƒ‰ƒ[ƒ^iŠî–{‘¬“x‚Ì2”{EuŽž“ž’Bj
-    private PlayerMoveParameters m_dashMoveParameters;
-    private float m_dashCurrentSpeed;
-
-    // ƒ_ƒbƒVƒ…I—¹Œã‚ÉŽg—p‚·‚éˆÀ’èƒu[ƒXƒg‚ÌˆÚ“®ƒpƒ‰ƒ[ƒ^
-    private PlayerMoveParameters m_normalMoveParameters;
-
-    // ƒ`ƒƒ[ƒWI—¹Žž‚ÉŠm’è‚µ‚½ƒ_ƒbƒVƒ…•ûŒü
-    // BOOST_DASH’†‚Í‚±‚Ì•ûŒü‚©‚ç•ÏX‚µ‚È‚¢
-    private Vector3 m_boostDashDirection;
+    private readonly bool m_isDashHandoff;
+    private readonly EffectHandle m_inheritedLoopEffect;
+    private PlayerMoveParameters m_moveParameters;
     private Vector3 m_movingChargeStartDirection;
     private bool m_isWaitingForMovingCharge;
 
+    /// <summary>ä¸­æ–­ã—ãŸãƒ–ãƒ¼ã‚¹ãƒˆç§»å‹•ã‚’å†é–‹ã—ã¾ã™ã€‚</summary>
+    public PlayerVRunningState() { }
 
-    EffectHandle m_loopEffect;
-    /// <summary>
-    /// ó‘ÔŠJŽnŽž‚ÉŒÄ‚Î‚ê‚Ü‚·B
-    /// ’†’fiƒWƒƒƒ“ƒvE’âŽ~‚È‚Çj‚©‚ç•œ‹A‚µ‚½ê‡‚ÍA
-    /// ’†’fŽž“_‚ÌƒtƒF[ƒY‚©‚çÄŠJ‚µ‚Ü‚·B
-    /// </summary>
+    /// <summary>ãƒ€ãƒƒã‚·ãƒ¥ã‹ã‚‰æ¼”å‡ºã‚’å¼•ãç¶™ã„ã§é€šå¸¸ç§»å‹•ã‚’é–‹å§‹ã—ã¾ã™ã€‚</summary>
+    /// <param name="loopEffect">ãƒ€ãƒƒã‚·ãƒ¥ä¸­ã®ç¶™ç¶šã‚¨ãƒ•ã‚§ã‚¯ãƒˆã€‚</param>
+    public PlayerVRunningState(EffectHandle loopEffect)
+    {
+        m_isDashHandoff = true;
+        m_inheritedLoopEffect = loopEffect;
+    }
+
+    /// <summary>é€šå¸¸ç§»å‹•ã§ã¯ç§»å‹•å…¥åŠ›ãŒãªããªã£ãŸã‚‰åœæ­¢ã—ã¾ã™ã€‚</summary>
+    protected override bool StopsWithoutMoveInput => true;
+
+    /// <summary>é€šå¸¸ãƒ–ãƒ¼ã‚¹ãƒˆç§»å‹•ã®ãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿ã¨æ¼”å‡ºã‚’æº–å‚™ã—ã¾ã™ã€‚</summary>
     protected override void OnStartState()
     {
-        // ’ÊíˆÚ“®‰¹‚©‚çVƒu[ƒXƒg‘–s‰¹‚ÖØ‚è‘Ö‚¦‚Ü‚·B
-        PlayerAudioActionUtility.StopSequential(
-            Owner,
-            PlayerAudioActionID.WALKING,
-            true);
-
-        PlayerAudioActionUtility.PlaySequential(
-            Owner,
-            PlayerAudioActionID.V_RUNNING);
-
         m_isWaitingForMovingCharge = false;
-
-        PlayerMoveParameters normalParameters =
-            Owner.MovementParameterAsset
-                .CreateMoveParameters();
-
-        m_dashMoveParameters = Owner.VBoostMovementParameterAsset
-            .CreateInitialBoostParameters();
-        m_normalMoveParameters = Owner.VBoostMovementParameterAsset
-            .CreateStableBoostParameters();
-        m_dashCurrentSpeed = Mathf.Min(
-            Owner.Motor.HorizontalSpeed,
-            m_dashMoveParameters.MaxMoveSpeed);
-
-        float fullTankDuration =
-            Mathf.Max(
-                Owner.VBoostMovementParameterAsset
-                    .StableBoostDuration,
-                0.01f);
-
-        Owner.SetBoostGaugeDepletionRate(
-            1.0f / fullTankDuration);
+        m_moveParameters = Owner.VBoostMovementParameterAsset.CreateStableBoostParameters();
 
         if (Owner.IsBoostSuspended)
-        {
-            // ’†’f‚³‚ê‚½ó‘Ô‚©‚ç‚Ì•œ‹A
-            m_currentPhase =
-                VBoostPhase.NORMAL_MOVE;
-
-            m_elapsedTime = 0.0f;
-
             Owner.IsBoostSuspended = false;
 
-            Debug.Log(
-                $"[PlayerVRunningState] " +
-                $"’†’f‚©‚ç•œ‹A " +
-                $"Žc‚èƒQ[ƒW—Ê={Owner.SuspendedBoostGaugeRate:P1}",
-                Owner);
-        }
-        else
-        {
-            // V‹KVƒu[ƒXƒgŠJŽn
-            Owner.SuspendedBoostGaugeRate =
-                Owner.CarriedBoostGaugeRate;
-
-            m_currentPhase =
-                VBoostPhase.BOOST_DASH;
-
-            m_elapsedTime = 0.0f;
-
-            m_boostDashDirection =
-                Owner.BoostDashDirection;
-
-            m_boostDashDirection.y = 0.0f;
-
-            if (m_boostDashDirection.sqrMagnitude <= 0.0001f)
-            {
-                m_boostDashDirection =
-                    Owner.transform.forward;
-
-                m_boostDashDirection.y = 0.0f;
-            }
-
-            m_boostDashDirection.Normalize();
-
-            Debug.Log(
-                $"[PlayerVRunningState] ƒu[ƒXƒgƒ_ƒbƒVƒ…ŠJŽn " +
-                $"ˆø‚«Œp‚¬ƒQ[ƒW—Ê={Owner.SuspendedBoostGaugeRate:P1} " +
-                $"ƒ_ƒbƒVƒ…•ûŒü={m_boostDashDirection} " +
-                $"ƒ_ƒbƒVƒ…Å‚‘¬“x={m_dashMoveParameters.MaxMoveSpeed:F2} " +
-                $"i’Êí‘¬“x={normalParameters.MaxMoveSpeed:F2}j " +
-                $"ƒ_ƒbƒVƒ…ŽžŠÔ={Owner.VBoostMovementParameterAsset.InitialBoostDuration:F2}•b " +
-                $"–žƒ^ƒ“Á”ïŽžŠÔ={fullTankDuration:F2}•b",
-                Owner);
-        }
-
-        // Vƒu[ƒXƒg‘–sƒAƒjƒ[ƒVƒ‡ƒ“‚ðŠJŽn
-        Owner.AnimationPresenter.PlayVBoostRunningAnimation();
-
-        Owner.VGaugePlaceModel.SetGaugeRate(
-            Owner.SuspendedBoostGaugeRate);
-
-        Owner.EffectEmitter.Play(EffectId.PLAYER_MOVE_VBOOST_I);
-        m_loopEffect = Owner.EffectEmitter.Play(EffectId.PLAYER_MOVE_VBOOST_L);
+        StartBoost(m_isDashHandoff, m_inheritedLoopEffect);
     }
 
-
-    /// <summary>
-    /// ˆê’èŠÔŠu‚ÌXVˆ—‚ðs‚¢‚Ü‚·B
-    /// </summary>
-    protected override void OnFixedUpdate()
+    /// <summary>å†ãƒãƒ£ãƒ¼ã‚¸å…¥åŠ›ã‚’ç¢ºèªã—ã€é€šå¸¸ãƒ–ãƒ¼ã‚¹ãƒˆç§»å‹•ã‚’è¡Œã„ã¾ã™ã€‚</summary>
+    protected override void UpdateBoostMovement()
     {
-        // UŒ‚“ü—Í‚ðŠm”F
-        if (Owner.InputReader.ConsumeAttackInput() && Owner.Monitor.IsGrounded)
-        {
-            // UŒ‚’†‚àŽc—Ê‚ðˆø‚«Œp‚¬Aƒ`ƒƒ[ƒW‚ÌŒp‘±Á”ï‚ðˆÛŽ‚·‚éB
-            SuspendBoost();
+        UpdateMovingChargeStartDirection();
 
-            // UŒ‚‰¹‚ÖØ‚è‘Ö‚¦‚é‚½‚ßVƒu[ƒXƒg‰¹‚Í‘¦Žž’âŽ~‚µ‚Ü‚·B
+        if (Owner.Monitor.IsGrounded &&
+            m_isWaitingForMovingCharge &&
+            Owner.InputReader.HasVBoostHoldStarted &&
+            Owner.BoostChargingParameterAsset.CanStartMovingCharge(
+                Owner.Motor.HorizontalSpeed) &&
+            Owner.BoostChargingParameterAsset.HasLateralChargeInput(
+                Owner.InputReader.MoveInput) &&
+            Owner.BoostChargingParameterAsset.HasExceededFreeSteeringAngle(
+                m_movingChargeStartDirection,
+                Owner.Motor.HorizontalDirection) &&
+            Owner.InputReader.ConsumeVBoostHoldStarted())
+        {
             PlayerAudioActionUtility.StopSequential(
-                Owner,
-                PlayerAudioActionID.V_RUNNING,
-                true);
-
-            Machine.ChangeState<PlayerAttackingState>();
+                Owner, PlayerAudioActionID.V_RUNNING, true);
+            Machine.ChangeState<PlayerDynamicChargeState>();
             return;
         }
 
-
-        // ƒQ[ƒW‚ª–{‘Ì‘¤‚ÌÁ”ï‚É‚æ‚Á‚Äs‚«‚Ä‚¢‚È‚¢‚©Šm”F
-        // i’†’f•œ‹A’¼Œã‚âAÁ”ï‚ªi‚ñ‚Å0‚É‚È‚Á‚½ê‡‚Í‚±‚±‚ÅŒŸ’m‚·‚éj
-        if (Owner.SuspendedBoostGaugeRate <= 0.0f)
-        {
-            // Œ»Ý‚ÌVƒu[ƒXƒg“ü—Íó‘Ô‚ðÁ”ï‚µ‚ÄA
-            // WalkingState‚Ö‘JˆÚ‚µ‚½’¼Œã‚É
-            // “¯‚¶“ü—Í‚ÅÄƒ`ƒƒ[ƒW‚³‚ê‚é‚±‚Æ‚ð–h‚®B
-            Owner.InputReader.ConsumeVBoostInput();
-
-            Debug.Log(
-                "[PlayerVRunningState] " +
-                "ƒQ[ƒW‚ðÁ”ï‚µ‚«‚Á‚½‚½‚ß’Êí•às‚Ö‘JˆÚ‚µ‚Ü‚·B",
-                Owner);
-
-            Machine.ChangeState<PlayerWalkingState>();
-            return;
-        }
-
-
-        // ˆÚ“®“ü—Í‚ª‚È‚­‚È‚Á‚½ê‡‚ÍA‘Å‚¿Ø‚ç‚¸‚É’†’f‚·‚éB
-        // ‘Ò‹@’†‚ÉÄ‚ÑˆÚ“®“ü—Í‚ª“ü‚ê‚Î•œ‹A‚Å‚«‚é‚æ‚¤‚É‚·‚éB
-        // ‚½‚¾‚µAƒu[ƒXƒgƒ_ƒbƒVƒ…’†‚Í“ü—Í‚ð•K—v‚Æ‚µ‚È‚¢‚½‚ßA
-        // ’ÊíˆÚ“®ƒtƒF[ƒY‚Å‚Ì‚Ý’†’f”»’è‚ðs‚¤B
-        if (m_currentPhase == VBoostPhase.NORMAL_MOVE &&
-            !Owner.InputReader.HasMoveInput)
-        {
-            SuspendBoost();
-
-            Machine.ChangeState<PlayerIdlingState>();
-            return;
-        }
-
-
-
-        // ƒWƒƒƒ“ƒv“ü—Í‚ðŠm”F
-        // “¯—l‚É‘Å‚¿Ø‚ç‚¸’†’f‚µA’…’nŒã‚É•œ‹A‚³‚¹‚é
-        if (Owner.Monitor.CanStartJump &&
-            Owner.InputReader.HasJumpInput)
-        {
-            SuspendBoost();
-
-            Machine.ChangeState<PlayerJumpingState>();
-            return;
-        }
-
-        if (Owner.GrindController.CanStartGrind(
-            Owner.Monitor.IsRailed ? Owner.Monitor.HitRailInfo : null))
-        {
-            SuspendBoost();
-            Machine.ChangeState<PlayerGrindingState>(Owner.Monitor.HitRailInfo);
-            return;
-        }
-
-        UpdatePhaseMovement();
+        Owner.Motor.Move(
+            Owner.InputReader.MoveInput,
+            m_moveParameters,
+            Time.fixedDeltaTime);
     }
 
-
-    /// <summary>ƒ`ƒƒ[ƒWƒ{ƒ^ƒ“‰Ÿ‰ºŽž‚ÌŽÀˆÚ“®•ûŒü‚ðŠJŽn”»’è—p‚É•ÛŽ‚µ‚Ü‚·B</summary>
+    /// <summary>ç§»å‹•ãƒãƒ£ãƒ¼ã‚¸é–‹å§‹æ™‚ã®é€²è¡Œæ–¹å‘ã‚’ä¿å­˜ã—ã¾ã™ã€‚</summary>
     private void UpdateMovingChargeStartDirection()
     {
         if (!Owner.InputReader.IsVBoostHeld)
@@ -238,181 +75,9 @@ public sealed class PlayerVRunningState
 
         if (m_isWaitingForMovingCharge ||
             !Owner.InputReader.ConsumeVBoostStarted())
-        {
             return;
-        }
 
-        m_movingChargeStartDirection =
-            Owner.Motor.HorizontalDirection;
+        m_movingChargeStartDirection = Owner.Motor.HorizontalDirection;
         m_isWaitingForMovingCharge = true;
-    }
-
-    /// <summary>
-    /// ó‘ÔI—¹Žž‚ÉŒÄ‚Î‚ê‚Ü‚·B
-    /// </summary>
-    protected override void OnExitState()
-    {
-        // Vƒu[ƒXƒg‘–sƒAƒjƒ[ƒVƒ‡ƒ“‚ð’âŽ~
-        Owner.AnimationPresenter.StopVBoostRunningAnimation();
-
-        m_loopEffect.Stop();
-        Owner.EffectEmitter.Play(EffectId.PLAYER_MOVE_VBOOST_O);
-
-        // –³“ü—ÍEƒWƒƒƒ“ƒv“™‚É‚æ‚é’†’f‚Å‚ÍA
-        // Vƒu[ƒXƒgŽ©‘Ì‚ÍŽc‚èƒQ[ƒW‚ð•ÛŽ‚µ‚½‚Ü‚ÜŒp‘±‚µ‚Ä‚¢‚é‚½‚ßA
-        // V_RUNNING‰¹º‚à’âŽ~‚µ‚Ü‚¹‚ñB
-        //
-        // Ä‚ÑPlayerVRunningState‚Ö–ß‚Á‚½ê‡‚ÍA
-        // PlayerAudioActionUtility‘¤‚ÌIsPlaying”»’è‚É‚æ‚Á‚Ä
-        // “¯‚¶‰¹º‚ª“ñdÄ¶‚³‚ê‚é‚±‚Æ‚à‚ ‚è‚Ü‚¹‚ñB
-        if (Owner.IsBoostSuspended)
-        {
-            return;
-        }
-
-        // ƒQ[ƒWŒÍŠ‰‚È‚Ç‚ÅVƒu[ƒXƒg‚ªŠ®‘SI—¹‚µ‚½ê‡‚¾‚¯A
-        // I—¹‰¹‚Ö‘JˆÚ‚µ‚ÄV_RUNNING‰¹º‚ð’âŽ~‚µ‚Ü‚·B
-        PlayerAudioActionUtility.StopSequential(
-            Owner,
-            PlayerAudioActionID.V_RUNNING);
-
-        Owner.VGaugePlaceModel.SetGaugeRate(0.0f);
-    }
-
-
-    /// <summary>
-    /// Œ»Ý‚Ìó‘Ô‚ð’†’fî•ñ‚Æ‚µ‚Ä•Û‘¶‚µ‚Ü‚·B
-    /// ƒQ[ƒW—ÊŽ©‘Ì‚Í–{‘Ì‘¤‚Å•ÛŽ‚³‚ê‘±‚¯‚Ä‚¢‚é‚½‚ßA
-    /// ‚±‚±‚Å‚Íƒtƒ‰ƒO‚ð—§‚Ä‚é‚¾‚¯‚Å‚æ‚¢‚Å‚·B
-    /// </summary>
-    private void SuspendBoost()
-    {
-        Owner.IsBoostSuspended = true;
-
-        Debug.Log(
-            $"[PlayerVRunningState] " +
-            $"Vƒu[ƒXƒg‚ð’†’f " +
-            $"Žc‚èƒQ[ƒW—Ê={Owner.SuspendedBoostGaugeRate:P1}",
-            Owner);
-    }
-
-
-
-    /// <summary>
-    /// Œ»Ý‚ÌƒtƒF[ƒY‚É‰ž‚¶‚½ˆÚ“®ˆ—‚ðs‚¢A
-    /// ƒ_ƒbƒVƒ…ŽžŠÔŒo‰ßŽž‚ÍƒtƒF[ƒY‚ðØ‚è‘Ö‚¦‚Ü‚·B
-    /// </summary>
-    private void UpdatePhaseMovement()
-    {
-        switch (m_currentPhase)
-        {
-            case VBoostPhase.BOOST_DASH:
-
-                // ƒ_ƒbƒVƒ…’†‚É‰Ÿ‚³‚ê‚½ƒ`ƒƒ[ƒW“ü—Í‚ð’ÊíˆÚ“®‚ÖŽ‚¿‰z‚µ‚Ü‚¹‚ñB
-                // ‰Ÿ‚µ‘±‚¯‚½ê‡‚àA‚¢‚Á‚½‚ñ—£‚µ‚ÄÄ“x‰Ÿ‚·‚Ü‚ÅÄƒ`ƒƒ[ƒW‚ð‹ÖŽ~‚µ‚Ü‚·B
-                Owner.InputReader.DiscardVBoostPendingInput();
-
-                // ------------------------------------------------
-                // ƒu[ƒXƒgƒ_ƒbƒVƒ…
-                // ------------------------------------------------
-                //
-                // ƒXƒeƒBƒbƒN“ü—Í‚ÍŽg—p‚µ‚È‚¢B
-                // ƒ`ƒƒ[ƒWI—¹Žž‚ÉŠm’è‚µ‚½•ûŒü‚ÖŒÅ’è‚·‚éB
-                //
-
-                // ‰“®‚Ì‰Á‘¬ŽžŠÔ‚ð”½‰f‚µAŠm’è‚µ‚½•ûŒü‚Ö‘¬“x‚ðã‚°‚Ü‚·B
-                m_dashCurrentSpeed = Mathf.MoveTowards(
-                    m_dashCurrentSpeed,
-                    m_dashMoveParameters.MaxMoveSpeed,
-                    m_dashMoveParameters.MaxMoveSpeed /
-                    Mathf.Max(0.01f, m_dashMoveParameters.TimeToMaxSpeed) *
-                    Time.fixedDeltaTime);
-                Owner.Motor.MoveAtFixedWorldDirection(
-                    m_boostDashDirection,
-                    m_dashCurrentSpeed,
-                    m_dashMoveParameters.RotationSpeed,
-                    Time.fixedDeltaTime);
-
-                m_elapsedTime += Time.fixedDeltaTime;
-
-                if (m_elapsedTime >= Owner.VBoostMovementParameterAsset.InitialBoostDuration)
-                {
-                    // ƒ_ƒbƒVƒ…I—¹Žž‚É³–Ê‚ðis•ûŒü‚Ö‡‚í‚¹‚é
-                    Vector3 finalForward =
-                        m_boostDashDirection;
-
-                    finalForward.y = 0.0f;
-
-                    if (finalForward.sqrMagnitude > 0.0001f)
-                    {
-                        finalForward.Normalize();
-
-                        Owner.transform.forward =
-                            finalForward;
-                    }
-
-                    Debug.Log(
-                        "[PlayerVRunningState] " +
-                        "ƒu[ƒXƒgƒ_ƒbƒVƒ…I—¹ ¨ ’ÊíˆÚ“®ƒtƒF[ƒY‚Ö",
-                        Owner);
-
-                    m_currentPhase =
-                        VBoostPhase.NORMAL_MOVE;
-                }
-
-                break;
-
-
-            case VBoostPhase.NORMAL_MOVE:
-
-                // ------------------------------------------------
-                // V‚µ‚¢Vƒu[ƒXƒgƒ`ƒƒ[ƒW
-                // ------------------------------------------------
-                //
-                // Œ»Ý‚ÌVƒu[ƒXƒgƒQ[ƒW‚ªŽc‚Á‚Ä‚¢‚éê‡‚ÍA
-                // V‚µ‚¢’·‰Ÿ‚µ¬—§Žž‚ÉŽc—Ê‚ðˆø‚«Œp‚¢‚Åƒ`ƒƒ[ƒW‚ðÄŠJ‚·‚éB
-                //
-
-                UpdateMovingChargeStartDirection();
-
-                if (Owner.Monitor.IsGrounded &&
-                    m_isWaitingForMovingCharge &&
-                    Owner.InputReader.HasVBoostHoldStarted &&
-                    Owner.BoostChargingParameterAsset.CanStartMovingCharge(
-                        Owner.Motor.HorizontalSpeed) &&
-                    Owner.BoostChargingParameterAsset.HasLateralChargeInput(
-                        Owner.InputReader.MoveInput) &&
-                    Owner.BoostChargingParameterAsset.HasExceededFreeSteeringAngle(
-                        m_movingChargeStartDirection,
-                        Owner.Motor.HorizontalDirection) &&
-                    Owner.InputReader.ConsumeVBoostHoldStarted())
-                {
-                    Debug.Log(
-                        $"[PlayerVRunningState] " +
-                        $"Žc‚èƒQ[ƒW‚ðˆø‚«Œp‚¢‚ÅVƒu[ƒXƒgƒ`ƒƒ[ƒW‚ðŠJŽn‚µ‚Ü‚·B" +
-                        $"ˆø‚«Œp‚¬—¦={Owner.SuspendedBoostGaugeRate:P1}",
-                        Owner);
-
-                    // ƒ`ƒƒ[ƒW‰¹‚ÖØ‚è‘Ö‚¦‚é‚½‚ßI—¹‰¹‚ð–Â‚ç‚³‚¸’âŽ~‚µ‚Ü‚·B
-                    PlayerAudioActionUtility.StopSequential(
-                        Owner,
-                        PlayerAudioActionID.V_RUNNING,
-                        true);
-
-                    Machine.ChangeState<PlayerBoostChargingState>();
-                    return;
-                }
-
-                // ------------------------------------------------
-                // ’ÊíˆÚ“®
-                // ------------------------------------------------
-
-                Owner.Motor.Move(
-                    Owner.InputReader.MoveInput,
-                    m_normalMoveParameters,
-                    Time.fixedDeltaTime);
-
-                break;
-        }
     }
 }

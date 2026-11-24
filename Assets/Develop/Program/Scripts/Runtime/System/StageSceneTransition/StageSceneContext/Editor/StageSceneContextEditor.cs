@@ -171,6 +171,44 @@ public sealed class StageSceneContextEditor : Editor
     }
 
     /// <summary>
+    /// デバッグ用のステージ情報変更UIを表示します。
+    /// </summary>
+    /// <param name="context">
+    /// 操作対象のContext。
+    /// </param>
+    private void DrawStageDebugControls(
+        StageSceneContext context)
+    {
+        EditorGUILayout.LabelField(
+            "Stage",
+            EditorStyles.boldLabel);
+
+        EditorGUI.BeginChangeCheck();
+
+        int stageNumber =
+            EditorGUILayout.IntField(
+                "Stage Number",
+                context.StageNumber);
+
+        string stageName =
+            EditorGUILayout.TextField(
+                "Stage Name",
+                context.StageName);
+
+        if (!EditorGUI.EndChangeCheck())
+        {
+            return;
+        }
+
+        context.SetStage(
+            stageNumber,
+            stageName);
+
+        EditorUtility.SetDirty(
+            context);
+    }
+
+    /// <summary>
     /// デバッグ用のContext変更UIを表示します。
     /// </summary>
     /// <param name="context">
@@ -191,6 +229,11 @@ public sealed class StageSceneContextEditor : Editor
 
             return;
         }
+
+        DrawStageDebugControls(
+            context);
+
+        EditorGUILayout.Space();
 
         if (GUILayout.Button(
             "Set New Game"))

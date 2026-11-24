@@ -37,15 +37,26 @@ public sealed class PlayerWalkingState
     /// </summary>
     protected override void OnFixedUpdate()
     {
+        if (!Owner.Monitor.IsGrounded)
+        {
+            Machine.ChangeState<PlayerJumpAirborneState>();
+            return;
+        }
+
         // 攻撃入力を確認します。
-        if (Owner.InputReader.ConsumeAttackInput() &&
-            Owner.Monitor.IsGrounded)
+        if (Owner.Monitor.IsGrounded &&
+            (Owner.Monitor.HorizontalSpeed >= 1.0f ||
+             (Owner.IsBoostSuspended && Owner.SuspendedBoostGaugeRate > 0.0f)) &&
+            Owner.InputReader.ConsumeAttackInput())
         {
             // 攻撃状態へ遷移する前に攻撃SEを再生し、
             // 歩行SEとの切り替えを行います。
             StartAttackAudioBeforeTransition();
 
-            Machine.ChangeState<PlayerAttackingState>();
+            if (Owner.IsBoostSuspended && Owner.SuspendedBoostGaugeRate > 0.0f)
+                Machine.ChangeState<PlayerChargeAttackingState>();
+            else
+                Machine.ChangeState<PlayerAttackingState>();
             return;
         }
 
@@ -109,7 +120,7 @@ public sealed class PlayerWalkingState
                 Owner.Motor.HorizontalDirection) &&
             Owner.InputReader.ConsumeVBoostHoldStarted())
         {
-            Machine.ChangeState<PlayerBoostChargingState>();
+            Machine.ChangeState<PlayerDynamicChargeState>();
             return;
         }
 

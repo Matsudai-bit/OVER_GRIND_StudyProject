@@ -1,5 +1,45 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-6427578417421912664
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4c2086f4fe387174ba6108990c545740, type: 3}
+  m_Name: Audio Cue Timeline Track
+  m_EditorClassIdentifier: Assembly-CSharp::AudioCueTimelineTrack
+  m_Version: 3
+  m_AnimClip: {fileID: 0}
+  m_Locked: 0
+  m_Muted: 0
+  m_CustomPlayableFullTypename: 
+  m_Curves: {fileID: 0}
+  m_Parent: {fileID: 11400000}
+  m_Children: []
+  m_Clips: []
+  m_Markers:
+    m_Objects:
+    - {fileID: 103440437153823302}
+    - {fileID: -3984654369181348982}
+--- !u!114 &-3984654369181348982
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c4b31012076f23746a5a6cef49c307c4, type: 3}
+  m_Name: Audio Cue Marker
+  m_EditorClassIdentifier: Assembly-CSharp::AudioCueMarker
+  m_Time: 6
+  m_cueId: 8
+  m_action: 0
 --- !u!114 &-3859488625054585059
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -179,12 +219,28 @@ MonoBehaviour:
   - {fileID: 5478892327063621784}
   - {fileID: -3803368959502910318}
   - {fileID: 7484454008778163044}
+  - {fileID: -6427578417421912664}
   m_FixedDuration: 0
   m_EditorSettings:
     m_Framerate: 60
     m_ScenePreview: 1
   m_DurationMode: 0
   m_MarkerTrack: {fileID: 0}
+--- !u!114 &103440437153823302
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c4b31012076f23746a5a6cef49c307c4, type: 3}
+  m_Name: Audio Cue Marker
+  m_EditorClassIdentifier: Assembly-CSharp::AudioCueMarker
+  m_Time: 3
+  m_cueId: 7
+  m_action: 0
 --- !u!114 &5478892327063621784
 MonoBehaviour:
   m_ObjectHideFlags: 1

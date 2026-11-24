@@ -17,8 +17,9 @@ public sealed class AudioSequentialHandle
 
     // 再生設定と発生地点
     private readonly AudioSequentialAsset m_asset;
-    private readonly Transform m_emissionPoint;
+    private Transform m_emissionPoint;
     private readonly Vector3 m_fixedPosition;
+    private readonly AudioSequentialSpatialMode m_spatialMode;
 
     // STARTとLOOPは同時に予約されるため、それぞれ独立して保持します。
     private AudioPlayHandle m_startHandle;
@@ -42,10 +43,30 @@ public sealed class AudioSequentialHandle
     /// 連続音声の再生設定と発生地点を保存します。
     /// </summary>
     internal AudioSequentialHandle(AudioSequentialAsset asset, Transform emissionPoint)
+        : this(asset,
+            asset != null ? asset.SpatialMode : AudioSequentialSpatialMode.TWO_DIMENSIONAL,
+            emissionPoint, emissionPoint != null ? emissionPoint.position : Vector3.zero)
+    {
+    }
+
+    /// <summary>
+    /// 指定ワールド座標で固定位置3D再生するハンドルを生成します。
+    /// </summary>
+    internal AudioSequentialHandle(AudioSequentialAsset asset, Vector3 position)
+        : this(asset, AudioSequentialSpatialMode.THREE_DIMENSIONAL_AT_POSITION, null, position)
+    {
+    }
+
+    /// <summary>
+    /// 音声設定と再生位置方式を指定してハンドルを生成します。
+    /// </summary>
+    internal AudioSequentialHandle(AudioSequentialAsset asset, AudioSequentialSpatialMode spatialMode,
+        Transform emissionPoint, Vector3 position)
     {
         m_asset = asset;
+        m_spatialMode = spatialMode;
         m_emissionPoint = emissionPoint;
-        m_fixedPosition = emissionPoint != null ? emissionPoint.position : Vector3.zero;
+        m_fixedPosition = position;
     }
 
     /// <summary>
@@ -55,11 +76,13 @@ public sealed class AudioSequentialHandle
     internal bool Begin()
     {
         AudioManager manager = AudioManager.Instance;
-        if (m_asset == null || manager == null || m_state != PlaybackState.IDLE)
+        if (m_asset == null ||
+            manager == null ||
+            !manager.isActiveAndEnabled ||
+            m_state != PlaybackState.IDLE)
         {
             return false;
         }
-
         if (!m_asset.HasStartAudio)
         {
             // 開始音を使わない設定では、ループ音を直ちに開始します。
@@ -114,9 +137,14 @@ public sealed class AudioSequentialHandle
         {
             return;
         }
-
         AudioManager manager = AudioManager.Instance;
-        if (m_asset == null || !m_asset.HasEndAudio || manager == null)
+
+        // AudioManagerが非アクティブの場合はCoroutineを開始しません。
+        if (m_asset == null ||
+            !m_asset.HasEndAudio ||
+            manager == null ||
+            !manager.isActiveAndEnabled ||
+            !manager.gameObject.activeInHierarchy)
         {
             StopImmediate();
             return;
@@ -152,6 +180,27 @@ public sealed class AudioSequentialHandle
     public void StopImmediate()
     {
         FinishSequence();
+    }
+
+    /// <summary>
+    /// 再生中・予約中の各段階を、新しいTransformへ追従させます。
+    /// </summary>
+    /// <param name="newTarget">新しい追従先。</param>
+    /// <returns>true：更新成功。false：追従再生ではない、または参照が無効。</returns>
+    public bool ChangeFollowTarget(Transform newTarget)
+    {
+        if (m_state == PlaybackState.IDLE ||
+            m_spatialMode != AudioSequentialSpatialMode.THREE_DIMENSIONAL_FOLLOWING ||
+            newTarget == null)
+        {
+            return false;
+        }
+
+        m_emissionPoint = newTarget;
+        m_startHandle?.ChangeFollowTarget(newTarget);
+        m_loopHandle?.ChangeFollowTarget(newTarget);
+        m_endHandle?.ChangeFollowTarget(newTarget);
+        return true;
     }
 
     /// <summary>
@@ -299,7 +348,7 @@ public sealed class AudioSequentialHandle
             return null;
         }
 
-        switch (m_asset.SpatialMode)
+        switch (m_spatialMode)
         {
             case AudioSequentialSpatialMode.THREE_DIMENSIONAL_AT_POSITION:
                 return manager.Play3DAtPosition(id, m_fixedPosition, loop);
@@ -326,7 +375,7 @@ public sealed class AudioSequentialHandle
             return null;
         }
 
-        switch (m_asset.SpatialMode)
+        switch (m_spatialMode)
         {
             case AudioSequentialSpatialMode.THREE_DIMENSIONAL_AT_POSITION:
                 return manager.PlayScheduled3DAtPosition(

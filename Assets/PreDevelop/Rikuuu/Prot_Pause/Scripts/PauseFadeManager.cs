@@ -1,33 +1,53 @@
 using UnityEngine;
-using UnityEngine.Playables;
 using UnityEngine.Events;
+using UnityEngine.InputSystem;
+using UnityEngine.Playables;
 
+/// <summary>
+/// ポーズ画面の表示演出と入力の有効状態を管理します。
+/// </summary>
+[DisallowMultipleComponent]
+[RequireComponent(typeof(UIWindow))]
 public class PauseFadeManager : MonoBehaviour, IUIInputControllable
 {
-    // SetActive の切り替えに関する設定(Inspector でグループとして表示されます)
+    /// <summary>
+    /// 表示状態に応じて切り替えるオブジェクトを設定します。
+    /// </summary>
     [System.Serializable]
     private class ActiveSwitchSettings
     {
-        [Tooltip("切り替える対象。このスクリプトが付いているオブジェクト自身は指定しないでください")]
+        [Tooltip("切り替え対象（このスクリプトのオブジェクト自身は指定しない）")]
         public GameObject[] m_targets;
 
-        [Tooltip("フェードイン開始時に対象を有効にするか")]
+        [Tooltip("フェードイン開始時に対象を有効にする")]
         public bool m_activateOnFadeIn = true;
 
-        [Tooltip("フェードアウト終了後に対象を無効にするか")]
+        [Tooltip("フェードアウト終了後に対象を無効にする")]
         public bool m_deactivateOnFadeOut = true;
 
-        [Tooltip("開始時に、表示状態(Start Shown)に合わせて対象の有効・無効を反映するか")]
+        [Tooltip("初回有効化時に初期表示状態を反映する")]
         public bool m_applyOnStart = true;
     }
 
-    //[Header("切替キー")]
-    //[SerializeField]
-    //private InputActionReference m_inputRef;
+    [Header("切替キー")]
+    [SerializeField]
+    private InputActionReference m_inputRef;
 
-    //[Header("ButtonSelector")]
-    //[SerializeField]
-    //private ButtonSelector m_buttonSelector;
+    [Header("ButtonSelector")]
+    [SerializeField]
+    private ButtonSelector m_buttonSelector;
+
+    [Header("ポーズ要求イベント")]
+    [SerializeField]
+    private PauseRequestEvent m_pauseRequestEvent;
+
+    [Header("メニューコンテキスト")]
+    [SerializeField]
+    private MenuOpenContext m_menuContext;
+
+    [Header("ウィンドウ")]
+    [SerializeField]
+    private UIWindow m_window;
 
     [Header("Timeline")]
     [SerializeField]
@@ -40,33 +60,39 @@ public class PauseFadeManager : MonoBehaviour, IUIInputControllable
     private ActiveSwitchSettings m_activeSwitch = new ActiveSwitchSettings();
 
     [Header("設定")]
-    // ポーズ中(Time.timeScale = 0)でも再生するか
     [SerializeField]
     private bool m_useUnscaledTime = true;
-    // 有効化時に自動でフェードインを再生するか
     [SerializeField]
     private bool m_playFadeInOnEnable = false;
-    // 開始時点で表示された状態にするか(キー切り替えの初期状態)
     [SerializeField]
     private bool m_startShown = false;
 
     [Header("イベント")]
-    // フェードアウト終了時に通知するイベント(UIWindow.NotifyHideCompleted を登録します)
     [SerializeField]
-    private UnityEvent m_onFadeOutCompleted = new();
+    private UnityEvent m_onFadeOutCompleted = new UnityEvent();
 
-    // フェードアウト再生中かどうか(終了検知用)
-    private bool m_isFadingOut = false;
-    // 表示状態かどうか(キー切り替え用)
-    private bool m_isShown = false;
-    // 初期状態を反映したかどうか
-    private bool m_initialized = false;
+    // フェードの進行状態
+    private bool m_isFadingIn;
+    private bool m_isFadingOut;
+    private bool m_ignoreStopped;
 
-    // キー入力が有効かどうか
-    private bool m_isKeyInputEnabled = true;
+    // 表示状態と初期化状態
+    private bool m_isShown;
+    private bool m_isDisplayCompleted;
+    private bool m_initialized;
 
-    // 現在表示されているかどうか
+    // UIOverlaySceneManager によって許可された入力状態
+    private bool m_isKeyInputEnabled;
+
+    /// <summary>
+    /// 表示中、または表示開始済みかを取得します。
+    /// </summary>
     public bool IsShown => m_isShown;
+
+    /// <summary>
+    /// フェード演出中かを取得します。
+    /// </summary>
+    public bool IsPlaying => m_isFadingIn || m_isFadingOut;
 
     private void Awake()
     {
@@ -76,30 +102,36 @@ public class PauseFadeManager : MonoBehaviour, IUIInputControllable
 
     private void OnEnable()
     {
-        // 初回だけ初期状態を反映する
         if (!m_initialized)
         {
             m_isShown = m_startShown;
+            m_isDisplayCompleted = m_startShown;
             m_initialized = true;
 
-            // 開始時の有効・無効を反映する
             if (m_activeSwitch.m_applyOnStart)
             {
                 SetTargetsActive(m_startShown);
             }
         }
 
-        // フェードアウト終了イベントを登録
+        // 演出完了通知と入力イベントは有効期間中のみ登録する
+        if (m_fadeInDirector != null)
+        {
+            m_fadeInDirector.stopped += OnFadeInStopped;
+        }
+
         if (m_fadeOutDirector != null)
         {
             m_fadeOutDirector.stopped += OnFadeOutStopped;
         }
 
-        //// 切替キーの入力を有効にする
-        //if (m_inputRef != null)
-        //{
-        //    m_inputRef.action.Enable();
-        //}
+        if (m_inputRef != null && m_inputRef.action != null)
+        {
+            m_inputRef.action.performed += OnPause;
+            m_inputRef.action.Enable();
+        }
+
+        UpdateUIInputState();
 
         if (m_playFadeInOnEnable)
         {
@@ -109,56 +141,143 @@ public class PauseFadeManager : MonoBehaviour, IUIInputControllable
 
     private void OnDisable()
     {
-        // イベントを解除
+        if (m_fadeInDirector != null)
+        {
+            m_fadeInDirector.stopped -= OnFadeInStopped;
+        }
+
         if (m_fadeOutDirector != null)
         {
             m_fadeOutDirector.stopped -= OnFadeOutStopped;
         }
+
+        if (m_inputRef != null && m_inputRef.action != null)
+        {
+            m_inputRef.action.performed -= OnPause;
+            // InputAction は他のコンポーネントと共有される可能性があるため無効化しない
+        }
+
+        // 非アクティブ中に選択を受け付けない
+        m_isFadingIn = false;
         m_isFadingOut = false;
+        UpdateUIInputState();
     }
 
-    private void Update()
+    /// <summary>
+    /// オプション画面をメニューの遷移先に設定します。
+    /// </summary>
+    public void SetOptionMenu()
     {
-        //if (m_inputRef == null || !m_isKeyInputEnabled)
-        //{
-        //    return;
-        //}
-
-        //// キーが押された瞬間に切り替える
-        //if (m_inputRef.action.WasPressedThisFrame())
-        //{
-        //    Toggle();
-        //}
+        if (m_menuContext != null)
+        {
+            m_menuContext.SetOpenTarget(MenuOpenTargetType.OPTIONS);
+        }
     }
 
-    // 背面UIとして入力を止める・戻す(UIOverlaySceneManager から呼ばれます)
+    /// <summary>
+    /// マニュアル画面をメニューの遷移先に設定します。
+    /// </summary>
+    public void SetManualMenu()
+    {
+        if (m_menuContext != null)
+        {
+            m_menuContext.SetOpenTarget(MenuOpenTargetType.MANUAL);
+        }
+    }
+
+    /// <summary>
+    /// ウィンドウが開いた際にゲーム時間を停止します。
+    /// </summary>
+    public void OnWindowOpened()
+    {
+        AudioManager.Instance.PauseInGameAudio();
+        Time.timeScale = 0.0f;
+    }
+
+    /// <summary>
+    /// ウィンドウが閉じた際にゲーム時間を戻します。
+    /// </summary>
+    public void OnWindowClosed()
+    {
+        Time.timeScale = 1.0f;
+        AudioManager.Instance.ResumeInGameAudio();
+
+    }
+
+    /// <summary>
+    /// 背面 UI の入力を許可、または禁止します。
+    /// </summary>
+    /// <param name="isEnabled">入力を許可するか。</param>
     public void SetInputEnabled(bool isEnabled)
     {
         m_isKeyInputEnabled = isEnabled;
-
-        //if (m_buttonSelector == null)
-        //{
-        //    return;
-        //}
-
-        //if (isEnabled)
-        //{
-        //    // ポーズ画面が表示中のときだけカーソルを戻す
-        //    if (m_isShown)
-        //    {
-        //        m_buttonSelector.UnLockCursor();
-        //    }
-        //}
-        //else
-        //{
-        //    m_buttonSelector.LockCursor();
-        //}
+        UpdateUIInputState();
     }
 
-    // 表示・非表示を切り替える(UnityEvent からも呼べます)
+    /// <summary>
+    /// 表示状態に応じて UI 入力を切り替えます。
+    /// </summary>
+    private void UpdateUIInputState()
+    {
+        if (m_buttonSelector == null)
+        {
+            return;
+        }
+
+        // UI はフェードインが完了するまで操作不可にする
+        bool canInteract = isActiveAndEnabled && m_isKeyInputEnabled &&
+                           m_isShown && m_isDisplayCompleted && !IsPlaying;
+
+        if (canInteract)
+        {
+            m_buttonSelector.UnLockCursor();
+        }
+        else
+        {
+            m_buttonSelector.LockCursor();
+        }
+    }
+
+    /// <summary>
+    /// キー入力時にウィンドウの開閉を要求します。
+    /// </summary>
+    private void OnPause(InputAction.CallbackContext context)
+    {
+        if (!context.performed || !m_isKeyInputEnabled || IsPlaying)
+        {
+            return;
+        }
+
+        if (!m_isShown)
+        {
+            PlayFadeIn();
+            return;
+        }
+
+        // 表示が完了し、選択操作が解放されている場合のみ閉じる
+        if (!m_isDisplayCompleted ||
+            (m_buttonSelector != null && m_buttonSelector.IsLockCursor))
+        {
+            return;
+        }
+
+        // イベント側でウィンドウを閉じる場合もあるため、重複実行を防ぐ
+        if (m_pauseRequestEvent != null)
+        {
+            m_pauseRequestEvent.RaiseResume();
+        }
+
+        if (isActiveAndEnabled && m_isShown && !IsPlaying)
+        {
+            PlayFadeOut();
+        }
+    }
+
+    /// <summary>
+    /// 表示と非表示を切り替えます。
+    /// </summary>
     public void Toggle()
     {
-        // フェード再生中は切り替えない(連打対策)
         if (IsPlaying)
         {
             return;
@@ -174,120 +293,180 @@ public class PauseFadeManager : MonoBehaviour, IUIInputControllable
         }
     }
 
-    // フェードインを再生
+    /// <summary>
+    /// フェードイン演出を開始します。
+    /// </summary>
     public void PlayFadeIn()
     {
-        // フェードアウト中は開始しない
-        if (m_isFadingOut)
+        if (m_isFadingIn || m_isFadingOut)
         {
             return;
         }
 
         m_isShown = true;
+        m_isDisplayCompleted = false;
+        m_isFadingIn = true;
 
-        // 先に対象を有効にする(無効のままだと Timeline やカーソルが動かないため)
+        // 表示対象を先に有効にし、選択カーソルをロックしたまま初期化する
+        UpdateUIInputState();
+
         if (m_activeSwitch.m_activateOnFadeIn)
         {
             SetTargetsActive(true);
         }
 
-        //if (m_buttonSelector != null)
-        //{
-        //    // ボタンセレクターのリセット
-        //    m_buttonSelector.ResetCursor();
+        if (m_buttonSelector != null)
+        {
+            m_buttonSelector.ResetCursor();
+        }
 
-        //    // ボタンセレクターのロック解除
-        //    m_buttonSelector.UnLockCursor();
-        //}
+        // ResetCursor がロック状態を変更しても、演出中は必ず入力を禁止する
+        UpdateUIInputState();
 
-        Play(m_fadeInDirector, m_fadeOutDirector);
+        if (m_fadeInDirector == null)
+        {
+            CompleteFadeIn();
+            return;
+        }
+
+        PlayDirector(m_fadeInDirector, m_fadeOutDirector);
     }
 
-    // フェードアウトを再生
+    /// <summary>
+    /// フェードアウト演出を開始します。
+    /// </summary>
     public void PlayFadeOut()
     {
-        Debug.Log("PlayFadeOut が呼ばれました");
+        if (m_isFadingOut || (!m_isShown && !m_isFadingIn))
+        {
+            return;
+        }
 
         m_isShown = false;
+        m_isDisplayCompleted = false;
+        m_isFadingIn = false;
         m_isFadingOut = true;
-        Play(m_fadeOutDirector, m_fadeInDirector);
+
+        // 非表示演出が始まる時点で UI 入力を止める
+        UpdateUIInputState();
+
+        if (m_fadeOutDirector == null)
+        {
+            CompleteFadeOut();
+            return;
+        }
+
+        PlayDirector(m_fadeOutDirector, m_fadeInDirector);
     }
 
-    // 再生中のフェードを止めて、最初の状態に戻す
+    /// <summary>
+    /// 実行中のフェード演出を中断します。
+    /// </summary>
     public void StopAll()
     {
+        m_isFadingIn = false;
         m_isFadingOut = false;
+        m_isDisplayCompleted = false;
+        UpdateUIInputState();
+
+        m_ignoreStopped = true;
 
         if (m_fadeInDirector != null)
         {
             m_fadeInDirector.Stop();
         }
+
         if (m_fadeOutDirector != null)
         {
             m_fadeOutDirector.Stop();
         }
+
+        m_ignoreStopped = false;
     }
 
-    // フェードが再生中かどうか
-    public bool IsPlaying
+    /// <summary>
+    /// フェードインが正常終了した場合の後処理を行います。
+    /// </summary>
+    private void OnFadeInStopped(PlayableDirector director)
     {
-        get
-        {
-            return (m_fadeInDirector != null && m_fadeInDirector.state == PlayState.Playing) ||
-                   (m_fadeOutDirector != null && m_fadeOutDirector.state == PlayState.Playing);
-        }
-    }
-
-    // ----------------------------------------------------------------------
-
-    // フェードアウトが終わったときに呼ばれる
-    private void OnFadeOutStopped(PlayableDirector director)
-    {
-        // 途中で中断された場合は何もしない
-        if (!m_isFadingOut)
+        if (m_ignoreStopped || !m_isFadingIn)
         {
             return;
         }
+
+        CompleteFadeIn();
+    }
+
+    /// <summary>
+    /// フェードアウトが正常終了した場合の後処理を行います。
+    /// </summary>
+    private void OnFadeOutStopped(PlayableDirector director)
+    {
+        if (m_ignoreStopped || !m_isFadingOut)
+        {
+            return;
+        }
+
+        CompleteFadeOut();
+    }
+
+    /// <summary>
+    /// 表示完了を通知してから UI 入力を許可します。
+    /// </summary>
+    private void CompleteFadeIn()
+    {
+        m_isFadingIn = false;
+        m_isDisplayCompleted = true;
+
+        if (m_window != null)
+        {
+            m_window.NotifyShowCompleted();
+        }
+
+        UpdateUIInputState();
+    }
+
+    /// <summary>
+    /// 非表示完了を通知し、対象オブジェクトを無効にします。
+    /// </summary>
+    private void CompleteFadeOut()
+    {
         m_isFadingOut = false;
+        UpdateUIInputState();
 
-        //// ボタンセレクターのロック(有効なうちに行う)
-        //if (m_buttonSelector != null)
-        //{
-        //    m_buttonSelector.LockCursor();
-        //}
-
-        // 最後に対象を無効にする
         if (m_activeSwitch.m_deactivateOnFadeOut)
         {
             SetTargetsActive(false);
         }
 
-        // フェードアウト終了を通知する(UIWindow 側の非表示完了処理を呼ぶ)
         m_onFadeOutCompleted?.Invoke();
 
-        Debug.Log("FadeOut 終了を検知しました");
+        if (m_window != null)
+        {
+            m_window.NotifyHideCompleted();
+        }
     }
 
-    // 対象の有効・無効をまとめて切り替える
+    /// <summary>
+    /// 指定されたオブジェクトの有効状態を切り替えます。
+    /// </summary>
     private void SetTargetsActive(bool isActive)
     {
-        if (m_activeSwitch.m_targets == null)
+        if (m_activeSwitch == null || m_activeSwitch.m_targets == null)
         {
             return;
         }
 
-        for (int i = 0; i < m_activeSwitch.m_targets.Length; i++)
+        foreach (GameObject target in m_activeSwitch.m_targets)
         {
-            GameObject target = m_activeSwitch.m_targets[i];
             if (target == null)
             {
                 continue;
             }
 
-            // 自分自身を無効にすると Update が止まって戻せなくなるため除外する
             if (target == gameObject)
             {
-                Debug.LogWarning($"{gameObject.name}: 自分自身は切り替え対象に指定できません。", this);
+                Debug.LogWarning($"{name}: 自分自身を切り替え対象に指定できません。", this);
                 continue;
             }
 
@@ -295,28 +474,28 @@ public class PauseFadeManager : MonoBehaviour, IUIInputControllable
         }
     }
 
-    private void Play(PlayableDirector target, PlayableDirector other)
+    /// <summary>
+    /// 反対側の演出を止め、指定された Timeline を先頭から再生します。
+    /// </summary>
+    private void PlayDirector(PlayableDirector target, PlayableDirector other)
     {
-        if (target == null)
-        {
-            Debug.LogWarning($"{gameObject.name}: PlayableDirector が設定されていません。", this);
-            return;
-        }
+        m_ignoreStopped = true;
 
-        // 逆方向のフェードが再生中なら止める
         if (other != null)
         {
             other.Stop();
         }
 
-        Debug.Log($"{target.name} 再生開始 duration={target.duration} updateMode={target.timeUpdateMode}");
+        target.time = 0.0;
+        target.Evaluate();
+        m_ignoreStopped = false;
 
-        // 最初から再生する
-        target.time = 0;
         target.Play();
     }
 
-    // 設定の適用
+    /// <summary>
+    /// Timeline の更新方法と終了動作を設定します。
+    /// </summary>
     private void SetupDirector(PlayableDirector director)
     {
         if (director == null)

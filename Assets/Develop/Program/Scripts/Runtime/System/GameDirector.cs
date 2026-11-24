@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 
 /// <summary>
@@ -91,6 +92,14 @@ public sealed class GameDirector : MonoBehaviour
     // 次のステージ定義
     [SerializeField]
     private StageDefinitionAsset m_nextStageDefinition;
+
+    // ポーズ画面表示用データ
+    [SerializeField, Header("ポーズ")]
+    private PauseStatusModel m_pauseStatusModel;
+
+    // ポーズ状態変更イベント
+    [SerializeField]
+    private PauseChangedEvent m_pauseChangedEvent;
 
     private void Awake()
     {
@@ -198,11 +207,26 @@ public sealed class GameDirector : MonoBehaviour
         {
             m_bossPhaseController.PhaseCompletionRequested +=
                 OnBossPhaseCompletionRequested;
+
+            m_bossPhaseController.PhaseChanged +=
+                OnBossPhaseChanged;
         }
         else
         {
             Debug.LogWarning(
                 $"{nameof(BossPhaseController)} が設定されていません。",
+                this);
+        }
+
+        if (m_pauseChangedEvent != null)
+        {
+            m_pauseChangedEvent.RegisterListener(
+                OnPauseChanged);
+        }
+        else
+        {
+            Debug.LogWarning(
+                $"{nameof(PauseChangedEvent)} が設定されていません。",
                 this);
         }
     }
@@ -240,6 +264,15 @@ public sealed class GameDirector : MonoBehaviour
         {
             m_bossPhaseController.PhaseCompletionRequested -=
                 OnBossPhaseCompletionRequested;
+
+            m_bossPhaseController.PhaseChanged -=
+                OnBossPhaseChanged;
+        }
+
+        if (m_pauseChangedEvent != null)
+        {
+            m_pauseChangedEvent.UnregisterListener(
+                OnPauseChanged);
         }
     }
     private void OnGameFlowStateChanged(
@@ -258,10 +291,11 @@ public sealed class GameDirector : MonoBehaviour
 
             case GameFlowStateType.ENDING:
                 StopGameProgressTimer();
+                HandleResultStarted();
+
                 break;
 
             case GameFlowStateType.RESULT:
-                HandleResultStarted();
                 break;
 
             case GameFlowStateType.GAME_OVER:
@@ -323,7 +357,8 @@ public sealed class GameDirector : MonoBehaviour
     /// </summary>
     private void StartRestart()
     {
-        StartPlaying();
+        StartCoroutine(
+            StartPlayingDeferred());
     }
 
     /// <summary>
@@ -356,7 +391,8 @@ public sealed class GameDirector : MonoBehaviour
                 this);
         }
 
-        StartPlaying();
+        StartCoroutine(
+            StartPlayingDeferred());
     }
 
     /// <summary>
@@ -489,10 +525,6 @@ public sealed class GameDirector : MonoBehaviour
             return;
         }
 
-        /*
-         * 別Sequenceが続けて開始されている場合は
-         * Timerを再開しません。
-         */
         if (m_sequenceController != null
             && m_sequenceController.IsRunning)
         {
@@ -501,6 +533,19 @@ public sealed class GameDirector : MonoBehaviour
 
         StartGameProgressTimer();
     }
+    /// <summary>
+    /// 現在のGameFlow状態変更イベントの通知完了後に
+    /// 通常ゲームプレイ状態へ遷移します。
+    /// </summary>
+    /// <returns>次フレームまで待機するCoroutine。</returns>
+    private IEnumerator StartPlayingDeferred()
+    {
+   
+        yield return null;
+
+        StartPlaying();
+    }
+
     /// <summary>
     /// 通常ゲームプレイ状態へ遷移します。
     /// </summary>
@@ -515,6 +560,40 @@ public sealed class GameDirector : MonoBehaviour
             return;
         }
         m_gameFlowController.EnterPlaying();
+    }
+
+    /// <summary>
+    /// ボスフェーズ変更を受け取り、
+    /// 新しいフェーズをチェックポイントとして記録します。
+    /// </summary>
+    /// <param name="phaseID">変更後のボスフェーズ。</param>
+    private void OnBossPhaseChanged(
+        BossPhaseID phaseID)
+    {
+        if (m_stageCheckpointController == null)
+        {
+            return;
+        }
+
+        /*
+         * RestoreCheckpoint() 内の SetPhase() でも
+         * PhaseChanged は通知されます。
+         *
+         * 復元中にチェックポイントを上書きしないよう、
+         * StageCheckpointController の復元状態を確認します。
+         */
+        if (m_stageCheckpointController.IsRestoring)
+        {
+            return;
+        }
+
+        if (!m_stageCheckpointController
+            .CaptureCurrentPhaseCheckpoint())
+        {
+            Debug.LogWarning(
+                $"{phaseID} のチェックポイント記録に失敗しました。",
+                this);
+        }
     }
 
     /// <summary>
@@ -794,6 +873,52 @@ public sealed class GameDirector : MonoBehaviour
             m_resultStageModel.SetStageData(
                 m_stageSceneContext);
         }
+    }
+
+    /// <summary>
+    /// ポーズ状態変更を受け取ります。
+    /// ポーズ開始時に表示用データを更新します。
+    /// </summary>
+    /// <param name="eventData">ポーズ状態変更情報。</param>
+    private void OnPauseChanged(
+        PauseChangedEventData eventData)
+    {
+        if (!eventData.IsPaused)
+        {
+            return;
+        }
+
+        ApplyPauseStatusData();
+    }
+
+    /// <summary>
+    /// 現在の残り時間とリトライ回数を
+    /// ポーズ画面表示用Modelへ反映します。
+    /// </summary>
+    public void ApplyPauseStatusData()
+    {
+        if (m_pauseStatusModel == null)
+        {
+            Debug.LogWarning(
+                $"{nameof(PauseStatusModel)} が設定されていません。",
+                this);
+
+            return;
+        }
+
+        double remainingSeconds =
+            m_stageTimeLimitController != null
+                ? m_stageTimeLimitController.RemainingSeconds
+                : 0.0;
+
+        int retryCount =
+            m_stageSceneContext != null
+                ? m_stageSceneContext.RetryCount
+                : 0;
+
+        m_pauseStatusModel.SetStatus(
+            remainingSeconds,
+            retryCount);
     }
 
     /// <summary>

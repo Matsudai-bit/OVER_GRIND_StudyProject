@@ -83,6 +83,7 @@ public class ButtonSelector : MonoBehaviour
     private Vector2 m_previousNav = Vector2.zero;
 
     // カーソルがロックされているかどうか
+    [SerializeField]
     private bool m_isLockCursor = false;
 
     // 初期化を行ったかどうか
@@ -289,14 +290,14 @@ public class ButtonSelector : MonoBehaviour
                 // ボタンの数だけ呼ぶ
                 for (int i = 0; i < m_buttons.Length; i++)
                 {
-                    m_onCursorExitAction?.Invoke();
+                    //m_onCursorExitAction?.Invoke();
                     m_buttons[i].OnCursorExit();
                 }
             }
             else
             {
                 // 1回だけ呼ぶ
-                m_onCursorExitAction?.Invoke();
+                //m_onCursorExitAction?.Invoke();
                 m_buttons[m_selectButtonNumber].OnCursorExit();
             }
         }
@@ -318,7 +319,7 @@ public class ButtonSelector : MonoBehaviour
 
         if (isActiveAndEnabled && m_buttons != null && m_buttons.Length > 0)
         {
-            m_onCursorAction?.Invoke();
+            //m_onCursorAction?.Invoke();
             m_buttons[m_selectButtonNumber].OnCursor();
         }
     }

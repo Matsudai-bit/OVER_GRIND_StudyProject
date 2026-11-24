@@ -601,6 +601,8 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
             m_stateMachine.IsCurrentState<PlayerGrindingState>() &&
             m_splineGrindController.IsGrinding && m_inputReader.ConsumeJumpPress())
         {
+            PlayerGrindingState grindingState = m_stateMachine.GetNowState() as PlayerGrindingState;
+            grindingState?.CancelChargeForRailJump();
             RequestRailStateChange<PlayerRailJumpingState>(m_inputReader.MoveInput);
         }
 
@@ -635,6 +637,7 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
     {
         bool isConsumingGauge =
             IsCurrentState<PlayerVRunningState>() ||
+            IsCurrentState<PlayerBoostDashingState>() ||
             m_isBoostSuspended;
 
         if (!isConsumingGauge)
