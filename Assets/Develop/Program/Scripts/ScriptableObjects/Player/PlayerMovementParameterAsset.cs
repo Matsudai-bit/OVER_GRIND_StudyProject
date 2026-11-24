@@ -54,9 +54,39 @@ public sealed class PlayerMovementParameterAsset : ScriptableObject
     [Min(MIN_TIME)]
     private float m_jumpInputDuration = 0.5f;
 
-    // 空中移動時の空気抵抗
+    // 空中移動の最高速度
     [SerializeField, Header("空中移動")]
-    [Tooltip("空中で水平方向の速度が減衰する強さです。0で速度を維持します。")]
+    [Tooltip("ジャンプ・滑空中に入力で到達できる最高水平速度です。")]
+    [Min(0.0f)]
+    private float m_airMaxMoveSpeed = 6.0f;
+
+    // 空中移動で最高速度まで到達する時間
+    [SerializeField]
+    [Tooltip("空中で入力し続けた場合に最高水平速度へ到達するまでの時間です。")]
+    [Min(MIN_TIME)]
+    private float m_airTimeToMaxSpeed = 0.35f;
+
+    // 空中で逆方向入力した際のブレーキ倍率
+    [SerializeField]
+    [Tooltip("空中で現在の進行方向と逆へ入力した際の減速倍率です。")]
+    [Min(1.0f)]
+    private float m_airReverseBrakeMultiplier = 1.5f;
+
+    // 空中で逆入力した際に基準とする停止時間
+    [SerializeField]
+    [Tooltip("空中で逆方向入力した際の基準停止時間です。通常の無入力減速には使用しません。")]
+    [Min(MIN_TIME)]
+    private float m_airReverseStopTime = 0.35f;
+
+    // 空中で入力方向へ向きを変える速度
+    [SerializeField]
+    [Tooltip("ジャンプ・滑空中に入力方向へ回転する1秒間の最大角度です。")]
+    [Min(0.0f)]
+    private float m_airRotationSpeed = 360.0f;
+
+    // 空中移動時の空気抵抗
+    [SerializeField]
+    [Tooltip("空中で水平方向の速度が減衰する強さです。0で速度を維持します。入力中にも適用されます。")]
     [Min(0.0f)]
     private float m_airResistance = 1.0f;
 
@@ -78,18 +108,18 @@ public sealed class PlayerMovementParameterAsset : ScriptableObject
     [Min(0.0f)]
     private float m_maxFallSpeed = 20.0f;
 
-// ============================================================
-// 攻撃
-// ============================================================
+    // ============================================================
+    // 攻撃
+    // ============================================================
 
-// 攻撃中、移動入力がない場合の減速倍率
-// 1.0 = 通常と同じ
-// 2.0 = 通常の2倍の時間をかけて減速
-// 3.0 = 通常の3倍の時間をかけて減速
-[SerializeField, Header("攻撃")]
-[Tooltip("攻撃中、移動入力がない場合に通常より緩やかに減速する倍率です。")]
-[Min(1.0f)]
-private float m_attackDecelerationMultiplier = 3.0f;
+    // 攻撃中、移動入力がない場合の減速倍率
+    // 1.0 = 通常と同じ
+    // 2.0 = 通常の2倍の時間をかけて減速
+    // 3.0 = 通常の3倍の時間をかけて減速
+    [SerializeField, Header("攻撃")]
+    [Tooltip("攻撃中、移動入力がない場合に通常より緩やかに減速する倍率です。")]
+    [Min(1.0f)]
+    private float m_attackDecelerationMultiplier = 3.0f;
 
     // 攻撃ヒット中の実際の移動速度倍率
     // 1.0 = 通常速度
@@ -126,7 +156,24 @@ private float m_attackDecelerationMultiplier = 3.0f;
     /// <summary>
     /// 空中移動時の空気抵抗を取得します。
     /// </summary>
-    public float AirResistance => m_airResistance;
+    public float AirResistance =>
+        m_airResistance;
+
+    /// <summary>
+    /// 空中移動用パラメータを生成します。
+    /// </summary>
+    /// <returns>空中水平移動用パラメータ。</returns>
+    public PlayerMoveParameters CreateAirMoveParameters()
+    {
+        return new PlayerMoveParameters(
+            m_airMaxMoveSpeed,
+            m_airTimeToMaxSpeed,
+            m_airReverseStopTime,
+            m_airRotationSpeed,
+            Mathf.Max(
+                1.0f,
+                m_airReverseBrakeMultiplier));
+    }
 
     /// <summary>
     /// 落下中に適用する重力倍率を取得します。

@@ -139,7 +139,12 @@ public sealed class AudioSequentialHandle
         }
         AudioManager manager = AudioManager.Instance;
 
-        if (m_asset == null || !m_asset.HasEndAudio || manager == null)
+        // AudioManagerが非アクティブの場合はCoroutineを開始しません。
+        if (m_asset == null ||
+            !m_asset.HasEndAudio ||
+            manager == null ||
+            !manager.isActiveAndEnabled ||
+            !manager.gameObject.activeInHierarchy)
         {
             StopImmediate();
             return;

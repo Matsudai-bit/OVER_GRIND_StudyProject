@@ -130,10 +130,26 @@ public sealed class UIOverlaySceneManager : MonoBehaviour
             yield break;
         }
 
+        //m_overlayRoot = FindOverlayRoot(m_loadedScene);
+        //if (m_overlayRoot == null || !m_overlayRoot.HasWindow)
+        //{
+        //    Debug.LogError("UIOverlaySceneRootとUIWindowをシーンに設定してください。", this);
+        //    m_overlayRoot = null;
+        //    yield return UnloadOverlayRoutine();
+        //    yield break;
+        //}
+
         m_overlayRoot = FindOverlayRoot(m_loadedScene);
-        if (m_overlayRoot == null || !m_overlayRoot.HasWindow)
+        if (m_overlayRoot == null)
         {
-            Debug.LogError("UIOverlaySceneRootとUIWindowをシーンに設定してください。", this);
+            Debug.LogError($"シーン '{sceneName}' にUIOverlaySceneRootが見つかりません。", this);
+            yield return UnloadOverlayRoutine();
+            yield break;
+        }
+
+        if (!m_overlayRoot.HasWindow)
+        {
+            Debug.LogError($"UIOverlaySceneRootはありますが、UIWindowが取得できていません: {m_overlayRoot.name}", m_overlayRoot);
             m_overlayRoot = null;
             yield return UnloadOverlayRoutine();
             yield break;

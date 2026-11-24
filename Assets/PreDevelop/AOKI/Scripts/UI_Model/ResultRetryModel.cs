@@ -49,8 +49,8 @@ public class ResultRetryModel :
 
     private void Awake()
     {
-        SetRetryCount(
-            m_initialRetryCount);
+        //SetRetryCount(
+        //    m_initialRetryCount);
     }
 
     /// <summary>

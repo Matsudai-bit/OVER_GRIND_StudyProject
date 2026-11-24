@@ -291,10 +291,11 @@ public sealed class GameDirector : MonoBehaviour
 
             case GameFlowStateType.ENDING:
                 StopGameProgressTimer();
+                HandleResultStarted();
+
                 break;
 
             case GameFlowStateType.RESULT:
-                HandleResultStarted();
                 break;
 
             case GameFlowStateType.GAME_OVER:
@@ -524,10 +525,6 @@ public sealed class GameDirector : MonoBehaviour
             return;
         }
 
-        /*
-         * 別Sequenceが続けて開始されている場合は
-         * Timerを再開しません。
-         */
         if (m_sequenceController != null
             && m_sequenceController.IsRunning)
         {
@@ -543,14 +540,7 @@ public sealed class GameDirector : MonoBehaviour
     /// <returns>次フレームまで待機するCoroutine。</returns>
     private IEnumerator StartPlayingDeferred()
     {
-        /*
-         * INTROのGameFlowStateChangedEvent通知中に
-         * PLAYINGへ再遷移すると、イベント通知が入れ子になります。
-         *
-         * PLAYING通知後に古いINTRO通知を受け取るリスナーが存在すると、
-         * UIや入力がINTRO状態へ上書きされる可能性があるため、
-         * 次フレームへ遅延させてからPLAYINGへ遷移します。
-         */
+   
         yield return null;
 
         StartPlaying();
