@@ -4,6 +4,7 @@ using UnityEngine;
 
 /// <summary>
 /// ハイトマップデータからチャンク単位で Marching Cubes メッシュを構築するクラス。
+/// 長方形グリッドおよびX/Z別ボクセル間隔に対応します。
 /// </summary>
 public class MarchingCubesMeshBuilder
 {
@@ -33,10 +34,13 @@ public class MarchingCubesMeshBuilder
     private static readonly int[] EDGE_AXIS = new int[12];
 
     // ---- メンバー変数 ----
-    private readonly int m_gridSize;                      // 全体XZ方向のサンプル点数
+    private readonly int m_gridSizeX;                     // 全体X方向のサンプル点数
+    private readonly int m_gridSizeZ;                     // 全体Z方向のサンプル点数
     private readonly int m_ny;                            // Y方向のサンプル層数
-    private readonly float m_voxelSize;                   // サンプル点の間隔
-    private readonly int m_strideXZ;                      // チャンクキャッシュ用の1辺ストライド
+    private readonly float m_voxelSizeX;                  // X方向のサンプル点間隔
+    private readonly float m_voxelSizeY;                  // Y方向の層間隔
+    private readonly float m_voxelSizeZ;                  // Z方向のサンプル点間隔
+    private readonly int m_strideZ;                       // チャンクキャッシュ用のZストライド
     private readonly int[] m_edgeCache;                   // 共有頂点インデックスのキャッシュ
     private readonly List<Vector3> m_vertices = new List<Vector3>();
     private readonly List<Vector3> m_normals = new List<Vector3>();
@@ -57,28 +61,39 @@ public class MarchingCubesMeshBuilder
     /// <summary>
     /// MarchingCubesMeshBuilder を初期化します。
     /// </summary>
-    /// <param name="gridSize">全体XZ方向のサンプル点数。</param>
+    /// <param name="gridSizeX">全体X方向のサンプル点数。</param>
+    /// <param name="gridSizeZ">全体Z方向のサンプル点数。</param>
     /// <param name="ny">Y方向のサンプル層数。</param>
-    /// <param name="voxelSize">サンプル点の間隔。</param>
-    /// <param name="chunkCellSize">1チャンクあたりの最大セル数。</param>
-    public MarchingCubesMeshBuilder(int gridSize, int ny, float voxelSize, int chunkCellSize)
+    /// <param name="voxelSizeX">X方向のサンプル点間隔。</param>
+    /// <param name="voxelSizeY">Y方向の層間隔。</param>
+    /// <param name="voxelSizeZ">Z方向のサンプル点間隔。</param>
+    /// <param name="maxChunkCellsX">1チャンクあたりのX最大セル数。</param>
+    /// <param name="maxChunkCellsZ">1チャンクあたりのZ最大セル数。</param>
+    public MarchingCubesMeshBuilder(
+        int gridSizeX,
+        int gridSizeZ,
+        int ny,
+        float voxelSizeX,
+        float voxelSizeY,
+        float voxelSizeZ,
+        int maxChunkCellsX,
+        int maxChunkCellsZ)
     {
-        m_gridSize = gridSize;
+        m_gridSizeX = gridSizeX;
+        m_gridSizeZ = gridSizeZ;
         m_ny = ny;
-        m_voxelSize = voxelSize;
-        m_strideXZ = chunkCellSize + 1;
-        m_edgeCache = new int[m_strideXZ * m_ny * m_strideXZ * 3];
+        m_voxelSizeX = voxelSizeX;
+        m_voxelSizeY = voxelSizeY;
+        m_voxelSizeZ = voxelSizeZ;
+
+        int strideX = maxChunkCellsX + 1;
+        m_strideZ = maxChunkCellsZ + 1;
+        m_edgeCache = new int[strideX * m_ny * m_strideZ * 3];
     }
 
     /// <summary>
     /// 指定されたセル範囲（チャンク）のみのメッシュを構築し、対象 Mesh へ適用します。
     /// </summary>
-    /// <param name="heightField">参照するハイトマップデータ。</param>
-    /// <param name="startX">開始セルXインデックス。</param>
-    /// <param name="endX">終了セルXインデックス（含まない）。</param>
-    /// <param name="startZ">開始セルZインデックス。</param>
-    /// <param name="endZ">終了セルZインデックス（含まない）。</param>
-    /// <param name="targetMesh">更新対象の Mesh。</param>
     public void RebuildChunkMesh(
         SandHeightField heightField,
         int startX,
@@ -98,10 +113,12 @@ public class MarchingCubesMeshBuilder
         m_triangles.Clear();
         Array.Fill(m_edgeCache, -1);
 
-        float invVoxel = 1f / m_voxelSize;
+        float invVoxelY = 1f / m_voxelSizeY;
         float sink = heightField.Sink;
-        float offset = (m_gridSize - 1) * m_voxelSize * 0.5f;
-        float totalSize = (m_gridSize - 1) * m_voxelSize;
+        float totalSizeX = (m_gridSizeX - 1) * m_voxelSizeX;
+        float totalSizeZ = (m_gridSizeZ - 1) * m_voxelSizeZ;
+        float halfSizeX = totalSizeX * 0.5f;
+        float halfSizeZ = totalSizeZ * 0.5f;
 
         for (int x = startX; x < endX; x++)
         {
@@ -115,8 +132,8 @@ public class MarchingCubesMeshBuilder
                 float sMin = Mathf.Min(Mathf.Min(s00, s10), Mathf.Min(s01, s11));
                 float sMax = Mathf.Max(Mathf.Max(s00, s10), Mathf.Max(s01, s11));
 
-                int yLo = Mathf.Max(0, Mathf.FloorToInt(sMin * invVoxel) + LAYER_GROUND_OFFSET - 1);
-                int yHi = Mathf.Min(m_ny - 2, Mathf.FloorToInt(sMax * invVoxel) + LAYER_GROUND_OFFSET + 1);
+                int yLo = Mathf.Max(0, Mathf.FloorToInt(sMin * invVoxelY) + LAYER_GROUND_OFFSET - 1);
+                int yHi = Mathf.Min(m_ny - 2, Mathf.FloorToInt(sMax * invVoxelY) + LAYER_GROUND_OFFSET + 1);
 
                 for (int y = yLo; y <= yHi; y++)
                 {
@@ -124,7 +141,7 @@ public class MarchingCubesMeshBuilder
                     for (int i = 0; i < 8; i++)
                     {
                         Vector3Int c = CORNER_OFFSETS[i];
-                        float density = (heightField.GetHeight(x + c.x, z + c.z) - sink) - ((y + c.y - LAYER_GROUND_OFFSET) * m_voxelSize);
+                        float density = (heightField.GetHeight(x + c.x, z + c.z) - sink) - ((y + c.y - LAYER_GROUND_OFFSET) * m_voxelSizeY);
                         if (density < 0f)
                         {
                             cubeIndex |= 1 << i;
@@ -139,9 +156,9 @@ public class MarchingCubesMeshBuilder
 
                     for (int k = 0; k < triRow.Length; k += 3)
                     {
-                        int i0 = GetOrCreateEdgeVertex(heightField, startX, startZ, x, y, z, triRow[k], sink, offset, totalSize);
-                        int i1 = GetOrCreateEdgeVertex(heightField, startX, startZ, x, y, z, triRow[k + 1], sink, offset, totalSize);
-                        int i2 = GetOrCreateEdgeVertex(heightField, startX, startZ, x, y, z, triRow[k + 2], sink, offset, totalSize);
+                        int i0 = GetOrCreateEdgeVertex(heightField, startX, startZ, x, y, z, triRow[k], sink, halfSizeX, halfSizeZ, totalSizeX, totalSizeZ);
+                        int i1 = GetOrCreateEdgeVertex(heightField, startX, startZ, x, y, z, triRow[k + 1], sink, halfSizeX, halfSizeZ, totalSizeX, totalSizeZ);
+                        int i2 = GetOrCreateEdgeVertex(heightField, startX, startZ, x, y, z, triRow[k + 2], sink, halfSizeX, halfSizeZ, totalSizeX, totalSizeZ);
 
                         if (i0 == i1 || i1 == i2 || i0 == i2)
                         {
@@ -185,8 +202,8 @@ public class MarchingCubesMeshBuilder
     /// </summary>
     private Vector3 CalculateOutwardNormal(SandHeightField heightField, int x, int z)
     {
-        float dhdx = (heightField.GetClampedHeight(x + 1, z) - heightField.GetClampedHeight(x - 1, z)) / (2f * m_voxelSize);
-        float dhdz = (heightField.GetClampedHeight(x, z + 1) - heightField.GetClampedHeight(x, z - 1)) / (2f * m_voxelSize);
+        float dhdx = (heightField.GetClampedHeight(x + 1, z) - heightField.GetClampedHeight(x - 1, z)) / (2f * m_voxelSizeX);
+        float dhdz = (heightField.GetClampedHeight(x, z + 1) - heightField.GetClampedHeight(x, z - 1)) / (2f * m_voxelSizeZ);
         return new Vector3(-dhdx, 1f, -dhdz);
     }
 
@@ -202,8 +219,10 @@ public class MarchingCubesMeshBuilder
         int z,
         int edgeIndex,
         float sink,
-        float offset,
-        float totalSize)
+        float halfSizeX,
+        float halfSizeZ,
+        float totalSizeX,
+        float totalSizeZ)
     {
         Vector3Int bs = EDGE_BASE[edgeIndex];
         int ax = x + bs.x;
@@ -213,7 +232,7 @@ public class MarchingCubesMeshBuilder
 
         int lx = ax - startX;
         int lz = az - startZ;
-        int key = ((lx * m_ny + ay) * m_strideXZ + lz) * 3 + axis;
+        int key = ((lx * m_ny + ay) * m_strideZ + lz) * 3 + axis;
         int cachedIndex = m_edgeCache[key];
         if (cachedIndex >= 0)
         {
@@ -224,13 +243,13 @@ public class MarchingCubesMeshBuilder
         int by = ay + (axis == 1 ? 1 : 0);
         int bz = az + (axis == 2 ? 1 : 0);
 
-        float va = (heightField.GetHeight(ax, az) - sink) - ((ay - LAYER_GROUND_OFFSET) * m_voxelSize);
-        float vb = (heightField.GetHeight(bx, bz) - sink) - ((by - LAYER_GROUND_OFFSET) * m_voxelSize);
+        float va = (heightField.GetHeight(ax, az) - sink) - ((ay - LAYER_GROUND_OFFSET) * m_voxelSizeY);
+        float vb = (heightField.GetHeight(bx, bz) - sink) - ((by - LAYER_GROUND_OFFSET) * m_voxelSizeY);
         float t = Mathf.Abs(vb - va) < DENSITY_EPSILON ? 0.5f : -va / (vb - va);
         t = Mathf.Clamp(t, MIN_EDGE_T, 1f - MIN_EDGE_T);
 
-        Vector3 posA = new Vector3(ax * m_voxelSize - offset, (ay - LAYER_GROUND_OFFSET) * m_voxelSize, az * m_voxelSize - offset);
-        Vector3 posB = new Vector3(bx * m_voxelSize - offset, (by - LAYER_GROUND_OFFSET) * m_voxelSize, bz * m_voxelSize - offset);
+        Vector3 posA = new Vector3(ax * m_voxelSizeX - halfSizeX, (ay - LAYER_GROUND_OFFSET) * m_voxelSizeY, az * m_voxelSizeZ - halfSizeZ);
+        Vector3 posB = new Vector3(bx * m_voxelSizeX - halfSizeX, (by - LAYER_GROUND_OFFSET) * m_voxelSizeY, bz * m_voxelSizeZ - halfSizeZ);
         Vector3 pos = Vector3.Lerp(posA, posB, t);
 
         Vector3 normal = Vector3.Lerp(
@@ -239,8 +258,8 @@ public class MarchingCubesMeshBuilder
             t
         ).normalized;
 
-        float u = totalSize > 0f ? (pos.x + offset) / totalSize : 0.5f;
-        float v = totalSize > 0f ? (pos.z + offset) / totalSize : 0.5f;
+        float u = totalSizeX > 0f ? (pos.x + halfSizeX) / totalSizeX : 0.5f;
+        float v = totalSizeZ > 0f ? (pos.z + halfSizeZ) / totalSizeZ : 0.5f;
 
         int index = m_vertices.Count;
         m_vertices.Add(pos);
