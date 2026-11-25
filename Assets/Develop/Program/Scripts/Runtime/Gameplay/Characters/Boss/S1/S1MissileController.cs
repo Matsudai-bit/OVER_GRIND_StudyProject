@@ -127,13 +127,19 @@ public sealed class S1MissileController : MonoBehaviour, IPooledMissileLauncher
 
     private void UpdateUpwardLaunch()
     {
-        m_upwardElapsedTime += Time.fixedDeltaTime;
-        if (m_upwardElapsedTime < m_upwardDuration)
+        m_upwardElapsedTime +=
+            Time.fixedDeltaTime;
+
+        if (m_upwardElapsedTime <
+            m_upwardDuration)
         {
             return;
         }
+
         m_steering.ResetSteering();
-        m_currentState = MissileState.HOMING;
+
+        m_currentState =
+            MissileState.HOMING;
     }
 
     private void UpdateHoming()
@@ -150,13 +156,35 @@ public sealed class S1MissileController : MonoBehaviour, IPooledMissileLauncher
         m_motor.AddAcceleration(acceleration);
     }
 
-    private void OnCollisionEnter(Collision collision)
+    /// <summary>
+    /// ホーミング開始後の衝突を処理します。
+    /// </summary>
+    /// <param name="collision">
+    /// 衝突情報。
+    /// </param>
+    private void OnCollisionEnter(
+        Collision collision)
     {
-        if (!m_isInitialized || m_isTerminating || collision.contactCount == 0)
+        if (!m_isInitialized ||
+            m_isTerminating ||
+            collision.contactCount == 0)
         {
             return;
         }
-        FinishFlight(true, collision.GetContact(0).point);
+
+        /*
+         * 上昇中は無敵状態として扱い、
+         * 衝突しても爆発・消滅させません。
+         */
+        if (m_currentState !=
+            MissileState.HOMING)
+        {
+            return;
+        }
+
+        FinishFlight(
+            true,
+            collision.GetContact(0).point);
     }
 
     /// <summary>二重爆発を防ぎ、飛行体のみを返却します。</summary>

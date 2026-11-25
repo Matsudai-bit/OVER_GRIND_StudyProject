@@ -295,10 +295,10 @@ public sealed class GameDirector : MonoBehaviour
                 StopGameProgressTimer();
                 HandleResultStarted();
 
+
                 break;
 
             case GameFlowStateType.RESULT:
-                Time.timeScale = 0.0f;
                 break;
 
             case GameFlowStateType.GAME_OVER:
@@ -809,7 +809,7 @@ public sealed class GameDirector : MonoBehaviour
         int stageNumber =
             GetCurrentStageNumber();
 
-        if (stageNumber <= 0)
+        if (stageNumber < StageSceneContext.MIN_STAGE_NUMBER)
         {
             Debug.LogError(
                 "ステージ番号がContextへ設定されていません。",

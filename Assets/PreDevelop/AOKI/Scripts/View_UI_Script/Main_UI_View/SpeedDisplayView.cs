@@ -10,7 +10,7 @@ public class SpeedDisplayView : MonoBehaviour
     private const int NUMBER_SPRITE_COUNT = 10;
 
     /// <summary>デフォルトの最高速度 (km/h)</summary>
-    private const float DEFAULT_MAX_SPEED = 40f;
+    private const float DEFAULT_MAX_SPEED = 40f * 2.0f;
 
     /// <summary>通常時の数字スプライト素材 (0～9)</summary>
     [Header("通常時の数字スプライト素材 (0～9)")]

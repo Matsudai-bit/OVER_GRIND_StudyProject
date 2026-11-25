@@ -117,6 +117,8 @@ public class ResultSelectionInput : MonoBehaviour, IUIInputControllable
     private void Start()
     {
         m_hasStarted = true;
+        Time.timeScale = 0.0f;
+
         ShowInitialState();
     }
 
@@ -131,6 +133,8 @@ public class ResultSelectionInput : MonoBehaviour, IUIInputControllable
         m_isEntrancePlaying = false;
         m_isEntranceCompleted = false;
         UpdatePanelInputState();
+        Time.timeScale = 1.0f;
+
     }
 
     /// <summary>
