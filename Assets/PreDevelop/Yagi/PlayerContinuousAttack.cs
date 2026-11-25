@@ -13,6 +13,7 @@ public sealed class PlayerContinuousAttack
     private float m_airHitStopTimer;
     private Vector3 m_direction;
     private PlayerAirAttackAttachment m_airAttachment;
+    private PlayerAirAttackPose m_airPose;
 
     /// <summary>Gets whether an air attack hit stop is still active.</summary>
     public bool IsAirHitStopping => m_isAirAttack && m_airHitStopTimer > 0.0f;
@@ -29,20 +30,39 @@ public sealed class PlayerContinuousAttack
     {
         m_remainingSpeed = m_owner.Motor.HorizontalSpeed;
         m_initialSpeed = Mathf.Max(m_remainingSpeed, SPEED_EPSILON);
-        // 空中ではジャンプの慣性方向を引き継ぎ、元の体の向きへ速度を曲げません。
+        // 対象がいない場合、空中ではジャンプの慣性方向を引き継ぎます。
         m_direction = m_isAirAttack
             ? m_owner.Motor.HorizontalDirection
             : m_owner.Motor.FacingDirection;
-        if (m_isAirAttack) m_owner.Motor.AlignFacingToDirection(m_direction);
+        if (m_owner.AttackController.TryGetAssistedAttackTarget(m_owner.transform, m_owner.Motor.FacingDirection,
+                m_isAirAttack, out Vector3 attackDirection, out Transform target, out Collider surface))
+        {
+            m_owner.Motor.AlignFacingToDirection(attackDirection);
+            m_direction = attackDirection;
+            // 入力を離して減速中でも進行方向を補正し、水平速度の大きさと垂直速度は維持します。
+            Vector3 velocity = attackDirection * m_remainingSpeed;
+            velocity.y = m_owner.Motor.VerticalVelocity;
+            m_owner.Motor.SetWorldVelocity(velocity);
+            if (m_isAirAttack && m_owner.TryGetComponent(out m_airPose))
+                m_airPose.BeginAim(target, surface, m_owner.AttackController.AirMaxPitch);
+        }
+        else if (m_isAirAttack)
+        {
+            m_owner.Motor.AlignFacingToDirection(m_direction);
+        }
         m_hitTimer = 0.0f;
         m_airHitStopTimer = 0.0f;
         if (m_isAirAttack)
         {
             m_airAttachment = new PlayerAirAttackAttachment(m_owner);
             m_owner.AttackController.ContinuousAttackHit += m_airAttachment.AttachToTarget;
+            m_owner.AnimationPresenter.PlayAerialAttackingAnimation();
         }
+
+        AttackPowerSourceRegistry.Register(
+            m_owner.transform,
+            GetAttackPowerType());
         m_owner.AttackController.EnableContinuousAttackHitboxes();
-        m_owner.AnimationPresenter.PlayAttackAnimation();
         m_owner.SetSpeedDisplayOverride(m_remainingSpeed);
     }
 
@@ -54,6 +74,18 @@ public sealed class PlayerContinuousAttack
         if (!m_owner.InputReader.IsAttackHeld) return false;
         m_remainingSpeed = Mathf.Max(0.0f, m_remainingSpeed - SPEED_DECAY_PER_SECOND * deltaTime);
         if (m_remainingSpeed <= SPEED_EPSILON) return false;
+
+        if (m_airPose != null)
+        {
+            if (m_owner.Monitor.IsGrounded && m_owner.Motor.VerticalVelocity <= 0f && m_owner.Monitor.HasGroundSupport())
+                m_airPose.RestorePose();
+            else
+                m_airPose.UpdateAim();
+        }
+
+        AttackPowerSourceRegistry.Register(
+            m_owner.transform,
+            GetAttackPowerType());
 
         if (!m_isAirAttack) UpdateMovement(deltaTime);
         m_owner.SetSpeedDisplayOverride(m_remainingSpeed);
@@ -68,7 +100,16 @@ public sealed class PlayerContinuousAttack
         while (m_hitTimer >= interval)
         {
             m_hitTimer -= interval;
-            if (m_owner.AttackController.ApplyContinuousHitTick() && m_isAirAttack)
+            AttackPowerType attackPowerType = GetAttackPowerType();
+
+            bool hasHit;
+            using (AttackPowerContext.Begin(attackPowerType))
+            using (AttackHitTickContext.Begin())
+            {
+                hasHit = m_owner.AttackController.ApplyContinuousHitTick();
+            }
+
+            if (hasHit && m_isAirAttack)
                 m_airHitStopTimer = m_owner.AttackController.AirHitStopDuration;
         }
 
@@ -88,43 +129,147 @@ public sealed class PlayerContinuousAttack
         }
 
         if (!m_isAirAttack &&
-            m_owner.AttackController.TryGetMaxPenetration(out Vector3 direction, out float distance))
-            m_owner.Motor.ResolvePenetration(direction, distance);
+            m_owner.AttackController.TryGetMaxMovementBlockerPenetration(
+                out Vector3 direction,
+                out float distance))
+        {
+            // 完全に分離させると次の攻撃が届かなくなるため、浅い接触を残します。
+            float correctionDistance = Mathf.Max(
+                0.0f, distance - m_owner.AttackController.AttackContactOverlap);
+            m_owner.Motor.ResolvePenetration(direction, correctionDistance);
+        }
         return true;
     }
 
-    /// <summary>地上攻撃と同じ入力減速・命中減速を適用します。</summary>
-    private void UpdateMovement(float deltaTime)
+    /// <summary>
+    /// 攻撃中の移動を更新します。
+    /// 空中攻撃では垂直速度へ干渉しない空中専用Motor APIを使用します。
+    /// </summary>
+    /// <param name="deltaTime">
+    /// 物理更新時間。
+    /// </param>
+    private void UpdateMovement(
+        float deltaTime)
     {
-        if (!m_owner.InputReader.HasMoveInput)
+        PlayerMoveParameters normalParameters =
+            m_owner.MovementParameterAsset
+                .CreateMoveParameters();
+
+        float decelerationMultiplier =
+            Mathf.Max(
+                m_owner.MovementParameterAsset
+                    .AttackDecelerationMultiplier,
+                1.0f);
+
+        PlayerMoveParameters attackParameters =
+            new PlayerMoveParameters(
+                normalParameters.MaxMoveSpeed,
+                normalParameters.TimeToMaxSpeed,
+                normalParameters.TimeToStop *
+                    decelerationMultiplier,
+                normalParameters.RotationSpeed);
+
+        // インタラクト対象への命中中は前進を止める
+        if (AttackMovementBlockRegistry.IsBlocked(
+                m_owner.transform))
         {
-            PlayerMoveParameters normal = m_owner.MovementParameterAsset.CreateMoveParameters();
-            float multiplier = Mathf.Max(m_owner.MovementParameterAsset.AttackDecelerationMultiplier, 1.0f);
-            var attack = new PlayerMoveParameters(normal.MaxMoveSpeed, normal.TimeToMaxSpeed,
-                normal.TimeToStop * multiplier, normal.RotationSpeed);
-            m_owner.Motor.Decelerate(attack, deltaTime);
+            if (m_isAirAttack)
+            {
+                m_owner.Motor.MoveAirAtFixedWorldDirection(
+                    m_direction,
+                    0.0f,
+                    0.0f,
+                    deltaTime);
+            }
+            else
+            {
+                m_owner.Motor.MoveAtFixedWorldDirection(
+                    m_direction,
+                    0.0f,
+                    0.0f,
+                    deltaTime,
+                    applyObstacleAvoidance: false);
+            }
+
             return;
         }
 
-        float speed = m_remainingSpeed;
+        if (!m_owner.InputReader.HasMoveInput)
+        {
+            if (m_isAirAttack)
+            {
+                // 空中ではXZだけを減速し、現在のY速度を維持する
+                m_owner.Motor.DecelerateAirHorizontal(
+                    attackParameters,
+                    deltaTime);
+            }
+            else
+            {
+                m_owner.Motor.Decelerate(
+                    attackParameters,
+                    deltaTime);
+            }
+
+            return;
+        }
+
+        float speed =
+            m_remainingSpeed;
+
         if (m_owner.AttackController.IsHittingAnyTarget())
-            speed *= m_owner.MovementParameterAsset.AttackHitMovementSpeedMultiplier;
-        m_owner.Motor.MoveAtFixedWorldDirection(m_direction, speed, 0.0f, deltaTime,
-            applyObstacleAvoidance: false);
+        {
+            speed *=
+                m_owner.MovementParameterAsset
+                    .AttackHitMovementSpeedMultiplier;
+        }
+
+        if (m_isAirAttack)
+        {
+            // 空中攻撃ではGround判定や斜面補正を通さず、
+            // レール離脱・ジャンプ由来のY速度をそのまま維持する
+            m_owner.Motor.MoveAirAtFixedWorldDirection(
+                m_direction,
+                speed,
+                0.0f,
+                deltaTime);
+        }
+        else
+        {
+            m_owner.Motor.MoveAtFixedWorldDirection(
+                m_direction,
+                speed,
+                0.0f,
+                deltaTime,
+                applyObstacleAvoidance: false);
+        }
     }
 
     /// <summary>攻撃判定とアニメーション、速度表示の上書きを終了します。</summary>
     public void StopAttack()
     {
+        if (m_airPose != null) m_airPose.RestorePose();
         if (m_airAttachment != null)
         {
             m_owner.AttackController.ContinuousAttackHit -= m_airAttachment.AttachToTarget;
             m_airAttachment.Detach();
             m_airAttachment = null;
         }
-        m_owner.AnimationPresenter.StopAttackAnimation();
+        if (m_isAirAttack)
+        {
+            m_owner.AnimationPresenter.StopAerialAttackingAnimation();
+        }
         m_owner.AttackController.DisableAttackHitboxes();
+        AttackPowerSourceRegistry.Unregister(m_owner.transform);
         m_owner.ClearSpeedDisplayOverride();
         m_airHitStopTimer = 0.0f;
+    }
+
+    /// <summary>現在の攻撃条件から威力種別を取得します。</summary>
+    /// <returns>地上でブースト残量がある場合はCHARGED、それ以外はNORMAL。</returns>
+    private AttackPowerType GetAttackPowerType()
+    {
+        return !m_isAirAttack && m_owner.SuspendedBoostGaugeRate > 0.0f
+            ? AttackPowerType.CHARGED
+            : AttackPowerType.NORMAL;
     }
 }

@@ -32,7 +32,9 @@ public sealed class TargetableEnemy : MonoBehaviour
             foreach (TargetPoint targetPoint in m_targetPoints)
             {
                 if (targetPoint != null &&
-                    targetPoint.TargetTransform != null)
+                    targetPoint.IsActive &&
+                    targetPoint.TargetTransform != null &&
+                    targetPoint.gameObject.activeInHierarchy)
                 {
                     return true;
                 }

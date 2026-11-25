@@ -1,5 +1,6 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.InputSystem;
 
 public class UserSupportManager : MonoBehaviour
@@ -37,8 +38,9 @@ public class UserSupportManager : MonoBehaviour
     [SerializeField]
     private GameObject[] m_optionItems;
 
-    // 選択されているボタン番号
-    private int m_selectedIndex = 0;
+    [Header("ページ切り替え時に呼ぶ処理")]
+    [SerializeField]
+    private UnityEvent m_onChangePageEvent;
 
     [Header("入力判定関連")]
     // ページ切り替えキーが押される判定
@@ -49,6 +51,9 @@ public class UserSupportManager : MonoBehaviour
 
     private void OnEnable()
     {
+        m_changePageLeftActionRef?.action.Enable();
+        m_changePageRightActionRef?.action.Enable();
+
         if (m_changePageLeftActionRef == null)
         {
             Debug.LogWarning($"{gameObject.name}: {m_changePageLeftActionRef} が設定されていません。Inspectorで割り当ててください。", this);
@@ -65,12 +70,15 @@ public class UserSupportManager : MonoBehaviour
     {
     }
 
+    public void Initialize(MenuOpenTargetType openTargetType)
+    {
+        ChangePage(openTargetType);
+    }
+
     private void Start()
     {
-        // オプションページを表示する
-        m_choseState = ChoseState.OPTION;
-        // 切り替え関数を実行する
-        ChangeToOptionPage();
+        // 指定されたページを開く(指定がなければオプション)
+        ChangePage(UserSupportOpenRequest.Consume());
     }
 
     private void Update()
@@ -78,6 +86,9 @@ public class UserSupportManager : MonoBehaviour
         // ページの切り替え
         if(WasPressedChangeKey())
         {
+            // 関数を呼び出す
+            m_onChangePageEvent?.Invoke();
+
             if(m_choseState != ChoseState.MANUAL)
             {
                 // マニュアルページにする
@@ -94,6 +105,36 @@ public class UserSupportManager : MonoBehaviour
                 // 切り替え関数を実行する
                 ChangeToOptionPage();
             }
+        }
+    }
+
+    void ChangePage(MenuOpenTargetType openTargetType)
+    {
+        switch (openTargetType)
+        {
+            case MenuOpenTargetType.MANUAL:
+                if (m_choseState == ChoseState.MANUAL) 
+                { 
+                    break; 
+                }
+                
+                // マニュアルページにする
+                m_choseState = ChoseState.MANUAL;
+                // 切り替え関数を実行する
+                ChangeToManualPage();
+                break;
+
+            case MenuOpenTargetType.OPTIONS:
+                if (m_choseState == ChoseState.OPTION) 
+                { 
+                    break; 
+                }
+
+                // オプションページにする
+                m_choseState = ChoseState.OPTION;
+                // 切り替え関数を実行する
+                ChangeToOptionPage();
+                break;
         }
     }
 

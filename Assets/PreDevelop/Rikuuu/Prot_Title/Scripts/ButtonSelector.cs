@@ -11,6 +11,29 @@ public class ButtonSelector : MonoBehaviour
     [SerializeField]
     private SelectButton[] m_buttons;
 
+    [Header("共通処理")]
+    // カーソルが合わさったときに実行する関数
+    [SerializeField]
+    private UnityEngine.Events.UnityEvent m_onCursorAction;
+    // カーソルが離れたときに実行する関数
+    [SerializeField]
+    private UnityEngine.Events.UnityEvent m_onCursorExitAction;
+    // クリックされたときに実行する関数
+    [SerializeField]
+    private UnityEngine.Events.UnityEvent m_onClickAction;
+    // クリックが離れたときに実行する関数
+    [SerializeField]
+    private UnityEngine.Events.UnityEvent m_onClickExitAction;
+
+    [Header("関数呼び出しに関する処理")]
+    [Tooltip("開始時に共通処理の関数を呼ぶかどうか")]
+    [SerializeField]
+    private bool m_isInvokeOnStart = false;
+    [Tooltip("開始時、カーソル解除時の関数をボタンの数だけ呼ぶかどうか")]
+    [SerializeField]
+    private bool m_isCallCursorExitForAllButtons = false;
+
+    [Header("カーソル")]
     // カーソルオブジェクト
     [SerializeField]
     private UnityEngine.UI.Image m_cursor;
@@ -20,10 +43,17 @@ public class ButtonSelector : MonoBehaviour
     // カーソル移動させる場合に呼び出す関数
     [SerializeField]
     private UnityEngine.Events.UnityEvent<UnityEngine.UI.Image, Vector3> m_moveAction = null;
+    // 停止用のイベント
+    [SerializeField]
+    private UnityEngine.Events.UnityEvent<UnityEngine.UI.Image> m_stopMoveAction = null;
 
     // カーソルが外れたときに自身を残したままにするかどうか
     [SerializeField]
     private bool m_keepSelectionWhenLocked = false;
+
+    [Header("動作設定")]
+    // ロック時にカーソルの座標を初期位置へ戻すかどうか
+    [SerializeField] private bool m_resetCursorPositionOnLock = false;
 
     // 開始時にロック状態にするかどうか
     [SerializeField]
@@ -33,8 +63,9 @@ public class ButtonSelector : MonoBehaviour
     [SerializeField]
     private bool m_isVerticalNavigation = true;
 
-    // カーソルがロックされているかどうか
-    private bool m_isLockCursor = false;
+    // カーソルのアニメーションのロック
+    [SerializeField]
+    private bool m_isLockedCursorAnimation = false;
 
     [Header("入力判定関連")]
     // 上キーが押される判定
@@ -44,8 +75,16 @@ public class ButtonSelector : MonoBehaviour
     [SerializeField]
     private InputActionReference m_enterActionRef;
 
+    // カーソルの初期座標(Start 時に記録)
+    private Vector3 m_cursorInitialPosition;
+    private bool m_hasCursorInitialPosition = false;
+
     // 前フレームからのスティック移動距離
     private Vector2 m_previousNav = Vector2.zero;
+
+    // カーソルがロックされているかどうか
+    [SerializeField]
+    private bool m_isLockCursor = false;
 
     // 初期化を行ったかどうか
     private bool m_initialized = false;
@@ -54,18 +93,7 @@ public class ButtonSelector : MonoBehaviour
 
     private void OnEnable()
     {
-        // 初回の有効化時だけ初期ロック状態を反映（2回目以降は状態を保持）
-        if (!m_initialized)
-        {
-            m_isLockCursor = m_lockOnStart;
-            m_initialized = true;
-        }
-
-        // 押されっぱなしの入力を新規入力と誤判定しないよう、現在値で初期化
-        m_previousNav = (m_navigateActionRef != null)
-            ? m_navigateActionRef.action.ReadValue<Vector2>()
-            : Vector2.zero;
-
+        // 先に null チェックを行う
         if (m_navigateActionRef == null)
         {
             Debug.LogWarning($"{gameObject.name}: m_navigateActionRef が設定されていません。", this);
@@ -76,6 +104,19 @@ public class ButtonSelector : MonoBehaviour
             Debug.LogWarning($"{gameObject.name}: m_enterActionRef が設定されていません。", this);
             return;
         }
+
+        // 初回の有効化時だけ初期ロック状態を反映（2回目以降は状態を保持）
+        if (!m_initialized)
+        {
+            m_isLockCursor = m_lockOnStart;
+            m_initialized = true;
+        }
+
+        m_navigateActionRef.action.Enable();
+        m_enterActionRef.action.Enable();
+
+        // 押されっぱなしの入力を新規入力と誤判定しないよう、現在値で初期化
+        m_previousNav = m_navigateActionRef.action.ReadValue<Vector2>();
     }
 
     private void OnDisable()
@@ -85,25 +126,56 @@ public class ButtonSelector : MonoBehaviour
 
     private void Start()
     {
-        if (m_buttons != null)
+        // 初期座標を記録
+        if (m_cursor != null)
         {
-            for (int i = 0; i < m_buttons.Length; i++)
-            {
-                // 選択していない状態にする
-                m_buttons[i].OnCursorExit();
-
-                // もし選択されている番号と一致した場合
-                if (m_selectButtonNumber == i)
-                {
-                    // 選択している状態にする
-                    m_buttons[m_selectButtonNumber].OnCursor();
-                }
-            }
+            m_cursorInitialPosition = m_cursor.transform.position;
+            m_hasCursorInitialPosition = true;
         }
+
+        if (m_buttons == null || m_buttons.Length == 0)
+        {
+            return;
+        }
+
+        // 共通の Exit を1回だけ呼ぶ場合
+        if (m_isInvokeOnStart && !m_isCallCursorExitForAllButtons)
+        {
+            m_onCursorExitAction?.Invoke();
+        }
+
+        for (int i = 0; i < m_buttons.Length; i++)
+        {
+            // ボタンの数だけ呼ぶ場合
+            if (m_isInvokeOnStart && m_isCallCursorExitForAllButtons)
+            {
+                m_onCursorExitAction?.Invoke();
+            }
+
+            // 選択していない状態にする
+            m_buttons[i].OnCursorExit();
+        }
+
+        // 選択中のボタンだけ OnCursor を呼ぶ
+        if (m_isInvokeOnStart)
+        {
+            m_onCursorAction?.Invoke();
+        }
+        m_buttons[m_selectButtonNumber].OnCursor();
     }
 
     private void Update()
     {
+        if (wasPressedNavigate())
+        {
+            Debug.Log($"[Nav] locked={m_isLockCursor} frame={Time.frameCount}");
+        }
+
+        if (m_navigateActionRef == null || m_buttons == null || m_buttons.Length == 0)
+        {
+            return;
+        }
+
         // 入力方向
         Vector2 nav = m_navigateActionRef.action.ReadValue<Vector2>();
 
@@ -114,6 +186,9 @@ public class ButtonSelector : MonoBehaviour
         // 移動キーが押された瞬間 && カーソルが固定されていなかったら
         if (wasPressedNavigate() && !m_isLockCursor)
         {
+            // 共通の Exit 関数を呼ぶ(1回の移動につき1回)
+            m_onCursorExitAction?.Invoke();
+
             // カーソルを離れるときの関数を実行する
             m_buttons[m_selectButtonNumber].OnCursorExit();
 
@@ -136,6 +211,9 @@ public class ButtonSelector : MonoBehaviour
 
             // 範囲内に収める
             Clamp();
+
+            // 共通の Cursor 関数を呼ぶ
+            m_onCursorAction?.Invoke();
             // カーソルが乗ったときの処理を呼ぶ
             m_buttons[m_selectButtonNumber].OnCursor();
         }
@@ -144,18 +222,18 @@ public class ButtonSelector : MonoBehaviour
         if (!m_isLockCursor)
         {
             // カーソルの座標更新
-            if (m_cursor != null)
+            if (m_cursor != null && !m_isLockedCursorAnimation)
             {
                 if (m_moveAction.GetPersistentEventCount() > 0)
                 {
                     m_moveAction.Invoke(
                         m_cursor,
-                        m_buttons[m_selectButtonNumber].transform.position
+                        GetButtonCenter(m_selectButtonNumber)
                     );
                 }
                 else
                 {
-                    m_cursor.transform.position = m_buttons[m_selectButtonNumber].transform.position;
+                    m_cursor.transform.position = GetButtonCenter(m_selectButtonNumber);
                 }
             }
 
@@ -163,13 +241,19 @@ public class ButtonSelector : MonoBehaviour
             // 決定ボタンが押されたら
             if (!justUnlocked && m_enterActionRef != null && m_enterActionRef.action.WasPressedThisFrame())
             {
+                // 押されたときの共通処理を実行する
+                m_onClickAction?.Invoke();
+
                 // キーが押されたときの処理を実行する
                 m_buttons[m_selectButtonNumber].OnClick();
             }
             // 決定ボタンが離されたら
             if (!justUnlocked && m_enterActionRef != null && m_enterActionRef.action.WasReleasedThisFrame())
             {
-                // キーが押されたときの処理を実行する
+                // 離されたときの共通処理を実行する
+                m_onClickExitAction?.Invoke();
+
+                // キーが離されたときの処理を実行する
                 m_buttons[m_selectButtonNumber].OnClickExit();
             }
         }
@@ -183,13 +267,32 @@ public class ButtonSelector : MonoBehaviour
     // カーソルのリセット
     public void ResetCursor()
     {
+        // 共通の Exit 関数を呼ぶ
+        m_onCursorExitAction?.Invoke();
         // 選択していない状態にする
         m_buttons[m_selectButtonNumber].OnCursorExit();
 
         // 選択されているカーソル番号をリセット
         m_selectButtonNumber = 0;
+        SnapCursorY();
+
+        // 共通の Cursor 関数を呼ぶ
+        m_onCursorAction?.Invoke();
         // 選択している状態にする
         m_buttons[m_selectButtonNumber].OnCursor();
+    }
+
+    // 矢印のYを選択中のボタンの高さへ合わせる
+    private void SnapCursorY()
+    {
+        if (m_cursor == null)
+        {
+            return;
+        }
+
+        Vector3 pos = m_cursor.transform.position;
+        pos.y = GetButtonCenter(m_selectButtonNumber).y;
+        m_cursor.transform.position = pos;
     }
 
     // カーソルのロック
@@ -198,12 +301,34 @@ public class ButtonSelector : MonoBehaviour
         m_isLockCursor = true;
 
         // 見た目の更新は、有効なときだけ行う
-        if (isActiveAndEnabled && !m_keepSelectionWhenLocked &&
-            m_buttons != null && m_buttons.Length > 0)
+        //if (isActiveAndEnabled && !m_keepSelectionWhenLocked &&
+        //    m_buttons != null && m_buttons.Length > 0)
+        //{
+        //    if (m_isCallCursorExitForAllButtons)
+        //    {
+        //        // ボタンの数だけ呼ぶ
+        //        for (int i = 0; i < m_buttons.Length; i++)
+        //        {
+        //            //m_onCursorExitAction?.Invoke();
+        //            m_buttons[i].OnCursorExit();
+        //        }
+        //    }
+        //    else
+        //    {
+        //        // 1回だけ呼ぶ
+        //        //m_onCursorExitAction?.Invoke();
+        //        m_buttons[m_selectButtonNumber].OnCursorExit();
+        //    }
+        //}
+
+        // カーソルが外れたので、座標を初期位置に戻す
+        if (m_resetCursorPositionOnLock)
         {
-            m_buttons[m_selectButtonNumber].OnCursorExit();
+            ResetCursorPosition();
         }
     }
+
+    public bool IsLockCursor => m_isLockCursor;
 
     // カーソルのロックを解除する
     public void UnLockCursor()
@@ -213,8 +338,26 @@ public class ButtonSelector : MonoBehaviour
 
         if (isActiveAndEnabled && m_buttons != null && m_buttons.Length > 0)
         {
+            m_onCursorAction?.Invoke();
             m_buttons[m_selectButtonNumber].OnCursor();
         }
+
+        Debug.Log("UnLockCursor");
+    }
+
+    public void LockCursorAnimation()
+    {
+        m_isLockedCursorAnimation = true;
+        // 進行中の移動アニメーションを停止するイベントを発火
+        if (m_cursor != null && m_stopMoveAction != null && m_stopMoveAction.GetPersistentEventCount() > 0)
+        {
+            m_stopMoveAction.Invoke(m_cursor);
+        }
+    }
+
+    public void UnLockCursorAnimation()
+    {
+        m_isLockedCursorAnimation = false;
     }
 
     // ----------------------------------------------------------------------
@@ -231,7 +374,7 @@ public class ButtonSelector : MonoBehaviour
                (current < -NAVIGATE_THRESHOLD && previous >= -NAVIGATE_THRESHOLD);
     }
 
-    // カーソル番号を範囲内に収める 
+    // カーソル番号を範囲内に収める
     private void Clamp()
     {
         // 0以下の場合
@@ -248,5 +391,37 @@ public class ButtonSelector : MonoBehaviour
     private float GetAxisValue(Vector2 v)
     {
         return m_isVerticalNavigation ? v.y : v.x;
+    }
+
+    // カーソルの座標を初期位置に戻す
+    private void ResetCursorPosition()
+    {
+        if (m_cursor == null || !m_hasCursorInitialPosition)
+        {
+            return;
+        }
+
+        // 進行中のアニメーションがあれば先に停止してから戻す
+        if (m_stopMoveAction != null && m_stopMoveAction.GetPersistentEventCount() > 0)
+        {
+            m_stopMoveAction.Invoke(m_cursor);
+        }
+
+        m_cursor.transform.position = m_cursorInitialPosition;
+
+        // 今選択されているボタンの見た目を解除してから番号を戻す
+        m_buttons[m_selectButtonNumber].OnCursorExit();
+        m_selectButtonNumber = 0;
+    }
+
+    // ボタンの見た目上の中心(ワールド座標)を返す
+    private Vector3 GetButtonCenter(int index)
+    {
+        RectTransform rect = m_buttons[index].transform as RectTransform;
+        if (rect == null)
+        {
+            return m_buttons[index].transform.position;
+        }
+        return rect.TransformPoint(rect.rect.center);
     }
 }

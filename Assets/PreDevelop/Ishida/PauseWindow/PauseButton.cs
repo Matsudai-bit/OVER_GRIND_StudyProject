@@ -77,12 +77,6 @@ public class PauseButton : MonoBehaviour
 
         // スケールを範囲内に収める
         Clamp();
-
-        // サイズを適用させる
-        //m_texture.rectTransform.sizeDelta = new Vector2(
-        //    m_textureSize.x * m_currentScale,
-        //    m_textureSize.y * m_currentScale
-        //);
     }
 
     // 押されたときの処理 ---------------------------------------

@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.InputSystem;
 
 public class ContainerController : MonoBehaviour
@@ -48,6 +49,11 @@ public class ContainerController : MonoBehaviour
     [SerializeField]
     private InputActionReference m_backActionRef;
 
+    [SerializeField, Header("メニューコンテイナー変更時に呼ばれる")]
+    UnityEvent m_onChanged;
+
+    public bool CanCloseMenu = true;
+
     private void OnEnable()
     {
         if (m_backActionRef == null)
@@ -58,12 +64,6 @@ public class ContainerController : MonoBehaviour
 
         // 有効にする
         m_backActionRef?.action.Enable();
-    }
-
-    private void OnDisable()
-    {
-        // 無効にする
-        //m_backActionRef?.action.Disable();
     }
 
     private void Start()
@@ -89,7 +89,7 @@ public class ContainerController : MonoBehaviour
     public void ChangeToLeft()
     {
         Debug.Log($"[Lock] {name} frame={Time.frameCount}", this);
-
+        m_onChanged?.Invoke();
         // 選択状態の更新
         m_choseState = ChoseState.LEFT;
         // 表示するテクスチャを入れ替える
@@ -100,11 +100,15 @@ public class ContainerController : MonoBehaviour
         foreach (var selector in m_buttonSelectorL)
         {
             selector.enabled = true;
+
             selector.UnLockCursor();
+            selector.UnLockCursorAnimation();
         }
         foreach (var selector in m_buttonSelectorR)
         {
+            selector.LockCursorAnimation();
             selector.LockCursor();
+
             selector.enabled = false;
         }
     }
@@ -119,16 +123,28 @@ public class ContainerController : MonoBehaviour
         m_containerLImage.sprite = m_defaultContainerLTexture;
         m_containerRImage.sprite = m_OnCursorContainerRTexture;
 
+        // 閉じれない状態にする
+        SetCanCloseMenu(false);
+
         // カーソルを固定・解除する
         foreach (var selector in m_buttonSelectorL)
         {
+            selector.LockCursorAnimation();
             selector.LockCursor();
+
             selector.enabled = false;
         }
         foreach (var selector in m_buttonSelectorR)
         {
             selector.enabled = true;
+
             selector.UnLockCursor();
+            selector.UnLockCursorAnimation();
         }
+    }
+
+    public void SetCanCloseMenu(bool canCloseMenu)
+    {
+        CanCloseMenu = canCloseMenu;
     }
 }

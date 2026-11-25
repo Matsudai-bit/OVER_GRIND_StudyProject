@@ -23,7 +23,7 @@ public class SelectButton : MonoBehaviour
         Debug.Log("OnCursor");
         if(m_onCursorAction != null)
         {
-            m_onCursorAction.Invoke();
+            m_onCursorAction?.Invoke();
         }
     }
 
@@ -33,7 +33,7 @@ public class SelectButton : MonoBehaviour
         Debug.Log("OnCursorExit");
         if(m_onCursorExitAction != null)
         {
-            m_onCursorExitAction.Invoke();
+            m_onCursorExitAction?.Invoke();
         }
     }
 
@@ -43,7 +43,7 @@ public class SelectButton : MonoBehaviour
         Debug.Log("OnClick");
         if (m_onClickAction != null)
         {
-            m_onClickAction.Invoke();
+            m_onClickAction?.Invoke();
         }
     }
 
@@ -53,7 +53,7 @@ public class SelectButton : MonoBehaviour
         Debug.Log("OnClickExit");
         if(m_onClickExitAction != null)
         {
-            m_onClickExitAction.Invoke();
+            m_onClickExitAction?.Invoke();
         }
     }
 }
