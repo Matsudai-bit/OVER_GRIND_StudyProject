@@ -193,5 +193,32 @@ public sealed class BossController : MonoBehaviour, IStateStatusProvider
         m_attackHitboxRegistry.EnableHitboxes(
             attackIdentifier);
     }
+    /// <summary>
+    /// 現在実行中の行動を中断し、
+    /// ボスをIdle状態へ強制的に変更します。
+    /// </summary>
+    /// <summary>
+    /// 現在実行中の行動を中断し、
+    /// ボスをIdle状態へ強制的に変更します。
+    /// </summary>
+    public void ForceIdleState()
+    {
+        // 移動を即停止
+        m_motor?
+            .StopHorizontalMovement();
+
+        // 攻撃判定を即停止
+        m_attackHitboxRegistry?
+            .DisableAllHitboxes();
+
+        if (m_stateMachine == null)
+        {
+            return;
+        }
+
+        // 現在Stateを終了してIdleへ変更
+        m_stateMachine.ChangeState<BossIdleState>(
+            0.0f);
+    }
 
 }

@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 /// <summary>
 /// ステージ1フェーズ1の踏みつけ攻撃を実行します。
@@ -8,6 +8,12 @@ using UnityEngine;
 public sealed class S1P1BossStompState :
     StateBase<BossController>
 {
+    // State中に使用するAnimation Timeline管理
+    private AnimationTimelineController m_animationTimelineController;
+
+    // AnimationEvent待機による永久停止を防ぐ上限時間
+    private const float MAX_STATE_DURATION = 15.0f;
+
     // 攻撃ID
     private AttackIdentifier m_attackIdentifier;
 
@@ -26,11 +32,16 @@ public sealed class S1P1BossStompState :
     // AnimationEvent購読中か
     private bool m_isAnimationEventRegistered;
 
+    // State開始からの経過時間
+    private float m_stateElapsedTime;
+
     /// <summary>
     /// 踏みつけ攻撃を開始します。
     /// </summary>
     protected override void OnStartState()
     {
+        CacheAnimationTimelineController();
+
         ResetRuntimeState();
 
         if (!TryGetReferences())
@@ -77,6 +88,38 @@ public sealed class S1P1BossStompState :
     }
 
     /// <summary>
+    /// AnimationEvent待機のタイムアウトを監視します。
+    /// </summary>
+    /// <param name="deltaTime">前フレームからの経過時間。</param>
+    protected override void OnUpdate(
+        float deltaTime)
+    {
+        if (Owner == null ||
+            Owner.GetStateExecutionStatus() !=
+                StateExecutionStatus.RUNNING)
+        {
+            return;
+        }
+
+        m_stateElapsedTime +=
+            Mathf.Max(
+                0.0f,
+                deltaTime);
+
+        if (m_stateElapsedTime <
+            MAX_STATE_DURATION)
+        {
+            return;
+        }
+
+        Debug.LogError(
+            $"[{nameof(S1P1BossStompState)}] " +
+            "AnimationEvent待機がタイムアウトしました。");
+
+        SetFailed();
+    }
+
+    /// <summary>
     /// 攻撃AnimationEventを処理します。
     /// </summary>
     /// <param name="attackEventData">
@@ -114,6 +157,8 @@ public sealed class S1P1BossStompState :
     /// </summary>
     protected override void OnExitState()
     {
+        StopAnimationTimelines();
+
         UnregisterAnimationEvent();
 
         /*
@@ -402,6 +447,9 @@ public sealed class S1P1BossStompState :
 
         m_isAnimationEventRegistered =
             false;
+
+        m_stateElapsedTime =
+            0.0f;
     }
 
     /// <summary>
@@ -474,5 +522,35 @@ public sealed class S1P1BossStompState :
 
         m_isAnimationEventRegistered =
             false;
+    }
+
+    /// <summary>
+    /// 現在フェーズのAnimation Timeline管理を保持します。
+    /// </summary>
+    private void CacheAnimationTimelineController()
+    {
+        m_animationTimelineController =
+            null;
+
+        if (Owner?.PhaseController == null)
+        {
+            return;
+        }
+
+        Owner.PhaseController
+            .TryGetCurrentPhaseComponent(
+                out m_animationTimelineController);
+    }
+
+    /// <summary>
+    /// State中に再生されたAnimation Timelineを停止します。
+    /// </summary>
+    private void StopAnimationTimelines()
+    {
+        m_animationTimelineController?
+            .StopAll();
+
+        m_animationTimelineController =
+            null;
     }
 }

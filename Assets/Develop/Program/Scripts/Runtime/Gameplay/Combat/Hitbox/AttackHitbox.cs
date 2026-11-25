@@ -42,18 +42,26 @@ public sealed class AttackHitbox : MonoBehaviour
     {
         AttackDamageData damageData = m_currentDamageData;
 
+        bool hasSourceSession = AttackPowerSourceRegistry.TryGet(
+            transform,
+            out AttackPowerType sourcePowerType,
+            out int attackSessionId);
+
+        if (hasSourceSession)
+        {
+            damageData = damageData.WithAttackSessionId(attackSessionId);
+        }
+
         if (AttackPowerContext.TryGetCurrent(
                 out AttackPowerType attackPowerType))
         {
             damageData =
                 damageData.WithAttackPowerType(attackPowerType);
         }
-        else if (AttackPowerSourceRegistry.TryGet(
-                     transform,
-                     out attackPowerType))
+        else if (hasSourceSession)
         {
             damageData =
-                damageData.WithAttackPowerType(attackPowerType);
+                damageData.WithAttackPowerType(sourcePowerType);
         }
 
         if (m_playerMotor != null)

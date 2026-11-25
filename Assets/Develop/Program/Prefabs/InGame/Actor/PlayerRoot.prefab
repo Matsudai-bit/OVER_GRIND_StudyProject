@@ -412,6 +412,7 @@ MonoBehaviour:
     m_dashDistance: 8
     m_dashEndSpeedRate: 0.2
     m_railCollisionIgnoreDuration: 0.1
+  m_attackHitAudioInterval: 0.05
   m_knockbackSpeed: 12
   m_knockbackRate: 1
   m_defaultKnockbackProfile: {fileID: 0}
@@ -455,6 +456,7 @@ MonoBehaviour:
   m_playerCamera: {fileID: 7282053601130355310}
   m_modelTransform: {fileID: 5260446927991776623}
   m_health: {fileID: 1405796748971180126}
+  m_playerDiedEvent: {fileID: 0}
 --- !u!114 &8122269946311702765
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -640,7 +642,7 @@ CapsuleCollider:
   m_Radius: 0.28
   m_Height: 1.94
   m_Direction: 1
-  m_Center: {x: 0, y: 0.92, z: 0}
+  m_Center: {x: 0, y: 0.97, z: 0}
 --- !u!95 &3539817516368647558
 Animator:
   serializedVersion: 7
@@ -2593,6 +2595,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EffectLocalController
   m_anchorRegistry: {fileID: 1069608767716415352}
   m_entries: []
+  m_allowRuntimeInstantiation: 1
+  m_logPoolExhaustion: 0
 --- !u!1001 &262406724028549611
 PrefabInstance:
   m_ObjectHideFlags: 0

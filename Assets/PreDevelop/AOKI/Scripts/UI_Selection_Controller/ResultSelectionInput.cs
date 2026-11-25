@@ -1,5 +1,6 @@
 using DG.Tweening;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 /// <summary>
@@ -34,6 +35,8 @@ public class ResultSelectionInput : MonoBehaviour, IUIInputControllable
 
     [Header("Next Stage ボタン演出設定")]
     [SerializeField]
+    private Selectable m_nextStageButton;
+    [SerializeField]
     private RectTransform m_nextStageVisual;
     [SerializeField]
     private Image m_nextStageImage;
@@ -45,8 +48,6 @@ public class ResultSelectionInput : MonoBehaviour, IUIInputControllable
     private float m_slideOffset = -50.0f;
 
     [Header("Stage Select ボタン演出設定")]
-    [SerializeField]
-    private Selectable m_stageSelectButton;
     [SerializeField]
     private RectTransform m_stageSelectVisual;
     [SerializeField]
@@ -116,8 +117,9 @@ public class ResultSelectionInput : MonoBehaviour, IUIInputControllable
     private void Start()
     {
         m_hasStarted = true;
+        Time.timeScale = 0.0f;
+
         ShowInitialState();
-        SetInputEnabled(false);
     }
 
     private void OnDisable()
@@ -131,6 +133,8 @@ public class ResultSelectionInput : MonoBehaviour, IUIInputControllable
         m_isEntrancePlaying = false;
         m_isEntranceCompleted = false;
         UpdatePanelInputState();
+        Time.timeScale = 1.0f;
+
     }
 
     /// <summary>
@@ -141,18 +145,6 @@ public class ResultSelectionInput : MonoBehaviour, IUIInputControllable
     {
         m_isExternalInputEnabled = isEnabled;
         UpdatePanelInputState();
-
-        if (m_buttonSelector != null)
-        {
-            if (isEnabled)
-            {
-                m_buttonSelector.UnLockCursor();
-            }
-            else
-            {
-                m_buttonSelector.LockCursor();
-            }
-        }
     }
 
     /// <summary>
@@ -193,16 +185,16 @@ public class ResultSelectionInput : MonoBehaviour, IUIInputControllable
         if (m_nextStageVisual != null)
         {
             m_nsOriginalPosX = m_nextStageVisual.anchoredPosition.x;
+
+            if (m_nextStageButton == null)
+            {
+                m_nextStageButton = m_nextStageVisual.GetComponentInParent<Selectable>();
+            }
         }
 
         if (m_stageSelectVisual != null)
         {
             m_ssOriginalScale = m_stageSelectVisual.localScale;
-
-            if (m_stageSelectButton == null)
-            {
-                m_stageSelectButton = m_stageSelectVisual.GetComponentInParent<Selectable>();
-            }
         }
 
         m_isInitialized = true;
@@ -223,9 +215,9 @@ public class ResultSelectionInput : MonoBehaviour, IUIInputControllable
         m_isEntranceCompleted = true;
         SetPanelsAlpha(FADE_IN_ALPHA);
         ResetSelectionVisuals();
-        UpdatePanelInputState();
-        PlayNextStageDeselectedVisual();
-        PlayStageSelectSelectedVisual();
+        SetInputEnabled(true);
+        PlayStageSelectDeselectedVisual();
+        PlayNextStageSelectedVisual();
         SelectInitialButton();
     }
 
@@ -243,7 +235,7 @@ public class ResultSelectionInput : MonoBehaviour, IUIInputControllable
 
         m_isEntrancePlaying = true;
         m_isEntranceCompleted = false;
-        UpdatePanelInputState();
+        SetInputEnabled(false);
 
         SetPanelsAlpha(FADE_OUT_ALPHA);
         ResetSelectionVisuals();
@@ -310,45 +302,61 @@ public class ResultSelectionInput : MonoBehaviour, IUIInputControllable
         m_isEntranceCompleted = true;
 
         SetInputEnabled(true);
-        PlayNextStageDeselectedVisual();
-        PlayStageSelectSelectedVisual();
+        PlayStageSelectDeselectedVisual();
+        PlayNextStageSelectedVisual();
         SelectInitialButton();
     }
 
     /// <summary>
-    /// 初期選択ボタン（Stage Select）にフォーカスを合わせます。
+    /// 初期選択ボタン（Next Stage）にフォーカスを合わせます。
     /// </summary>
     private void SelectInitialButton()
     {
-        if (m_stageSelectButton != null)
+        if (m_nextStageButton != null)
         {
-            m_stageSelectButton.Select();
+            m_nextStageButton.Select();
         }
     }
 
     /// <summary>
-    /// 現在の表示状態に応じてパネルへの入力を切り替えます。
+    /// 現在の表示状態に応じてパネルへの入力・カーソル・選択状態を切り替えます。
     /// </summary>
     private void UpdatePanelInputState()
     {
-        if (m_targetCanvasGroups == null)
-        {
-            return;
-        }
-
         bool canInteract = CanProcessInput;
 
-        for (int i = 0; i < m_targetCanvasGroups.Length; i++)
+        if (m_targetCanvasGroups != null)
         {
-            CanvasGroup canvasGroup = m_targetCanvasGroups[i];
-            if (canvasGroup == null)
+            for (int i = 0; i < m_targetCanvasGroups.Length; i++)
             {
-                continue;
-            }
+                CanvasGroup canvasGroup = m_targetCanvasGroups[i];
+                if (canvasGroup == null)
+                {
+                    continue;
+                }
 
-            // 元々無効にしていたパネルは入力解放後も無効のままにする
-            canvasGroup.interactable = canInteract && m_originalInteractables[i];
-            canvasGroup.blocksRaycasts = canInteract && m_originalBlocksRaycasts[i];
+                // 元々無効にしていたパネルは入力解放後も無効のままにする
+                canvasGroup.interactable = canInteract && m_originalInteractables[i];
+                canvasGroup.blocksRaycasts = canInteract && m_originalBlocksRaycasts[i];
+            }
+        }
+
+        if (m_buttonSelector != null)
+        {
+            if (canInteract)
+            {
+                m_buttonSelector.UnLockCursor();
+            }
+            else
+            {
+                m_buttonSelector.LockCursor();
+            }
+        }
+
+        // 入力禁止中は EventSystem のフォーカスも外し、Enter などの Submit 反応を防ぐ
+        if (!canInteract && EventSystem.current != null)
+        {
+            EventSystem.current.SetSelectedGameObject(null);
         }
     }
 
@@ -380,26 +388,29 @@ public class ResultSelectionInput : MonoBehaviour, IUIInputControllable
 
         if (m_nextStageImage != null)
         {
-            m_nextStageImage.sprite = m_nextStageUnselectedSprite;
+            m_nextStageImage.sprite = m_nextStageSelectedSprite;
         }
 
         if (m_nextStageVisual != null)
         {
             m_nextStageVisual.anchoredPosition = new Vector2(
-                m_nsOriginalPosX + m_slideOffset,
+                m_nsOriginalPosX,
                 m_nextStageVisual.anchoredPosition.y);
         }
 
         if (m_stageSelectFrameImage != null)
         {
             Color color = m_stageSelectFrameImage.color;
-            color.a = FADE_IN_ALPHA;
+            color.a = FADE_OUT_ALPHA;
             m_stageSelectFrameImage.color = color;
         }
 
         if (m_stageSelectVisual != null)
         {
-            m_stageSelectVisual.localScale = m_ssOriginalScale;
+            m_stageSelectVisual.localScale = new Vector3(
+                m_ssOriginalScale.x * m_fadeOutScale.x,
+                m_ssOriginalScale.y * m_fadeOutScale.y,
+                m_ssOriginalScale.z);
         }
     }
 

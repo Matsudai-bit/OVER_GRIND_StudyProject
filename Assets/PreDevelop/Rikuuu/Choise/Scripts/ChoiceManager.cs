@@ -1,6 +1,7 @@
 using System;
 using TMPro;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.Playables;
 
 public class ChoiceManager : MonoBehaviour
@@ -41,12 +42,32 @@ public class ChoiceManager : MonoBehaviour
     [SerializeField]
     private UnityEngine.Events.UnityEvent m_CloseEvent;
 
+    [Header("入力判定関連")]
+    // キャンセルキーが押される判定
+    [SerializeField]
+    private InputActionReference m_cancelActionRef;
+
     // 使用しているデータ
     ChoiceData m_choiceData;
     // アニメーション再生中か
     private bool m_isAnimating;
     // 開いているか
     private bool m_isOpen;
+
+    private void Start()
+    {
+        m_cancelActionRef?.action.Enable();
+    }
+
+    private void Update()
+    {
+        // キャンセルボタンが押されたら
+        if(m_cancelActionRef != null && m_cancelActionRef.action.WasPressedThisFrame())
+        {
+            // ウィンドウを閉じる
+            CloseChoiceMenu();
+        }
+    }
 
     public void OpenChoiceMenu(ChoiceData data)
     {

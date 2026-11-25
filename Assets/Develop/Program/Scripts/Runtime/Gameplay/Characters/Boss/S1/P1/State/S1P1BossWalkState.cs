@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 /// <summary>
 /// ステージ1フェーズ1の歩行を実行します。
@@ -7,8 +7,14 @@ using UnityEngine;
 public sealed class S1P1BossWalkState :
     StateBase<BossController>
 {
+    // State中に使用するAnimation Timeline管理
+    private AnimationTimelineController m_animationTimelineController;
+
     // Animatorパラメータ名
     private const string WALK_PARAMETER_NAME = "Walk";
+
+    // AnimationEvent待機の猶予時間
+    private const float ANIMATION_TIMEOUT_MARGIN = 2.0f;
 
     // AnimatorパラメータID
     private static readonly int WALK_PARAMETER_ID =
@@ -45,11 +51,16 @@ public sealed class S1P1BossWalkState :
     // AnimationEvent購読中か
     private bool m_isAnimationEventRegistered;
 
+    // State開始からの経過時間
+    private float m_stateElapsedTime;
+
     /// <summary>
     /// 歩行を開始します。
     /// </summary>
     protected override void OnStartState()
     {
+        CacheAnimationTimelineController();
+
         ResetRuntimeState();
 
         if (Owner == null ||
@@ -114,6 +125,41 @@ public sealed class S1P1BossWalkState :
 
         Owner.AnimationController.SetTrigger(
             m_animationTriggerID);
+
+        
+    }
+
+    /// <summary>
+    /// AnimationEvent待機のタイムアウトを監視します。
+    /// </summary>
+    /// <param name="deltaTime">前フレームからの経過時間。</param>
+    protected override void OnUpdate(
+        float deltaTime)
+    {
+        if (Owner == null ||
+            Owner.GetStateExecutionStatus() !=
+                StateExecutionStatus.RUNNING)
+        {
+            return;
+        }
+
+        m_stateElapsedTime +=
+            Mathf.Max(
+                0.0f,
+                deltaTime);
+
+        if (m_stateElapsedTime <
+            m_animationDuration +
+            ANIMATION_TIMEOUT_MARGIN)
+        {
+            return;
+        }
+
+        Debug.LogError(
+            $"[{nameof(S1P1BossWalkState)}] " +
+            "歩行Animationがタイムアウトしました。");
+
+        SetImmediateFailed();
     }
 
     /// <summary>
@@ -174,6 +220,8 @@ public sealed class S1P1BossWalkState :
     /// </summary>
     protected override void OnExitState()
     {
+        StopAnimationTimelines();
+
         Owner?.Motor?
             .StopHorizontalMovement();
 
@@ -275,11 +323,21 @@ public sealed class S1P1BossWalkState :
     /// </summary>
     private void FinishWalk()
     {
-        if (!m_isAnimationStarted ||
-            Owner == null ||
+        if (Owner == null ||
             Owner.GetStateExecutionStatus() !=
                 StateExecutionStatus.RUNNING)
         {
+            return;
+        }
+
+        if (!m_isAnimationStarted)
+        {
+            Debug.LogError(
+                $"[{nameof(S1P1BossWalkState)}] " +
+                "ANIMATION_STARTを受信する前にANIMATION_ENDを受信しました。");
+
+            SetImmediateFailed();
+
             return;
         }
 
@@ -324,6 +382,9 @@ public sealed class S1P1BossWalkState :
     private void ResetRuntimeState()
     {
         m_animationElapsedTime =
+            0.0f;
+
+        m_stateElapsedTime =
             0.0f;
 
         m_animationDuration =
@@ -604,5 +665,35 @@ public sealed class S1P1BossWalkState :
 
         Owner.SetStateExecutionStatus(
             StateExecutionStatus.FAILED);
+    }
+
+    /// <summary>
+    /// 現在フェーズのAnimation Timeline管理を保持します。
+    /// </summary>
+    private void CacheAnimationTimelineController()
+    {
+        m_animationTimelineController =
+            null;
+
+        if (Owner?.PhaseController == null)
+        {
+            return;
+        }
+
+        Owner.PhaseController
+            .TryGetCurrentPhaseComponent(
+                out m_animationTimelineController);
+    }
+
+    /// <summary>
+    /// State中に再生されたAnimation Timelineを停止します。
+    /// </summary>
+    private void StopAnimationTimelines()
+    {
+        m_animationTimelineController?
+            .StopAll();
+
+        m_animationTimelineController =
+            null;
     }
 }

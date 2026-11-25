@@ -79,4 +79,15 @@ public class OutGameUISwitcher : MonoBehaviour
             m_image.SetNativeSize();
         }
     }
+
+    // ---------------------------------------------------------------------------
+
+    public void SetKeyName(string keyName)
+    {
+        // キー名を入れ替える
+        m_keyName = keyName;
+
+        // キー画像を入れ替える
+        ApplySprite(m_switcher.CurrentInputDeviceType);
+    }
 }

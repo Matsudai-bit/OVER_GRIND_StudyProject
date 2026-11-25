@@ -52,7 +52,7 @@ public class ContainerController : MonoBehaviour
     [SerializeField, Header("メニューコンテイナー変更時に呼ばれる")]
     UnityEvent m_onChanged;
 
-    public bool IsLeft => m_choseState == ChoseState.LEFT;
+    public bool CanCloseMenu = true;
 
     private void OnEnable()
     {
@@ -64,12 +64,6 @@ public class ContainerController : MonoBehaviour
 
         // 有効にする
         m_backActionRef?.action.Enable();
-    }
-
-    private void OnDisable()
-    {
-        // 無効にする
-        //m_backActionRef?.action.Disable();
     }
 
     private void Start()
@@ -129,6 +123,9 @@ public class ContainerController : MonoBehaviour
         m_containerLImage.sprite = m_defaultContainerLTexture;
         m_containerRImage.sprite = m_OnCursorContainerRTexture;
 
+        // 閉じれない状態にする
+        SetCanCloseMenu(false);
+
         // カーソルを固定・解除する
         foreach (var selector in m_buttonSelectorL)
         {
@@ -144,5 +141,10 @@ public class ContainerController : MonoBehaviour
             selector.UnLockCursor();
             selector.UnLockCursorAnimation();
         }
+    }
+
+    public void SetCanCloseMenu(bool canCloseMenu)
+    {
+        CanCloseMenu = canCloseMenu;
     }
 }

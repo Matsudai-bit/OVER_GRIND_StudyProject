@@ -1,5 +1,6 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 /// <summary>
 /// ゲーム全体の進行を統括します。
@@ -12,6 +13,11 @@ public sealed class GameDirector : MonoBehaviour
     // セーブデータ管理
     [SerializeField, Header("リザルト")]
     private SaveDataController m_saveDataController;
+
+    // プレイヤーのHP0 + ダウン成立時に通知される死亡イベント
+    [SerializeField, Header("死亡時のイベント")]
+    [FormerlySerializedAs("playerDiedEvent")]
+    private PlayerDiedEvent m_playerDiedEvent;
 
     // リザルトタイム
     [SerializeField]
@@ -67,10 +73,6 @@ public sealed class GameDirector : MonoBehaviour
     // シーケンス状態変更イベント
     [SerializeField]
     private GameplaySequenceChangedEvent m_gameplaySequenceChangedEvent;
-
-    // プレイヤーHP
-    [SerializeField, Header("ゲームオブジェクト")]
-    private Health m_playerHealth;
 
     // ボスフェーズ管理
     [SerializeField]
@@ -185,15 +187,15 @@ public sealed class GameDirector : MonoBehaviour
                 this);
         }
 
-        if (m_playerHealth != null)
+        if (m_playerDiedEvent != null)
         {
-            m_playerHealth.HealthChanged +=
-                OnPlayerHealthChanged;
+            m_playerDiedEvent.RegisterListener(
+                OnPlayerDied);
         }
         else
         {
             Debug.LogWarning(
-                $"{nameof(Health)} が設定されていません。",
+                $"{nameof(PlayerDiedEvent)} が設定されていません。",
                 this);
         }
 
@@ -248,10 +250,10 @@ public sealed class GameDirector : MonoBehaviour
                 OnGameplaySequenceChanged);
         }
 
-        if (m_playerHealth != null)
+        if (m_playerDiedEvent != null)
         {
-            m_playerHealth.HealthChanged -=
-                OnPlayerHealthChanged;
+            m_playerDiedEvent.UnregisterListener(
+                OnPlayerDied);
         }
 
         if (m_stageTimeLimitController != null)
@@ -292,6 +294,7 @@ public sealed class GameDirector : MonoBehaviour
             case GameFlowStateType.ENDING:
                 StopGameProgressTimer();
                 HandleResultStarted();
+
 
                 break;
 
@@ -540,7 +543,7 @@ public sealed class GameDirector : MonoBehaviour
     /// <returns>次フレームまで待機するCoroutine。</returns>
     private IEnumerator StartPlayingDeferred()
     {
-   
+
         yield return null;
 
         StartPlaying();
@@ -621,20 +624,23 @@ public sealed class GameDirector : MonoBehaviour
     }
 
     /// <summary>
-    /// プレイヤーHP変更を受け取ります。
+    /// プレイヤーの死亡通知を受け取り、
+    /// ゲーム進行をゲームオーバーへ遷移させます。
     /// </summary>
-    /// <param name="currentHealth">現在のHP。</param>
-    /// <param name="previousHealth">変更前のHP。</param>
-    private void OnPlayerHealthChanged(
-        int currentHealth,
-        int previousHealth)
+    private void OnPlayerDied()
     {
-        if (currentHealth > 0)
+        if (m_gameFlowController == null)
         {
+            Debug.LogWarning(
+                $"{nameof(GameFlowController)} が設定されていません。",
+                this);
+
             return;
         }
 
-        if (m_gameFlowController == null)
+        // 同じ死亡通知が重複しても再遷移しない。
+        if (m_gameFlowController.CurrentState ==
+            GameFlowStateType.GAME_OVER)
         {
             return;
         }
@@ -803,7 +809,7 @@ public sealed class GameDirector : MonoBehaviour
         int stageNumber =
             GetCurrentStageNumber();
 
-        if (stageNumber <= 0)
+        if (stageNumber < StageSceneContext.MIN_STAGE_NUMBER)
         {
             Debug.LogError(
                 "ステージ番号がContextへ設定されていません。",
