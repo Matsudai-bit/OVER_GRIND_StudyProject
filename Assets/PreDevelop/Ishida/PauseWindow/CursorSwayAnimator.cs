@@ -44,7 +44,11 @@ public class CursorSwayAnimator : MonoBehaviour
 
     private void StartHoverAnimation(RectTransform cursorRect)
     {
-        cursorRect.DOKill();
+        // ©•ª‚Ì—h‚ê‚ÌTween‚¾‚¯~‚ß‚éi‰ñ“]‚Í~‚ß‚È‚¢j
+        if (m_cursorTween != null && m_cursorTween.IsActive())
+        {
+            m_cursorTween.Kill();
+        }
 
         m_cursorTween = cursorRect.DOAnchorPosX(m_hoverDistance, m_hoverDuration)
                                   .SetRelative(true)

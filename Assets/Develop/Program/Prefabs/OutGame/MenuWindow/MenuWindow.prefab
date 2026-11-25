@@ -741,6 +741,30 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
+      - m_Target: {fileID: 599812534816042959}
+        m_TargetAssemblyTypeName: CursorRotator, Assembly-CSharp
+        m_MethodName: Rotate
+        m_Mode: 6
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+      - m_Target: {fileID: 3051745278091280041}
+        m_TargetAssemblyTypeName: ButtonSelector, Assembly-CSharp
+        m_MethodName: UnLockCursorAnimation
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!1 &835260324690450042
 GameObject:
   m_ObjectHideFlags: 0
@@ -2107,6 +2131,30 @@ MonoBehaviour:
   m_onClickAction:
     m_PersistentCalls:
       m_Calls:
+      - m_Target: {fileID: 3051745278091280041}
+        m_TargetAssemblyTypeName: ButtonSelector, Assembly-CSharp
+        m_MethodName: LockCursorAnimation
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+      - m_Target: {fileID: 599812534816042959}
+        m_TargetAssemblyTypeName: CursorRotator, Assembly-CSharp
+        m_MethodName: Rotate
+        m_Mode: 6
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 1
+        m_CallState: 2
       - m_Target: {fileID: 2099863977213539430}
         m_TargetAssemblyTypeName: ParentButton, Assembly-CSharp
         m_MethodName: OnClick
@@ -2582,6 +2630,30 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
+      - m_Target: {fileID: 599812534816042959}
+        m_TargetAssemblyTypeName: CursorRotator, Assembly-CSharp
+        m_MethodName: Rotate
+        m_Mode: 6
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+      - m_Target: {fileID: 3051745278091280041}
+        m_TargetAssemblyTypeName: ButtonSelector, Assembly-CSharp
+        m_MethodName: UnLockCursorAnimation
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!1 &3063159082143356694
 GameObject:
   m_ObjectHideFlags: 0
@@ -2914,6 +2986,7 @@ GameObject:
   - component: {fileID: 7755968739508460186}
   - component: {fileID: 4912932521203641014}
   - component: {fileID: 6769362976315105708}
+  - component: {fileID: 599812534816042959}
   m_Layer: 5
   m_Name: 'ManualArrow '
   m_TagString: Untagged
@@ -2978,6 +3051,22 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!114 &599812534816042959
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3510132117379646369}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7ae38cbc3638b714d9f10c097d1a6bd2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CursorRotator
+  m_cursor: {fileID: 7755968739508460186}
+  m_angle: 90
+  m_duration: 0.2
+  m_ease: 9
 --- !u!1 &3548383095138881650
 GameObject:
   m_ObjectHideFlags: 0
@@ -3528,6 +3617,30 @@ MonoBehaviour:
   m_onClickAction:
     m_PersistentCalls:
       m_Calls:
+      - m_Target: {fileID: 3051745278091280041}
+        m_TargetAssemblyTypeName: ButtonSelector, Assembly-CSharp
+        m_MethodName: LockCursorAnimation
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+      - m_Target: {fileID: 599812534816042959}
+        m_TargetAssemblyTypeName: CursorRotator, Assembly-CSharp
+        m_MethodName: Rotate
+        m_Mode: 6
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 1
+        m_CallState: 2
       - m_Target: {fileID: 3911048132064533222}
         m_TargetAssemblyTypeName: ParentButton, Assembly-CSharp
         m_MethodName: OnClick
@@ -3837,6 +3950,30 @@ MonoBehaviour:
       - m_Target: {fileID: 2099863977213539430}
         m_TargetAssemblyTypeName: ParentButton, Assembly-CSharp
         m_MethodName: OnCursorExit
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+      - m_Target: {fileID: 599812534816042959}
+        m_TargetAssemblyTypeName: CursorRotator, Assembly-CSharp
+        m_MethodName: Rotate
+        m_Mode: 6
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+      - m_Target: {fileID: 3051745278091280041}
+        m_TargetAssemblyTypeName: ButtonSelector, Assembly-CSharp
+        m_MethodName: UnLockCursorAnimation
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -5408,6 +5545,30 @@ MonoBehaviour:
   m_onClickAction:
     m_PersistentCalls:
       m_Calls:
+      - m_Target: {fileID: 3051745278091280041}
+        m_TargetAssemblyTypeName: ButtonSelector, Assembly-CSharp
+        m_MethodName: LockCursor
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+      - m_Target: {fileID: 599812534816042959}
+        m_TargetAssemblyTypeName: CursorRotator, Assembly-CSharp
+        m_MethodName: Rotate
+        m_Mode: 6
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 1
+        m_CallState: 2
       - m_Target: {fileID: 4426717388249914620}
         m_TargetAssemblyTypeName: ParentButton, Assembly-CSharp
         m_MethodName: OnClick
@@ -6727,6 +6888,30 @@ MonoBehaviour:
   m_onClickAction:
     m_PersistentCalls:
       m_Calls:
+      - m_Target: {fileID: 3051745278091280041}
+        m_TargetAssemblyTypeName: ButtonSelector, Assembly-CSharp
+        m_MethodName: LockCursorAnimation
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+      - m_Target: {fileID: 599812534816042959}
+        m_TargetAssemblyTypeName: CursorRotator, Assembly-CSharp
+        m_MethodName: Rotate
+        m_Mode: 6
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 1
+        m_CallState: 2
       - m_Target: {fileID: 4754605198882715882}
         m_TargetAssemblyTypeName: ParentButton, Assembly-CSharp
         m_MethodName: OnClick
@@ -7129,6 +7314,30 @@ MonoBehaviour:
       - m_Target: {fileID: 4754605198882715882}
         m_TargetAssemblyTypeName: ParentButton, Assembly-CSharp
         m_MethodName: OnCursorExit
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+      - m_Target: {fileID: 599812534816042959}
+        m_TargetAssemblyTypeName: CursorRotator, Assembly-CSharp
+        m_MethodName: Rotate
+        m_Mode: 6
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+      - m_Target: {fileID: 3051745278091280041}
+        m_TargetAssemblyTypeName: ButtonSelector, Assembly-CSharp
+        m_MethodName: UnLockCursorAnimation
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
