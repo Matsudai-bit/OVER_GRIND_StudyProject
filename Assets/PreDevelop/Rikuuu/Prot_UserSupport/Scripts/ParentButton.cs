@@ -107,7 +107,9 @@ public class ParentButton : MonoBehaviour
                 // start.y = <親ボタン下端のy>;
                 // child.localPosition = start;
 
-                child.DOLocalMove(target, m_expandDuration).SetEase(m_expandEase);
+                child.DOLocalMove(target, m_expandDuration)
+                    .SetEase(m_expandEase)
+                    .SetUpdate(true);
 
                 float step = child.rect.height + m_paddingTop;
                 nextTop -= step;
@@ -123,7 +125,9 @@ public class ParentButton : MonoBehaviour
                 Vector3 target = m_underOriginalPositions[i];
                 target.y -= totalHeight;
 
-                under.DOLocalMove(target, m_expandDuration).SetEase(m_expandEase);
+                under.DOLocalMove(target, m_expandDuration)
+                    .SetEase(m_expandEase)
+                    .SetUpdate(true);
             }
         }
 
@@ -153,7 +157,8 @@ public class ParentButton : MonoBehaviour
             RectTransform child = m_childButtons[i].GetRectTransform();
             child.DOKill();
             child.DOLocalMove(m_childOriginalPositions[i], m_expandDuration)
-                .SetEase(m_expandEase);
+                .SetEase(m_expandEase)
+                .SetUpdate(true);
         }
 
         // 下のボタンを元の位置へ
@@ -162,7 +167,8 @@ public class ParentButton : MonoBehaviour
             RectTransform under = m_underParentButtons[i].GetRectTransform();
             under.DOKill();
             under.DOLocalMove(m_underOriginalPositions[i], m_expandDuration)
-                .SetEase(m_expandEase);
+                .SetEase(m_expandEase)
+                .SetUpdate(true);
         }
 
         // 戻り終わったら子ボタンを非表示にする
