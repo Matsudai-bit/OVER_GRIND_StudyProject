@@ -8,6 +8,9 @@ using UnityEngine;
 /// </summary>
 public sealed class SoundToolBulkSettings
 {
+    // 最大距離を最小距離より大きく保つための余白
+    private const float DISTANCE_MARGIN = 0.01f;
+
     /// <summary>
     /// カテゴリーを変更するかを取得または設定します。
     /// </summary>
@@ -73,7 +76,7 @@ public sealed class SoundToolBulkSettings
         {
             target.m_rolloffMode = Values.m_rolloffMode;
             target.m_minDistance = Values.m_minDistance;
-            target.m_maxDistance = Mathf.Max(Values.m_minDistance + 0.01f, Values.m_maxDistance);
+            target.m_maxDistance = Mathf.Max(Values.m_minDistance + DISTANCE_MARGIN, Values.m_maxDistance);
             target.m_customRolloffCurve = new AnimationCurve(Values.m_customRolloffCurve.keys);
         }
     }

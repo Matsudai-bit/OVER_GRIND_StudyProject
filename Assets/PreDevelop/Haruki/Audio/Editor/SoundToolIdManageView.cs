@@ -53,6 +53,9 @@ public sealed class SoundToolIdManageView
     // ピッチの最大値
     private const float MAX_PITCH = 3.0f;
 
+    // 距離の最小下限値
+    private const float MIN_DISTANCE_LIMIT = 0.01f;
+
     // 最大距離を最小距離より大きく保つための余白
     private const float DISTANCE_MARGIN = 0.01f;
 
@@ -178,7 +181,6 @@ public sealed class SoundToolIdManageView
     /// <summary>
     /// ID 追加欄を描画します。
     /// </summary>
-    /// <param name="database">対象の SoundDatabase。</param>
     private void DrawAddSection(SoundDatabase database)
     {
         m_isAddFoldout = EditorGUILayout.Foldout(
@@ -194,7 +196,6 @@ public sealed class SoundToolIdManageView
 
         DrawDropArea();
 
-        // 初期カテゴリーと行の操作
         EditorGUILayout.BeginHorizontal();
 
         m_defaultCategory = (SoundCategory)EditorGUILayout.EnumPopup("追加時の初期カテゴリー", m_defaultCategory);
@@ -214,7 +215,6 @@ public sealed class SoundToolIdManageView
 
         EditorGUILayout.EndHorizontal();
 
-        // 追加予定の行
         int removeIndex = -1;
 
         for (int i = 0; i < m_addList.Count; i++)
@@ -225,7 +225,6 @@ public sealed class SoundToolIdManageView
             }
         }
 
-        // 描画中に一覧を変更しないよう、削除は描画後に行う
         if (removeIndex >= 0)
         {
             m_addList.RemoveAt(removeIndex);
@@ -237,19 +236,12 @@ public sealed class SoundToolIdManageView
     /// <summary>
     /// 追加予定の1行を描画します。
     /// </summary>
-    /// <param name="item">描画する行。</param>
-    /// <param name="rowIndex">行番号。</param>
-    /// <returns>
-    /// true：この行の削除が押されました。
-    /// false：削除は押されていません。
-    /// </returns>
     private bool DrawAddRow(AddItem item, int rowIndex)
     {
         bool isRemoveRequested = false;
 
         EditorGUILayout.BeginVertical(EditorStyles.helpBox);
 
-        // 1行目：ID 名・AudioClip・削除
         EditorGUILayout.BeginHorizontal();
         GUILayout.Label((rowIndex + 1).ToString(), GUILayout.Width(ROW_INDEX_WIDTH));
 
@@ -269,7 +261,6 @@ public sealed class SoundToolIdManageView
 
         EditorGUILayout.EndHorizontal();
 
-        // 2行目：カテゴリー・音量・詳細
         EditorGUILayout.BeginHorizontal();
         GUILayout.Space(ROW_INDEX_WIDTH);
 
@@ -284,13 +275,11 @@ public sealed class SoundToolIdManageView
 
         EditorGUILayout.EndHorizontal();
 
-        // 詳細設定
         if (item.IsDetailOpen)
         {
             DrawAddRowDetail(item);
         }
 
-        // 入力チェックの結果
         DrawAddRowMessage(item, rowIndex);
 
         EditorGUILayout.EndVertical();
@@ -301,8 +290,7 @@ public sealed class SoundToolIdManageView
     /// <summary>
     /// 追加予定の行の詳細設定を描画します。
     /// </summary>
-    /// <param name="item">描画する行。</param>
-    private void DrawAddRowDetail(AddItem item)
+    private static void DrawAddRowDetail(AddItem item)
     {
         EditorGUI.indentLevel++;
 
@@ -321,8 +309,6 @@ public sealed class SoundToolIdManageView
     /// <summary>
     /// 追加予定の行の入力チェック結果を描画します。
     /// </summary>
-    /// <param name="item">確認する行。</param>
-    /// <param name="rowIndex">行番号。</param>
     private void DrawAddRowMessage(AddItem item, int rowIndex)
     {
         string errorMessage = GetRowErrorMessage(item, rowIndex);
@@ -333,7 +319,6 @@ public sealed class SoundToolIdManageView
             return;
         }
 
-        // 実際に登録される名前が入力と異なる場合は知らせる
         string sanitizedName = SoundToolIdRegistry.SanitizeName(item.IdName);
 
         if (sanitizedName != item.IdName.Trim())
@@ -345,9 +330,6 @@ public sealed class SoundToolIdManageView
     /// <summary>
     /// 追加予定の行の入力エラーを取得します。
     /// </summary>
-    /// <param name="item">確認する行。</param>
-    /// <param name="rowIndex">行番号。</param>
-    /// <returns>エラーメッセージ。問題が無ければ空文字。</returns>
     private string GetRowErrorMessage(AddItem item, int rowIndex)
     {
         if (string.IsNullOrWhiteSpace(item.IdName))
@@ -367,7 +349,6 @@ public sealed class SoundToolIdManageView
             return "既に登録されている ID 名です。";
         }
 
-        // 上の行との重複を確認する
         for (int i = 0; i < rowIndex; i++)
         {
             if (SoundToolIdRegistry.SanitizeName(m_addList[i].IdName) == sanitizedName)
@@ -387,12 +368,10 @@ public sealed class SoundToolIdManageView
     /// <summary>
     /// 一括追加ボタンを描画します。
     /// </summary>
-    /// <param name="database">対象の SoundDatabase。</param>
     private void DrawRegisterButton(SoundDatabase database)
     {
         EditorGUILayout.Space(4.0f);
 
-        // いずれかの行にエラーがあるか確認する
         bool hasError = false;
 
         for (int i = 0; i < m_addList.Count; i++)
@@ -421,7 +400,6 @@ public sealed class SoundToolIdManageView
     /// <summary>
     /// 追加予定の内容を SoundDatabase と AudioID.cs へ登録します。
     /// </summary>
-    /// <param name="database">対象の SoundDatabase。</param>
     private void RegisterAddItems(SoundDatabase database)
     {
         List<SoundToolIdRegistry.IdEntry> entries = SoundToolIdRegistry.GetCurrentEntries();
@@ -434,7 +412,6 @@ public sealed class SoundToolIdManageView
         {
             string idName = SoundToolIdRegistry.SanitizeName(item.IdName);
 
-            // enum の固定値をそのままデータベースへ登録する（スクリプトの再読み込みを待たない）
             database.m_soundList.Add(CreateSoundData(item, (AudioID)nextValue));
             entries.Add(new SoundToolIdRegistry.IdEntry(idName, nextValue));
             addedNames.Add(idName);
@@ -442,11 +419,9 @@ public sealed class SoundToolIdManageView
             nextValue++;
         }
 
-        // データベースを先に保存してから enum ファイルを書き換える
         SoundToolDatabaseProvider.MarkDirty(database);
         SoundToolDatabaseProvider.SaveIfNeeded();
 
-        // 追加した ID を、再読み込み後のミキサー画面で選択状態にする
         SessionState.SetString(SoundToolIdRegistry.RECENT_ADDED_IDS_KEY, string.Join(",", addedNames));
 
         SoundToolIdRegistry.GenerateFile(entries, nextValue);
@@ -460,12 +435,12 @@ public sealed class SoundToolIdManageView
     /// <summary>
     /// 追加予定の行から登録用のサウンド設定を作成します。
     /// </summary>
-    /// <param name="item">追加予定の行。</param>
-    /// <param name="audioId">割り当てる AudioID。</param>
-    /// <returns>登録用のサウンド設定。</returns>
     private static SoundDatabase.SoundData CreateSoundData(AddItem item, AudioID audioId)
     {
         SoundDatabase.SoundData source = item.Settings;
+        AnimationCurve curveCopy = source.m_customRolloffCurve != null
+            ? new AnimationCurve(source.m_customRolloffCurve.keys)
+            : new AnimationCurve();
 
         return new SoundDatabase.SoundData
         {
@@ -476,10 +451,10 @@ public sealed class SoundToolIdManageView
             m_pitch = source.m_pitch,
             m_loop = source.m_loop,
             m_is3D = source.m_is3D,
-            m_minDistance = Mathf.Max(0.01f, source.m_minDistance),
+            m_minDistance = Mathf.Max(MIN_DISTANCE_LIMIT, source.m_minDistance),
             m_maxDistance = Mathf.Max(source.m_minDistance + DISTANCE_MARGIN, source.m_maxDistance),
             m_rolloffMode = source.m_rolloffMode,
-            m_customRolloffCurve = new AnimationCurve(source.m_customRolloffCurve.keys)
+            m_customRolloffCurve = curveCopy
         };
     }
 
@@ -499,12 +474,10 @@ public sealed class SoundToolIdManageView
     /// <summary>
     /// ドラッグ＆ドロップの操作を処理します。
     /// </summary>
-    /// <param name="dropArea">ドロップを受け付ける領域。</param>
     private void HandleDragAndDrop(Rect dropArea)
     {
         Event currentEvent = Event.current;
 
-        // 領域外・対象外のイベントは無視する
         if (!dropArea.Contains(currentEvent.mousePosition))
         {
             return;
@@ -515,7 +488,6 @@ public sealed class SoundToolIdManageView
             return;
         }
 
-        // AudioClip が含まれているか確認する
         bool containsAudioClip = false;
 
         foreach (UnityEngine.Object draggedObject in DragAndDrop.objectReferences)
@@ -535,7 +507,6 @@ public sealed class SoundToolIdManageView
 
         DragAndDrop.visualMode = DragAndDropVisualMode.Copy;
 
-        // ドロップが確定したときだけ取り込む
         if (currentEvent.type == EventType.DragPerform)
         {
             DragAndDrop.AcceptDrag();
@@ -548,7 +519,6 @@ public sealed class SoundToolIdManageView
     /// <summary>
     /// ドロップされた AudioClip を追加予定へ登録します。空の行を優先して使います。
     /// </summary>
-    /// <param name="draggedObjects">ドロップされたオブジェクト一覧。</param>
     private void AddDroppedClips(UnityEngine.Object[] draggedObjects)
     {
         foreach (UnityEngine.Object draggedObject in draggedObjects)
@@ -575,7 +545,6 @@ public sealed class SoundToolIdManageView
     /// <summary>
     /// 初期カテゴリーを適用した追加予定の行を作成します。
     /// </summary>
-    /// <returns>作成した行。</returns>
     private AddItem CreateAddItem()
     {
         AddItem item = new AddItem();
@@ -586,7 +555,6 @@ public sealed class SoundToolIdManageView
     /// <summary>
     /// AudioClip が未設定の追加予定の行を取得します。
     /// </summary>
-    /// <returns>空の行。無い場合は null。</returns>
     private AddItem FindEmptyAddItem()
     {
         foreach (AddItem item in m_addList)
@@ -603,8 +571,6 @@ public sealed class SoundToolIdManageView
     /// <summary>
     /// 追加予定の行へ AudioClip を設定します。ID 名が未入力なら Clip 名を大文字化して設定します。
     /// </summary>
-    /// <param name="item">設定先の行。</param>
-    /// <param name="clip">設定する AudioClip。</param>
     private static void SetClipToAddItem(AddItem item, AudioClip clip)
     {
         item.Clip = clip;
@@ -620,7 +586,6 @@ public sealed class SoundToolIdManageView
     /// <summary>
     /// ID 削除欄を描画します。
     /// </summary>
-    /// <param name="database">対象の SoundDatabase。</param>
     private void DrawDeleteSection(SoundDatabase database)
     {
         m_isDeleteFoldout = EditorGUILayout.Foldout(m_isDeleteFoldout, "ID の削除", true, EditorStyles.foldoutHeader);
@@ -630,7 +595,6 @@ public sealed class SoundToolIdManageView
             return;
         }
 
-        // 検索欄
         EditorGUILayout.BeginHorizontal();
         GUILayout.Label("検索", GUILayout.Width(32.0f));
         m_deleteSearchText = EditorGUILayout.TextField(m_deleteSearchText, EditorStyles.toolbarSearchField);
@@ -638,7 +602,6 @@ public sealed class SoundToolIdManageView
 
         List<SoundToolIdRegistry.IdEntry> visibleEntries = BuildVisibleDeleteEntries();
 
-        // 選択操作
         EditorGUILayout.BeginHorizontal();
 
         EditorGUILayout.LabelField(
@@ -667,7 +630,6 @@ public sealed class SoundToolIdManageView
     /// <summary>
     /// 検索条件に合う削除候補の一覧を作成します。
     /// </summary>
-    /// <returns>表示する削除候補。</returns>
     private List<SoundToolIdRegistry.IdEntry> BuildVisibleDeleteEntries()
     {
         List<SoundToolIdRegistry.IdEntry> visibleEntries = new List<SoundToolIdRegistry.IdEntry>();
@@ -687,8 +649,6 @@ public sealed class SoundToolIdManageView
     /// <summary>
     /// 削除候補の一覧を描画します。
     /// </summary>
-    /// <param name="database">対象の SoundDatabase。</param>
-    /// <param name="visibleEntries">表示する削除候補。</param>
     private void DrawDeleteList(SoundDatabase database, List<SoundToolIdRegistry.IdEntry> visibleEntries)
     {
         m_deleteScrollPosition = EditorGUILayout.BeginScrollView(
@@ -700,7 +660,6 @@ public sealed class SoundToolIdManageView
         {
             EditorGUILayout.BeginHorizontal();
 
-            // 削除対象のチェック
             bool isSelected = m_deleteSelectedNames.Contains(entry.Name);
             bool newSelected = EditorGUILayout.ToggleLeft(entry.Name, isSelected, GUILayout.Width(DELETE_NAME_WIDTH));
 
@@ -716,7 +675,6 @@ public sealed class SoundToolIdManageView
                 }
             }
 
-            // カテゴリーと Clip 名（データが無い ID は未登録と表示）
             SoundDatabase.SoundData data = database.GetSoundData((AudioID)entry.Value);
 
             if (data != null)
@@ -738,7 +696,6 @@ public sealed class SoundToolIdManageView
     /// <summary>
     /// 削除ボタンを描画します。
     /// </summary>
-    /// <param name="database">対象の SoundDatabase。</param>
     private void DrawDeleteButton(SoundDatabase database)
     {
         using (new EditorGUI.DisabledScope(m_deleteSelectedNames.Count == 0))
@@ -759,10 +716,8 @@ public sealed class SoundToolIdManageView
     /// <summary>
     /// 確認ダイアログを表示し、承認されたら選択した ID を削除します。
     /// </summary>
-    /// <param name="database">対象の SoundDatabase。</param>
     private void ConfirmAndDelete(SoundDatabase database)
     {
-        // 確認メッセージを作成する
         StringBuilder builder = new StringBuilder();
         builder.AppendLine($"{m_deleteSelectedNames.Count} 件の ID を削除します。");
         builder.AppendLine();
@@ -790,25 +745,21 @@ public sealed class SoundToolIdManageView
             ExecuteDelete(database);
         }
 
-        // ダイアログ表示後は GUI の処理を打ち切る
         GUIUtility.ExitGUI();
     }
 
     /// <summary>
     /// 選択した ID を SoundDatabase と AudioID.cs から削除します。
     /// </summary>
-    /// <param name="database">対象の SoundDatabase。</param>
     private void ExecuteDelete(SoundDatabase database)
     {
         SoundToolPreviewPlayer.Stop();
 
-        // 削除前に次の採番値を確定する（削除した番号は再利用しない）
         List<SoundToolIdRegistry.IdEntry> entries = SoundToolIdRegistry.GetCurrentEntries();
         int nextValue = SoundToolIdRegistry.GetNextValue(entries);
 
         HashSet<string> deleteNames = new HashSet<string>(m_deleteSelectedNames, StringComparer.Ordinal);
 
-        // データベースから削除する
         Undo.RecordObject(database, "Delete Sound IDs");
 
         database.m_soundList.RemoveAll(
@@ -817,7 +768,6 @@ public sealed class SoundToolIdManageView
         SoundToolDatabaseProvider.MarkDirty(database);
         SoundToolDatabaseProvider.SaveIfNeeded();
 
-        // enum ファイルから削除する
         entries.RemoveAll(entry => deleteNames.Contains(entry.Name));
         SoundToolIdRegistry.GenerateFile(entries, nextValue);
 

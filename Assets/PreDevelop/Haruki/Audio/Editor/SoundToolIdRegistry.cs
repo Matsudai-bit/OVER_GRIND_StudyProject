@@ -35,15 +35,21 @@ public static class SoundToolIdRegistry
     /// </summary>
     public sealed class IdEntry
     {
+        // AudioID 名
+        private readonly string m_name;
+
+        // AudioID の固定整数値
+        private readonly int m_value;
+
         /// <summary>
         /// AudioID 名を取得します。
         /// </summary>
-        public string Name { get; }
+        public string Name => m_name;
 
         /// <summary>
         /// AudioID の固定整数値を取得します。
         /// </summary>
-        public int Value { get; }
+        public int Value => m_value;
 
         /// <summary>
         /// AudioID 情報を生成します。
@@ -52,8 +58,8 @@ public static class SoundToolIdRegistry
         /// <param name="value">固定整数値。</param>
         public IdEntry(string name, int value)
         {
-            Name = name;
-            Value = value;
+            m_name = name;
+            m_value = value;
         }
     }
 
@@ -80,7 +86,6 @@ public static class SoundToolIdRegistry
     /// <returns>次に使用する整数値。</returns>
     public static int GetNextValue(IReadOnlyList<IdEntry> entries)
     {
-        // 現在の最大値 + 1 を求める
         int maxValue = 0;
 
         foreach (IdEntry entry in entries)
@@ -92,8 +97,6 @@ public static class SoundToolIdRegistry
         }
 
         int nextValue = maxValue + 1;
-
-        // ファイルに記録された採番値があれば大きい方を採用する
         string path = GetFilePath();
 
         if (!File.Exists(path))
@@ -128,12 +131,10 @@ public static class SoundToolIdRegistry
     {
         StringBuilder builder = new StringBuilder();
 
-        // ヘッダーと採番値
         builder.AppendLine(FILE_HEADER_COMMENT);
         builder.AppendLine($"{NEXT_AUDIO_ID_PREFIX}{nextValue}");
         builder.AppendLine();
 
-        // enum 本体
         builder.AppendLine("public enum AudioID");
         builder.AppendLine("{");
         builder.AppendLine($"{ENUM_INDENT}None = 0,");
@@ -165,10 +166,7 @@ public static class SoundToolIdRegistry
             return "";
         }
 
-        // 空白とハイフンはアンダースコアへ置き換える
         string name = Regex.Replace(rawName.Trim(), @"[\s\-]+", "_");
-
-        // 識別子に使えない文字を取り除く
         return Regex.Replace(name, @"[^\w]", "");
     }
 
@@ -187,13 +185,11 @@ public static class SoundToolIdRegistry
             return false;
         }
 
-        // 先頭は英字またはアンダースコア
         if (!(char.IsLetter(identifier[0]) || identifier[0] == '_'))
         {
             return false;
         }
 
-        // 2文字目以降は英数字またはアンダースコア
         for (int i = 1; i < identifier.Length; i++)
         {
             if (!(char.IsLetterOrDigit(identifier[i]) || identifier[i] == '_'))

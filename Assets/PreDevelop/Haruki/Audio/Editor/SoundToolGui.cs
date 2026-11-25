@@ -17,11 +17,20 @@ public static class SoundToolGui
     // カテゴリータグの高さ
     private const float TAG_HEIGHT = 16.0f;
 
+    // パートバッジの高さ
+    private const float BADGE_HEIGHT = 16.0f;
+
     // 3D 距離の下限値
     private const float MIN_DISTANCE_LIMIT = 0.01f;
 
     // 最大距離を最小距離より大きく保つための余白
     private const float DISTANCE_MARGIN = 0.01f;
+
+    // dB 変換の係数
+    private const float DECIBEL_MULTIPLIER = 20.0f;
+
+    // 高音量ゲージの色変化しきい値
+    private const float HIGH_VOLUME_THRESHOLD = 0.85f;
 
     // 無音（0 以下）を表す dB の文字列
     private const string SILENT_DECIBEL_TEXT = "-inf dB";
@@ -29,8 +38,35 @@ public static class SoundToolGui
     // 区切り線の色
     private static readonly Color SEPARATOR_COLOR = new Color(0.5f, 0.5f, 0.5f, 0.5f);
 
+    // 音量ゲージの背景色
+    private static readonly Color VOLUME_METER_BG_COLOR = new Color(0.0f, 0.0f, 0.0f, 0.2f);
+
+    // 音量ゲージ（標準）の色
+    private static readonly Color VOLUME_METER_NORMAL_COLOR = new Color(0.30f, 0.72f, 0.45f, 0.75f);
+
+    // 音量ゲージ（高音量警告）の色
+    private static readonly Color VOLUME_METER_HIGH_COLOR = new Color(0.95f, 0.65f, 0.20f, 0.85f);
+
+    // バッジ色：Intro
+    private static readonly Color BADGE_INTRO_COLOR = new Color(0.25f, 0.55f, 0.85f);
+
+    // バッジ色：Loop
+    private static readonly Color BADGE_LOOP_COLOR = new Color(0.25f, 0.65f, 0.45f);
+
+    // バッジ色：Outro
+    private static readonly Color BADGE_OUTRO_COLOR = new Color(0.75f, 0.45f, 0.25f);
+
+    // バッジ色：未登録または非アクティブ
+    private static readonly Color BADGE_INACTIVE_COLOR = new Color(0.35f, 0.35f, 0.35f, 0.45f);
+
+    // バッジ色：再生中ハイライト
+    private static readonly Color BADGE_PLAYING_COLOR = new Color(0.95f, 0.75f, 0.20f);
+
     // カテゴリータグの文字スタイル（初回使用時に生成）
     private static GUIStyle m_tagStyle;
+
+    // パートバッジの文字スタイル（初回使用時に生成）
+    private static GUIStyle m_badgeStyle;
 
     /// <summary>
     /// 区切り線を描画します。
@@ -93,6 +129,72 @@ public static class SoundToolGui
     }
 
     /// <summary>
+    /// パート種別（I / L / O）を示すバッジを描画します。
+    /// </summary>
+    /// <param name="label">表示文字。</param>
+    /// <param name="partType">パート種別。</param>
+    /// <param name="isAvailable">データが存在するか。</param>
+    /// <param name="isPlaying">再生中か。</param>
+    /// <param name="width">バッジ幅。</param>
+    public static void DrawPartBadge(string label, SoundPartType partType, bool isAvailable, bool isPlaying, float width)
+    {
+        Rect badgeRect = GUILayoutUtility.GetRect(
+            width,
+            BADGE_HEIGHT,
+            GUILayout.Width(width),
+            GUILayout.Height(BADGE_HEIGHT));
+
+        Color backgroundColor;
+
+        if (!isAvailable)
+        {
+            backgroundColor = BADGE_INACTIVE_COLOR;
+        }
+        else if (isPlaying)
+        {
+            backgroundColor = BADGE_PLAYING_COLOR;
+        }
+        else
+        {
+            backgroundColor = GetPartColor(partType);
+        }
+
+        EditorGUI.DrawRect(badgeRect, backgroundColor);
+
+        GUIStyle style = GetBadgeStyle();
+        Color previousTextColor = style.normal.textColor;
+        style.normal.textColor = isPlaying ? Color.black : (isAvailable ? Color.white : new Color(0.7f, 0.7f, 0.7f));
+        GUI.Label(badgeRect, label, style);
+        style.normal.textColor = previousTextColor;
+    }
+
+    /// <summary>
+    /// 音量の視覚的ゲージを描画します。
+    /// </summary>
+    /// <param name="volume">音量（0～1）。</param>
+    /// <param name="width">ゲージ幅。</param>
+    /// <param name="height">ゲージ高さ。</param>
+    public static void DrawVolumeMeter(float volume, float width, float height)
+    {
+        Rect meterRect = GUILayoutUtility.GetRect(
+            width,
+            height,
+            GUILayout.Width(width),
+            GUILayout.Height(height));
+
+        EditorGUI.DrawRect(meterRect, VOLUME_METER_BG_COLOR);
+
+        float clampedVolume = Mathf.Clamp01(volume);
+
+        if (clampedVolume > 0.0f)
+        {
+            Rect fillRect = new Rect(meterRect.x, meterRect.y, meterRect.width * clampedVolume, meterRect.height);
+            Color fillColor = clampedVolume >= HIGH_VOLUME_THRESHOLD ? VOLUME_METER_HIGH_COLOR : VOLUME_METER_NORMAL_COLOR;
+            EditorGUI.DrawRect(fillRect, fillColor);
+        }
+    }
+
+    /// <summary>
     /// カテゴリーに対応する色を取得します。
     /// </summary>
     /// <param name="category">カテゴリー。</param>
@@ -128,7 +230,30 @@ public static class SoundToolGui
             return SILENT_DECIBEL_TEXT;
         }
 
-        return $"{20.0f * Mathf.Log10(volume):F1} dB";
+        return $"{DECIBEL_MULTIPLIER * Mathf.Log10(volume):F1} dB";
+    }
+
+    /// <summary>
+    /// dB の変化量を線形倍率へ変換します。
+    /// </summary>
+    /// <param name="decibelDelta">dB の変化量。</param>
+    /// <returns>乗算する倍率。</returns>
+    public static float ConvertDecibelDeltaToMultiplier(float decibelDelta)
+    {
+        return Mathf.Pow(10.0f, decibelDelta / DECIBEL_MULTIPLIER);
+    }
+
+    /// <summary>
+    /// 秒数を mm:ss.f 形式の文字列へ変換します。
+    /// </summary>
+    /// <param name="seconds">秒数。</param>
+    /// <returns>フォーマットされた時間文字列。</returns>
+    public static string FormatTime(float seconds)
+    {
+        float safeSeconds = Mathf.Max(0.0f, seconds);
+        int minutes = Mathf.FloorToInt(safeSeconds / 60.0f);
+        float remainder = safeSeconds - (minutes * 60.0f);
+        return $"{minutes:00}:{remainder:00.0}";
     }
 
     /// <summary>
@@ -137,6 +262,11 @@ public static class SoundToolGui
     /// <param name="data">編集する設定。</param>
     public static void DrawRolloffFields(SoundDatabase.SoundData data)
     {
+        if (data == null)
+        {
+            return;
+        }
+
         data.m_rolloffMode = (AudioRolloffMode)EditorGUILayout.EnumPopup("距離減衰", data.m_rolloffMode);
 
         data.m_minDistance = Mathf.Max(
@@ -158,6 +288,26 @@ public static class SoundToolGui
     }
 
     /// <summary>
+    /// パート種別に応じた色を取得します。
+    /// </summary>
+    /// <param name="partType">パート種別。</param>
+    /// <returns>色。</returns>
+    private static Color GetPartColor(SoundPartType partType)
+    {
+        switch (partType)
+        {
+            case SoundPartType.PART_INTRO:
+                return BADGE_INTRO_COLOR;
+            case SoundPartType.PART_LOOP:
+                return BADGE_LOOP_COLOR;
+            case SoundPartType.PART_OUTRO:
+                return BADGE_OUTRO_COLOR;
+            default:
+                return Color.gray;
+        }
+    }
+
+    /// <summary>
     /// カテゴリータグの文字スタイルを取得します。
     /// </summary>
     /// <returns>文字スタイル。</returns>
@@ -171,6 +321,21 @@ public static class SoundToolGui
         }
 
         return m_tagStyle;
+    }
+
+    /// <summary>
+    /// パートバッジの文字スタイルを取得します。
+    /// </summary>
+    /// <returns>文字スタイル。</returns>
+    private static GUIStyle GetBadgeStyle()
+    {
+        if (m_badgeStyle == null)
+        {
+            m_badgeStyle = new GUIStyle(EditorStyles.miniBoldLabel);
+            m_badgeStyle.alignment = TextAnchor.MiddleCenter;
+        }
+
+        return m_badgeStyle;
     }
 }
 

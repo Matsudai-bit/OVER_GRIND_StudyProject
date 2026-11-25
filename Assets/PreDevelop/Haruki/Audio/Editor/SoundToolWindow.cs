@@ -12,10 +12,10 @@ public sealed class SoundToolWindow : EditorWindow
     private const string WINDOW_TITLE = "Sound ツール";
 
     // ウィンドウの最小幅
-    private const float WINDOW_MIN_WIDTH = 780.0f;
+    private const float WINDOW_MIN_WIDTH = 860.0f;
 
     // ウィンドウの最小高さ
-    private const float WINDOW_MIN_HEIGHT = 700.0f;
+    private const float WINDOW_MIN_HEIGHT = 720.0f;
 
     // タブ全体の幅
     private const float TAB_TOOLBAR_WIDTH = 380.0f;
@@ -56,9 +56,12 @@ public sealed class SoundToolWindow : EditorWindow
 
     private void OnEnable()
     {
-        // 各画面を生成する
-        m_mixerView = new SoundToolMixerView();
+        // 再描画コールバック付きで各画面を生成する
+        m_mixerView = new SoundToolMixerView(Repaint);
         m_idManageView = new SoundToolIdManageView(Repaint);
+
+        // 試聴プレイヤーの状態更新時にも画面を再描画する
+        SoundToolPreviewPlayer.OnStateChanged += Repaint;
 
         // ID 追加直後ならミキサーへ切り替え、追加した ID を選択状態にする
         if (m_mixerView.SelectRecentAddedIds())
@@ -66,12 +69,13 @@ public sealed class SoundToolWindow : EditorWindow
             m_tabIndex = TAB_MIXER;
         }
 
-        Undo.undoRedoPerformed += Repaint;
+        Undo.undoRedoPerformed += HandleUndoRedo;
     }
 
     private void OnDisable()
     {
-        Undo.undoRedoPerformed -= Repaint;
+        Undo.undoRedoPerformed -= HandleUndoRedo;
+        SoundToolPreviewPlayer.OnStateChanged -= Repaint;
 
         SoundToolPreviewPlayer.Stop();
         SoundToolDatabaseProvider.SaveIfNeeded();
@@ -79,13 +83,13 @@ public sealed class SoundToolWindow : EditorWindow
 
     private void OnLostFocus()
     {
-        // フォーカスを失うときに保存する
+        // フォーカスを失うタイミングで保存する（操作中のラグを防ぐため毎クリック保存はしない）
         SoundToolDatabaseProvider.SaveIfNeeded();
     }
 
     private void OnInspectorUpdate()
     {
-        // 試聴中は再生終了を検知するため定期的に再描画する
+        // 試聴中はシークバーや再生状態の表示を更新する
         if (SoundToolPreviewPlayer.HasActivePreview())
         {
             Repaint();
@@ -106,8 +110,21 @@ public sealed class SoundToolWindow : EditorWindow
                 m_mixerView.Draw();
                 break;
         }
+    }
 
-        HandleAutoSave();
+    /// <summary>
+    /// Undo / Redo 実行時に未保存フラグと表示を更新します。
+    /// </summary>
+    private void HandleUndoRedo()
+    {
+        SoundDatabase database = SoundToolDatabaseProvider.GetDatabase();
+
+        if (database != null)
+        {
+            SoundToolDatabaseProvider.MarkDirty(database);
+        }
+
+        Repaint();
     }
 
     /// <summary>
@@ -137,19 +154,6 @@ public sealed class SoundToolWindow : EditorWindow
         }
 
         EditorGUILayout.EndHorizontal();
-    }
-
-    /// <summary>
-    /// マウスやキーを離したタイミングで自動保存します。
-    /// </summary>
-    private void HandleAutoSave()
-    {
-        EventType rawType = Event.current.rawType;
-
-        if (rawType == EventType.MouseUp || rawType == EventType.KeyUp)
-        {
-            SoundToolDatabaseProvider.SaveIfNeeded();
-        }
     }
 }
 
