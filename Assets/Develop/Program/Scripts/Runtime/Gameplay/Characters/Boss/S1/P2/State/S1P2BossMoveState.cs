@@ -1,52 +1,63 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
 /// <summary>
-/// ƒXƒe[ƒW1ƒtƒF[ƒY2‚ÌŒo˜HˆÚ“®‚ğÀs‚µ‚Ü‚·B
-/// ˆÚ“®’†‚ÍÚGUŒ‚”»’è‚ğ—LŒø‰»‚µA
-/// ğŒ¬—§‚É‚ÍK”ö’@‚«‚Â‚¯UŒ‚‚ğ•Às‚µ‚ÄÀs‚µ‚Ü‚·B
+/// ã‚¹ãƒ†ãƒ¼ã‚¸1ãƒ•ã‚§ãƒ¼ã‚º2ã®çµŒè·¯ç§»å‹•ã‚’å®Ÿè¡Œã—ã¾ã™ã€‚
+/// ç§»å‹•ä¸­ã¯æ¥è§¦æ”»æ’ƒåˆ¤å®šã‚’æœ‰åŠ¹åŒ–ã—ã€
+/// æ¡ä»¶æˆç«‹æ™‚ã«ã¯å°»å°¾å©ãã¤ã‘æ”»æ’ƒã‚’ä¸¦è¡Œã—ã¦å®Ÿè¡Œã—ã¾ã™ã€‚
 /// </summary>
 public sealed class S1P2BossMoveState :
     StateBase<BossController>
 {
-    // S1P2ŒÅ—LQÆ
+    // Stateä¸­ã«ä½¿ç”¨ã™ã‚‹Animation Timelineç®¡ç†
+    private AnimationTimelineController m_animationTimelineController;
+
+    // ç§»å‹•ãƒ»è¿½åŠ æ”»æ’ƒå¾…æ©Ÿã«ã‚ˆã‚‹æ°¸ä¹…åœæ­¢ã‚’é˜²ãä¸Šé™æ™‚é–“
+    private const float MAX_STATE_DURATION = 20.0f;
+
+    // S1P2å›ºæœ‰å‚ç…§
     private S1P2BossReferences m_references;
 
-    // ˆÚ“®ó‘ÔQÆ
+    // ç§»å‹•çŠ¶æ…‹å‚ç…§
     private S1P2MoveStateReferences m_moveReferences;
 
-    // ˆÚ“®§Œä
+    // ç§»å‹•åˆ¶å¾¡
     private S1P2BossMoveController m_moveController;
 
-    // ˆÚ“®ƒpƒ‰ƒ[ƒ^
+    // ç§»å‹•ãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿
     private S1P2BossMoveStateParameters m_parameter;
 
-    // K”öUŒ‚Às§Œä
+    // å°»å°¾æ”»æ’ƒå®Ÿè¡Œåˆ¶å¾¡
     private S1P2BossTailSlamExecutor m_tailSlamExecutor;
 
-    // ˆÚ“®’†‚ÌUŒ‚ID
+    // ç§»å‹•ä¸­ã®æ”»æ’ƒID
     private AttackIdentifier m_moveAttackIdentifier;
 
-    // ˆÚ“®Š®—¹
+    // ç§»å‹•å®Œäº†
     private bool m_isMoveCompleted;
 
-    // ¡‰ñ‚ÌˆÚ“®‚ÅK”öUŒ‚‚ğs‚¤‚©
+    // ä»Šå›ã®ç§»å‹•ã§å°»å°¾æ”»æ’ƒã‚’è¡Œã†ã‹
     private bool m_shouldExecuteTailSlam;
 
-    // K”öUŒ‚Š®—¹
+    // å°»å°¾æ”»æ’ƒå®Œäº†
     private bool m_isTailSlamCompleted;
 
-    // ˆÚ“®UŒ‚”»’è‚ª—LŒø‚©
+    // ç§»å‹•æ”»æ’ƒåˆ¤å®šãŒæœ‰åŠ¹ã‹
     private bool m_isMoveAttackEnabled;
 
     private EffectHandle m_effectHandle;
 
     private BossPhaseReferences m_commonReferences;
 
+    // Stateé–‹å§‹ã‹ã‚‰ã®çµŒéæ™‚é–“
+    private float m_stateElapsedTime;
+
     /// <summary>
-    /// Œo˜HˆÚ“®‚ğŠJn‚µ‚Ü‚·B
+    /// çµŒè·¯ç§»å‹•ã‚’é–‹å§‹ã—ã¾ã™ã€‚
     /// </summary>
     protected override void OnStartState()
     {
+        CacheAnimationTimelineController();
+
         ResetRuntimeState();
 
         if (!TryGetReferences())
@@ -60,7 +71,7 @@ public sealed class S1P2BossMoveState :
         {
             Debug.LogError(
                 $"[{nameof(S1P2BossMoveState)}] " +
-                "ˆÚ“®’†‚ÌUŒ‚İ’è‚ğæ“¾‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½B");
+                "ç§»å‹•ä¸­ã®æ”»æ’ƒè¨­å®šã‚’å–å¾—ã§ãã¾ã›ã‚“ã§ã—ãŸã€‚");
 
             SetFailed();
 
@@ -73,7 +84,7 @@ public sealed class S1P2BossMoveState :
         {
             Debug.LogWarning(
                 $"[{nameof(S1P2BossMoveState)}] " +
-                "ˆÚ“®Œo˜H‚ğ¶¬‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½B");
+                "ç§»å‹•çµŒè·¯ã‚’ç”Ÿæˆã§ãã¾ã›ã‚“ã§ã—ãŸã€‚");
 
             SetFailed();
 
@@ -89,20 +100,27 @@ public sealed class S1P2BossMoveState :
         {
             Debug.LogError(
                 $"[{nameof(S1P2BossMoveState)}] " +
-                "Œo˜HˆÚ“®‚ğŠJn‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½B");
+                "çµŒè·¯ç§»å‹•ã‚’é–‹å§‹ã§ãã¾ã›ã‚“ã§ã—ãŸã€‚");
 
             SetFailed();
 
             return;
         }
         
-        m_effectHandle = m_commonReferences.EffectEmitter.Play(EffectId.S1P2_BOSS_SMOKE);
-        m_commonReferences.AudioEmitter.PlaySequence(AudioCueId.MOVE_0);
+        if (m_commonReferences?.EffectEmitter != null)
+        {
+            m_effectHandle =
+                m_commonReferences.EffectEmitter.Play(
+                    EffectId.S1P2_BOSS_SMOKE);
+        }
+
+        m_commonReferences?.AudioEmitter?.PlaySequence(
+                AudioCueId.MOVE_0);
 
 
         /*
-         * MoveStateŠJn‚Éˆê“x‚¾‚¯
-         * K”öUŒ‚‚ğÀs‚·‚é‚©”»’è‚µ‚Ü‚·B
+         * MoveStateé–‹å§‹æ™‚ã«ä¸€åº¦ã ã‘
+         * å°»å°¾æ”»æ’ƒã‚’å®Ÿè¡Œã™ã‚‹ã‹åˆ¤å®šã—ã¾ã™ã€‚
          */
         m_shouldExecuteTailSlam =
             ShouldExecuteTailSlam();
@@ -114,9 +132,10 @@ public sealed class S1P2BossMoveState :
             StateExecutionStatus.RUNNING);
 
         /*
-         * ˆÚ“®’†‚ÍÚGUŒ‚”»’è‚ğ—LŒø‚É‚µ‚Ü‚·B
+         * æ¥è§¦æ”»æ’ƒåˆ¤å®šã¯å®Ÿé€Ÿåº¦ã«å¿œã˜ã¦æœ‰åŠ¹åŒ–ã—ã¾ã™ã€‚
+         * Stateé–‹å§‹ç›´å¾Œã®åœæ­¢ä¸­ã«1ãƒ•ãƒ¬ãƒ¼ãƒ ã ã‘åˆ¤å®šãŒå‡ºã‚‹ã“ã¨ã‚’é˜²ãã¾ã™ã€‚
          */
-        EnableMoveAttack();
+        UpdateMoveAttackState();
 
         if (m_shouldExecuteTailSlam)
         {
@@ -125,10 +144,10 @@ public sealed class S1P2BossMoveState :
     }
 
     /// <summary>
-    /// ˆÚ“®’†‚Ì’Ç‰ÁUŒ‚‚ğXV‚µ‚Ü‚·B
+    /// ç§»å‹•ä¸­ã®è¿½åŠ æ”»æ’ƒã‚’æ›´æ–°ã—ã¾ã™ã€‚
     /// </summary>
     /// <param name="deltaTime">
-    /// ‘OƒtƒŒ[ƒ€‚©‚ç‚ÌŒo‰ßŠÔB
+    /// å‰ãƒ•ãƒ¬ãƒ¼ãƒ ã‹ã‚‰ã®çµŒéæ™‚é–“ã€‚
     /// </param>
     protected override void OnUpdate(
         float deltaTime)
@@ -137,6 +156,23 @@ public sealed class S1P2BossMoveState :
             Owner.GetStateExecutionStatus() !=
                 StateExecutionStatus.RUNNING)
         {
+            return;
+        }
+
+        m_stateElapsedTime +=
+            Mathf.Max(
+                0.0f,
+                deltaTime);
+
+        if (m_stateElapsedTime >=
+            MAX_STATE_DURATION)
+        {
+            Debug.LogError(
+                $"[{nameof(S1P2BossMoveState)}] " +
+                "çµŒè·¯ç§»å‹•çŠ¶æ…‹ãŒã‚¿ã‚¤ãƒ ã‚¢ã‚¦ãƒˆã—ã¾ã—ãŸã€‚");
+
+            SetFailed();
+
             return;
         }
 
@@ -164,8 +200,6 @@ public sealed class S1P2BossMoveState :
         {
             return;
         }
-        m_effectHandle.Stop();
-
         m_isTailSlamCompleted =
             true;
 
@@ -175,7 +209,7 @@ public sealed class S1P2BossMoveState :
     }
 
     /// <summary>
-    /// Œo˜HˆÚ“®‚ğ•¨—XV‚µ‚Ü‚·B
+    /// çµŒè·¯ç§»å‹•ã‚’ç‰©ç†æ›´æ–°ã—ã¾ã™ã€‚
     /// </summary>
     protected override void OnFixedUpdate()
     {
@@ -221,21 +255,25 @@ public sealed class S1P2BossMoveState :
         Owner.Motor?
             .StopHorizontalMovement();
 
+        m_effectHandle.Stop();
+
         /*
-         * K”öUŒ‚‚ÌŠ®—¹ŠÄ‹‚Í
-         * OnUpdate‘¤‚Ås‚¢‚Ü‚·B
+         * å°»å°¾æ”»æ’ƒã®å®Œäº†ç›£è¦–ã¯
+         * OnUpdateå´ã§è¡Œã„ã¾ã™ã€‚
          */
         TryCompleteState();
     }
 
     /// <summary>
-    /// ˆÚ“®ó‘Ô‚ğI—¹‚µ‚Ü‚·B
+    /// ç§»å‹•çŠ¶æ…‹ã‚’çµ‚äº†ã—ã¾ã™ã€‚
     /// </summary>
     protected override void OnExitState()
     {
+        StopAnimationTimelines();
+
         /*
-         * StateI—¹‚É‚Í•K‚¸
-         * ˆÚ“®’†‚ÌUŒ‚”»’è‚ğ–³Œø‰»‚µ‚Ü‚·B
+         * Stateçµ‚äº†æ™‚ã«ã¯å¿…ãš
+         * ç§»å‹•ä¸­ã®æ”»æ’ƒåˆ¤å®šã‚’ç„¡åŠ¹åŒ–ã—ã¾ã™ã€‚
          */
         DisableMoveAttack();
 
@@ -245,6 +283,11 @@ public sealed class S1P2BossMoveState :
 
         Owner?.Motor?
             .StopHorizontalMovement();
+
+        m_effectHandle.Stop();
+
+        m_commonReferences?.AudioEmitter?.StopSequence(
+                AudioCueId.MOVE_0);
 
         if (Owner != null &&
             Owner.GetStateExecutionStatus() ==
@@ -271,15 +314,18 @@ public sealed class S1P2BossMoveState :
 
         m_references =
             null;
+
+        m_commonReferences =
+            null;
     }
 
     /// <summary>
-    /// ¡‰ñ‚ÌˆÚ“®’†‚ÉK”ö’@‚«‚Â‚¯UŒ‚‚ğ
-    /// Às‚·‚é‚©”»’è‚µ‚Ü‚·B
+    /// ä»Šå›ã®ç§»å‹•ä¸­ã«å°»å°¾å©ãã¤ã‘æ”»æ’ƒã‚’
+    /// å®Ÿè¡Œã™ã‚‹ã‹åˆ¤å®šã—ã¾ã™ã€‚
     /// </summary>
     /// <returns>
-    /// trueFÀs‚µ‚Ü‚·B
-    /// falseFÀs‚µ‚Ü‚¹‚ñB
+    /// trueï¼šå®Ÿè¡Œã—ã¾ã™ã€‚
+    /// falseï¼šå®Ÿè¡Œã—ã¾ã›ã‚“ã€‚
     /// </returns>
     private bool ShouldExecuteTailSlam()
     {
@@ -298,7 +344,7 @@ public sealed class S1P2BossMoveState :
     }
 
     /// <summary>
-    /// K”ö’@‚«‚Â‚¯UŒ‚‚ğŠJn‚µ‚Ü‚·B
+    /// å°»å°¾å©ãã¤ã‘æ”»æ’ƒã‚’é–‹å§‹ã—ã¾ã™ã€‚
     /// </summary>
     private void StartTailSlam()
     {
@@ -314,14 +360,14 @@ public sealed class S1P2BossMoveState :
 
         Debug.LogError(
             $"[{nameof(S1P2BossMoveState)}] " +
-            "ˆÚ“®’†‚ÌK”ö’@‚«‚Â‚¯UŒ‚‚ğŠJn‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½B");
+            "ç§»å‹•ä¸­ã®å°»å°¾å©ãã¤ã‘æ”»æ’ƒã‚’é–‹å§‹ã§ãã¾ã›ã‚“ã§ã—ãŸã€‚");
 
         SetFailed();
     }
 
     /// <summary>
-    /// ˆÚ“®’†‚ÉÀs‚µ‚½K”öUŒ‚‚Ì
-    /// ƒN[ƒ‹ƒ^ƒCƒ€‚ğŠJn‚µ‚Ü‚·B
+    /// ç§»å‹•ä¸­ã«å®Ÿè¡Œã—ãŸå°»å°¾æ”»æ’ƒã®
+    /// ã‚¯ãƒ¼ãƒ«ã‚¿ã‚¤ãƒ ã‚’é–‹å§‹ã—ã¾ã™ã€‚
     /// </summary>
     private void StartTailSlamCoolTime()
     {
@@ -341,8 +387,8 @@ public sealed class S1P2BossMoveState :
         }
 
         /*
-         * ’P“ÆTailSlamState‚Æ“¯‚¶ƒL[‚ğg—p‚·‚é‚±‚Æ‚ÅA
-         * Move’†‚ÌK”öUŒ‚‚ÆƒN[ƒ‹ƒ^ƒCƒ€‚ğ‹¤—L‚µ‚Ü‚·B
+         * å˜ç‹¬TailSlamStateã¨åŒã˜ã‚­ãƒ¼ã‚’ä½¿ç”¨ã™ã‚‹ã“ã¨ã§ã€
+         * Moveä¸­ã®å°»å°¾æ”»æ’ƒã¨ã‚¯ãƒ¼ãƒ«ã‚¿ã‚¤ãƒ ã‚’å…±æœ‰ã—ã¾ã™ã€‚
          */
         coolTimeManager
             .StartCoolTime<S1P2BossTailSlamState>(
@@ -353,11 +399,11 @@ public sealed class S1P2BossMoveState :
     }
 
     /// <summary>
-    /// ˆÚ“®’†‚ÌUŒ‚İ’è‚ğæ“¾‚µ‚Ü‚·B
+    /// ç§»å‹•ä¸­ã®æ”»æ’ƒè¨­å®šã‚’å–å¾—ã—ã¾ã™ã€‚
     /// </summary>
     /// <returns>
-    /// trueFæ“¾‚Å‚«‚Ü‚µ‚½B
-    /// falseFæ“¾‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½B
+    /// trueï¼šå–å¾—ã§ãã¾ã—ãŸã€‚
+    /// falseï¼šå–å¾—ã§ãã¾ã›ã‚“ã§ã—ãŸã€‚
     /// </returns>
     private bool ApplyMoveAttackSetting()
     {
@@ -375,8 +421,8 @@ public sealed class S1P2BossMoveState :
         {
             Debug.LogError(
                 $"[{nameof(S1P2BossMoveState)}] " +
-                $"{nameof(S1P2BossAttackSettings)}‚ª" +
-                "Œ©‚Â‚©‚è‚Ü‚¹‚ñB");
+                $"{nameof(S1P2BossAttackSettings)}ãŒ" +
+                "è¦‹ã¤ã‹ã‚Šã¾ã›ã‚“ã€‚");
 
             return false;
         }
@@ -388,8 +434,8 @@ public sealed class S1P2BossMoveState :
         {
             Debug.LogError(
                 $"[{nameof(S1P2BossMoveState)}] " +
-                $"{S1P2BossAttackType.MOVE}‚Ì" +
-                "UŒ‚İ’è‚ª‚ ‚è‚Ü‚¹‚ñB");
+                $"{S1P2BossAttackType.MOVE}ã®" +
+                "æ”»æ’ƒè¨­å®šãŒã‚ã‚Šã¾ã›ã‚“ã€‚");
 
             return false;
         }
@@ -398,7 +444,7 @@ public sealed class S1P2BossMoveState :
         {
             Debug.LogError(
                 $"[{nameof(S1P2BossMoveState)}] " +
-                "ˆÚ“®—pAttackIdentifier‚ªİ’è‚³‚ê‚Ä‚¢‚Ü‚¹‚ñB");
+                "ç§»å‹•ç”¨AttackIdentifierãŒè¨­å®šã•ã‚Œã¦ã„ã¾ã›ã‚“ã€‚");
 
             return false;
         }
@@ -407,7 +453,7 @@ public sealed class S1P2BossMoveState :
     }
 
     /// <summary>
-    /// ˆÚ“®’†‚ÌUŒ‚”»’è‚ğ—LŒø‰»‚µ‚Ü‚·B
+    /// ç§»å‹•ä¸­ã®æ”»æ’ƒåˆ¤å®šã‚’æœ‰åŠ¹åŒ–ã—ã¾ã™ã€‚
     /// </summary>
     private void EnableMoveAttack()
     {
@@ -426,7 +472,7 @@ public sealed class S1P2BossMoveState :
     }
 
     /// <summary>
-    /// ˆÚ“®’†‚ÌUŒ‚”»’è‚ğ–³Œø‰»‚µ‚Ü‚·B
+    /// ç§»å‹•ä¸­ã®æ”»æ’ƒåˆ¤å®šã‚’ç„¡åŠ¹åŒ–ã—ã¾ã™ã€‚
     /// </summary>
     private void DisableMoveAttack()
     {
@@ -446,22 +492,23 @@ public sealed class S1P2BossMoveState :
     }
 
     /// <summary>
-    /// ˆÚ“®‚Æ’Ç‰ÁUŒ‚‚ªŠ®—¹‚µ‚½ê‡‚É
-    /// State‚ğ³íI—¹‚µ‚Ü‚·B
+    /// ç§»å‹•ã¨è¿½åŠ æ”»æ’ƒãŒå®Œäº†ã—ãŸå ´åˆã«
+    /// Stateã‚’æ­£å¸¸çµ‚äº†ã—ã¾ã™ã€‚
     /// </summary>
     private void TryCompleteState()
     {
-        m_commonReferences.AudioEmitter.StopSequence(AudioCueId.MOVE_0);
-
         if (!m_isMoveCompleted ||
             !m_isTailSlamCompleted)
         {
             return;
         }
 
+        m_commonReferences?.AudioEmitter?.StopSequence(
+                AudioCueId.MOVE_0);
+
         /*
-         * ³íI—¹‚ªŠm’è‚µ‚½“_‚Å
-         * ˆÚ“®’†‚ÌUŒ‚”»’è‚ğ’â~‚µ‚Ü‚·B
+         * æ­£å¸¸çµ‚äº†ãŒç¢ºå®šã—ãŸæ™‚ç‚¹ã§
+         * ç§»å‹•ä¸­ã®æ”»æ’ƒåˆ¤å®šã‚’åœæ­¢ã—ã¾ã™ã€‚
          */
         DisableMoveAttack();
 
@@ -473,11 +520,11 @@ public sealed class S1P2BossMoveState :
     }
 
     /// <summary>
-    /// ˆÚ“®ó‘Ô‚É•K—v‚ÈQÆ‚ğæ“¾‚µ‚Ü‚·B
+    /// ç§»å‹•çŠ¶æ…‹ã«å¿…è¦ãªå‚ç…§ã‚’å–å¾—ã—ã¾ã™ã€‚
     /// </summary>
     /// <returns>
-    /// trueFæ“¾‚Å‚«‚Ü‚µ‚½B
-    /// falseFæ“¾‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½B
+    /// trueï¼šå–å¾—ã§ãã¾ã—ãŸã€‚
+    /// falseï¼šå–å¾—ã§ãã¾ã›ã‚“ã§ã—ãŸã€‚
     /// </returns>
     private bool TryGetReferences()
     {
@@ -494,8 +541,8 @@ public sealed class S1P2BossMoveState :
         {
             Debug.LogError(
                 $"[{nameof(S1P2BossMoveState)}] " +
-                $"{nameof(S1P2BossReferences)}‚ğ" +
-                "æ“¾‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½B");
+                $"{nameof(S1P2BossReferences)}ã‚’" +
+                "å–å¾—ã§ãã¾ã›ã‚“ã§ã—ãŸã€‚");
 
             return false;
         }
@@ -506,8 +553,8 @@ public sealed class S1P2BossMoveState :
         {
             Debug.LogError(
                 $"[{nameof(S1P2BossMoveState)}] " +
-                $"{nameof(BossPhaseReferences)}‚ğ" +
-                "æ“¾‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½B");
+                $"{nameof(BossPhaseReferences)}ã‚’" +
+                "å–å¾—ã§ãã¾ã›ã‚“ã§ã—ãŸã€‚");
 
             return false;
         }
@@ -525,8 +572,8 @@ public sealed class S1P2BossMoveState :
         {
             Debug.LogError(
                 $"[{nameof(S1P2BossMoveState)}] " +
-                $"{nameof(S1P2MoveStateReferences)}‚ª" +
-                "İ’è‚³‚ê‚Ä‚¢‚Ü‚¹‚ñB");
+                $"{nameof(S1P2MoveStateReferences)}ãŒ" +
+                "è¨­å®šã•ã‚Œã¦ã„ã¾ã›ã‚“ã€‚");
 
             return false;
         }
@@ -535,8 +582,8 @@ public sealed class S1P2BossMoveState :
         {
             Debug.LogError(
                 $"[{nameof(S1P2BossMoveState)}] " +
-                $"{nameof(S1P2BossMoveRoutePlanner)}‚ª" +
-                "İ’è‚³‚ê‚Ä‚¢‚Ü‚¹‚ñB");
+                $"{nameof(S1P2BossMoveRoutePlanner)}ãŒ" +
+                "è¨­å®šã•ã‚Œã¦ã„ã¾ã›ã‚“ã€‚");
 
             return false;
         }
@@ -545,8 +592,8 @@ public sealed class S1P2BossMoveState :
         {
             Debug.LogError(
                 $"[{nameof(S1P2BossMoveState)}] " +
-                $"{nameof(S1P2BossMoveController)}‚ª" +
-                "İ’è‚³‚ê‚Ä‚¢‚Ü‚¹‚ñB");
+                $"{nameof(S1P2BossMoveController)}ãŒ" +
+                "è¨­å®šã•ã‚Œã¦ã„ã¾ã›ã‚“ã€‚");
 
             return false;
         }
@@ -560,15 +607,15 @@ public sealed class S1P2BossMoveState :
         {
             Debug.LogError(
                 $"[{nameof(S1P2BossMoveState)}] " +
-                $"{nameof(S1P2BossMoveStateParameters)}‚ª" +
-                "İ’è‚³‚ê‚Ä‚¢‚Ü‚¹‚ñB");
+                $"{nameof(S1P2BossMoveStateParameters)}ãŒ" +
+                "è¨­å®šã•ã‚Œã¦ã„ã¾ã›ã‚“ã€‚");
 
             return false;
         }
 
         /*
-         * K”öUŒ‚‚ğg—p‚·‚é‚Æ‚«‚¾‚¯
-         * TailSlamŠÖ˜AQÆ‚ğ•K{‚É‚µ‚Ü‚·B
+         * å°»å°¾æ”»æ’ƒã‚’ä½¿ç”¨ã™ã‚‹ã¨ãã ã‘
+         * TailSlamé–¢é€£å‚ç…§ã‚’å¿…é ˆã«ã—ã¾ã™ã€‚
          */
         if (m_parameter.EnableTailSlam)
         {
@@ -576,8 +623,8 @@ public sealed class S1P2BossMoveState :
             {
                 Debug.LogError(
                     $"[{nameof(S1P2BossMoveState)}] " +
-                    $"{nameof(S1P2BossTailSlamReference)}‚ª" +
-                    "İ’è‚³‚ê‚Ä‚¢‚Ü‚¹‚ñB");
+                    $"{nameof(S1P2BossTailSlamReference)}ãŒ" +
+                    "è¨­å®šã•ã‚Œã¦ã„ã¾ã›ã‚“ã€‚");
 
                 return false;
             }
@@ -586,7 +633,7 @@ public sealed class S1P2BossMoveState :
             {
                 Debug.LogError(
                     $"[{nameof(S1P2BossMoveState)}] " +
-                    "TailTransform‚ªİ’è‚³‚ê‚Ä‚¢‚Ü‚¹‚ñB");
+                    "TailTransformãŒè¨­å®šã•ã‚Œã¦ã„ã¾ã›ã‚“ã€‚");
 
                 return false;
             }
@@ -595,8 +642,8 @@ public sealed class S1P2BossMoveState :
             {
                 Debug.LogError(
                     $"[{nameof(S1P2BossMoveState)}] " +
-                    $"{nameof(S1P2BossDecisionParameterAsset)}‚ª" +
-                    "İ’è‚³‚ê‚Ä‚¢‚Ü‚¹‚ñB");
+                    $"{nameof(S1P2BossDecisionParameterAsset)}ãŒ" +
+                    "è¨­å®šã•ã‚Œã¦ã„ã¾ã›ã‚“ã€‚");
 
                 return false;
             }
@@ -606,7 +653,7 @@ public sealed class S1P2BossMoveState :
     }
 
     /// <summary>
-    /// Runtimeó‘Ô‚ğ‰Šú‰»‚µ‚Ü‚·B
+    /// RuntimeçŠ¶æ…‹ã‚’åˆæœŸåŒ–ã—ã¾ã™ã€‚
     /// </summary>
     private void ResetRuntimeState()
     {
@@ -626,10 +673,13 @@ public sealed class S1P2BossMoveState :
             true;
         m_isMoveAttackEnabled =
              false;
+
+        m_stateElapsedTime =
+            0.0f;
     }
 
     /// <summary>
-    /// State‚ğ¸”sI—¹‚µ‚Ü‚·B
+    /// Stateã‚’å¤±æ•—çµ‚äº†ã—ã¾ã™ã€‚
     /// </summary>
     private void SetFailed()
     {
@@ -642,6 +692,11 @@ public sealed class S1P2BossMoveState :
         Owner?.Motor?
             .StopHorizontalMovement();
 
+        m_effectHandle.Stop();
+
+        m_commonReferences?.AudioEmitter?.StopSequence(
+                AudioCueId.MOVE_0);
+
         if (Owner == null)
         {
             return;
@@ -651,7 +706,7 @@ public sealed class S1P2BossMoveState :
             StateExecutionStatus.FAILED);
     }
     /// <summary>
-    /// ˆÚ“®‘¬“x‚É‰‚¶‚ÄÚGUŒ‚”»’è‚ğXV‚µ‚Ü‚·B
+    /// ç§»å‹•é€Ÿåº¦ã«å¿œã˜ã¦æ¥è§¦æ”»æ’ƒåˆ¤å®šã‚’æ›´æ–°ã—ã¾ã™ã€‚
     /// </summary>
     private void UpdateMoveAttackState()
     {
@@ -676,4 +731,34 @@ public sealed class S1P2BossMoveState :
     }
 
 
+
+    /// <summary>
+    /// ç¾åœ¨ãƒ•ã‚§ãƒ¼ã‚ºã®Animation Timelineç®¡ç†ã‚’ä¿æŒã—ã¾ã™ã€‚
+    /// </summary>
+    private void CacheAnimationTimelineController()
+    {
+        m_animationTimelineController =
+            null;
+
+        if (Owner?.PhaseController == null)
+        {
+            return;
+        }
+
+        Owner.PhaseController
+            .TryGetCurrentPhaseComponent(
+                out m_animationTimelineController);
+    }
+
+    /// <summary>
+    /// Stateä¸­ã«å†ç”Ÿã•ã‚ŒãŸAnimation Timelineã‚’åœæ­¢ã—ã¾ã™ã€‚
+    /// </summary>
+    private void StopAnimationTimelines()
+    {
+        m_animationTimelineController?
+            .StopAll();
+
+        m_animationTimelineController =
+            null;
+    }
 }

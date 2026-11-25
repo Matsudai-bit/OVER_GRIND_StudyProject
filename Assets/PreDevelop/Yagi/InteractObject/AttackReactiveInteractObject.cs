@@ -118,6 +118,7 @@ public sealed class AttackReactiveInteractObject : MonoBehaviour,
     private bool m_hasBeenLaunched;
     private bool m_isRecoveringFromLaunch;
     private bool m_hasAcceptedDamageDuringContact;
+    private int m_acceptedChargedAttackSessionId;
     private float m_settleTimer;
     private float m_lastGroundContactTime = float.NegativeInfinity;
     private Vector3 m_visualBaseLocalPosition;
@@ -514,9 +515,15 @@ public sealed class AttackReactiveInteractObject : MonoBehaviour,
         AttackDamageData damageData,
         Vector3 attackCenter)
     {
-        if (damageData.Damage <= 0 ||
-            (!m_canBeLaunchedByNormalAttack &&
-             damageData.PowerType != AttackPowerType.CHARGED))
+        if (damageData.Damage <= 0)
+        {
+            return false;
+        }
+
+        if (!m_canBeLaunchedByNormalAttack &&
+            damageData.PowerType != AttackPowerType.CHARGED &&
+            (damageData.AttackSessionId == 0 ||
+             damageData.AttackSessionId != m_acceptedChargedAttackSessionId))
         {
             return false;
         }
@@ -527,6 +534,13 @@ public sealed class AttackReactiveInteractObject : MonoBehaviour,
             // 再命中でも通常の着地処理と同じ速度条件を確認し、飛行中の勢いを維持します。
             if (!HasSupportedGroundContact() || !HasSlowedDownForNextAttack()) return false;
             LockForNextAttack();
+        }
+
+        if (!m_canBeLaunchedByNormalAttack &&
+            damageData.PowerType == AttackPowerType.CHARGED)
+        {
+            // 残量切れでNORMALへ変わっても、同じ攻撃のヒットだけを受け付けます。
+            m_acceptedChargedAttackSessionId = damageData.AttackSessionId;
         }
 
         // Collider接触だけではなく、実際に有効なダメージを受けた場合のみ揺らします。
@@ -706,6 +720,7 @@ public sealed class AttackReactiveInteractObject : MonoBehaviour,
         RestoreVisualTransform();
         RestoreVisualColors();
         m_hasAcceptedDamageDuringContact = false;
+        m_acceptedChargedAttackSessionId = 0;
         m_attackContactSourceIds.Clear();
     }
 

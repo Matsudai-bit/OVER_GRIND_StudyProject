@@ -67,6 +67,7 @@ public sealed class BossGameplayControl
     private void EnableGameplayControl(
         BossPhaseController phaseController)
     {
+        Debug.Log("ボスを停止解除します");
         if (!phaseController.TryGetCurrentPhaseComponent(
             out BehaviorGraphAgent agent))
         {
@@ -85,7 +86,6 @@ public sealed class BossGameplayControl
         agent.enabled =
             true;
     }
-
     /// <summary>
     /// ボスのゲームプレイ操作を無効化します。
     /// </summary>
@@ -95,23 +95,28 @@ public sealed class BossGameplayControl
     private void DisableGameplayControl(
         BossPhaseController phaseController)
     {
-        if (!phaseController.TryGetCurrentPhaseComponent(
-            out BehaviorGraphAgent agent))
+        Debug.Log(
+            "ボスを停止します");
+
+        /*
+         * 先にBehaviorGraphを停止します。
+         * ForceIdleState後に新しい行動を
+         * 選択されることを防ぎます。
+         */
+        if (phaseController.TryGetCurrentPhaseComponent(
+                out BehaviorGraphAgent agent) &&
+            agent != null)
         {
-            return;
+            agent.enabled =
+                false;
         }
 
-        if (agent == null)
-        {
-            Debug.LogWarning(
-                $"{nameof(BehaviorGraphAgent)} の取得結果がnullです。",
-                this);
-
-            return;
-        }
-
-        agent.enabled =
-            false;
+        /*
+         * 現在実行中の攻撃・移動Stateを中断して
+         * Idleへ強制変更します。
+         */
+        m_bossController?
+            .ForceIdleState();
     }
 
     /// <summary>

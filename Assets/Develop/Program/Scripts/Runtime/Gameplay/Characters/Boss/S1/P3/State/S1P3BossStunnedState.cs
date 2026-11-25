@@ -1,45 +1,60 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
 /// <summary>
-/// ƒXƒe[ƒW1ƒtƒF[ƒY3‚ÌƒXƒ^ƒ“ó‘Ô‚ğÀs‚µ‚Ü‚·B
+/// ã‚¹ãƒ†ãƒ¼ã‚¸1ãƒ•ã‚§ãƒ¼ã‚º3ã®ã‚¹ã‚¿ãƒ³çŠ¶æ…‹ã‚’å®Ÿè¡Œã—ã¾ã™ã€‚
 /// </summary>
 public sealed class S1P3BossStunnedState :
     StateBase<BossController>
 {
+    // Stateä¸­ã«ä½¿ç”¨ã™ã‚‹Animation Timelineç®¡ç†
+    private AnimationTimelineController m_animationTimelineController;
+
   
 
-    // Animator Bool–¼
+    // Animator Boolå
     private const string STUN_ANIMATION_BOOL_NAME =
         "Stun";
 
-    // S1P3ŒÅ—LQÆ
+    // QTE Sequenceå¾…æ©Ÿã«ã‚ˆã‚‹æ°¸ä¹…åœæ­¢ã‚’é˜²ãä¸Šé™æ™‚é–“
+    private const float MAX_QTE_DURATION = 30.0f;
+
+    // QTEæˆåŠŸæ™‚ã«ç ´å£Šå¯¾è±¡ã¸ä¸ãˆã‚‹ãƒ€ãƒ¡ãƒ¼ã‚¸
+    private const int QTE_BREAK_DAMAGE = 999999;
+
+    // S1P3å›ºæœ‰å‚ç…§
     private S1P3BossReferences m_references;
 
-    // Œo‰ßŠÔ
+    // çµŒéæ™‚é–“
     private float m_elapsedTime;
 
     // Animator Bool ID
     private int m_animationBoolID;
 
-    // QTEŠJn—v‹Ï‚İ‚©
+    // QTEé–‹å§‹è¦æ±‚æ¸ˆã¿ã‹
     private bool m_hasRequestedQTE;
 
-    // QTEÀs’†‚©
+    // QTEå®Ÿè¡Œä¸­ã‹
     private bool m_isQTERunning;
 
-    // Sensor‚ğw“Ç’†‚©
+    // Sensorã‚’è³¼èª­ä¸­ã‹
     private bool m_isSensorRegistered;
 
-    // SequenceƒCƒxƒ“ƒg‚ğw“Ç’†‚©
+    // Sequenceã‚¤ãƒ™ãƒ³ãƒˆã‚’è³¼èª­ä¸­ã‹
     private bool m_isSequenceEventRegistered;
 
+    // ã‚¹ã‚¿ãƒ³ç¶™ç¶šæ™‚é–“
     private float m_stunDuration = 0.0f;
 
+    // QTEé–‹å§‹å¾Œã®çµŒéæ™‚é–“
+    private float m_qteElapsedTime;
+
     /// <summary>
-    /// ƒXƒ^ƒ“‚ğŠJn‚µ‚Ü‚·B
+    /// ã‚¹ã‚¿ãƒ³ã‚’é–‹å§‹ã—ã¾ã™ã€‚
     /// </summary>
     protected override void OnStartState()
     {
+        CacheAnimationTimelineController();
+
         ResetRuntimeState();
 
         if (!TryGetReferences())
@@ -72,10 +87,10 @@ public sealed class S1P3BossStunnedState :
     }
 
     /// <summary>
-    /// ƒXƒ^ƒ“ó‘Ô‚ğXV‚µ‚Ü‚·B
+    /// ã‚¹ã‚¿ãƒ³çŠ¶æ…‹ã‚’æ›´æ–°ã—ã¾ã™ã€‚
     /// </summary>
     /// <param name="deltaTime">
-    /// ‘OƒtƒŒ[ƒ€‚©‚ç‚ÌŒo‰ßŠÔB
+    /// å‰ãƒ•ãƒ¬ãƒ¼ãƒ ã‹ã‚‰ã®çµŒéæ™‚é–“ã€‚
     /// </param>
     protected override void OnUpdate(
         float deltaTime)
@@ -88,16 +103,35 @@ public sealed class S1P3BossStunnedState :
         }
 
         /*
-         * QTEÀs’†‚Í’Êí‚ÌƒXƒ^ƒ“ŠÔ‚ğ
-         * Á”ï‚µ‚Ü‚¹‚ñB
+         * QTEå®Ÿè¡Œä¸­ã¯é€šå¸¸ã®ã‚¹ã‚¿ãƒ³æ™‚é–“ã‚’
+         * æ¶ˆè²»ã—ã¾ã›ã‚“ã€‚
          */
         if (m_isQTERunning)
         {
+            m_qteElapsedTime +=
+                Mathf.Max(
+                    0.0f,
+                    deltaTime);
+
+            if (m_qteElapsedTime <
+                MAX_QTE_DURATION)
+            {
+                return;
+            }
+
+            Debug.LogError(
+                $"[{nameof(S1P3BossStunnedState)}] " +
+                "QTE SequenceãŒã‚¿ã‚¤ãƒ ã‚¢ã‚¦ãƒˆã—ã¾ã—ãŸã€‚");
+
+            SetFailed();
+
             return;
         }
 
         m_elapsedTime +=
-            deltaTime;
+            Mathf.Max(
+                0.0f,
+                deltaTime);
 
         if (m_elapsedTime <
             m_stunDuration)
@@ -109,10 +143,12 @@ public sealed class S1P3BossStunnedState :
     }
 
     /// <summary>
-    /// ƒXƒ^ƒ“ó‘Ô‚ğI—¹‚µ‚Ü‚·B
+    /// ã‚¹ã‚¿ãƒ³çŠ¶æ…‹ã‚’çµ‚äº†ã—ã¾ã™ã€‚
     /// </summary>
     protected override void OnExitState()
     {
+        StopAnimationTimelines();
+
         UnregisterEvents();
 
         if (Owner?.AnimationController != null)
@@ -137,10 +173,10 @@ public sealed class S1P3BossStunnedState :
     }
 
     /// <summary>
-    /// QTEŠJn”ÍˆÍ‚Ö‚ÌN“ü‚ğˆ—‚µ‚Ü‚·B
+    /// QTEé–‹å§‹ç¯„å›²ã¸ã®ä¾µå…¥ã‚’å‡¦ç†ã—ã¾ã™ã€‚
     /// </summary>
     /// <param name="hitPosition">
-    /// Sensor“à‚ÖN“ü‚µ‚½ˆÊ’uB
+    /// Sensorå†…ã¸ä¾µå…¥ã—ãŸä½ç½®ã€‚
     /// </param>
     private void HandleQTESensorDetected(
         Vector3 hitPosition)
@@ -158,7 +194,7 @@ public sealed class S1P3BossStunnedState :
     }
 
     /// <summary>
-    /// QTE Sequence‚ÌŠJn‚ğ—v‹‚µ‚Ü‚·B
+    /// QTE Sequenceã®é–‹å§‹ã‚’è¦æ±‚ã—ã¾ã™ã€‚
     /// </summary>
     private void StartQTE()
     {
@@ -168,14 +204,14 @@ public sealed class S1P3BossStunnedState :
         {
             Debug.LogError(
                 $"[{nameof(S1P3BossStunnedState)}] " +
-                "QTE Sequence‚Ìİ’è‚ª•s‘«‚µ‚Ä‚¢‚Ü‚·B");
+                "QTE Sequenceã®è¨­å®šãŒä¸è¶³ã—ã¦ã„ã¾ã™ã€‚");
 
             return;
         }
 
         /*
-         * OnTriggerEnter‚ª•¡”Collider‚©‚ç
-         * ”­¶‚µ‚Ä‚à1‰ñ‚¾‚¯—v‹‚µ‚Ü‚·B
+         * OnTriggerEnterãŒè¤‡æ•°Colliderã‹ã‚‰
+         * ç™ºç”Ÿã—ã¦ã‚‚1å›ã ã‘è¦æ±‚ã—ã¾ã™ã€‚
          */
         m_hasRequestedQTE =
             true;
@@ -185,15 +221,18 @@ public sealed class S1P3BossStunnedState :
     }
 
     /// <summary>
-    /// Sequence•ÏXƒCƒxƒ“ƒg‚ğˆ—‚µ‚Ü‚·B
+    /// Sequenceå¤‰æ›´ã‚¤ãƒ™ãƒ³ãƒˆã‚’å‡¦ç†ã—ã¾ã™ã€‚
     /// </summary>
     /// <param name="eventData">
-    /// Sequence•ÏXî•ñB
+    /// Sequenceå¤‰æ›´æƒ…å ±ã€‚
     /// </param>
     private void HandleSequenceChanged(
         GameplaySequenceChangedEventData eventData)
     {
-        if (m_references == null ||
+        if (Owner == null ||
+            Owner.GetStateExecutionStatus() !=
+                StateExecutionStatus.RUNNING ||
+            m_references == null ||
             eventData.Sequence !=
                 m_references.QTESequenceAsset)
         {
@@ -217,33 +256,54 @@ public sealed class S1P3BossStunnedState :
     }
 
     /// <summary>
-    /// QTEŠJn‚ğˆ—‚µ‚Ü‚·B
+    /// QTEé–‹å§‹ã‚’å‡¦ç†ã—ã¾ã™ã€‚
     /// </summary>
     private void HandleQTEStarted()
     {
         m_isQTERunning =
             true;
 
+        m_qteElapsedTime =
+            0.0f;
+
         Owner?.Motor?
             .StopHorizontalMovement();
     }
 
     /// <summary>
-    /// QTEŠ®—¹‚ğˆ—‚µ‚Ü‚·B
+    /// QTEå®Œäº†ã‚’å‡¦ç†ã—ã¾ã™ã€‚
     /// </summary>
     private void HandleQTEFinished()
     {
         m_isQTERunning =
             false;
 
-        CompleteStun();
+        /*
+         * SUCCEEDEDè¨­å®šã«ã‚ˆã£ã¦Stateé·ç§»ãŒå³æ™‚ç™ºç”Ÿã—ã¦ã‚‚
+         * å‚ç…§ãŒç ´æ£„ã•ã‚Œãªã„ã‚ˆã†ã€éƒ¨ä½ç ´å£Šã‚’å…ˆã«å‡¦ç†ã—ã¾ã™ã€‚
+         */
+        if (m_references?.BreakablePart == null)
+        {
+            Debug.LogError(
+                $"[{nameof(S1P3BossStunnedState)}] " +
+                "BreakablePartãŒè¨­å®šã•ã‚Œã¦ã„ã¾ã›ã‚“ã€‚");
 
-        AttackDamageData attackDamage = new(999999);
-        m_references.BreakablePart.TakeDamage(attackDamage);
+            SetFailed();
+
+            return;
+        }
+
+        AttackDamageData attackDamage =
+            new(QTE_BREAK_DAMAGE);
+
+        m_references.BreakablePart.TakeDamage(
+            attackDamage);
+
+        CompleteStun();
     }
 
     /// <summary>
-    /// QTE’†’f‚ğˆ—‚µ‚Ü‚·B
+    /// QTEä¸­æ–­ã‚’å‡¦ç†ã—ã¾ã™ã€‚
     /// </summary>
     private void HandleQTECanceled()
     {
@@ -251,16 +311,16 @@ public sealed class S1P3BossStunnedState :
             false;
 
         /*
-         * ’†’fŒã‚Í’Êí‚ÌƒXƒ^ƒ“ó‘Ô‚Ö–ß‚µ‚Ü‚·B
-         * Player‚ªˆê“xSensorŠO‚Öo‚ÄÄN“ü‚·‚ê‚Î
-         * QTE‚ğÄ—v‹‚Å‚«‚Ü‚·B
+         * ä¸­æ–­å¾Œã¯é€šå¸¸ã®ã‚¹ã‚¿ãƒ³çŠ¶æ…‹ã¸æˆ»ã—ã¾ã™ã€‚
+         * PlayerãŒä¸€åº¦Sensorå¤–ã¸å‡ºã¦å†ä¾µå…¥ã™ã‚Œã°
+         * QTEã‚’å†è¦æ±‚ã§ãã¾ã™ã€‚
          */
         m_hasRequestedQTE =
             false;
     }
 
     /// <summary>
-    /// ƒXƒ^ƒ“ó‘Ô‚ğ³íI—¹‚µ‚Ü‚·B
+    /// ã‚¹ã‚¿ãƒ³çŠ¶æ…‹ã‚’æ­£å¸¸çµ‚äº†ã—ã¾ã™ã€‚
     /// </summary>
     private void CompleteStun()
     {
@@ -280,11 +340,11 @@ public sealed class S1P3BossStunnedState :
     }
 
     /// <summary>
-    /// •K—v‚ÈQÆ‚ğæ“¾‚µ‚Ü‚·B
+    /// å¿…è¦ãªå‚ç…§ã‚’å–å¾—ã—ã¾ã™ã€‚
     /// </summary>
     /// <returns>
-    /// trueFæ“¾‚µ‚Ü‚µ‚½B
-    /// falseFæ“¾‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½B
+    /// trueï¼šå–å¾—ã—ã¾ã—ãŸã€‚
+    /// falseï¼šå–å¾—ã§ãã¾ã›ã‚“ã§ã—ãŸã€‚
     /// </returns>
     private bool TryGetReferences()
     {
@@ -302,11 +362,31 @@ public sealed class S1P3BossStunnedState :
             return false;
         }
 
+        if (m_references == null ||
+            m_references.StateParameterAsset == null ||
+            m_references.StateParameterAsset.Stunned == null)
+        {
+            Debug.LogError(
+                $"[{nameof(S1P3BossStunnedState)}] " +
+                "ã‚¹ã‚¿ãƒ³çŠ¶æ…‹ãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿ãŒè¨­å®šã•ã‚Œã¦ã„ã¾ã›ã‚“ã€‚");
+
+            return false;
+        }
+
+        if (m_references.BreakablePart == null)
+        {
+            Debug.LogError(
+                $"[{nameof(S1P3BossStunnedState)}] " +
+                "BreakablePartãŒè¨­å®šã•ã‚Œã¦ã„ã¾ã›ã‚“ã€‚");
+
+            return false;
+        }
+
         if (m_references.StunQTESensor == null)
         {
             Debug.LogError(
                 $"[{nameof(S1P3BossStunnedState)}] " +
-                $"{nameof(CollisionSensor)}‚ªİ’è‚³‚ê‚Ä‚¢‚Ü‚¹‚ñ.");
+                $"{nameof(CollisionSensor)}ãŒè¨­å®šã•ã‚Œã¦ã„ã¾ã›ã‚“.");
 
             return false;
         }
@@ -315,7 +395,7 @@ public sealed class S1P3BossStunnedState :
         {
             Debug.LogError(
                 $"[{nameof(S1P3BossStunnedState)}] " +
-                "QTE Sequence Asset‚ªİ’è‚³‚ê‚Ä‚¢‚Ü‚¹‚ñ.");
+                "QTE Sequence AssetãŒè¨­å®šã•ã‚Œã¦ã„ã¾ã›ã‚“.");
 
             return false;
         }
@@ -325,7 +405,7 @@ public sealed class S1P3BossStunnedState :
         {
             Debug.LogError(
                 $"[{nameof(S1P3BossStunnedState)}] " +
-                "Sequence Event‚ªİ’è‚³‚ê‚Ä‚¢‚Ü‚¹‚ñ.");
+                "Sequence EventãŒè¨­å®šã•ã‚Œã¦ã„ã¾ã›ã‚“.");
 
             return false;
         }
@@ -334,7 +414,7 @@ public sealed class S1P3BossStunnedState :
     }
 
     /// <summary>
-    /// QTEŠÖ˜AƒCƒxƒ“ƒg‚ğw“Ç‚µ‚Ü‚·B
+    /// QTEé–¢é€£ã‚¤ãƒ™ãƒ³ãƒˆã‚’è³¼èª­ã—ã¾ã™ã€‚
     /// </summary>
     private void RegisterEvents()
     {
@@ -358,7 +438,7 @@ public sealed class S1P3BossStunnedState :
     }
 
     /// <summary>
-    /// QTEŠÖ˜AƒCƒxƒ“ƒg‚Ìw“Ç‚ğ‰ğœ‚µ‚Ü‚·B
+    /// QTEé–¢é€£ã‚¤ãƒ™ãƒ³ãƒˆã®è³¼èª­ã‚’è§£é™¤ã—ã¾ã™ã€‚
     /// </summary>
     private void UnregisterEvents()
     {
@@ -384,11 +464,14 @@ public sealed class S1P3BossStunnedState :
     }
 
     /// <summary>
-    /// Runtimeó‘Ô‚ğ‰Šú‰»‚µ‚Ü‚·B
+    /// RuntimeçŠ¶æ…‹ã‚’åˆæœŸåŒ–ã—ã¾ã™ã€‚
     /// </summary>
     private void ResetRuntimeState()
     {
         m_elapsedTime =
+            0.0f;
+
+        m_qteElapsedTime =
             0.0f;
 
         m_hasRequestedQTE =
@@ -405,7 +488,7 @@ public sealed class S1P3BossStunnedState :
     }
 
     /// <summary>
-    /// ƒXƒ^ƒ“ó‘Ô‚ğ¸”só‘Ô‚É‚µ‚Ü‚·B
+    /// ã‚¹ã‚¿ãƒ³çŠ¶æ…‹ã‚’å¤±æ•—çŠ¶æ…‹ã«ã—ã¾ã™ã€‚
     /// </summary>
     private void SetFailed()
     {
@@ -418,5 +501,35 @@ public sealed class S1P3BossStunnedState :
 
         Owner.SetStateExecutionStatus(
             StateExecutionStatus.FAILED);
+    }
+
+    /// <summary>
+    /// ç¾åœ¨ãƒ•ã‚§ãƒ¼ã‚ºã®Animation Timelineç®¡ç†ã‚’ä¿æŒã—ã¾ã™ã€‚
+    /// </summary>
+    private void CacheAnimationTimelineController()
+    {
+        m_animationTimelineController =
+            null;
+
+        if (Owner?.PhaseController == null)
+        {
+            return;
+        }
+
+        Owner.PhaseController
+            .TryGetCurrentPhaseComponent(
+                out m_animationTimelineController);
+    }
+
+    /// <summary>
+    /// Stateä¸­ã«å†ç”Ÿã•ã‚ŒãŸAnimation Timelineã‚’åœæ­¢ã—ã¾ã™ã€‚
+    /// </summary>
+    private void StopAnimationTimelines()
+    {
+        m_animationTimelineController?
+            .StopAll();
+
+        m_animationTimelineController =
+            null;
     }
 }

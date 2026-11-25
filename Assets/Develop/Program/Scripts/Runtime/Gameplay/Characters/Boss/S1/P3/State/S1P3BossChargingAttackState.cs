@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -8,8 +8,14 @@ using UnityEngine;
 public sealed class S1P3BossChargingAttackState :
     StateBase<BossController>
 {
+    // State中に使用するAnimation Timeline管理
+    private AnimationTimelineController m_animationTimelineController;
+
     // フェーズ3で行う突進回数
     private const int CHARGE_COUNT = 3;
+
+    // 連続突進が物理的に進行できない場合の上限時間
+    private const float MAX_STATE_DURATION = 60.0f;
 
     // プレイヤー
     private Transform m_playerTransform;
@@ -50,11 +56,19 @@ public sealed class S1P3BossChargingAttackState :
     // 突進攻撃の旋回方向Int ID
     private int m_animationTurnDirectionIntID;
 
+    // State開始からの経過時間
+    private float m_stateElapsedTime;
+
     /// <summary>
     /// 連続突進を開始します。
     /// </summary>
     protected override void OnStartState()
     {
+        CacheAnimationTimelineController();
+
+        m_stateElapsedTime =
+            0.0f;
+
         if (!TryInitializeReferences())
         {
             SetFailed();
@@ -110,6 +124,21 @@ public sealed class S1P3BossChargingAttackState :
             Owner.GetStateExecutionStatus() !=
                 StateExecutionStatus.RUNNING)
         {
+            return;
+        }
+
+        m_stateElapsedTime +=
+            Time.fixedDeltaTime;
+
+        if (m_stateElapsedTime >=
+            MAX_STATE_DURATION)
+        {
+            Debug.LogError(
+                $"[{nameof(S1P3BossChargingAttackState)}] " +
+                "連続突進攻撃がタイムアウトしました。");
+
+            SetFailed();
+
             return;
         }
 
@@ -417,6 +446,22 @@ public sealed class S1P3BossChargingAttackState :
                     m_animationActiveBoolID,
                     false);
             }
+
+            if (m_animationPhaseIntID !=
+                newPhaseIntID)
+            {
+                Owner.AnimationController.SetInteger(
+                    m_animationPhaseIntID,
+                    -1);
+            }
+
+            if (m_animationTurnDirectionIntID !=
+                newTurnDirectionIntID)
+            {
+                Owner.AnimationController.SetInteger(
+                    m_animationTurnDirectionIntID,
+                    0);
+            }
         }
 
         m_animationActiveBoolID =
@@ -557,6 +602,8 @@ public sealed class S1P3BossChargingAttackState :
     /// </summary>
     protected override void OnExitState()
     {
+        StopAnimationTimelines();
+
 
         ReleaseChargeExecutor();
 
@@ -656,5 +703,35 @@ public sealed class S1P3BossChargingAttackState :
 
         Owner.SetStateExecutionStatus(
             StateExecutionStatus.FAILED);
+    }
+
+    /// <summary>
+    /// 現在フェーズのAnimation Timeline管理を保持します。
+    /// </summary>
+    private void CacheAnimationTimelineController()
+    {
+        m_animationTimelineController =
+            null;
+
+        if (Owner?.PhaseController == null)
+        {
+            return;
+        }
+
+        Owner.PhaseController
+            .TryGetCurrentPhaseComponent(
+                out m_animationTimelineController);
+    }
+
+    /// <summary>
+    /// State中に再生されたAnimation Timelineを停止します。
+    /// </summary>
+    private void StopAnimationTimelines()
+    {
+        m_animationTimelineController?
+            .StopAll();
+
+        m_animationTimelineController =
+            null;
     }
 }

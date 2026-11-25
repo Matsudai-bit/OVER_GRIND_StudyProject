@@ -100,7 +100,14 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
     private StateMachine<PlayerStateMachineComponent>
         m_stateMachine;
 
+    // プレイヤーのHP
     private Health m_health;
+
+    // プレイヤー死亡通知イベント
+    private PlayerDiedEvent m_playerDiedEvent;
+
+    // 同一死亡中のイベント多重発火を防止する
+    private bool m_hasRaisedPlayerDiedEvent;
 
     // 初期化されているか
     private bool m_isInitialized;
@@ -429,7 +436,8 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
             audioSequentialController,
         PlayerAudioSequentialTableAsset
             audioSequentialTableAsset,
-        Health health)
+        Health health,
+        PlayerDiedEvent playerDiedEvent)
     {
         ApplyParameterAsset();
 
@@ -444,7 +452,8 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
             boostChargingParameterAsset == null ||
             vGaugePlaceModel == null ||
             speedPlaceModel == null ||
-            statusProvider == null)
+            statusProvider == null ||
+            health == null)
         {
             Debug.LogError(
                 $"[{nameof(PlayerStateMachineComponent)}] " +
@@ -493,8 +502,18 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
                 this);
         }
 
-        // 再初期化時に旧AttackControllerのイベント購読を残さない
+        if (playerDiedEvent == null)
+        {
+            Debug.LogWarning(
+                $"[{nameof(PlayerStateMachineComponent)}] " +
+                $"{nameof(PlayerDiedEvent)}が設定されていません。" +
+                "HP0かつダウン状態になっても死亡通知は発火しません。",
+                this);
+        }
+
+        // 再初期化時に旧イベント購読を残さない
         UnsubscribeAttackHitAudio();
+        UnsubscribeHealthEvents();
 
         m_stateMachine?.Dispose();
 
@@ -532,7 +551,12 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
         m_audioSequentialTableAsset =
             audioSequentialTableAsset;
 
+        m_health = health;
+        m_playerDiedEvent = playerDiedEvent;
+        m_hasRaisedPlayerDiedEvent = false;
+
         SubscribeAttackHitAudio();
+        SubscribeHealthEvents();
 
         m_stateMachine =
             new StateMachine<PlayerStateMachineComponent>(
@@ -541,8 +565,6 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
         m_isInitialized = true;
 
         m_stateMachine.ChangeState<PlayerIdlingState>();
-
-        m_health = health;
     }
 
 
@@ -662,6 +684,106 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
 
 
     // ============================================================
+    // Player Death
+    // ============================================================
+
+    /// <summary>
+    /// Playerがダウン状態へ入ったことを通知します。
+    /// HPが0の場合のみ死亡イベントを発火します。
+    /// </summary>
+    public void NotifyDownStateEntered()
+    {
+        TryRaisePlayerDiedEvent();
+    }
+
+    /// <summary>
+    /// Healthのイベントを購読します。
+    /// </summary>
+    private void SubscribeHealthEvents()
+    {
+        if (m_health == null)
+        {
+            return;
+        }
+
+        m_health.Died -=
+            HandleHealthDied;
+
+        m_health.Died +=
+            HandleHealthDied;
+
+        m_health.HealthChanged -=
+            HandleHealthChanged;
+
+        m_health.HealthChanged +=
+            HandleHealthChanged;
+    }
+
+    /// <summary>
+    /// Healthのイベント購読を解除します。
+    /// </summary>
+    private void UnsubscribeHealthEvents()
+    {
+        if (m_health == null)
+        {
+            return;
+        }
+
+        m_health.Died -=
+            HandleHealthDied;
+
+        m_health.HealthChanged -=
+            HandleHealthChanged;
+    }
+
+    /// <summary>
+    /// HPが0になった際に、ダウン状態なら死亡イベントを発火します。
+    /// </summary>
+    private void HandleHealthDied()
+    {
+        TryRaisePlayerDiedEvent();
+    }
+
+    /// <summary>
+    /// HP回復後に死亡イベントの発火済み状態を解除します。
+    /// </summary>
+    /// <param name="currentHealth">現在のHP。</param>
+    /// <param name="maxHealth">最大HP。</param>
+    private void HandleHealthChanged(
+        int currentHealth,
+        int maxHealth)
+    {
+        if (currentHealth > 0)
+        {
+            m_hasRaisedPlayerDiedEvent = false;
+        }
+    }
+
+    /// <summary>
+    /// HP0かつPlayerHitState中の場合のみ死亡イベントを発火します。
+    /// </summary>
+    private void TryRaisePlayerDiedEvent()
+    {
+        if (m_hasRaisedPlayerDiedEvent ||
+            m_health == null ||
+            !m_health.IsDead ||
+            m_stateMachine == null ||
+            !m_stateMachine.IsCurrentState<PlayerHitState>())
+        {
+            return;
+        }
+
+        if (m_playerDiedEvent == null)
+        {
+            return;
+        }
+
+        m_hasRaisedPlayerDiedEvent = true;
+        m_playerDiedEvent.Raise();
+    }
+
+
+    // ============================================================
     // Attack Hit Audio
     // ============================================================
 
@@ -761,6 +883,7 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
         m_isInitialized = false;
 
         UnsubscribeAttackHitAudio();
+        UnsubscribeHealthEvents();
 
         m_stateMachine?.Dispose();
 

@@ -1,14 +1,20 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
 /// <summary>
-/// ƒXƒe[ƒW1ƒtƒF[ƒY3‚ÌƒGƒlƒ‹ƒM[–CUŒ‚‚ğÀs‚µ‚Ü‚·B
-/// AnimationEvent‚É‡‚í‚¹‚ÄÆËŠJnEI—¹‚ğ§Œä‚µ‚Ü‚·B
+/// ã‚¹ãƒ†ãƒ¼ã‚¸1ãƒ•ã‚§ãƒ¼ã‚º3ã®ã‚¨ãƒãƒ«ã‚®ãƒ¼ç ²æ”»æ’ƒã‚’å®Ÿè¡Œã—ã¾ã™ã€‚
+/// AnimationEventã«åˆã‚ã›ã¦ç…§å°„é–‹å§‹ãƒ»çµ‚äº†ã‚’åˆ¶å¾¡ã—ã¾ã™ã€‚
 /// </summary>
 public sealed class S1P3BossEnergyCannonState :
     StateBase<BossController>
 {
+    // Stateä¸­ã«ä½¿ç”¨ã™ã‚‹Animation Timelineç®¡ç†
+    private AnimationTimelineController m_animationTimelineController;
+
+    // AnimationEventå¾…æ©Ÿã«ã‚ˆã‚‹æ°¸ä¹…åœæ­¢ã‚’é˜²ãä¸Šé™æ™‚é–“
+    private const float MAX_STATE_DURATION = 20.0f;
+
     /// <summary>
-    /// ƒGƒlƒ‹ƒM[–CUŒ‚‚ÌÀsó‘Ô‚Å‚·B
+    /// ã‚¨ãƒãƒ«ã‚®ãƒ¼ç ²æ”»æ’ƒã®å®Ÿè¡ŒçŠ¶æ…‹ã§ã™ã€‚
     /// </summary>
     private enum EnergyCannonExecutionState
     {
@@ -20,41 +26,46 @@ public sealed class S1P3BossEnergyCannonState :
         FINISHED
     }
 
-    // ƒtƒF[ƒY3ŒÅ—LQÆ
+    // ãƒ•ã‚§ãƒ¼ã‚º3å›ºæœ‰å‚ç…§
     private S1P3BossReferences m_references;
 
-    // ƒ{ƒX‹¤’ÊQÆ
+    // ãƒœã‚¹å…±é€šå‚ç…§
     private BossPhaseReferences m_commonReferences;
 
-    // ƒGƒlƒ‹ƒM[–CŒÅ—LQÆ
+    // ã‚¨ãƒãƒ«ã‚®ãƒ¼ç ²å›ºæœ‰å‚ç…§
     private S1P3EnergyCannonStateReferences m_stateReferences;
 
-    // ƒGƒlƒ‹ƒM[–Cƒpƒ‰ƒ[ƒ^
+    // ã‚¨ãƒãƒ«ã‚®ãƒ¼ç ²ãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿
     private S1P3BossEnergyCannonStateParameters m_parameters;
 
-    // UŒ‚ID
+    // æ”»æ’ƒID
     private AttackIdentifier m_attackIdentifier;
 
-    // UŒ‚’†Animator Bool ID
+    // æ”»æ’ƒä¸­Animator Bool ID
     private int m_animationActiveBoolID;
 
-    // UŒ‚ƒtƒF[ƒYAnimator Int ID
+    // æ”»æ’ƒãƒ•ã‚§ãƒ¼ã‚ºAnimator Int ID
     private int m_animationPhaseIntID;
 
-    // Animationİ’è‚ğ‰Šú‰»Ï‚İ‚©
+    // Animationè¨­å®šã‚’åˆæœŸåŒ–æ¸ˆã¿ã‹
     private bool m_isAnimationInitialized;
 
-    // AnimationEventóM
+    // AnimationEventå—ä¿¡
     private AnimationEventReceiver m_animationEventReceiver;
 
-    // Œ»İ‚Ìisó‘Ô
+    // ç¾åœ¨ã®é€²è¡ŒçŠ¶æ…‹
     private EnergyCannonExecutionState m_executionState;
 
+    // Stateé–‹å§‹ã‹ã‚‰ã®çµŒéæ™‚é–“
+    private float m_stateElapsedTime;
+
     /// <summary>
-    /// ƒGƒlƒ‹ƒM[–CUŒ‚‚ğŠJn‚µ‚Ü‚·B
+    /// ã‚¨ãƒãƒ«ã‚®ãƒ¼ç ²æ”»æ’ƒã‚’é–‹å§‹ã—ã¾ã™ã€‚
     /// </summary>
     protected override void OnStartState()
     {
+        CacheAnimationTimelineController();
+
         ResetRuntimeState();
 
         if (!TryGetReferences())
@@ -68,7 +79,7 @@ public sealed class S1P3BossEnergyCannonState :
         {
             Debug.LogError(
                 $"[{nameof(S1P3BossEnergyCannonState)}] " +
-                "ƒGƒlƒ‹ƒM[–C‚ÌUŒ‚İ’è‚ğæ“¾‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½B");
+                "ã‚¨ãƒãƒ«ã‚®ãƒ¼ç ²ã®æ”»æ’ƒè¨­å®šã‚’å–å¾—ã§ãã¾ã›ã‚“ã§ã—ãŸã€‚");
 
             SetFailed();
 
@@ -79,7 +90,7 @@ public sealed class S1P3BossEnergyCannonState :
         {
             Debug.LogError(
                 $"[{nameof(S1P3BossEnergyCannonState)}] " +
-                "Animationİ’è‚ğ‰Šú‰»‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½B");
+                "Animationè¨­å®šã‚’åˆæœŸåŒ–ã§ãã¾ã›ã‚“ã§ã—ãŸã€‚");
 
             SetFailed();
 
@@ -90,25 +101,25 @@ public sealed class S1P3BossEnergyCannonState :
         {
             Debug.LogError(
                 $"[{nameof(S1P3BossEnergyCannonState)}] " +
-                "AnimationEvent‚ğw“Ç‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½B");
+                "AnimationEventã‚’è³¼èª­ã§ãã¾ã›ã‚“ã§ã—ãŸã€‚");
 
             SetFailed();
 
             return;
         }
 
-        // UŒ‚’†‚Íƒ{ƒX–{‘Ì‚ğ’â~‚³‚¹‚Ü‚·B
+        // æ”»æ’ƒä¸­ã¯ãƒœã‚¹æœ¬ä½“ã‚’åœæ­¢ã•ã›ã¾ã™ã€‚
         Owner.Motor?
             .StopHorizontalMovement();
 
-        // ‘O‰ñ‚ÌUŒ‚”»’è‚ªc‚ç‚È‚¢‚æ‚¤‰Šúó‘Ô‚Å‚Í–³Œø‰»‚µ‚Ü‚·B
+        // å‰å›ã®æ”»æ’ƒåˆ¤å®šãŒæ®‹ã‚‰ãªã„ã‚ˆã†åˆæœŸçŠ¶æ…‹ã§ã¯ç„¡åŠ¹åŒ–ã—ã¾ã™ã€‚
         Owner.AttackHitboxRegistry?
             .DisableHitboxes(
                 m_attackIdentifier);
 
         /*
-         * AnimationŠJn‘O‚ÉPhase‚ğİ’è‚µ‚Ü‚·B
-         * HITBOX_ENABLE‚ª—ˆ‚é‚Ü‚Å‚Í—\”õ“®ìó‘Ô‚Å‚·B
+         * Animationé–‹å§‹å‰ã«Phaseã‚’è¨­å®šã—ã¾ã™ã€‚
+         * HITBOX_ENABLEãŒæ¥ã‚‹ã¾ã§ã¯äºˆå‚™å‹•ä½œçŠ¶æ…‹ã§ã™ã€‚
          */
         SetAnimationPhase(
             BossActionPhase.PREPARATION);
@@ -124,10 +135,10 @@ public sealed class S1P3BossEnergyCannonState :
     }
 
     /// <summary>
-    /// ƒGƒlƒ‹ƒM[–CUŒ‚‚ğXV‚µ‚Ü‚·B
+    /// ã‚¨ãƒãƒ«ã‚®ãƒ¼ç ²æ”»æ’ƒã‚’æ›´æ–°ã—ã¾ã™ã€‚
     /// </summary>
     /// <param name="deltaTime">
-    /// ‘OƒtƒŒ[ƒ€‚©‚ç‚ÌŒo‰ßŠÔB
+    /// å‰ãƒ•ãƒ¬ãƒ¼ãƒ ã‹ã‚‰ã®çµŒéæ™‚é–“ã€‚
     /// </param>
     protected override void OnUpdate(
         float deltaTime)
@@ -136,6 +147,23 @@ public sealed class S1P3BossEnergyCannonState :
             Owner.GetStateExecutionStatus() !=
                 StateExecutionStatus.RUNNING)
         {
+            return;
+        }
+
+        m_stateElapsedTime +=
+            Mathf.Max(
+                0.0f,
+                deltaTime);
+
+        if (m_stateElapsedTime >=
+            MAX_STATE_DURATION)
+        {
+            Debug.LogError(
+                $"[{nameof(S1P3BossEnergyCannonState)}] " +
+                "ã‚¨ãƒãƒ«ã‚®ãƒ¼ç ²æ”»æ’ƒãŒã‚¿ã‚¤ãƒ ã‚¢ã‚¦ãƒˆã—ã¾ã—ãŸã€‚");
+
+            SetFailed();
+
             return;
         }
 
@@ -150,10 +178,12 @@ public sealed class S1P3BossEnergyCannonState :
     }
 
     /// <summary>
-    /// ƒGƒlƒ‹ƒM[–CUŒ‚‚ğI—¹‚µ‚Ü‚·B
+    /// ã‚¨ãƒãƒ«ã‚®ãƒ¼ç ²æ”»æ’ƒã‚’çµ‚äº†ã—ã¾ã™ã€‚
     /// </summary>
     protected override void OnExitState()
     {
+        StopAnimationTimelines();
+
         UnregisterAnimationEvent();
 
         Owner?.Motor?
@@ -198,10 +228,10 @@ public sealed class S1P3BossEnergyCannonState :
     }
 
     /// <summary>
-    /// ƒGƒlƒ‹ƒM[–CAnimationEvent‚ğˆ—‚µ‚Ü‚·B
+    /// ã‚¨ãƒãƒ«ã‚®ãƒ¼ç ²AnimationEventã‚’å‡¦ç†ã—ã¾ã™ã€‚
     /// </summary>
     /// <param name="attackEventData">
-    /// UŒ‚ƒCƒxƒ“ƒgî•ñB
+    /// æ”»æ’ƒã‚¤ãƒ™ãƒ³ãƒˆæƒ…å ±ã€‚
     /// </param>
     private void HandleAttackEvent(
         AttackEventData attackEventData)
@@ -235,8 +265,8 @@ public sealed class S1P3BossEnergyCannonState :
     }
 
     /// <summary>
-    /// AnimationEvent‚ğ‹N“_‚É
-    /// ƒGƒlƒ‹ƒM[–C‚ÌÆË‚ğŠJn‚µ‚Ü‚·B
+    /// AnimationEventã‚’èµ·ç‚¹ã«
+    /// ã‚¨ãƒãƒ«ã‚®ãƒ¼ç ²ã®ç…§å°„ã‚’é–‹å§‹ã—ã¾ã™ã€‚
     /// </summary>
     private void StartEnergyCannon()
     {
@@ -253,8 +283,8 @@ public sealed class S1P3BossEnergyCannonState :
             m_attackIdentifier);
 
         /*
-         * IMPACT_START‚ª—ˆ‚é‚Ü‚Å‚Í
-         * CannonPivot‚ğ‰ñ“]‚³‚¹‚¸³–Ê‚ÖÆË‚µ‚Ü‚·B
+         * IMPACT_STARTãŒæ¥ã‚‹ã¾ã§ã¯
+         * CannonPivotã‚’å›è»¢ã•ã›ãšæ­£é¢ã¸ç…§å°„ã—ã¾ã™ã€‚
          */
         m_executionState =
             EnergyCannonExecutionState.STRAIGHT_FIRE;
@@ -262,8 +292,8 @@ public sealed class S1P3BossEnergyCannonState :
 
 
     /// <summary>
-    /// AnimationEvent‚ğ‹N“_‚É
-    /// Player’Ç]ó‘Ô‚ğŠJn‚µ‚Ü‚·B
+    /// AnimationEventã‚’èµ·ç‚¹ã«
+    /// Playerè¿½å¾“çŠ¶æ…‹ã‚’é–‹å§‹ã—ã¾ã™ã€‚
     /// </summary>
     private void StartTracking()
     {
@@ -278,10 +308,10 @@ public sealed class S1P3BossEnergyCannonState :
     }
 
     /// <summary>
-    /// Player’Ç]ó‘Ô‚ğXV‚µ‚Ü‚·B
+    /// Playerè¿½å¾“çŠ¶æ…‹ã‚’æ›´æ–°ã—ã¾ã™ã€‚
     /// </summary>
     /// <param name="deltaTime">
-    /// ‘OƒtƒŒ[ƒ€‚©‚ç‚ÌŒo‰ßŠÔB
+    /// å‰ãƒ•ãƒ¬ãƒ¼ãƒ ã‹ã‚‰ã®çµŒéæ™‚é–“ã€‚
     /// </param>
     private void UpdateTracking(
         float deltaTime)
@@ -291,8 +321,8 @@ public sealed class S1P3BossEnergyCannonState :
     }
 
     /// <summary>
-    /// AnimationEvent‚ğ‹N“_‚É
-    /// ƒGƒlƒ‹ƒM[–C‚ÌÆË‚ğI—¹‚µ‚Ü‚·B
+    /// AnimationEventã‚’èµ·ç‚¹ã«
+    /// ã‚¨ãƒãƒ«ã‚®ãƒ¼ç ²ã®ç…§å°„ã‚’çµ‚äº†ã—ã¾ã™ã€‚
     /// </summary>
     private void StopEnergyCannon()
     {
@@ -316,10 +346,10 @@ public sealed class S1P3BossEnergyCannonState :
     }
 
     /// <summary>
-    /// ƒGƒlƒ‹ƒM[–C‚ğPlayer•ûŒü‚Ö’Ç]‚³‚¹‚Ü‚·B
+    /// ã‚¨ãƒãƒ«ã‚®ãƒ¼ç ²ã‚’Playeræ–¹å‘ã¸è¿½å¾“ã•ã›ã¾ã™ã€‚
     /// </summary>
     /// <param name="deltaTime">
-    /// ‘OƒtƒŒ[ƒ€‚©‚ç‚ÌŒo‰ßŠÔB
+    /// å‰ãƒ•ãƒ¬ãƒ¼ãƒ ã‹ã‚‰ã®çµŒéæ™‚é–“ã€‚
     /// </param>
     private void TrackPlayer(
         float deltaTime)
@@ -340,7 +370,7 @@ public sealed class S1P3BossEnergyCannonState :
             playerTransform.position -
             cannonPivot.position;
 
-        // …•½•ûŒü‚Ì‚İ’Ç]‚µ‚Ü‚·B
+        // æ°´å¹³æ–¹å‘ã®ã¿è¿½å¾“ã—ã¾ã™ã€‚
         direction.y =
             0.0f;
 
@@ -364,7 +394,7 @@ public sealed class S1P3BossEnergyCannonState :
     }
 
     /// <summary>
-    /// AnimationI—¹‚ÉƒGƒlƒ‹ƒM[–CUŒ‚‚ğŠ®—¹‚µ‚Ü‚·B
+    /// Animationçµ‚äº†æ™‚ã«ã‚¨ãƒãƒ«ã‚®ãƒ¼ç ²æ”»æ’ƒã‚’å®Œäº†ã—ã¾ã™ã€‚
     /// </summary>
     private void FinishAttack()
     {
@@ -375,8 +405,8 @@ public sealed class S1P3BossEnergyCannonState :
         }
 
         /*
-         * HITBOX_DISABLE‚ğæ‚è‚±‚Ú‚µ‚½ê‡‚Å‚à
-         * AnimationI—¹‚É‚Í•K‚¸UŒ‚”»’è‚ğ’â~‚µ‚Ü‚·B
+         * HITBOX_DISABLEã‚’å–ã‚Šã“ã¼ã—ãŸå ´åˆã§ã‚‚
+         * Animationçµ‚äº†æ™‚ã«ã¯å¿…ãšæ”»æ’ƒåˆ¤å®šã‚’åœæ­¢ã—ã¾ã™ã€‚
          */
         Owner.AttackHitboxRegistry?
             .DisableHitboxes(
@@ -391,8 +421,8 @@ public sealed class S1P3BossEnergyCannonState :
         {
             Debug.LogError(
                 $"[{nameof(S1P3BossEnergyCannonState)}] " +
-                $"{nameof(S1P3BossStateTransitionRequest)}‚ª" +
-                "İ’è‚³‚ê‚Ä‚¢‚Ü‚¹‚ñB");
+                $"{nameof(S1P3BossStateTransitionRequest)}ãŒ" +
+                "è¨­å®šã•ã‚Œã¦ã„ã¾ã›ã‚“ã€‚");
 
             Owner.SetStateExecutionStatus(
                 StateExecutionStatus.FAILED);
@@ -401,12 +431,12 @@ public sealed class S1P3BossEnergyCannonState :
         }
 
         /*
-         * SUCCEEDED‚É‚·‚é‚ÆŸ‚Ìs“®”»’è‚ªŠJn‚³‚ê‚é‰Â”\«‚ª‚ ‚é‚½‚ßA
-         * •K‚¸æ‚ÉƒN[ƒ‹ƒ^ƒCƒ€‚ğ“o˜^‚µ‚Ü‚·B
+         * SUCCEEDEDã«ã™ã‚‹ã¨æ¬¡ã®è¡Œå‹•åˆ¤å®šãŒé–‹å§‹ã•ã‚Œã‚‹å¯èƒ½æ€§ãŒã‚ã‚‹ãŸã‚ã€
+         * å¿…ãšå…ˆã«ã‚¯ãƒ¼ãƒ«ã‚¿ã‚¤ãƒ ã‚’ç™»éŒ²ã—ã¾ã™ã€‚
          */
         StartCoolTime();
 
-        // ƒGƒlƒ‹ƒM[–C³íI—¹Œã‚ÍƒXƒ^ƒ“‚Ö‘JˆÚ‚³‚¹‚Ü‚·B
+        // ã‚¨ãƒãƒ«ã‚®ãƒ¼ç ²æ­£å¸¸çµ‚äº†å¾Œã¯ã‚¹ã‚¿ãƒ³ã¸é·ç§»ã•ã›ã¾ã™ã€‚
         transitionRequest.RequestStunned();
 
         Owner.SetStateExecutionStatus(
@@ -414,11 +444,11 @@ public sealed class S1P3BossEnergyCannonState :
     }
 
     /// <summary>
-    /// •K—v‚ÈQÆ‚ğæ“¾‚µ‚Ü‚·B
+    /// å¿…è¦ãªå‚ç…§ã‚’å–å¾—ã—ã¾ã™ã€‚
     /// </summary>
     /// <returns>
-    /// trueFæ“¾‚Å‚«‚Ü‚µ‚½B
-    /// falseFæ“¾‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½B
+    /// trueï¼šå–å¾—ã§ãã¾ã—ãŸã€‚
+    /// falseï¼šå–å¾—ã§ãã¾ã›ã‚“ã§ã—ãŸã€‚
     /// </returns>
     private bool TryGetReferences()
     {
@@ -433,8 +463,8 @@ public sealed class S1P3BossEnergyCannonState :
                     out m_references))
         {
             Debug.LogError(
-                $"{nameof(S1P3BossReferences)}‚ª" +
-                "Œ©‚Â‚©‚è‚Ü‚¹‚ñB");
+                $"{nameof(S1P3BossReferences)}ãŒ" +
+                "è¦‹ã¤ã‹ã‚Šã¾ã›ã‚“ã€‚");
 
             return false;
         }
@@ -444,8 +474,8 @@ public sealed class S1P3BossEnergyCannonState :
                     out m_commonReferences))
         {
             Debug.LogError(
-                $"{nameof(BossPhaseReferences)}‚ª" +
-                "Œ©‚Â‚©‚è‚Ü‚¹‚ñB");
+                $"{nameof(BossPhaseReferences)}ãŒ" +
+                "è¦‹ã¤ã‹ã‚Šã¾ã›ã‚“ã€‚");
 
             return false;
         }
@@ -457,8 +487,8 @@ public sealed class S1P3BossEnergyCannonState :
         if (m_stateReferences == null)
         {
             Debug.LogError(
-                $"{nameof(S1P3EnergyCannonStateReferences)}‚ª" +
-                "İ’è‚³‚ê‚Ä‚¢‚Ü‚¹‚ñB");
+                $"{nameof(S1P3EnergyCannonStateReferences)}ãŒ" +
+                "è¨­å®šã•ã‚Œã¦ã„ã¾ã›ã‚“ã€‚");
 
             return false;
         }
@@ -482,7 +512,7 @@ public sealed class S1P3BossEnergyCannonState :
         if (m_stateReferences.CannonPivot == null)
         {
             Debug.LogError(
-                "CannonPivot‚ªİ’è‚³‚ê‚Ä‚¢‚Ü‚¹‚ñB");
+                "CannonPivotãŒè¨­å®šã•ã‚Œã¦ã„ã¾ã›ã‚“ã€‚");
 
             return false;
         }
@@ -491,7 +521,7 @@ public sealed class S1P3BossEnergyCannonState :
             null)
         {
             Debug.LogError(
-                "PlayerTransform‚ªİ’è‚³‚ê‚Ä‚¢‚Ü‚¹‚ñB");
+                "PlayerTransformãŒè¨­å®šã•ã‚Œã¦ã„ã¾ã›ã‚“ã€‚");
 
             return false;
         }
@@ -500,11 +530,11 @@ public sealed class S1P3BossEnergyCannonState :
     }
 
     /// <summary>
-    /// ƒGƒlƒ‹ƒM[–C‚ÌUŒ‚İ’è‚ğæ“¾‚µ‚Ü‚·B
+    /// ã‚¨ãƒãƒ«ã‚®ãƒ¼ç ²ã®æ”»æ’ƒè¨­å®šã‚’å–å¾—ã—ã¾ã™ã€‚
     /// </summary>
     /// <returns>
-    /// trueFæ“¾‚Å‚«‚Ü‚µ‚½B
-    /// falseFæ“¾‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½B
+    /// trueï¼šå–å¾—ã§ãã¾ã—ãŸã€‚
+    /// falseï¼šå–å¾—ã§ãã¾ã›ã‚“ã§ã—ãŸã€‚
     /// </returns>
     private bool TryGetAttackSetting()
     {
@@ -516,8 +546,8 @@ public sealed class S1P3BossEnergyCannonState :
         if (attackSettings == null)
         {
             Debug.LogError(
-                $"{nameof(S1P3BossAttackSettings)}‚ª" +
-                "Œ©‚Â‚©‚è‚Ü‚¹‚ñB");
+                $"{nameof(S1P3BossAttackSettings)}ãŒ" +
+                "è¦‹ã¤ã‹ã‚Šã¾ã›ã‚“ã€‚");
 
             return false;
         }
@@ -534,11 +564,11 @@ public sealed class S1P3BossEnergyCannonState :
     }
 
     /// <summary>
-    /// Animatorƒpƒ‰ƒ[ƒ^‚ğ‰Šú‰»‚µ‚Ü‚·B
+    /// Animatorãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿ã‚’åˆæœŸåŒ–ã—ã¾ã™ã€‚
     /// </summary>
     /// <returns>
-    /// trueF‰Šú‰»‚Å‚«‚Ü‚µ‚½B
-    /// falseF‰Šú‰»‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½B
+    /// trueï¼šåˆæœŸåŒ–ã§ãã¾ã—ãŸã€‚
+    /// falseï¼šåˆæœŸåŒ–ã§ãã¾ã›ã‚“ã§ã—ãŸã€‚
     /// </returns>
     private bool InitializeAnimationParameters()
     {
@@ -572,11 +602,11 @@ public sealed class S1P3BossEnergyCannonState :
     }
 
     /// <summary>
-    /// AnimationEvent‚ğw“Ç‚µ‚Ü‚·B
+    /// AnimationEventã‚’è³¼èª­ã—ã¾ã™ã€‚
     /// </summary>
     /// <returns>
-    /// trueFw“Ç‚Å‚«‚Ü‚µ‚½B
-    /// falseFw“Ç‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½B
+    /// trueï¼šè³¼èª­ã§ãã¾ã—ãŸã€‚
+    /// falseï¼šè³¼èª­ã§ãã¾ã›ã‚“ã§ã—ãŸã€‚
     /// </returns>
     private bool RegisterAnimationEvent()
     {
@@ -601,7 +631,7 @@ public sealed class S1P3BossEnergyCannonState :
     }
 
     /// <summary>
-    /// AnimationEvent‚Ìw“Ç‚ğ‰ğœ‚µ‚Ü‚·B
+    /// AnimationEventã®è³¼èª­ã‚’è§£é™¤ã—ã¾ã™ã€‚
     /// </summary>
     private void UnregisterAnimationEvent()
     {
@@ -615,10 +645,10 @@ public sealed class S1P3BossEnergyCannonState :
     }
 
     /// <summary>
-    /// Animator‚ÖUŒ‚’†ƒtƒ‰ƒO‚ğİ’è‚µ‚Ü‚·B
+    /// Animatorã¸æ”»æ’ƒä¸­ãƒ•ãƒ©ã‚°ã‚’è¨­å®šã—ã¾ã™ã€‚
     /// </summary>
     /// <param name="isActive">
-    /// UŒ‚’†‚©B
+    /// æ”»æ’ƒä¸­ã‹ã€‚
     /// </param>
     private void SetAnimationActive(
         bool isActive)
@@ -635,10 +665,10 @@ public sealed class S1P3BossEnergyCannonState :
     }
 
     /// <summary>
-    /// Animator‚ÖUŒ‚ƒtƒF[ƒY‚ğİ’è‚µ‚Ü‚·B
+    /// Animatorã¸æ”»æ’ƒãƒ•ã‚§ãƒ¼ã‚ºã‚’è¨­å®šã—ã¾ã™ã€‚
     /// </summary>
     /// <param name="phase">
-    /// UŒ‚ƒtƒF[ƒYB
+    /// æ”»æ’ƒãƒ•ã‚§ãƒ¼ã‚ºã€‚
     /// </param>
     private void SetAnimationPhase(
         BossActionPhase phase)
@@ -655,7 +685,7 @@ public sealed class S1P3BossEnergyCannonState :
     }
 
     /// <summary>
-    /// Animatorƒpƒ‰ƒ[ƒ^‚ğ‰Šúó‘Ô‚Ö–ß‚µ‚Ü‚·B
+    /// Animatorãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿ã‚’åˆæœŸçŠ¶æ…‹ã¸æˆ»ã—ã¾ã™ã€‚
     /// </summary>
     private void ResetAnimationParameters()
     {
@@ -678,17 +708,20 @@ public sealed class S1P3BossEnergyCannonState :
     }
 
     /// <summary>
-    /// Runtimeó‘Ô‚ğ‰Šú‰»‚µ‚Ü‚·B
+    /// RuntimeçŠ¶æ…‹ã‚’åˆæœŸåŒ–ã—ã¾ã™ã€‚
     /// </summary>
     private void ResetRuntimeState()
     {
  
         m_executionState =
             EnergyCannonExecutionState.NONE;
+
+        m_stateElapsedTime =
+            0.0f;
     }
 
     /// <summary>
-    /// ƒGƒlƒ‹ƒM[–C‚ÌƒN[ƒ‹ƒ^ƒCƒ€‚ğŠJn‚µ‚Ü‚·B
+    /// ã‚¨ãƒãƒ«ã‚®ãƒ¼ç ²ã®ã‚¯ãƒ¼ãƒ«ã‚¿ã‚¤ãƒ ã‚’é–‹å§‹ã—ã¾ã™ã€‚
     /// </summary>
     private void StartCoolTime()
     {
@@ -719,7 +752,7 @@ public sealed class S1P3BossEnergyCannonState :
     }
 
     /// <summary>
-    /// State‚ğ¸”sI—¹‚µ‚Ü‚·B
+    /// Stateã‚’å¤±æ•—çµ‚äº†ã—ã¾ã™ã€‚
     /// </summary>
     private void SetFailed()
     {
@@ -741,5 +774,35 @@ public sealed class S1P3BossEnergyCannonState :
 
         Owner.SetStateExecutionStatus(
             StateExecutionStatus.FAILED);
+    }
+
+    /// <summary>
+    /// ç¾åœ¨ãƒ•ã‚§ãƒ¼ã‚ºã®Animation Timelineç®¡ç†ã‚’ä¿æŒã—ã¾ã™ã€‚
+    /// </summary>
+    private void CacheAnimationTimelineController()
+    {
+        m_animationTimelineController =
+            null;
+
+        if (Owner?.PhaseController == null)
+        {
+            return;
+        }
+
+        Owner.PhaseController
+            .TryGetCurrentPhaseComponent(
+                out m_animationTimelineController);
+    }
+
+    /// <summary>
+    /// Stateä¸­ã«å†ç”Ÿã•ã‚ŒãŸAnimation Timelineã‚’åœæ­¢ã—ã¾ã™ã€‚
+    /// </summary>
+    private void StopAnimationTimelines()
+    {
+        m_animationTimelineController?
+            .StopAll();
+
+        m_animationTimelineController =
+            null;
     }
 }

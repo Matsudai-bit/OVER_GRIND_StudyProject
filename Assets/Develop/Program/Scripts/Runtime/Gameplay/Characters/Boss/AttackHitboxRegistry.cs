@@ -170,7 +170,7 @@ public sealed class AttackHitboxRegistry : MonoBehaviour
     /// <summary>
     /// 現在登録されているHitboxをすべて無効にします。
     /// </summary>
-    private void DisableAllHitboxes()
+    public void DisableAllHitboxes()
     {
         HashSet<AttackHitbox> disabledHitboxes = new();
 

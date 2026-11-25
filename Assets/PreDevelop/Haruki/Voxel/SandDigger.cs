@@ -124,13 +124,13 @@ public class SandDigger : MonoBehaviour
             return;
         }
 
-        if (!TryGetDigParams(GetCurrentSpeed(), m_digInterval, ref m_nextDigTime, out float radius, out float depth))
+        float factor = CalculateDepthFactor(hit.normal, false);
+        if (factor <= 0f)
         {
             return;
         }
 
-        float factor = CalculateDepthFactor(hit.normal, false);
-        if (factor <= 0f)
+        if (!TryGetDigParams(GetCurrentSpeed(), m_digInterval, ref m_nextDigTime, out float radius, out float depth))
         {
             return;
         }
@@ -155,7 +155,7 @@ public class SandDigger : MonoBehaviour
     }
 
     /// <summary>
-    /// コライダーから砂山コンポーネントを取得します（前回分をキャッシュ）。
+    /// コライダー（またはその親）から砂山コンポーネントを取得します（前回分をキャッシュ）。
     /// </summary>
     private MarchingCubesMountain GetOrCacheMountain(Collider col)
     {
@@ -170,7 +170,7 @@ public class SandDigger : MonoBehaviour
         }
 
         m_lastCollider = col;
-        m_lastMountain = col.GetComponent<MarchingCubesMountain>();
+        m_lastMountain = col.GetComponentInParent<MarchingCubesMountain>();
         return m_lastMountain;
     }
 
@@ -286,11 +286,20 @@ public class SandDigger : MonoBehaviour
 
     /// <summary>
     /// 登録された Trigger コライダーと砂山の重なりを調べて削ります。
+    /// 速度不足やクールタイム中はスキャン自体をスキップして負荷を抑えます。
     /// </summary>
     private void DigWithTriggers()
     {
-        var mountains = MarchingCubesMountain.Instances;
         float currentTime = Time.time;
+
+        // 接触遅延が不要かつクールタイム中であれば、スキャン処理を丸ごとスキップする
+        if (m_triggerContactDelay <= 0f && currentTime < m_nextTriggerDigTime)
+        {
+            return;
+        }
+
+        var mountains = MarchingCubesMountain.Instances;
+        float baseSpeed = GetCurrentSpeed();
 
         for (int i = 0; i < m_triggerColliders.Length; i++)
         {
@@ -300,9 +309,16 @@ public class SandDigger : MonoBehaviour
                 continue;
             }
 
-            // コライダー有効化からの遅延時間を満たしていない場合はスキップ
             if (!m_triggerScanner.IsActivationDelayElapsed(i, currentTime, m_triggerActivationDelay))
             {
+                continue;
+            }
+
+            // 速度条件を満たしていないコライダーは高コストなサンプリングを行わない
+            float speed = Mathf.Max(baseSpeed, m_triggerScanner.GetTriggerSpeed(i));
+            if (speed < m_minSpeed)
+            {
+                m_triggerScanner.UpdateContactAndCheckDelay(i, false, currentTime, m_triggerContactDelay);
                 continue;
             }
 
@@ -327,19 +343,16 @@ public class SandDigger : MonoBehaviour
 
                 hasAnyOverlap = true;
 
-                // 重なり開始からの遅延時間をチェック
                 if (!m_triggerScanner.UpdateContactAndCheckDelay(i, true, currentTime, m_triggerContactDelay))
                 {
                     continue;
                 }
 
-                float speed = Mathf.Max(GetCurrentSpeed(), m_triggerScanner.GetTriggerSpeed(i));
                 if (!TryGetDigParams(speed, m_triggerDigInterval, ref m_nextTriggerDigTime, out float radius, out float depth))
                 {
                     continue;
                 }
 
-                // 重なり点が多い場合は均等に間引いて削る
                 int total = points.Count;
                 int useCount = Mathf.Min(total, Mathf.Max(1, m_maxContactsPerEvent));
                 int dugCount = 0;

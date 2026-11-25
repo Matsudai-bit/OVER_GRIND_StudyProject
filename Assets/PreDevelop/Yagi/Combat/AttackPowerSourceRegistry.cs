@@ -6,7 +6,9 @@ using UnityEngine;
 /// </summary>
 public static class AttackPowerSourceRegistry
 {
-    private static readonly Dictionary<int, AttackPowerType> s_powerTypes = new();
+    private static readonly Dictionary<int, (AttackPowerType powerType, int sessionId)>
+        s_attackSessions = new();
+    private static int s_nextSessionId;
 
     /// <summary>攻撃所有者の威力種別を登録します。</summary>
     /// <param name="owner">攻撃判定を子階層に持つ所有者。</param>
@@ -16,7 +18,14 @@ public static class AttackPowerSourceRegistry
         AttackPowerType attackPowerType)
     {
         if (owner == null) return;
-        s_powerTypes[owner.GetInstanceID()] = attackPowerType;
+        int ownerId = owner.GetInstanceID();
+        if (s_attackSessions.TryGetValue(ownerId, out var session))
+        {
+            s_attackSessions[ownerId] = (attackPowerType, session.sessionId);
+            return;
+        }
+
+        s_attackSessions[ownerId] = (attackPowerType, ++s_nextSessionId);
     }
 
     /// <summary>攻撃所有者の登録を解除します。</summary>
@@ -24,25 +33,27 @@ public static class AttackPowerSourceRegistry
     public static void Unregister(Transform owner)
     {
         if (owner == null) return;
-        s_powerTypes.Remove(owner.GetInstanceID());
+        s_attackSessions.Remove(owner.GetInstanceID());
     }
 
     /// <summary>攻撃判定の親階層から登録済みの威力種別を取得します。</summary>
     /// <param name="attackSource">攻撃判定のTransform。</param>
     /// <param name="attackPowerType">取得した威力種別。</param>
+    /// <param name="sessionId">攻撃開始から終了まで共通の識別子。</param>
     /// <returns>true：登録あり。false：登録なし。</returns>
     public static bool TryGet(
         Transform attackSource,
-        out AttackPowerType attackPowerType)
+        out AttackPowerType attackPowerType,
+        out int sessionId)
     {
         Transform current = attackSource;
 
         while (current != null)
         {
-            if (s_powerTypes.TryGetValue(
-                    current.GetInstanceID(),
-                    out attackPowerType))
+            if (s_attackSessions.TryGetValue(current.GetInstanceID(), out var session))
             {
+                attackPowerType = session.powerType;
+                sessionId = session.sessionId;
                 return true;
             }
 
@@ -50,6 +61,7 @@ public static class AttackPowerSourceRegistry
         }
 
         attackPowerType = AttackPowerType.NORMAL;
+        sessionId = 0;
         return false;
     }
 }

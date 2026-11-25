@@ -9,9 +9,9 @@ using UnityEngine;
     menuName = "Game/Context/Stage Scene Context")]
 public sealed class StageSceneContext : ScriptableObject
 {
-    private const int DEFAULT_STAGE_NUMBER = 0;
-    private const int MIN_STAGE_NUMBER = 1;
-    private const int MIN_RETRY_COUNT = 0;
+    public const int DEFAULT_STAGE_NUMBER = 0;
+    public const int MIN_STAGE_NUMBER = 0;
+    public const int MIN_RETRY_COUNT = 0;
 
     // 次回ステージSceneの開始方法
     [NonSerialized]
@@ -209,16 +209,16 @@ public sealed class StageSceneContext : ScriptableObject
     /// </summary>
     public void Clear()
     {
-        ResetEntryRequest();
+        //ResetEntryRequest();
 
-        m_stageNumber =
-            DEFAULT_STAGE_NUMBER;
+        //m_stageNumber =
+        //    DEFAULT_STAGE_NUMBER;
 
-        m_stageName =
-            string.Empty;
+        //m_stageName =
+        //    string.Empty;
 
-        m_retryCount =
-            MIN_RETRY_COUNT;
+        //m_retryCount =
+        //    MIN_RETRY_COUNT;
     }
 
     /// <summary>
