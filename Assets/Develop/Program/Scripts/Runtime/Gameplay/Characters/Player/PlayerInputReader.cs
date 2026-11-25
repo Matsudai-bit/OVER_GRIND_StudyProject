@@ -67,6 +67,7 @@ public sealed class PlayerInputReader : MonoBehaviour
 
     // Vブースト入力中か
     private bool m_isVBoostHeld;
+    private bool m_suppressRailChargeUntilRelease;
 
     // Vブースト入力が長押し状態になったか（外部消費用フラグ）
     private bool m_hasVBoostHoldStarted;
@@ -128,11 +129,27 @@ public sealed class PlayerInputReader : MonoBehaviour
     /// </summary>
     public bool IsInputEnabled => m_isInputEnabled;
 
+    /// <summary>Player操作用のAction Mapが有効で、移動入力を受け付けられるか取得します。</summary>
+    public bool IsControlAvailable =>
+        m_isInputEnabled &&
+        m_moveActionReference != null &&
+        m_moveActionReference.action != null &&
+        m_moveActionReference.action.enabled;
+
     /// <summary>
     /// Vブースト入力が押され続けているか取得します。
     /// </summary>
     public bool IsVBoostHeld =>
         m_isVBoostHeld;
+
+    /// <summary>現在の押下でレールチャージを開始できるか取得します。</summary>
+    public bool CanStartRailCharge => m_isVBoostHeld && !m_suppressRailChargeUntilRelease;
+
+    /// <summary>レールジャンプで中断したチャージの再開を、ボタンを離すまで抑制します。</summary>
+    public void SuppressRailChargeUntilRelease()
+    {
+        m_suppressRailChargeUntilRelease = m_isVBoostHeld;
+    }
 
     /// <summary>
     /// 未消費のVブースト開始入力があるか取得します。
@@ -536,6 +553,7 @@ public sealed class PlayerInputReader : MonoBehaviour
     {
         // 前回の入力状態をリセット
         m_hasVBoostReleased = false;
+        m_suppressRailChargeUntilRelease = false;
         m_hasVBoostHoldStarted = false;
         m_vBoostHoldTriggeredThisPress = false;
         m_vBoostHoldTime = 0.0f;
@@ -560,6 +578,7 @@ private void HandleVBoostCanceled(
     InputAction.CallbackContext context)
     {
         m_isVBoostHeld = false;
+        m_suppressRailChargeUntilRelease = false;
         // 押下イベントを離した後に状態遷移しても、古い開始要求を再利用しない。
         m_hasVBoostStarted = false;
         m_hasVBoostReleased = true;
@@ -588,6 +607,7 @@ private void HandleVBoostCanceled(
         m_suppressJumpUntilRelease = false;
         m_hasVBoostStarted = false;
         m_isVBoostHeld = false;
+        m_suppressRailChargeUntilRelease = false;
         m_hasVBoostHoldStarted = false;
         m_vBoostHoldTriggeredThisPress = false;
         m_hasVBoostReleased = false;

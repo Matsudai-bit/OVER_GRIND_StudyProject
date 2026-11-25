@@ -1,61 +1,80 @@
-using System.Collections.Generic;
+ï»¿using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// ƒXƒe[ƒW1ƒtƒF[ƒY3‚ÌƒhƒŒƒbƒgUŒ‚‚ğÀs‚µ‚Ü‚·B
+/// ã‚¹ãƒ†ãƒ¼ã‚¸1ãƒ•ã‚§ãƒ¼ã‚º3ã®ãƒ‰ãƒ¬ãƒƒãƒˆæ”»æ’ƒã‚’å®Ÿè¡Œã—ã¾ã™ã€‚
+/// AnimationEventã®HITBOX_ENABLEã”ã¨ã«
+/// ã‚ªã‚¤ãƒ«ã‚’1ç™ºãšã¤ç™ºå°„ã—ã¾ã™ã€‚
 /// </summary>
 public sealed class S1P3BossDreadAttackState :
     StateBase<BossController>
 {
-    // d—lã‚ÌƒIƒCƒ‹”­Ë”
-    private const int DREAD_PROJECTILE_COUNT = 12;
+    // Stateä¸­ã«ä½¿ç”¨ã™ã‚‹Animation Timelineç®¡ç†
+    private AnimationTimelineController m_animationTimelineController;
 
-    // ƒtƒF[ƒY3QÆ
+    // AnimationEventãƒ»é£›ç¿”ä½“ã‚¤ãƒ™ãƒ³ãƒˆå¾…æ©Ÿã«ã‚ˆã‚‹æ°¸ä¹…åœæ­¢ã‚’é˜²ãä¸Šé™æ™‚é–“
+    private const float MAX_STATE_DURATION = 30.0f;
+
+    // ãƒ•ã‚§ãƒ¼ã‚º3å‚ç…§
     private BossPhaseReferences m_commonReferences;
     private S1P3BossReferences m_references;
 
-    // ƒhƒŒƒbƒgUŒ‚ŒÅ—LQÆ
+    // ãƒ‰ãƒ¬ãƒƒãƒˆæ”»æ’ƒå›ºæœ‰å‚ç…§
     private DreadAttackStateReferences m_stateReferences;
 
-    // ƒhƒŒƒbƒgUŒ‚ƒpƒ‰ƒ[ƒ^
+    // ãƒ‰ãƒ¬ãƒƒãƒˆæ”»æ’ƒãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿
     private S1P3BossDreadAttackStateParameters m_parameters;
 
-    // UŒ‚ID
+    // æ”»æ’ƒID
     private AttackIdentifier m_attackIdentifier;
 
-    // Animator Trigger ID
-    private int m_animationTriggerId;
+    // Animator Bool ID
+    private int m_animationBoolID;
 
-    // ƒIƒCƒ‹‚Éİ’è‚·‚éƒ_ƒ[ƒW
+    // Animator Boolã‚’åˆæœŸåŒ–æ¸ˆã¿ã‹
+    private bool m_isAnimationInitialized;
+
+    // ã‚ªã‚¤ãƒ«ã«è¨­å®šã™ã‚‹ãƒ€ãƒ¡ãƒ¼ã‚¸
     private int m_projectileDamage;
 
-    // ¶¬‚µ‚½ƒIƒCƒ‹
+    // ç”Ÿæˆã—ãŸã‚ªã‚¤ãƒ«
     private readonly List<S1P3OilController> m_spawnedOils =
         new();
 
-    // ”­Ë‚µ‚½ƒIƒCƒ‹”
+    // æ¬¡ã«ä½¿ç”¨ã™ã‚‹ç™ºå°„åœ°ç‚¹Index
+    private int m_nextLaunchPointIndex;
+
+    // ç™ºå°„ã—ãŸã‚ªã‚¤ãƒ«æ•°
     private int m_launchedOilCount;
 
-    // ’…’e‚µ‚½ƒIƒCƒ‹”
+    // ç€å¼¾ã—ãŸã‚ªã‚¤ãƒ«æ•°
     private int m_landedOilCount;
 
-    // ”­ËÏ‚İ‚©
-    private bool m_hasLaunched;
+    // å…¨å¼¾ç™ºå°„æ¸ˆã¿ã‹
+    private bool m_hasFinishedLaunching;
 
-    // ‘S’e’…’eŒã‚Ì‘Ò‹@’†‚©
+    // å…¨å¼¾ç€å¼¾å¾Œã®å¾…æ©Ÿä¸­ã‹
     private bool m_isWaitingFinish;
 
-    // ó‘ÔI—¹‘Ò‹@ŠÔ
+    // çŠ¶æ…‹çµ‚äº†å¾…æ©Ÿæ™‚é–“
     private float m_finishElapsedTime;
 
-    // AnimationEventw“Ç’†‚©
+    // AnimationEventè³¼èª­ä¸­ã‹
     private bool m_isAnimationEventSubscribed;
 
+    // ä½¿ç”¨ä¸­ã®AnimationEventReceiver
+    private AnimationEventReceiver m_animationEventReceiver;
+
+    // Stateé–‹å§‹ã‹ã‚‰ã®çµŒéæ™‚é–“
+    private float m_stateElapsedTime;
+
     /// <summary>
-    /// ƒhƒŒƒbƒgUŒ‚‚ğŠJn‚µ‚Ü‚·B
+    /// ãƒ‰ãƒ¬ãƒƒãƒˆæ”»æ’ƒã‚’é–‹å§‹ã—ã¾ã™ã€‚
     /// </summary>
     protected override void OnStartState()
     {
+        CacheAnimationTimelineController();
+
         ResetRuntimeState();
 
         if (!TryGetReferences())
@@ -80,31 +99,66 @@ public sealed class S1P3BossDreadAttackState :
             return;
         }
 
-        Owner.Motor?.StopHorizontalMovement();
+        Owner.Motor?
+            .StopHorizontalMovement();
 
         SubscribeAnimationEvent();
 
         Owner.SetStateExecutionStatus(
             StateExecutionStatus.RUNNING);
 
-        Owner.AnimationController.SetTrigger(
-            m_animationTriggerId);
+        /*
+         * Triggerã§ã¯ãªãBoolã§
+         * ãƒ‰ãƒ¬ãƒƒãƒˆæ”»æ’ƒAnimationã‚’é–‹å§‹ã—ã¾ã™ã€‚
+         */
+        Owner.AnimationController.SetBool(
+            m_animationBoolID,
+            true);
     }
 
     /// <summary>
-    /// ‘S’e’…’eŒã‚ÌI—¹‘Ò‹@‚ğXV‚µ‚Ü‚·B
+    /// å…¨å¼¾ç€å¼¾å¾Œã®çµ‚äº†å¾…æ©Ÿã‚’æ›´æ–°ã—ã¾ã™ã€‚
     /// </summary>
-    /// <param name="deltaTime">Œo‰ßŠÔB</param>
+    /// <param name="deltaTime">
+    /// çµŒéæ™‚é–“ã€‚
+    /// </param>
     protected override void OnUpdate(
         float deltaTime)
     {
+        if (Owner == null ||
+            Owner.GetStateExecutionStatus() !=
+                StateExecutionStatus.RUNNING)
+        {
+            return;
+        }
+
+        m_stateElapsedTime +=
+            Mathf.Max(
+                0.0f,
+                deltaTime);
+
+        if (m_stateElapsedTime >=
+            MAX_STATE_DURATION)
+        {
+            Debug.LogError(
+                $"[{nameof(S1P3BossDreadAttackState)}] " +
+                "ãƒ‰ãƒ¬ãƒƒãƒˆæ”»æ’ƒãŒã‚¿ã‚¤ãƒ ã‚¢ã‚¦ãƒˆã—ã¾ã—ãŸã€‚");
+
+            CancelFlyingOils();
+            FailState();
+
+            return;
+        }
+
         if (!m_isWaitingFinish)
         {
             return;
         }
 
         m_finishElapsedTime +=
-            deltaTime;
+            Mathf.Max(
+                0.0f,
+                deltaTime);
 
         if (m_finishElapsedTime <
             m_parameters.FinishDelay)
@@ -116,18 +170,30 @@ public sealed class S1P3BossDreadAttackState :
     }
 
     /// <summary>
-    /// ƒhƒŒƒbƒgUŒ‚‚ğI—¹‚µ‚Ü‚·B
+    /// ãƒ‰ãƒ¬ãƒƒãƒˆæ”»æ’ƒã‚’çµ‚äº†ã—ã¾ã™ã€‚
     /// </summary>
     protected override void OnExitState()
     {
-        StartCoolTimeIfSucceeded();
+        StopAnimationTimelines();
 
         UnsubscribeAnimationEvent();
         UnsubscribeOilEvents();
 
-        // “r’†I—¹‚µ‚½ê‡‚Í”òs’†‚ÌƒIƒCƒ‹‚ğ’â~‚·‚é
-        if (Owner.GetStateExecutionStatus() ==
-            StateExecutionStatus.RUNNING)
+        if (m_isAnimationInitialized &&
+            Owner?.AnimationController != null)
+        {
+            Owner.AnimationController.SetBool(
+                m_animationBoolID,
+                false);
+        }
+
+        /*
+         * é€”ä¸­çµ‚äº†ã—ãŸå ´åˆã¯
+         * é£›è¡Œä¸­ã®ã‚ªã‚¤ãƒ«ã‚’åœæ­¢ã—ã¾ã™ã€‚
+         */
+        if (Owner != null &&
+            Owner.GetStateExecutionStatus() ==
+                StateExecutionStatus.RUNNING)
         {
             CancelFlyingOils();
 
@@ -137,49 +203,115 @@ public sealed class S1P3BossDreadAttackState :
 
         m_spawnedOils.Clear();
 
-        m_references = null;
-        m_stateReferences = null;
-        m_parameters = null;
-        m_attackIdentifier = null;
+        m_commonReferences =
+            null;
+
+        m_references =
+            null;
+
+        m_stateReferences =
+            null;
+
+        m_parameters =
+            null;
+
+        m_attackIdentifier =
+            null;
+
+        m_animationEventReceiver =
+            null;
     }
 
     /// <summary>
-    /// UŒ‚AnimationEvent‚ğˆ—‚µ‚Ü‚·B
+    /// æ”»æ’ƒAnimationEventã‚’å‡¦ç†ã—ã¾ã™ã€‚
     /// </summary>
-    /// <param name="attackEventData">UŒ‚ƒCƒxƒ“ƒgî•ñB</param>
+    /// <param name="attackEventData">
+    /// æ”»æ’ƒã‚¤ãƒ™ãƒ³ãƒˆæƒ…å ±ã€‚
+    /// </param>
     private void HandleAttackEvent(
         AttackEventData attackEventData)
     {
-        switch (attackEventData.AttackEventType)
-        {
-            case AttackEventType.HITBOX_ENABLE:
-                LaunchOils();
-                break;
-
-            case AttackEventType.ANIMATION_END:
-                // ƒhƒŒƒbƒgUŒ‚‚ÍAnimationI—¹‚Å‚ÍŠ®—¹‚µ‚È‚¢
-                break;
-        }
-    }
-
-    /// <summary>
-    /// ‘S”­Ë’n“_‚©‚çƒIƒCƒ‹‚ğ”­Ë‚µ‚Ü‚·B
-    /// </summary>
-    private void LaunchOils()
-    {
-        if (m_hasLaunched)
+        if (attackEventData == null ||
+            Owner == null ||
+            Owner.GetStateExecutionStatus() !=
+                StateExecutionStatus.RUNNING)
         {
             return;
         }
 
-        m_hasLaunched = true;
+        switch (attackEventData.AttackEventType)
+        {
+            case AttackEventType.HITBOX_ENABLE:
+                LaunchNextOil();
+                break;
+
+            case AttackEventType.ANIMATION_END:
+                /*
+                 * ãƒ‰ãƒ¬ãƒƒãƒˆæ”»æ’ƒã¯Animationçµ‚äº†ã§ã¯
+                 * Stateã‚’çµ‚äº†ã—ã¾ã›ã‚“ã€‚
+                 * å…¨ã‚ªã‚¤ãƒ«ç€å¼¾ã‚’å¾…ã¡ã¾ã™ã€‚
+                 */
+                break;
+        }
+    }
+
+    /// <summary>
+    /// æ¬¡ã®ç™ºå°„åœ°ç‚¹ã‹ã‚‰ã‚ªã‚¤ãƒ«ã‚’1ç™ºç™ºå°„ã—ã¾ã™ã€‚
+    /// HITBOX_ENABLE 1å›ã«ã¤ã1ç™ºã ã‘ç™ºå°„ã—ã¾ã™ã€‚
+    /// </summary>
+    private void LaunchNextOil()
+    {
+        if (m_hasFinishedLaunching ||
+            m_parameters == null)
+        {
+            return;
+        }
+
+        if (m_launchedOilCount >=
+            m_parameters.LaunchCount)
+        {
+            FinishLaunching();
+
+            return;
+        }
 
         IReadOnlyList<Transform> launchPoints =
             m_stateReferences.LaunchPoints;
 
-        foreach (Transform launchPoint
-                 in launchPoints)
+        if (launchPoints == null ||
+            launchPoints.Count == 0)
         {
+            Debug.LogError(
+                "ãƒ‰ãƒ¬ãƒƒãƒˆæ”»æ’ƒã®ç™ºå°„åœ°ç‚¹ãŒè¨­å®šã•ã‚Œã¦ã„ã¾ã›ã‚“ã€‚");
+
+            FailState();
+
+            return;
+        }
+
+        /*
+         * ç™ºå°„æ•°ãŒç™ºå°„åœ°ç‚¹æ•°ã‚ˆã‚Šå¤šã„å ´åˆã«ã‚‚å¯¾å¿œã™ã‚‹ãŸã‚ã€
+         * ç™ºå°„åœ°ç‚¹ã‚’å¾ªç’°ã—ã¦ä½¿ç”¨ã—ã¾ã™ã€‚
+         */
+        int searchCount =
+            0;
+
+        while (searchCount <
+               launchPoints.Count)
+        {
+            int launchPointIndex =
+                m_nextLaunchPointIndex %
+                launchPoints.Count;
+
+            m_nextLaunchPointIndex =
+                (launchPointIndex + 1) %
+                launchPoints.Count;
+
+            searchCount++;
+
+            Transform launchPoint =
+                launchPoints[launchPointIndex];
+
             if (launchPoint == null)
             {
                 continue;
@@ -193,21 +325,31 @@ public sealed class S1P3BossDreadAttackState :
 
             if (oilController == null)
             {
-                continue;
+                Debug.LogError(
+                    "ãƒ‰ãƒ¬ãƒƒãƒˆæ”»æ’ƒã®ã‚ªã‚¤ãƒ«ã‚’ç”Ÿæˆã§ãã¾ã›ã‚“ã§ã—ãŸã€‚");
+
+                FailState();
+
+                return;
             }
 
             if (!oilController.Initialize(
-                 m_commonReferences.PlayerTransform,
-                 m_parameters,
-                 m_stateReferences.GroundLayerMask,
-                 m_projectileDamage,
-                 m_stateReferences.TargetDecalPrefab,
-                 m_stateReferences.OilDecalPrefab))
+                    m_commonReferences.PlayerTransform,
+                    m_parameters,
+                    m_stateReferences.GroundLayerMask,
+                    m_projectileDamage,
+                    m_stateReferences.TargetDecalPrefab,
+                    m_stateReferences.OilDecalPrefab))
             {
                 Object.Destroy(
                     oilController.gameObject);
 
-                continue;
+                Debug.LogError(
+                    "ãƒ‰ãƒ¬ãƒƒãƒˆæ”»æ’ƒã®ã‚ªã‚¤ãƒ«ã‚’åˆæœŸåŒ–ã§ãã¾ã›ã‚“ã§ã—ãŸã€‚");
+
+                FailState();
+
+                return;
             }
 
             oilController.Landed +=
@@ -222,21 +364,59 @@ public sealed class S1P3BossDreadAttackState :
             m_launchedOilCount++;
 
             oilController.Launch();
+
+            /*
+             * æŒ‡å®šæ•°ã‚’æ’ƒã¡çµ‚ãˆãŸã‚‰
+             * ç™ºå°„Animationã®Boolã‚’OFFã«ã—ã¾ã™ã€‚
+             */
+            if (m_launchedOilCount >=
+                m_parameters.LaunchCount)
+            {
+                FinishLaunching();
+            }
+
+            return;
         }
 
-        if (m_launchedOilCount <= 0)
-        {
-            Debug.LogError(
-                "ƒhƒŒƒbƒgUŒ‚‚ÌƒIƒCƒ‹‚ğ”­Ë‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½B");
+        Debug.LogError(
+            "æœ‰åŠ¹ãªãƒ‰ãƒ¬ãƒƒãƒˆæ”»æ’ƒã®ç™ºå°„åœ°ç‚¹ãŒã‚ã‚Šã¾ã›ã‚“ã€‚");
 
-            FailState();
-        }
+        FailState();
     }
 
     /// <summary>
-    /// ƒIƒCƒ‹’…’e‚ğˆ—‚µ‚Ü‚·B
+    /// å…¨ã‚ªã‚¤ãƒ«ã®ç™ºå°„å®Œäº†ã‚’å‡¦ç†ã—ã¾ã™ã€‚
     /// </summary>
-    /// <param name="oilController">’…’e‚µ‚½ƒIƒCƒ‹B</param>
+    private void FinishLaunching()
+    {
+        if (m_hasFinishedLaunching)
+        {
+            return;
+        }
+
+        m_hasFinishedLaunching =
+            true;
+
+        if (Owner?.AnimationController == null)
+        {
+            return;
+        }
+
+        /*
+         * ç™ºå°„å›æ•°åˆ†ã®AnimationEventã‚’å—ã‘å–ã£ãŸãŸã‚ã€
+         * Boolã‚’OFFã«ã—ã¦ç™ºå°„Animationã‚’çµ‚äº†ã•ã›ã¾ã™ã€‚
+         */
+        Owner.AnimationController.SetBool(
+            m_animationBoolID,
+            false);
+    }
+
+    /// <summary>
+    /// ã‚ªã‚¤ãƒ«ç€å¼¾ã‚’å‡¦ç†ã—ã¾ã™ã€‚
+    /// </summary>
+    /// <param name="oilController">
+    /// ç€å¼¾ã—ãŸã‚ªã‚¤ãƒ«ã€‚
+    /// </param>
     private void HandleOilLanded(
         S1P3OilController oilController)
     {
@@ -253,26 +433,36 @@ public sealed class S1P3BossDreadAttackState :
 
         m_landedOilCount++;
 
-        if (m_landedOilCount <
-            m_launchedOilCount)
+        /*
+         * å…¨å¼¾ã®ç™ºå°„ãŒçµ‚ã‚ã£ã¦ãŠã‚Šã€
+         * ã‹ã¤ç™ºå°„ã—ãŸå…¨ã‚ªã‚¤ãƒ«ãŒç€å¼¾ã—ãŸå ´åˆã®ã¿
+         * çµ‚äº†å¾…æ©Ÿã¸ç§»è¡Œã—ã¾ã™ã€‚
+         */
+        if (!m_hasFinishedLaunching ||
+            m_landedOilCount <
+                m_launchedOilCount)
         {
             return;
         }
 
-        // ‘S’e’…’eŒã‚©‚ç2•bŠÔ‘Ò‹@‚·‚é
-        m_isWaitingFinish = true;
-        m_finishElapsedTime = 0.0f;
+        m_isWaitingFinish =
+            true;
+
+        m_finishElapsedTime =
+            0.0f;
     }
 
     /// <summary>
-    /// ƒIƒCƒ‹”òs¸”s‚ğˆ—‚µ‚Ü‚·B
+    /// ã‚ªã‚¤ãƒ«é£›è¡Œå¤±æ•—ã‚’å‡¦ç†ã—ã¾ã™ã€‚
     /// </summary>
-    /// <param name="oilController">¸”s‚µ‚½ƒIƒCƒ‹B</param>
+    /// <param name="oilController">
+    /// å¤±æ•—ã—ãŸã‚ªã‚¤ãƒ«ã€‚
+    /// </param>
     private void HandleOilFlightFailed(
         S1P3OilController oilController)
     {
         Debug.LogError(
-            "ƒhƒŒƒbƒgUŒ‚‚ÌƒIƒCƒ‹”òs‚É¸”s‚µ‚Ü‚µ‚½B");
+            "ãƒ‰ãƒ¬ãƒƒãƒˆæ”»æ’ƒã®ã‚ªã‚¤ãƒ«é£›è¡Œã«å¤±æ•—ã—ã¾ã—ãŸã€‚");
 
         CancelFlyingOils();
 
@@ -280,44 +470,59 @@ public sealed class S1P3BossDreadAttackState :
     }
 
     /// <summary>
-    /// ƒhƒŒƒbƒgUŒ‚‚ğ³íI—¹‚µ‚Ü‚·B
+    /// ãƒ‰ãƒ¬ãƒƒãƒˆæ”»æ’ƒã‚’æ­£å¸¸çµ‚äº†ã—ã¾ã™ã€‚
     /// </summary>
     private void FinishAttack()
     {
-        m_isWaitingFinish = false;
+        if (!m_isWaitingFinish)
+        {
+            return;
+        }
+
+        m_isWaitingFinish =
+            false;
+
+        /*
+         * SUCCEEDEDã‚ˆã‚Šå…ˆã«
+         * ã‚¯ãƒ¼ãƒ«ã‚¿ã‚¤ãƒ ã‚’é–‹å§‹ã—ã¾ã™ã€‚
+         */
+        StartCoolTime();
 
         Owner.SetStateExecutionStatus(
             StateExecutionStatus.SUCCEEDED);
     }
 
     /// <summary>
-    /// •K—v‚ÈQÆ‚ğæ“¾‚µ‚Ü‚·B
+    /// å¿…è¦ãªå‚ç…§ã‚’å–å¾—ã—ã¾ã™ã€‚
     /// </summary>
     /// <returns>
-    /// trueFæ“¾‚µ‚Ü‚µ‚½B
-    /// falseF•K—v‚ÈQÆ‚ª‚ ‚è‚Ü‚¹‚ñB
+    /// trueï¼šå–å¾—ã—ã¾ã—ãŸã€‚
+    /// falseï¼šå¿…è¦ãªå‚ç…§ãŒã‚ã‚Šã¾ã›ã‚“ã€‚
     /// </returns>
     private bool TryGetReferences()
     {
-        if (Owner.PhaseController == null)
+        if (Owner == null ||
+            Owner.PhaseController == null)
         {
             return false;
         }
 
         if (!Owner.PhaseController
-               .TryGetCurrentPhaseComponent(
-                   out m_commonReferences))
+                .TryGetCurrentPhaseComponent(
+                    out m_commonReferences))
         {
             Debug.LogError(
-                $"{nameof(BossPhaseReferences)}‚ªŒ©‚Â‚©‚è‚Ü‚¹‚ñB");
+                $"{nameof(BossPhaseReferences)}ãŒ" +
+                "è¦‹ã¤ã‹ã‚Šã¾ã›ã‚“ã€‚");
 
             return false;
         }
+
         if (m_commonReferences == null)
         {
             Debug.LogError(
-                $"{nameof(BossPhaseReferences)}‚ª" +
-                "İ’è‚³‚ê‚Ä‚¢‚Ü‚¹‚ñB");
+                $"{nameof(BossPhaseReferences)}ãŒ" +
+                "è¨­å®šã•ã‚Œã¦ã„ã¾ã›ã‚“ã€‚");
 
             return false;
         }
@@ -327,30 +532,40 @@ public sealed class S1P3BossDreadAttackState :
                     out m_references))
         {
             Debug.LogError(
-                $"{nameof(S1P3BossReferences)}‚ªŒ©‚Â‚©‚è‚Ü‚¹‚ñB");
+                $"{nameof(S1P3BossReferences)}ãŒ" +
+                "è¦‹ã¤ã‹ã‚Šã¾ã›ã‚“ã€‚");
 
             return false;
         }
 
         m_stateReferences =
-            m_references.DreadAttackStateReferences;
+            m_references
+                .DreadAttackStateReferences;
 
         if (m_stateReferences == null)
         {
             Debug.LogError(
-                $"{nameof(DreadAttackStateReferences)}‚ª" +
-                "İ’è‚³‚ê‚Ä‚¢‚Ü‚¹‚ñB");
+                $"{nameof(DreadAttackStateReferences)}ãŒ" +
+                "è¨­å®šã•ã‚Œã¦ã„ã¾ã›ã‚“ã€‚");
 
             return false;
         }
 
-        m_parameters = m_references.StateParameterAsset.DreadAttack;
+        if (m_references.StateParameterAsset == null)
+        {
+            return false;
+        }
+
+        m_parameters =
+            m_references
+                .StateParameterAsset
+                .DreadAttack;
 
         if (m_parameters == null)
         {
             Debug.LogError(
-                $"{nameof(S1P3BossDreadAttackStateParameters)}‚ª" +
-                "İ’è‚³‚ê‚Ä‚¢‚Ü‚¹‚ñB");
+                $"{nameof(S1P3BossDreadAttackStateParameters)}ãŒ" +
+                "è¨­å®šã•ã‚Œã¦ã„ã¾ã›ã‚“ã€‚");
 
             return false;
         }
@@ -358,7 +573,7 @@ public sealed class S1P3BossDreadAttackState :
         if (m_commonReferences.PlayerTransform == null)
         {
             Debug.LogError(
-                "PlayerTransform‚ªİ’è‚³‚ê‚Ä‚¢‚Ü‚¹‚ñB");
+                "PlayerTransformãŒè¨­å®šã•ã‚Œã¦ã„ã¾ã›ã‚“ã€‚");
 
             return false;
         }
@@ -366,8 +581,8 @@ public sealed class S1P3BossDreadAttackState :
         if (m_references.AttackSettingsProvider == null)
         {
             Debug.LogError(
-                $"{nameof(S1BossPhaseAttackSettingsProvider)}‚ª" +
-                "İ’è‚³‚ê‚Ä‚¢‚Ü‚¹‚ñB");
+                $"{nameof(S1BossPhaseAttackSettingsProvider)}ãŒ" +
+                "è¨­å®šã•ã‚Œã¦ã„ã¾ã›ã‚“ã€‚");
 
             return false;
         }
@@ -375,32 +590,44 @@ public sealed class S1P3BossDreadAttackState :
         if (m_stateReferences.OilPrefab == null)
         {
             Debug.LogError(
-                "ƒIƒCƒ‹Prefab‚ªİ’è‚³‚ê‚Ä‚¢‚Ü‚¹‚ñB");
+                "ã‚ªã‚¤ãƒ«PrefabãŒè¨­å®šã•ã‚Œã¦ã„ã¾ã›ã‚“ã€‚");
 
             return false;
         }
 
-        //if (m_stateReferences.LaunchPoints == null ||
-        //    m_stateReferences.LaunchPoints.Count !=
-        //    DREAD_PROJECTILE_COUNT)
-        //{
-        //    Debug.LogError(
-        //        $"ƒhƒŒƒbƒgUŒ‚‚Ì”­Ë’n“_‚ğ" +
-        //        $"{DREAD_PROJECTILE_COUNT}ŒÂİ’è‚µ‚Ä‚­‚¾‚³‚¢B");
+        IReadOnlyList<Transform> launchPoints =
+    m_stateReferences.LaunchPoints;
 
-        //    return false;
-        //}
-
-        foreach (Transform launchPoint
-                 in m_stateReferences.LaunchPoints)
+        if (launchPoints == null ||
+            launchPoints.Count == 0)
         {
-            if (launchPoint != null)
+            Debug.LogError(
+                "ãƒ‰ãƒ¬ãƒƒãƒˆæ”»æ’ƒã®ç™ºå°„åœ°ç‚¹ãŒè¨­å®šã•ã‚Œã¦ã„ã¾ã›ã‚“ã€‚");
+
+            return false;
+        }
+
+        bool hasValidLaunchPoint =
+            false;
+
+        foreach (Transform launchPoint in
+                 launchPoints)
+        {
+            if (launchPoint == null)
             {
                 continue;
             }
 
+            hasValidLaunchPoint =
+                true;
+
+            break;
+        }
+
+        if (!hasValidLaunchPoint)
+        {
             Debug.LogError(
-                "ƒhƒŒƒbƒgUŒ‚‚Ì”­Ë’n“_‚É–¢İ’è‚ª‚ ‚è‚Ü‚·B");
+                "æœ‰åŠ¹ãªãƒ‰ãƒ¬ãƒƒãƒˆæ”»æ’ƒã®ç™ºå°„åœ°ç‚¹ãŒã‚ã‚Šã¾ã›ã‚“ã€‚");
 
             return false;
         }
@@ -409,76 +636,96 @@ public sealed class S1P3BossDreadAttackState :
     }
 
     /// <summary>
-    /// UŒ‚ID‚ÆAnimator Trigger‚ğæ“¾‚µ‚Ü‚·B
+    /// æ”»æ’ƒIDã¨Animator Boolã‚’å–å¾—ã—ã¾ã™ã€‚
     /// </summary>
     /// <returns>
-    /// trueFæ“¾‚µ‚Ü‚µ‚½B
-    /// falseFæ“¾‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½B
+    /// trueï¼šå–å¾—ã—ã¾ã—ãŸã€‚
+    /// falseï¼šå–å¾—ã§ãã¾ã›ã‚“ã§ã—ãŸã€‚
     /// </returns>
     private bool TryGetAttackSetting()
     {
         S1P3BossAttackSettings attackSettings =
             Owner.GetComponentInChildren<
-                S1P3BossAttackSettings>(true);
+                S1P3BossAttackSettings>(
+                    true);
 
         if (attackSettings == null)
         {
             Debug.LogError(
-                $"{nameof(S1P3BossAttackSettings)}‚ª" +
-                "Œ©‚Â‚©‚è‚Ü‚¹‚ñB");
+                $"{nameof(S1P3BossAttackSettings)}ãŒ" +
+                "è¦‹ã¤ã‹ã‚Šã¾ã›ã‚“ã€‚");
 
             return false;
         }
 
+        /*
+         * AttackSettingså´ã®æ–‡å­—åˆ—ã¯
+         * Triggeråã§ã¯ãªãBoolåã¨ã—ã¦æ‰±ã„ã¾ã™ã€‚
+         */
         if (!attackSettings.TryGetAttackSetting(
                 S1P3BossAttackType.DREAD_ATTACK,
                 out m_attackIdentifier,
-                out string animationTriggerName))
+                out string animationBoolName))
         {
             Debug.LogError(
-                $"{S1P3BossAttackType.DREAD_ATTACK}‚Ì" +
-                "UŒ‚İ’è‚ª‚ ‚è‚Ü‚¹‚ñB");
+                $"{S1P3BossAttackType.DREAD_ATTACK}ã®" +
+                "æ”»æ’ƒè¨­å®šãŒã‚ã‚Šã¾ã›ã‚“ã€‚");
 
             return false;
         }
 
         if (m_attackIdentifier == null ||
             string.IsNullOrEmpty(
-                animationTriggerName) ||
-            Owner.AnimationController == null ||
-            Owner.AnimationController
-                .CurrentAnimationEventReceiver == null)
+                animationBoolName) ||
+            Owner.AnimationController == null)
         {
             return false;
         }
 
-        m_animationTriggerId =
+        m_animationEventReceiver =
+            Owner.AnimationController
+                .CurrentAnimationEventReceiver;
+
+        if (m_animationEventReceiver == null)
+        {
+            return false;
+        }
+
+        m_animationBoolID =
             Animator.StringToHash(
-                animationTriggerName);
+                animationBoolName);
+
+        m_isAnimationInitialized =
+            true;
 
         return true;
     }
 
     /// <summary>
-    /// ƒhƒŒƒbƒg”òãÄ•¨‚Ìƒ_ƒ[ƒW‚ğæ“¾‚µ‚Ü‚·B
+    /// ãƒ‰ãƒ¬ãƒƒãƒˆé£›ç¿”ç‰©ã®ãƒ€ãƒ¡ãƒ¼ã‚¸ã‚’å–å¾—ã—ã¾ã™ã€‚
     /// </summary>
-    /// <param name="damage">æ“¾‚µ‚½ƒ_ƒ[ƒWB</param>
+    /// <param name="damage">
+    /// å–å¾—ã—ãŸãƒ€ãƒ¡ãƒ¼ã‚¸ã€‚
+    /// </param>
     /// <returns>
-    /// trueFæ“¾‚µ‚Ü‚µ‚½B
-    /// falseFæ“¾‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½B
+    /// trueï¼šå–å¾—ã—ã¾ã—ãŸã€‚
+    /// falseï¼šå–å¾—ã§ãã¾ã›ã‚“ã§ã—ãŸã€‚
     /// </returns>
     private bool TryGetProjectileDamage(
         out int damage)
     {
-        damage = 0;
+        damage =
+            0;
 
         S1BossAttackDamageParameterAsset parameterAsset =
-            m_references.AttackSettingsProvider.ParameterAsset;
+            m_references
+                .AttackSettingsProvider
+                .ParameterAsset;
 
         if (parameterAsset == null)
         {
             Debug.LogError(
-                "UŒ‚ƒ_ƒ[ƒWƒpƒ‰ƒ[ƒ^‚ªİ’è‚³‚ê‚Ä‚¢‚Ü‚¹‚ñB");
+                "æ”»æ’ƒãƒ€ãƒ¡ãƒ¼ã‚¸ãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿ãŒè¨­å®šã•ã‚Œã¦ã„ã¾ã›ã‚“ã€‚");
 
             return false;
         }
@@ -489,15 +736,17 @@ public sealed class S1P3BossDreadAttackState :
                     attackParameter))
         {
             Debug.LogError(
-                $"{m_attackIdentifier.name}‚Ì" +
-                "ƒ_ƒ[ƒWƒpƒ‰ƒ[ƒ^‚ª‚ ‚è‚Ü‚¹‚ñB");
+                $"{m_attackIdentifier.name}ã®" +
+                "ãƒ€ãƒ¡ãƒ¼ã‚¸ãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿ãŒã‚ã‚Šã¾ã›ã‚“ã€‚");
 
             return false;
         }
 
-        IReadOnlyList<HitboxDamageParameter<S1BossHitboxId>>
+        IReadOnlyList<
+            HitboxDamageParameter<S1BossHitboxId>>
             hitboxParameters =
-                attackParameter.HitboxDamageParameters;
+                attackParameter
+                    .HitboxDamageParameters;
 
         if (hitboxParameters == null)
         {
@@ -526,14 +775,14 @@ public sealed class S1P3BossDreadAttackState :
         }
 
         Debug.LogError(
-            $"{S1BossHitboxId.DREAD_PROJECTILE}‚Ì" +
-            "ƒ_ƒ[ƒWİ’è‚ª‚ ‚è‚Ü‚¹‚ñB");
+            $"{S1BossHitboxId.DREAD_PROJECTILE}ã®" +
+            "ãƒ€ãƒ¡ãƒ¼ã‚¸è¨­å®šãŒã‚ã‚Šã¾ã›ã‚“ã€‚");
 
         return false;
     }
 
     /// <summary>
-    /// AnimationEvent‚ğw“Ç‚µ‚Ü‚·B
+    /// AnimationEventã‚’è³¼èª­ã—ã¾ã™ã€‚
     /// </summary>
     private void SubscribeAnimationEvent()
     {
@@ -542,37 +791,47 @@ public sealed class S1P3BossDreadAttackState :
             return;
         }
 
-        Owner.AnimationController
-            .CurrentAnimationEventReceiver
-            .AttackEventReceived +=
-            HandleAttackEvent;
-
-        m_isAnimationEventSubscribed = true;
-    }
-
-    /// <summary>
-    /// AnimationEvent‚Ìw“Ç‚ğ‰ğœ‚µ‚Ü‚·B
-    /// </summary>
-    private void UnsubscribeAnimationEvent()
-    {
-        if (!m_isAnimationEventSubscribed ||
-            Owner.AnimationController == null ||
-            Owner.AnimationController
-                .CurrentAnimationEventReceiver == null)
+        if (m_animationEventReceiver == null)
         {
             return;
         }
 
-        Owner.AnimationController
-            .CurrentAnimationEventReceiver
-            .AttackEventReceived -=
+        m_animationEventReceiver.AttackEventReceived +=
             HandleAttackEvent;
 
-        m_isAnimationEventSubscribed = false;
+        m_isAnimationEventSubscribed =
+            true;
     }
 
     /// <summary>
-    /// ƒIƒCƒ‹ƒCƒxƒ“ƒg‚Ìw“Ç‚ğ‰ğœ‚µ‚Ü‚·B
+    /// AnimationEventã®è³¼èª­ã‚’è§£é™¤ã—ã¾ã™ã€‚
+    /// </summary>
+    private void UnsubscribeAnimationEvent()
+    {
+        if (!m_isAnimationEventSubscribed ||
+            m_animationEventReceiver == null)
+        {
+            return;
+        }
+
+        m_animationEventReceiver.AttackEventReceived -=
+            HandleAttackEvent;
+
+        m_isAnimationEventSubscribed =
+            false;
+
+        m_isAnimationInitialized =
+            false;
+
+        m_animationEventReceiver =
+            null;
+
+        m_stateElapsedTime =
+            0.0f;
+    }
+
+    /// <summary>
+    /// ã‚ªã‚¤ãƒ«ã‚¤ãƒ™ãƒ³ãƒˆã®è³¼èª­ã‚’è§£é™¤ã—ã¾ã™ã€‚
     /// </summary>
     private void UnsubscribeOilEvents()
     {
@@ -593,25 +852,24 @@ public sealed class S1P3BossDreadAttackState :
     }
 
     /// <summary>
-    /// ”òs’†‚ÌƒIƒCƒ‹‚ğ’â~‚µ‚Ü‚·B
+    /// é£›è¡Œä¸­ã®ã‚ªã‚¤ãƒ«ã‚’åœæ­¢ã—ã¾ã™ã€‚
     /// </summary>
     private void CancelFlyingOils()
     {
         foreach (S1P3OilController oilController
                  in m_spawnedOils)
         {
-            oilController?.Cancel();
+            oilController?
+                .Cancel();
         }
     }
 
     /// <summary>
-    /// ³íI—¹‚µ‚½s“®‚ÌƒN[ƒ‹ƒ^ƒCƒ€‚ğŠJn‚µ‚Ü‚·B
+    /// ãƒ‰ãƒ¬ãƒƒãƒˆæ”»æ’ƒã®ã‚¯ãƒ¼ãƒ«ã‚¿ã‚¤ãƒ ã‚’é–‹å§‹ã—ã¾ã™ã€‚
     /// </summary>
-    private void StartCoolTimeIfSucceeded()
+    private void StartCoolTime()
     {
         if (Owner == null ||
-            Owner.GetStateExecutionStatus() !=
-            StateExecutionStatus.SUCCEEDED ||
             m_references == null ||
             m_references.DecisionParameterAsset == null)
         {
@@ -619,42 +877,100 @@ public sealed class S1P3BossDreadAttackState :
         }
 
         BossStateCoolTimeManager coolTimeManager =
-            Owner.GetComponent<BossStateCoolTimeManager>();
+            Owner.GetComponent<
+                BossStateCoolTimeManager>();
 
         if (coolTimeManager == null)
         {
             return;
         }
 
-        coolTimeManager.StartCoolTime<S1P3BossDreadAttackState>(
-            m_references.DecisionParameterAsset
-                .DreadAttack
-                .CoolTime);
+        coolTimeManager
+            .StartCoolTime<
+                S1P3BossDreadAttackState>(
+                m_references
+                    .DecisionParameterAsset
+                    .DreadAttack
+                    .CoolTime);
     }
 
     /// <summary>
-    /// ó‘Ô‚ğ¸”sI—¹‚µ‚Ü‚·B
+    /// çŠ¶æ…‹ã‚’å¤±æ•—çµ‚äº†ã—ã¾ã™ã€‚
     /// </summary>
     private void FailState()
     {
-        Owner.SetStateExecutionStatus(
+        UnsubscribeAnimationEvent();
+        UnsubscribeOilEvents();
+        CancelFlyingOils();
+
+        if (m_isAnimationInitialized &&
+            Owner?.AnimationController != null)
+        {
+            Owner.AnimationController.SetBool(
+                m_animationBoolID,
+                false);
+        }
+
+        Owner?.SetStateExecutionStatus(
             StateExecutionStatus.FAILED);
     }
 
     /// <summary>
-    /// Àsî•ñ‚ğ‰Šú‰»‚µ‚Ü‚·B
+    /// å®Ÿè¡Œæ™‚æƒ…å ±ã‚’åˆæœŸåŒ–ã—ã¾ã™ã€‚
     /// </summary>
     private void ResetRuntimeState()
     {
         m_spawnedOils.Clear();
 
-        m_launchedOilCount = 0;
-        m_landedOilCount = 0;
+        m_nextLaunchPointIndex =
+            0;
 
-        m_hasLaunched = false;
-        m_isWaitingFinish = false;
-        m_finishElapsedTime = 0.0f;
+        m_launchedOilCount =
+            0;
 
-        m_isAnimationEventSubscribed = false;
+        m_landedOilCount =
+            0;
+
+        m_hasFinishedLaunching =
+            false;
+
+        m_isWaitingFinish =
+            false;
+
+        m_finishElapsedTime =
+            0.0f;
+
+        m_isAnimationEventSubscribed =
+            false;
+    }
+
+    /// <summary>
+    /// ç¾åœ¨ãƒ•ã‚§ãƒ¼ã‚ºã®Animation Timelineç®¡ç†ã‚’ä¿æŒã—ã¾ã™ã€‚
+    /// </summary>
+    private void CacheAnimationTimelineController()
+    {
+        m_animationTimelineController =
+            null;
+
+        if (Owner?.PhaseController == null)
+        {
+            return;
+        }
+
+        Owner.PhaseController
+            .TryGetCurrentPhaseComponent(
+                out m_animationTimelineController);
+    }
+
+    /// <summary>
+    /// Stateä¸­ã«å†ç”Ÿã•ã‚ŒãŸAnimation Timelineã‚’åœæ­¢ã—ã¾ã™ã€‚
+    /// </summary>
+    private void StopAnimationTimelines()
+    {
+        m_animationTimelineController?
+            .StopAll();
+
+        m_animationTimelineController =
+            null;
     }
 }

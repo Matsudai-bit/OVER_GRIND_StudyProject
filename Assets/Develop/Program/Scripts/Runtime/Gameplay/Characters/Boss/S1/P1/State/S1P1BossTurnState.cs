@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 /// <summary>
 /// ステージ1フェーズ1の方向転換を実行します。
@@ -6,15 +6,57 @@ using UnityEngine;
 public sealed class S1P1BossTurnState :
     StateBase<BossController>
 {
-    // Animatorパラメータ名
-    private const string TURN_PARAMETER_NAME = "Turn";
+    // State中に使用するAnimation Timeline管理
+    private AnimationTimelineController m_animationTimelineController;
 
-    // AnimatorパラメータID
-    private static readonly int TURN_PARAMETER_ID =
-        Animator.StringToHash(TURN_PARAMETER_NAME);
+    // 1回の方向転換で回転する角度
+    private const float TURN_ANGLE = 45.0f;
+
+    // AnimationEvent待機の猶予時間
+    private const float ANIMATION_TIMEOUT_MARGIN = 2.0f;
+
+    // Animator Trigger名
+    private const string TURN_RIGHT_PARAMETER_NAME =
+        "Turn_Right";
+
+    private const string TURN_LEFT_PARAMETER_NAME =
+        "Turn_Left";
+
+    // Animator Trigger ID
+    private static readonly int TURN_RIGHT_PARAMETER_ID =
+        Animator.StringToHash(
+            TURN_RIGHT_PARAMETER_NAME);
+
+    private static readonly int TURN_LEFT_PARAMETER_ID =
+        Animator.StringToHash(
+            TURN_LEFT_PARAMETER_NAME);
+
+    /// <summary>
+    /// 方向転換の左右を表します。
+    /// </summary>
+    private enum TurnDirection
+    {
+        RIGHT,
+        LEFT
+    }
+
+    // 開始回転
+    private Quaternion m_startRotation;
 
     // 目標回転
     private Quaternion m_targetRotation;
+
+    // 回転方向
+    private TurnDirection m_turnDirection;
+
+    // Animation経過時間
+    private float m_animationElapsedTime;
+
+    // Animation時間
+    private float m_animationDuration;
+
+    // Animationが開始されたか
+    private bool m_isAnimationStarted;
 
     // S1P1固有参照
     private S1P1BossReferences m_references;
@@ -22,77 +64,141 @@ public sealed class S1P1BossTurnState :
     // フェーズ共通参照
     private BossPhaseReferences m_commonReferences;
 
-    // 方向転換状態パラメータ
+    // 方向転換パラメータ
     private S1P1BossTurnStateParameters m_parameters;
+
+    // AnimationEvent受信
+    private AnimationEventReceiver m_animationEventReceiver;
+
+    // State開始からの経過時間
+    private float m_stateElapsedTime;
 
     /// <summary>
     /// 方向転換を開始します。
     /// </summary>
     protected override void OnStartState()
     {
-        if (!TryGetReferences())
-        {
-            Owner.SetStateExecutionStatus(
-                StateExecutionStatus.FAILED);
+        CacheAnimationTimelineController();
 
+        ResetRuntimeState();
+
+        if (!TryGetReferences() ||
+            Owner.Motor == null ||
+            Owner.AnimationController == null)
+        {
+            SetImmediateFailed();
             return;
         }
 
-        Vector3 turnDirection =
+        Vector3 targetDirection =
             GetTurnDirection();
 
-        if (turnDirection.sqrMagnitude <=
+        if (targetDirection.sqrMagnitude <=
             Mathf.Epsilon)
         {
-            Owner.SetStateExecutionStatus(
-                StateExecutionStatus.FAILED);
-
+            SetImmediateFailed();
             return;
         }
 
-        m_targetRotation =
-            Quaternion.LookRotation(
-                turnDirection,
-                Vector3.up);
+        m_startRotation =
+            Owner.transform.rotation;
 
-        Owner.AnimationController?.SetBool(
-            TURN_PARAMETER_ID,
-            true);
+        if (!TryCalculateTargetRotation(
+                targetDirection))
+        {
+            SetImmediateFailed();
+            return;
+        }
+
+        if (!PrepareAnimation())
+        {
+            SetImmediateFailed();
+            return;
+        }
+
+        Owner.Motor.StopHorizontalMovement();
 
         Owner.SetStateExecutionStatus(
             StateExecutionStatus.RUNNING);
+
+        PlayTurnAnimation();
     }
 
     /// <summary>
-    /// 方向転換を更新します。
+    /// AnimationEvent待機のタイムアウトを監視します。
+    /// </summary>
+    /// <param name="deltaTime">前フレームからの経過時間。</param>
+    protected override void OnUpdate(
+        float deltaTime)
+    {
+        if (Owner == null ||
+            Owner.GetStateExecutionStatus() !=
+                StateExecutionStatus.RUNNING)
+        {
+            return;
+        }
+
+        m_stateElapsedTime +=
+            Mathf.Max(
+                0.0f,
+                deltaTime);
+
+        if (m_stateElapsedTime <
+            m_animationDuration +
+            ANIMATION_TIMEOUT_MARGIN)
+        {
+            return;
+        }
+
+        Debug.LogError(
+            $"[{nameof(S1P1BossTurnState)}] " +
+            "方向転換Animationがタイムアウトしました。");
+
+        SetImmediateFailed();
+    }
+
+    /// <summary>
+    /// Animationに同期して方向転換を更新します。
     /// </summary>
     protected override void OnFixedUpdate()
     {
-        if (Owner.Motor == null ||
-            m_parameters == null)
+        if (Owner == null ||
+            Owner.GetStateExecutionStatus() !=
+                StateExecutionStatus.RUNNING ||
+            !m_isAnimationStarted ||
+            m_parameters == null ||
+            Owner.Motor == null ||
+            m_animationDuration <= Mathf.Epsilon)
         {
-            Owner.SetStateExecutionStatus(
-                StateExecutionStatus.FAILED);
-
             return;
         }
 
-        bool hasReachedTarget =
-            Owner.Motor.RotateTowards(
+        m_animationElapsedTime +=
+            Time.fixedDeltaTime;
+
+        float normalizedTime =
+            Mathf.Clamp01(
+                m_animationElapsedTime /
+                m_animationDuration);
+
+        float easedTime =
+            Mathf.Clamp01(
+                m_parameters
+                    .RotationEasingCurve
+                    .Evaluate(
+                        normalizedTime));
+
+        Quaternion rotation =
+            Quaternion.Slerp(
+                m_startRotation,
                 m_targetRotation,
-                m_parameters.RotationSpeed,
-                Time.fixedDeltaTime);
+                easedTime);
 
-        if (!hasReachedTarget)
-        {
-            return;
-        }
+        Owner.Motor.MoveRotation(
+            rotation);
 
-        Owner.SetStateExecutionStatus(
-            StateExecutionStatus.SUCCEEDED);
-
-        // 方向転換後はそのまま歩行へ移行する
-        Machine.ChangeState<S1P1BossWalkState>();
+        // 補間が完了してもStateは終了しない。
+        // ANIMATION_ENDまでRUNNINGを維持する。
     }
 
     /// <summary>
@@ -100,12 +206,17 @@ public sealed class S1P1BossTurnState :
     /// </summary>
     protected override void OnExitState()
     {
-        StartCoolTimeIfSucceeded();
+        StopAnimationTimelines();
 
-        Owner.AnimationController?.SetBool(
-            TURN_PARAMETER_ID,
-            false);
+        Owner.Motor?.StopHorizontalMovement();
 
+        if (m_animationEventReceiver != null)
+        {
+            m_animationEventReceiver.AttackEventReceived -=
+                HandleAnimationEvent;
+        }
+
+        // 強制的にStateを抜けた場合は失敗として扱う
         if (Owner.GetStateExecutionStatus() ==
             StateExecutionStatus.RUNNING)
         {
@@ -116,6 +227,144 @@ public sealed class S1P1BossTurnState :
         m_references = null;
         m_commonReferences = null;
         m_parameters = null;
+        m_animationEventReceiver = null;
+
+        ResetRuntimeState();
+    }
+
+    /// <summary>
+    /// 使用する方向転換Animationを準備します。
+    /// </summary>
+    /// <returns>
+    /// true：準備できました。
+    /// false：必要な設定がありません。
+    /// </returns>
+    private bool PrepareAnimation()
+    {
+        AnimationClip animationClip =
+            m_turnDirection ==
+            TurnDirection.RIGHT
+                ? m_parameters.RightTurnAnimationClip
+                : m_parameters.LeftTurnAnimationClip;
+
+        if (animationClip == null ||
+            animationClip.length <=
+            Mathf.Epsilon)
+        {
+            return false;
+        }
+
+        m_animationDuration =
+            animationClip.length;
+
+        m_animationEventReceiver =
+            Owner.AnimationController
+                .CurrentAnimationEventReceiver;
+
+        if (m_animationEventReceiver == null)
+        {
+            return false;
+        }
+
+        m_animationEventReceiver.AttackEventReceived +=
+            HandleAnimationEvent;
+
+        return true;
+    }
+
+    /// <summary>
+    /// 左右に対応した方向転換Animationを再生します。
+    /// </summary>
+    private void PlayTurnAnimation()
+    {
+        int triggerID =
+            m_turnDirection ==
+            TurnDirection.RIGHT
+                ? TURN_RIGHT_PARAMETER_ID
+                : TURN_LEFT_PARAMETER_ID;
+
+        Owner.AnimationController.SetTrigger(
+            triggerID);
+    }
+
+    /// <summary>
+    /// AnimationEventを処理します。
+    /// </summary>
+    /// <param name="attackEventData">
+    /// AnimationEvent情報。
+    /// </param>
+    private void HandleAnimationEvent(
+        AttackEventData attackEventData)
+    {
+        if (attackEventData == null ||
+            Owner == null ||
+            Owner.GetStateExecutionStatus() !=
+                StateExecutionStatus.RUNNING)
+        {
+            return;
+        }
+
+        switch (attackEventData.AttackEventType)
+        {
+            case AttackEventType.ANIMATION_START:
+                StartTurning();
+                break;
+
+            case AttackEventType.ANIMATION_END:
+                FinishTurning();
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Animationに同期した方向転換を開始します。
+    /// </summary>
+    private void StartTurning()
+    {
+        m_animationElapsedTime = 0.0f;
+        m_isAnimationStarted = true;
+    }
+
+    /// <summary>
+    /// Animation終了時に方向転換を完了します。
+    /// </summary>
+    private void FinishTurning()
+    {
+        if (Owner == null ||
+            Owner.GetStateExecutionStatus() !=
+                StateExecutionStatus.RUNNING)
+        {
+            return;
+        }
+
+        if (!m_isAnimationStarted)
+        {
+            Debug.LogError(
+                $"[{nameof(S1P1BossTurnState)}] " +
+                "ANIMATION_STARTを受信する前にANIMATION_ENDを受信しました。");
+
+            SetImmediateFailed();
+
+            return;
+        }
+
+        m_isAnimationStarted = false;
+
+        // FixedUpdateとAnimation終了タイミングの誤差を補正し、
+        // 最終的に必ず45度回転した状態にする
+        Owner.Motor?.MoveRotation(
+            m_targetRotation);
+
+        /*
+         * SUCCEEDEDへ変更する前にクールタイムを登録します。
+         */
+        StartCoolTime();
+
+        Owner.SetStateExecutionStatus(
+            StateExecutionStatus.SUCCEEDED);
+
+        // 方向転換後は歩行へ移行
+        Machine.ChangeState<S1P1BossWalkState>();
     }
 
     /// <summary>
@@ -132,16 +381,17 @@ public sealed class S1P1BossTurnState :
             return false;
         }
 
-        if (!Owner.PhaseController.TryGetCurrentPhaseComponent(
-                out m_references) ||
-            !Owner.PhaseController.TryGetCurrentPhaseComponent(
-                out m_commonReferences))
+        if (!Owner.PhaseController
+                .TryGetCurrentPhaseComponent(
+                    out m_references) ||
+            !Owner.PhaseController
+                .TryGetCurrentPhaseComponent(
+                    out m_commonReferences))
         {
             return false;
         }
 
-        if (m_references.StateParameterAsset == null ||
-            !m_references.StateParameterAsset.HasRequiredParameters())
+        if (m_references.StateParameterAsset == null)
         {
             return false;
         }
@@ -150,16 +400,16 @@ public sealed class S1P1BossTurnState :
             m_references.StateParameterAsset.Turn;
 
         return m_parameters != null &&
+               m_parameters.HasRequiredParameters() &&
                m_commonReferences.Origin != null;
     }
 
     /// <summary>
     /// 正常終了した方向転換のクールタイムを開始します。
     /// </summary>
-    private void StartCoolTimeIfSucceeded()
+    private void StartCoolTime()
     {
-        if (Owner.GetStateExecutionStatus() !=
-            StateExecutionStatus.SUCCEEDED ||
+        if (Owner == null ||
             m_references == null ||
             m_references.DecisionParameterAsset == null)
         {
@@ -175,13 +425,17 @@ public sealed class S1P1BossTurnState :
         }
 
         coolTimeManager.StartCoolTime<S1P1BossTurnState>(
-            m_references.DecisionParameterAsset.Turn.CoolTime);
+            m_references.DecisionParameterAsset
+                .Turn
+                .CoolTime);
     }
 
     /// <summary>
-    /// 方向転換する方向を取得します。
+    /// 方向転換する対象方向を取得します。
     /// </summary>
-    /// <returns>方向転換する方向。</returns>
+    /// <returns>
+    /// 方向転換の基準となる方向。
+    /// </returns>
     private Vector3 GetTurnDirection()
     {
         BossNavMeshFootprint bossNavMeshFootprint =
@@ -198,6 +452,8 @@ public sealed class S1P1BossTurnState :
             return Vector3.zero;
         }
 
+        // NavMeshからはみ出している場合は
+        // NavMesh内側への方向を優先する
         if (bossNavMeshFootprint != null &&
             Owner.Navigation != null &&
             !Owner.Navigation.IsFootprintInsideNavMesh(
@@ -211,9 +467,10 @@ public sealed class S1P1BossTurnState :
             }
         }
 
+        // 通常時はPlayer方向を使用する
         if (playerTransform == null)
         {
-            return originTransform.forward;
+            return Vector3.zero;
         }
 
         Vector3 playerDirection =
@@ -225,9 +482,137 @@ public sealed class S1P1BossTurnState :
         if (playerDirection.sqrMagnitude <=
             Mathf.Epsilon)
         {
-            return originTransform.forward;
+            return Vector3.zero;
         }
 
         return playerDirection.normalized;
+    }
+
+    /// <summary>
+    /// 対象がいる左右を判定し、
+    /// 固定45度の目標回転を計算します。
+    /// </summary>
+    /// <param name="targetDirection">
+    /// 回転方向を決定する対象方向。
+    /// </param>
+    /// <returns>
+    /// true：目標回転を計算できました。
+    /// false：方向を決定できませんでした。
+    /// </returns>
+    private bool TryCalculateTargetRotation(
+        Vector3 targetDirection)
+    {
+        Vector3 currentForward =
+            m_commonReferences.Origin.forward;
+
+        currentForward.y = 0.0f;
+        targetDirection.y = 0.0f;
+
+        if (currentForward.sqrMagnitude <=
+                Mathf.Epsilon ||
+            targetDirection.sqrMagnitude <=
+                Mathf.Epsilon)
+        {
+            return false;
+        }
+
+        currentForward.Normalize();
+        targetDirection.Normalize();
+
+        float signedAngle =
+            Vector3.SignedAngle(
+                currentForward,
+                targetDirection,
+                Vector3.up);
+
+        if (Mathf.Abs(signedAngle) <=
+            Mathf.Epsilon)
+        {
+            return false;
+        }
+
+        m_turnDirection =
+            signedAngle > 0.0f
+                ? TurnDirection.RIGHT
+                : TurnDirection.LEFT;
+
+        float turnAngle =
+            m_turnDirection ==
+            TurnDirection.RIGHT
+                ? TURN_ANGLE
+                : -TURN_ANGLE;
+
+        m_targetRotation =
+            Quaternion.AngleAxis(
+                turnAngle,
+                Vector3.up) *
+            m_startRotation;
+
+        return true;
+    }
+
+    /// <summary>
+    /// Runtime状態を初期化します。
+    /// </summary>
+    private void ResetRuntimeState()
+    {
+        m_startRotation =
+            Quaternion.identity;
+
+        m_targetRotation =
+            Quaternion.identity;
+
+        m_animationElapsedTime =
+            0.0f;
+
+        m_animationDuration =
+            0.0f;
+
+        m_isAnimationStarted =
+            false;
+
+        m_stateElapsedTime =
+            0.0f;
+    }
+
+    /// <summary>
+    /// Animation開始前の設定不備として失敗させます。
+    /// </summary>
+    private void SetImmediateFailed()
+    {
+        Owner.Motor?.StopHorizontalMovement();
+
+        Owner.SetStateExecutionStatus(
+            StateExecutionStatus.FAILED);
+    }
+
+    /// <summary>
+    /// 現在フェーズのAnimation Timeline管理を保持します。
+    /// </summary>
+    private void CacheAnimationTimelineController()
+    {
+        m_animationTimelineController =
+            null;
+
+        if (Owner?.PhaseController == null)
+        {
+            return;
+        }
+
+        Owner.PhaseController
+            .TryGetCurrentPhaseComponent(
+                out m_animationTimelineController);
+    }
+
+    /// <summary>
+    /// State中に再生されたAnimation Timelineを停止します。
+    /// </summary>
+    private void StopAnimationTimelines()
+    {
+        m_animationTimelineController?
+            .StopAll();
+
+        m_animationTimelineController =
+            null;
     }
 }

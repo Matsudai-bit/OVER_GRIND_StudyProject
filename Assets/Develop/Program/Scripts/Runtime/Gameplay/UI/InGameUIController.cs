@@ -26,6 +26,10 @@ public sealed class InGameUIController : MonoBehaviour
     [SerializeField]
     private GameObject m_gameOverRoot;
 
+    // ポーズウィンドウ管理
+    [SerializeField, Header("ポーズUI")]
+    private UIWindowManager m_pauseWindowManager;
+
     // ゲーム進行状態変更イベント
     [SerializeField, Header("ゲーム状態イベント")]
     private GameFlowStateChangedEvent m_gameFlowStateChangedEvent;
@@ -51,7 +55,7 @@ public sealed class InGameUIController : MonoBehaviour
 
     private void Awake()
     {
-        HideAll();
+        HideInGameUI();
     }
 
     private void OnEnable()
@@ -67,7 +71,9 @@ public sealed class InGameUIController : MonoBehaviour
     /// <summary>
     /// HUDの表示状態を設定します。
     /// </summary>
-    /// <param name="isVisible">表示するか。</param>
+    /// <param name="isVisible">
+    /// 表示するか。
+    /// </param>
     public void SetHudVisible(bool isVisible)
     {
         SetRootActive(
@@ -78,7 +84,9 @@ public sealed class InGameUIController : MonoBehaviour
     /// <summary>
     /// チュートリアルUIの表示状態を設定します。
     /// </summary>
-    /// <param name="isVisible">表示するか。</param>
+    /// <param name="isVisible">
+    /// 表示するか。
+    /// </param>
     public void SetTutorialVisible(bool isVisible)
     {
         SetRootActive(
@@ -89,7 +97,9 @@ public sealed class InGameUIController : MonoBehaviour
     /// <summary>
     /// 独り言・セリフUIの表示状態を設定します。
     /// </summary>
-    /// <param name="isVisible">表示するか。</param>
+    /// <param name="isVisible">
+    /// 表示するか。
+    /// </param>
     public void SetDialogueVisible(bool isVisible)
     {
         SetRootActive(
@@ -100,7 +110,9 @@ public sealed class InGameUIController : MonoBehaviour
     /// <summary>
     /// リザルトUIの表示状態を設定します。
     /// </summary>
-    /// <param name="isVisible">表示するか。</param>
+    /// <param name="isVisible">
+    /// 表示するか。
+    /// </param>
     public void SetResultVisible(bool isVisible)
     {
         SetRootActive(
@@ -111,7 +123,9 @@ public sealed class InGameUIController : MonoBehaviour
     /// <summary>
     /// ゲームオーバーUIの表示状態を設定します。
     /// </summary>
-    /// <param name="isVisible">表示するか。</param>
+    /// <param name="isVisible">
+    /// 表示するか。
+    /// </param>
     public void SetGameOverVisible(bool isVisible)
     {
         SetRootActive(
@@ -120,9 +134,9 @@ public sealed class InGameUIController : MonoBehaviour
     }
 
     /// <summary>
-    /// インゲームUIをすべて非表示にします。
+    /// 通常のインゲームUIをすべて非表示にします。
     /// </summary>
-    public void HideAll()
+    public void HideInGameUI()
     {
         SetHudVisible(false);
         SetTutorialVisible(false);
@@ -141,17 +155,35 @@ public sealed class InGameUIController : MonoBehaviour
             m_gameFlowStateChangedEvent.RegisterListener(
                 OnGameFlowStateChanged);
         }
+        else
+        {
+            Debug.LogWarning(
+                $"{nameof(GameFlowStateChangedEvent)} が設定されていません。",
+                this);
+        }
 
         if (m_gameplayModeChangedEvent != null)
         {
             m_gameplayModeChangedEvent.RegisterListener(
                 OnGameplayModeChanged);
         }
+        else
+        {
+            Debug.LogWarning(
+                $"{nameof(GameplayModeChangedEvent)} が設定されていません。",
+                this);
+        }
 
         if (m_pauseChangedEvent != null)
         {
             m_pauseChangedEvent.RegisterListener(
                 OnPauseChanged);
+        }
+        else
+        {
+            Debug.LogWarning(
+                $"{nameof(PauseChangedEvent)} が設定されていません。",
+                this);
         }
     }
 
@@ -182,7 +214,9 @@ public sealed class InGameUIController : MonoBehaviour
     /// <summary>
     /// ゲーム進行状態の変更を受け取ります。
     /// </summary>
-    /// <param name="eventData">ゲーム進行状態変更情報。</param>
+    /// <param name="eventData">
+    /// ゲーム進行状態変更情報。
+    /// </param>
     private void OnGameFlowStateChanged(
         GameFlowStateChangedEventData eventData)
     {
@@ -195,7 +229,9 @@ public sealed class InGameUIController : MonoBehaviour
     /// <summary>
     /// ゲームプレイモードの変更を受け取ります。
     /// </summary>
-    /// <param name="eventData">ゲームプレイモード変更情報。</param>
+    /// <param name="eventData">
+    /// ゲームプレイモード変更情報。
+    /// </param>
     private void OnGameplayModeChanged(
         GameplayModeChangedEventData eventData)
     {
@@ -208,13 +244,59 @@ public sealed class InGameUIController : MonoBehaviour
     /// <summary>
     /// ポーズ状態の変更を受け取ります。
     /// </summary>
-    /// <param name="eventData">ポーズ状態変更情報。</param>
+    /// <param name="eventData">
+    /// ポーズ状態変更情報。
+    /// </param>
     private void OnPauseChanged(
         PauseChangedEventData eventData)
     {
         m_isPaused = eventData.IsPaused;
 
-        ApplyVisibility();
+        if (m_isPaused)
+        {
+            EnterPause();
+            return;
+        }
+
+        ExitPause();
+    }
+
+    /// <summary>
+    /// ポーズ状態へ移行します。
+    /// </summary>
+    private void EnterPause()
+    {
+        // 通常のインゲームUIは隠す
+        HideInGameUI();
+
+        if (m_pauseWindowManager == null)
+        {
+            Debug.LogWarning(
+                $"{nameof(UIWindowManager)} が設定されていません。",
+                this);
+
+            return;
+        }
+
+        m_pauseWindowManager.OpenInitialWindow();
+    }
+
+    /// <summary>
+    /// ポーズ状態を終了します。
+    /// </summary>
+    private void ExitPause()
+    {
+        if (m_pauseWindowManager == null)
+        {
+            // WindowManagerが無くても通常UIは復帰させる
+            ApplyVisibility();
+            return;
+        }
+
+        // ポーズWindowの終了演出が完了してから
+        // 通常ゲームUIを復帰させる
+        m_pauseWindowManager.CloseAllWindows(
+            ApplyVisibility);
     }
 
     /// <summary>
@@ -222,10 +304,10 @@ public sealed class InGameUIController : MonoBehaviour
     /// </summary>
     private void ApplyVisibility()
     {
-        // ポーズ中はインゲームUIを非表示
+        // PauseWindowの表示はOnPauseChanged側で管理する
         if (m_isPaused)
         {
-            HideAll();
+            HideInGameUI();
             return;
         }
 
@@ -247,7 +329,7 @@ public sealed class InGameUIController : MonoBehaviour
             case GameFlowStateType.ENDING:
             case GameFlowStateType.NONE:
             default:
-                HideAll();
+                HideInGameUI();
                 break;
         }
     }
@@ -273,7 +355,7 @@ public sealed class InGameUIController : MonoBehaviour
 
             case GameplayModeType.NONE:
             default:
-                HideAll();
+                HideInGameUI();
                 break;
         }
     }
@@ -283,7 +365,7 @@ public sealed class InGameUIController : MonoBehaviour
     /// </summary>
     private void ApplyNormalVisibility()
     {
-        HideAll();
+        HideInGameUI();
 
         SetHudVisible(true);
         SetTutorialVisible(true);
@@ -295,9 +377,9 @@ public sealed class InGameUIController : MonoBehaviour
     /// </summary>
     private void ApplyCinematicVisibility()
     {
-        HideAll();
+        HideInGameUI();
 
-        // カットシーン中の字幕・セリフ表示は許可
+        // カットシーン中は字幕・セリフ表示を許可
         SetDialogueVisible(true);
     }
 
@@ -306,9 +388,9 @@ public sealed class InGameUIController : MonoBehaviour
     /// </summary>
     private void ApplyQteVisibility()
     {
-        HideAll();
+        HideInGameUI();
 
-        // QTE中もセリフ表示は許可
+        // QTE中もセリフ表示を許可
         SetDialogueVisible(true);
     }
 
@@ -317,7 +399,7 @@ public sealed class InGameUIController : MonoBehaviour
     /// </summary>
     private void ApplyResultVisibility()
     {
-        HideAll();
+        HideInGameUI();
 
         SetResultVisible(true);
     }
@@ -327,7 +409,7 @@ public sealed class InGameUIController : MonoBehaviour
     /// </summary>
     private void ApplyGameOverVisibility()
     {
-        HideAll();
+        HideInGameUI();
 
         SetGameOverVisible(true);
     }
@@ -335,8 +417,12 @@ public sealed class InGameUIController : MonoBehaviour
     /// <summary>
     /// GameObjectの表示状態を設定します。
     /// </summary>
-    /// <param name="root">対象のGameObject。</param>
-    /// <param name="isActive">表示するか。</param>
+    /// <param name="root">
+    /// 対象のGameObject。
+    /// </param>
+    /// <param name="isActive">
+    /// 表示するか。
+    /// </param>
     private void SetRootActive(
         GameObject root,
         bool isActive)

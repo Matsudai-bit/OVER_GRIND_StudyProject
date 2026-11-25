@@ -1,13 +1,19 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
 /// <summary>
-/// ƒXƒe[ƒW1ƒtƒF[ƒY1‚Ì”r”MUŒ‚‚ğÀs‚µ‚Ü‚·B
+/// ã‚¹ãƒ†ãƒ¼ã‚¸1ãƒ•ã‚§ãƒ¼ã‚º1ã®æ’ç†±æ”»æ’ƒã‚’å®Ÿè¡Œã—ã¾ã™ã€‚
 /// </summary>
 public sealed class S1P1BossHeatVentState :
     StateBase<BossController>
 {
+    // Stateä¸­ã«ä½¿ç”¨ã™ã‚‹Animation Timelineç®¡ç†
+    private AnimationTimelineController m_animationTimelineController;
+
+    // AnimationEventå¾…æ©Ÿã«ã‚ˆã‚‹æ°¸ä¹…åœæ­¢ã‚’é˜²ãä¸Šé™æ™‚é–“
+    private const float MAX_STATE_DURATION = 15.0f;
+
     /// <summary>
-    /// ”r”MUŒ‚‚Ìisó‘Ô‚Å‚·B
+    /// æ’ç†±æ”»æ’ƒã®é€²è¡ŒçŠ¶æ…‹ã§ã™ã€‚
     /// </summary>
     private enum HeatExhaustState
     {
@@ -17,109 +23,161 @@ public sealed class S1P1BossHeatVentState :
         ENDING
     }
 
-    // UŒ‚ID
+    // æ”»æ’ƒID
     private AttackIdentifier m_attackIdentifier;
 
     // Animator Trigger ID
     private int m_animationTriggerID;
 
-    // Œ»İ‚Ì”r”MUŒ‚ó‘Ô
+    // ç¾åœ¨ã®æ’ç†±æ”»æ’ƒçŠ¶æ…‹
     private HeatExhaustState m_currentState;
 
-    // S1P1ŒÅ—LQÆ
+    // S1P1å›ºæœ‰å‚ç…§
     private S1P1BossReferences m_references;
 
-    // ”r”Mó‘Ôƒpƒ‰ƒ[ƒ^
+    // æ’ç†±çŠ¶æ…‹ãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿
     private S1P1BossHeatVentStateParameters m_parameters;
 
-    // AnimationEventóM
+    // AnimationEventå—ä¿¡
     private AnimationEventReceiver m_animationEventReceiver;
 
+    // Stateé–‹å§‹ã‹ã‚‰ã®çµŒéæ™‚é–“
+    private float m_stateElapsedTime;
+
+    // AnimationEventè³¼èª­ä¸­ã‹
+    private bool m_isAnimationEventRegistered;
+
     /// <summary>
-    /// ”r”MUŒ‚‚ğŠJn‚µ‚Ü‚·B
+    /// æ’ç†±æ”»æ’ƒã‚’é–‹å§‹ã—ã¾ã™ã€‚
     /// </summary>
     protected override void OnStartState()
     {
-        m_currentState =
-            HeatExhaustState.NONE;
+        CacheAnimationTimelineController();
 
-        Owner.Motor?.StopHorizontalMovement();
+        ResetRuntimeState();
+
+        Owner?.Motor?
+            .StopHorizontalMovement();
 
         if (!TryGetParameters())
         {
             Debug.LogError(
-                "”r”Mó‘Ô‚Ìƒpƒ‰ƒ[ƒ^‚ğæ“¾‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½B");
+                $"[{nameof(S1P1BossHeatVentState)}] " +
+                "æ’ç†±çŠ¶æ…‹ã®ãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿ã‚’å–å¾—ã§ãã¾ã›ã‚“ã§ã—ãŸã€‚");
 
-            Owner.SetStateExecutionStatus(
-                StateExecutionStatus.FAILED);
+            SetFailed();
 
             return;
         }
 
-        if (!ApplyAttackSetting())
+        if (!TryGetAttackSetting())
         {
             Debug.LogError(
-                "”r”MUŒ‚‚ğŠJn‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½B");
+                $"[{nameof(S1P1BossHeatVentState)}] " +
+                "æ’ç†±æ”»æ’ƒã®è¨­å®šã‚’å–å¾—ã§ãã¾ã›ã‚“ã§ã—ãŸã€‚");
 
-            Owner.SetStateExecutionStatus(
-                StateExecutionStatus.FAILED);
+            SetFailed();
 
             return;
         }
+
+        RegisterAnimationEvent();
 
         m_currentState =
             HeatExhaustState.PREPARATION;
 
+        /*
+         * AnimationEventå´ã§ã¯RUNNINGã®ã¿å‡¦ç†ã™ã‚‹ãŸã‚ã€
+         * Triggerã‚’ç™ºç«ã™ã‚‹å‰ã«RUNNINGã¸å¤‰æ›´ã—ã¾ã™ã€‚
+         */
         Owner.SetStateExecutionStatus(
             StateExecutionStatus.RUNNING);
+
+        Owner.AnimationController.SetTrigger(
+            m_animationTriggerID);
     }
 
     /// <summary>
-    /// ”r”MUŒ‚‚ğI—¹‚µ‚Ü‚·B
+    /// AnimationEventå¾…æ©Ÿã®ã‚¿ã‚¤ãƒ ã‚¢ã‚¦ãƒˆã‚’ç›£è¦–ã—ã¾ã™ã€‚
+    /// </summary>
+    /// <param name="deltaTime">å‰ãƒ•ãƒ¬ãƒ¼ãƒ ã‹ã‚‰ã®çµŒéæ™‚é–“ã€‚</param>
+    protected override void OnUpdate(
+        float deltaTime)
+    {
+        if (Owner == null ||
+            Owner.GetStateExecutionStatus() !=
+                StateExecutionStatus.RUNNING)
+        {
+            return;
+        }
+
+        m_stateElapsedTime +=
+            Mathf.Max(
+                0.0f,
+                deltaTime);
+
+        if (m_stateElapsedTime <
+            MAX_STATE_DURATION)
+        {
+            return;
+        }
+
+        Debug.LogError(
+            $"[{nameof(S1P1BossHeatVentState)}] " +
+            "AnimationEventå¾…æ©ŸãŒã‚¿ã‚¤ãƒ ã‚¢ã‚¦ãƒˆã—ã¾ã—ãŸã€‚");
+
+        SetFailed();
+    }
+
+    /// <summary>
+    /// æ’ç†±æ”»æ’ƒã‚’çµ‚äº†ã—ã¾ã™ã€‚
     /// </summary>
     protected override void OnExitState()
     {
-        StartCoolTimeIfSucceeded();
+        StopAnimationTimelines();
 
-        if (m_animationEventReceiver != null)
-        {
-            m_animationEventReceiver.AttackEventReceived -=
-                HandleAttackEvent;
-        }
+        UnregisterAnimationEvent();
 
-        if (m_attackIdentifier != null)
-        {
-            Owner.AttackHitboxRegistry?.DisableHitboxes(
-                m_attackIdentifier);
-        }
+        DisableAttackHitboxes();
 
         m_currentState =
             HeatExhaustState.NONE;
 
-        if (Owner.GetStateExecutionStatus() ==
-            StateExecutionStatus.RUNNING)
+        if (Owner != null &&
+            Owner.GetStateExecutionStatus() ==
+                StateExecutionStatus.RUNNING)
         {
             Owner.SetStateExecutionStatus(
                 StateExecutionStatus.FAILED);
         }
 
-        m_references = null;
-        m_parameters = null;
-        m_animationEventReceiver = null;
+        m_references =
+            null;
+
+        m_parameters =
+            null;
+
+        m_animationEventReceiver =
+            null;
+
+        m_attackIdentifier =
+            null;
     }
 
     /// <summary>
-    /// Œ»İƒtƒF[ƒY‚Ì”r”Mó‘Ôƒpƒ‰ƒ[ƒ^‚ğæ“¾‚µ‚Ü‚·B
+    /// ç¾åœ¨ãƒ•ã‚§ãƒ¼ã‚ºã®æ’ç†±çŠ¶æ…‹ãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿ã‚’å–å¾—ã—ã¾ã™ã€‚
     /// </summary>
     /// <returns>
-    /// trueFæ“¾‚Å‚«‚Ü‚µ‚½B
-    /// falseFæ“¾‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½B
+    /// trueï¼šå–å¾—ã§ãã¾ã—ãŸã€‚
+    /// falseï¼šå–å¾—ã§ãã¾ã›ã‚“ã§ã—ãŸã€‚
     /// </returns>
     private bool TryGetParameters()
     {
-        if (Owner.PhaseController == null ||
+        if (Owner == null ||
+            Owner.PhaseController == null ||
             !Owner.PhaseController.TryGetCurrentPhaseComponent(
                 out m_references) ||
+            m_references == null ||
             m_references.StateParameterAsset == null)
         {
             return false;
@@ -132,42 +190,24 @@ public sealed class S1P1BossHeatVentState :
     }
 
     /// <summary>
-    /// ³íI—¹‚µ‚½”r”MUŒ‚‚ÌƒN[ƒ‹ƒ^ƒCƒ€‚ğŠJn‚µ‚Ü‚·B
-    /// </summary>
-    private void StartCoolTimeIfSucceeded()
-    {
-        if (Owner.GetStateExecutionStatus() !=
-            StateExecutionStatus.SUCCEEDED ||
-            m_references == null ||
-            m_references.DecisionParameterAsset == null)
-        {
-            return;
-        }
-
-        BossStateCoolTimeManager coolTimeManager =
-            Owner.GetComponent<BossStateCoolTimeManager>();
-
-        if (coolTimeManager == null)
-        {
-            return;
-        }
-
-        coolTimeManager.StartCoolTime<S1P1BossHeatVentState>(
-            m_references.DecisionParameterAsset.HeatExhaust.CoolTime);
-    }
-
-    /// <summary>
-    /// ”r”MUŒ‚‚Ìİ’è‚ğ“K—p‚µ‚Ü‚·B
+    /// æ’ç†±æ”»æ’ƒã®è¨­å®šã‚’å–å¾—ã—ã¾ã™ã€‚
     /// </summary>
     /// <returns>
-    /// trueFİ’è‚Å‚«‚Ü‚µ‚½B
-    /// falseFİ’è‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½B
+    /// trueï¼šè¨­å®šã§ãã¾ã—ãŸã€‚
+    /// falseï¼šè¨­å®šã§ãã¾ã›ã‚“ã§ã—ãŸã€‚
     /// </returns>
-    private bool ApplyAttackSetting()
+    private bool TryGetAttackSetting()
     {
+        if (Owner == null ||
+            Owner.AnimationController == null)
+        {
+            return false;
+        }
+
         S1P1BossAttackSettings attackSettings =
             Owner.GetComponentInChildren<
-                S1P1BossAttackSettings>(true);
+                S1P1BossAttackSettings>(
+                    true);
 
         if (attackSettings == null)
         {
@@ -182,15 +222,16 @@ public sealed class S1P1BossHeatVentState :
             return false;
         }
 
-        if (string.IsNullOrEmpty(animationTriggerName) ||
-            m_attackIdentifier == null ||
-            Owner.AnimationController == null)
+        if (string.IsNullOrEmpty(
+                animationTriggerName) ||
+            m_attackIdentifier == null)
         {
             return false;
         }
 
         m_animationEventReceiver =
-            Owner.AnimationController.CurrentAnimationEventReceiver;
+            Owner.AnimationController
+                .CurrentAnimationEventReceiver;
 
         if (m_animationEventReceiver == null)
         {
@@ -201,22 +242,24 @@ public sealed class S1P1BossHeatVentState :
             Animator.StringToHash(
                 animationTriggerName);
 
-        m_animationEventReceiver.AttackEventReceived +=
-            HandleAttackEvent;
-
-        Owner.AnimationController.SetTrigger(
-            m_animationTriggerID);
-
         return true;
     }
 
     /// <summary>
-    /// ”r”MUŒ‚‚ÌAnimationEvent‚ğˆ—‚µ‚Ü‚·B
+    /// æ’ç†±æ”»æ’ƒã®AnimationEventã‚’å‡¦ç†ã—ã¾ã™ã€‚
     /// </summary>
-    /// <param name="attackEventData">UŒ‚ƒCƒxƒ“ƒgî•ñB</param>
+    /// <param name="attackEventData">æ”»æ’ƒã‚¤ãƒ™ãƒ³ãƒˆæƒ…å ±ã€‚</param>
     private void HandleAttackEvent(
         AttackEventData attackEventData)
     {
+        if (attackEventData == null ||
+            Owner == null ||
+            Owner.GetStateExecutionStatus() !=
+                StateExecutionStatus.RUNNING)
+        {
+            return;
+        }
+
         switch (attackEventData.AttackEventType)
         {
             case AttackEventType.HITBOX_ENABLE:
@@ -234,7 +277,7 @@ public sealed class S1P1BossHeatVentState :
     }
 
     /// <summary>
-    /// ”r”M‚ğŠJn‚µ‚Ü‚·B
+    /// æ’ç†±ã‚’é–‹å§‹ã—ã¾ã™ã€‚
     /// </summary>
     private void StartHeatExhaust()
     {
@@ -252,7 +295,7 @@ public sealed class S1P1BossHeatVentState :
     }
 
     /// <summary>
-    /// ”r”M‚ğI—¹‚µ‚Ü‚·B
+    /// æ’ç†±ã‚’çµ‚äº†ã—ã¾ã™ã€‚
     /// </summary>
     private void EndHeatExhaust()
     {
@@ -262,25 +305,190 @@ public sealed class S1P1BossHeatVentState :
             return;
         }
 
-        Owner.AttackHitboxRegistry?.DisableHitboxes(
-            m_attackIdentifier);
+        DisableAttackHitboxes();
 
         m_currentState =
             HeatExhaustState.ENDING;
     }
 
     /// <summary>
-    /// ”r”MUŒ‚‚ğŠ®—¹‚µ‚Ü‚·B
+    /// æ’ç†±æ”»æ’ƒã‚’å®Œäº†ã—ã¾ã™ã€‚
     /// </summary>
     private void FinishAttack()
     {
-        Owner.AttackHitboxRegistry?.DisableHitboxes(
-            m_attackIdentifier);
+        if (Owner == null ||
+            Owner.GetStateExecutionStatus() !=
+                StateExecutionStatus.RUNNING)
+        {
+            return;
+        }
+
+        DisableAttackHitboxes();
 
         m_currentState =
             HeatExhaustState.NONE;
 
+        /*
+         * SUCCEEDEDè¨­å®šå¾Œã«åŒã˜è¡Œå‹•ãŒå†è©•ä¾¡ã•ã‚Œã‚‹å¯èƒ½æ€§ãŒã‚ã‚‹ãŸã‚ã€
+         * å¿…ãšå…ˆã«ã‚¯ãƒ¼ãƒ«ã‚¿ã‚¤ãƒ ã‚’ç™»éŒ²ã—ã¾ã™ã€‚
+         */
+        StartCoolTime();
+
         Owner.SetStateExecutionStatus(
             StateExecutionStatus.SUCCEEDED);
+    }
+
+    /// <summary>
+    /// æ’ç†±æ”»æ’ƒã®ã‚¯ãƒ¼ãƒ«ã‚¿ã‚¤ãƒ ã‚’é–‹å§‹ã—ã¾ã™ã€‚
+    /// </summary>
+    private void StartCoolTime()
+    {
+        if (Owner == null ||
+            m_references == null ||
+            m_references.DecisionParameterAsset == null)
+        {
+            return;
+        }
+
+        BossStateCoolTimeManager coolTimeManager =
+            Owner.GetComponent<
+                BossStateCoolTimeManager>();
+
+        if (coolTimeManager == null)
+        {
+            return;
+        }
+
+        coolTimeManager
+            .StartCoolTime<
+                S1P1BossHeatVentState>(
+                m_references
+                    .DecisionParameterAsset
+                    .HeatExhaust
+                    .CoolTime);
+    }
+
+    /// <summary>
+    /// AnimationEventã‚’è³¼èª­ã—ã¾ã™ã€‚
+    /// </summary>
+    private void RegisterAnimationEvent()
+    {
+        if (m_isAnimationEventRegistered ||
+            m_animationEventReceiver == null)
+        {
+            return;
+        }
+
+        m_animationEventReceiver.AttackEventReceived +=
+            HandleAttackEvent;
+
+        m_isAnimationEventRegistered =
+            true;
+    }
+
+    /// <summary>
+    /// AnimationEventã®è³¼èª­ã‚’è§£é™¤ã—ã¾ã™ã€‚
+    /// </summary>
+    private void UnregisterAnimationEvent()
+    {
+        if (!m_isAnimationEventRegistered ||
+            m_animationEventReceiver == null)
+        {
+            return;
+        }
+
+        m_animationEventReceiver.AttackEventReceived -=
+            HandleAttackEvent;
+
+        m_isAnimationEventRegistered =
+            false;
+    }
+
+    /// <summary>
+    /// æ’ç†±æ”»æ’ƒåˆ¤å®šã‚’ç„¡åŠ¹åŒ–ã—ã¾ã™ã€‚
+    /// </summary>
+    private void DisableAttackHitboxes()
+    {
+        if (Owner == null ||
+            m_attackIdentifier == null)
+        {
+            return;
+        }
+
+        Owner.AttackHitboxRegistry?
+            .DisableHitboxes(
+                m_attackIdentifier);
+    }
+
+    /// <summary>
+    /// Stateã‚’å¤±æ•—çŠ¶æ…‹ã«ã—ã¾ã™ã€‚
+    /// </summary>
+    private void SetFailed()
+    {
+        DisableAttackHitboxes();
+
+        UnregisterAnimationEvent();
+
+        if (Owner == null)
+        {
+            return;
+        }
+
+        Owner.SetStateExecutionStatus(
+            StateExecutionStatus.FAILED);
+    }
+
+    /// <summary>
+    /// RuntimeçŠ¶æ…‹ã‚’åˆæœŸåŒ–ã—ã¾ã™ã€‚
+    /// </summary>
+    private void ResetRuntimeState()
+    {
+        m_currentState =
+            HeatExhaustState.NONE;
+
+        m_stateElapsedTime =
+            0.0f;
+
+        m_attackIdentifier =
+            null;
+
+        m_animationEventReceiver =
+            null;
+
+        m_animationTriggerID =
+            0;
+
+        m_isAnimationEventRegistered =
+            false;
+    }
+
+    /// <summary>
+    /// ç¾åœ¨ãƒ•ã‚§ãƒ¼ã‚ºã®Animation Timelineç®¡ç†ã‚’ä¿æŒã—ã¾ã™ã€‚
+    /// </summary>
+    private void CacheAnimationTimelineController()
+    {
+        m_animationTimelineController =
+            null;
+
+        if (Owner?.PhaseController == null)
+        {
+            return;
+        }
+
+        Owner.PhaseController
+            .TryGetCurrentPhaseComponent(
+                out m_animationTimelineController);
+    }
+
+    /// <summary>
+    /// Stateä¸­ã«å†ç”Ÿã•ã‚ŒãŸAnimation Timelineã‚’åœæ­¢ã—ã¾ã™ã€‚
+    /// </summary>
+    private void StopAnimationTimelines()
+    {
+        m_animationTimelineController?
+            .StopAll();
+
+        m_animationTimelineController =
+            null;
     }
 }

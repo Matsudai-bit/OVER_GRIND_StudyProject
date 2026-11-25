@@ -5,40 +5,53 @@ using UnityEngine;
 /// ボス突進攻撃パラメータのInspector表示を管理します。
 /// </summary>
 [CustomEditor(typeof(S1BossChargeAttackParameterAsset))]
-public sealed class BossChargeAttackParameterAssetEditor : Editor
+public sealed class BossChargeAttackParameterAssetEditor :
+    Editor
 {
     // Inspector上の余白
     private const float SECTION_SPACE = 8.0f;
 
-    // 回転状態の継続時間
-    private SerializedProperty m_preparationDurationProperty;
+    // 狙い確定状態の継続時間
+    private SerializedProperty m_targetLockDurationProperty;
 
-    // 回転状態の回転速度
+    // 回転速度
     private SerializedProperty m_rotationSpeedProperty;
 
-    // 突進状態の移動速度
+    // 突進速度
     private SerializedProperty m_chargeSpeedProperty;
 
-    // 突進状態の最大移動距離
+    // 最大突進距離
     private SerializedProperty m_maxChargeDistanceProperty;
 
-    // 突進状態の停止余白
+    // 対象位置を越えて進む距離
+    private SerializedProperty m_targetOverrunDistanceProperty;
+
+    // NavMesh境界から確保する停止余白
     private SerializedProperty m_stopMarginProperty;
 
-    // 終了状態の継続時間
+    // 加速時間
+    private SerializedProperty m_accelerationDurationProperty;
+
+    // 加速イージング
+    private SerializedProperty m_accelerationCurveProperty;
+
+    // 減速開始距離
+    private SerializedProperty m_decelerationDistanceProperty;
+
+    // 減速イージング
+    private SerializedProperty m_decelerationCurveProperty;
+
+    // 終了動作時間
     private SerializedProperty m_endDurationProperty;
 
-    // 回転状態のアニメーションBool名
-    private SerializedProperty
-        m_preparationAnimationBoolNameProperty;
+    // 突進攻撃中を示すAnimator Bool名
+    private SerializedProperty m_animationActiveBoolNameProperty;
 
-    // 突進状態のアニメーションBool名
-    private SerializedProperty
-        m_chargeAnimationBoolNameProperty;
+    // 突進攻撃フェーズを示すAnimator Int名
+    private SerializedProperty m_animationPhaseIntNameProperty;
 
-    // 終了状態のアニメーションBool名
-    private SerializedProperty
-        m_endAnimationBoolNameProperty;
+    // 左右旋回方向を示すAnimator Int名
+    private SerializedProperty m_animationTurnDirectionIntNameProperty;
 
     // 攻撃識別子
     private SerializedProperty m_attackIdentifierProperty;
@@ -51,9 +64,9 @@ public sealed class BossChargeAttackParameterAssetEditor : Editor
     /// </summary>
     private void OnEnable()
     {
-        m_preparationDurationProperty =
+        m_targetLockDurationProperty =
             serializedObject.FindProperty(
-                "m_preparationDuration");
+                "m_targetLockDuration");
 
         m_rotationSpeedProperty =
             serializedObject.FindProperty(
@@ -67,25 +80,45 @@ public sealed class BossChargeAttackParameterAssetEditor : Editor
             serializedObject.FindProperty(
                 "m_maxChargeDistance");
 
+        m_targetOverrunDistanceProperty =
+            serializedObject.FindProperty(
+                "m_targetOverrunDistance");
+
         m_stopMarginProperty =
             serializedObject.FindProperty(
                 "m_stopMargin");
+
+        m_accelerationDurationProperty =
+            serializedObject.FindProperty(
+                "m_accelerationDuration");
+
+        m_accelerationCurveProperty =
+            serializedObject.FindProperty(
+                "m_accelerationCurve");
+
+        m_decelerationDistanceProperty =
+            serializedObject.FindProperty(
+                "m_decelerationDistance");
+
+        m_decelerationCurveProperty =
+            serializedObject.FindProperty(
+                "m_decelerationCurve");
 
         m_endDurationProperty =
             serializedObject.FindProperty(
                 "m_endDuration");
 
-        m_preparationAnimationBoolNameProperty =
+        m_animationActiveBoolNameProperty =
             serializedObject.FindProperty(
-                "m_preparationAnimationBoolName");
+                "m_animationActiveBoolName");
 
-        m_chargeAnimationBoolNameProperty =
+        m_animationPhaseIntNameProperty =
             serializedObject.FindProperty(
-                "m_chargeAnimationBoolName");
+                "m_animationPhaseIntName");
 
-        m_endAnimationBoolNameProperty =
+        m_animationTurnDirectionIntNameProperty =
             serializedObject.FindProperty(
-                "m_endAnimationBoolName");
+                "m_animationTurnDirectionIntName");
 
         m_attackIdentifierProperty =
             serializedObject.FindProperty(
@@ -101,29 +134,37 @@ public sealed class BossChargeAttackParameterAssetEditor : Editor
 
         DrawDescription();
 
-        EditorGUILayout.Space(SECTION_SPACE);
+        EditorGUILayout.Space(
+            SECTION_SPACE);
 
-        DrawRotationSection();
+        DrawTurnSection();
 
         DrawTransitionLabel(
-            "回転完了後、現在向いている方向へ突進");
+            "目標方向へ向いたら、その方向を固定");
+
+        DrawTargetLockSection();
+
+        DrawTransitionLabel(
+            "一定時間その方向を向いた後に突進");
 
         DrawChargeSection();
 
         DrawTransitionLabel(
-            "突進終了後、停止して終了状態へ移行");
+            "突進終了後、停止して終了動作へ移行");
 
         DrawEndSection();
 
-        EditorGUILayout.Space(SECTION_SPACE);
+        EditorGUILayout.Space(
+            SECTION_SPACE);
 
-        DrawChargePreview();
+        DrawAnimationPhasePreview();
 
-        EditorGUILayout.Space(SECTION_SPACE);
+        EditorGUILayout.Space(
+            SECTION_SPACE);
 
         DrawSystemParameters();
 
-        DrawParameterWarnings();
+        DrawWarnings();
 
         serializedObject.ApplyModifiedProperties();
     }
@@ -134,46 +175,66 @@ public sealed class BossChargeAttackParameterAssetEditor : Editor
     private void DrawDescription()
     {
         EditorGUILayout.HelpBox(
-            "突進攻撃は「回転状態 → 突進状態 → 終了状態」の" +
-            "3段階で実行されます。",
+            "突進攻撃は「回転 → 狙い確定 → 突進 → 終了動作」の4段階で実行します。\n" +
+            "回転中は目標方向を追従し、目標方向へ向いた時点で方向を固定します。\n" +
+            "狙い確定中は固定した方向を一定時間向き続け、その後に直線突進します。",
             MessageType.Info);
     }
 
     /// <summary>
-    /// 回転状態のパラメータを表示します。
+    /// 回転状態のパラメータを描画します。
     /// </summary>
-    private void DrawRotationSection()
+    private void DrawTurnSection()
     {
         EditorGUILayout.BeginVertical(
             EditorStyles.helpBox);
 
         EditorGUILayout.LabelField(
-            "1. 回転状態",
+            "1. 回転",
             EditorStyles.boldLabel);
 
         EditorGUILayout.LabelField(
-            "突進前にプレイヤー方向を追従します。",
-            EditorStyles.miniLabel);
+            "目標方向へ旋回します。左右のAnimationは旋回方向で分岐します。",
+            EditorStyles.wordWrappedMiniLabel);
 
         EditorGUILayout.Space();
 
-        EditorGUILayout.PropertyField(
-            m_preparationDurationProperty,
-            new GUIContent(
-                "回転継続時間",
-                "プレイヤー方向を追従して回転する時間です。"));
-
-        EditorGUILayout.PropertyField(
+        DrawProperty(
             m_rotationSpeedProperty,
-            new GUIContent(
-                "回転速度",
-                "プレイヤー方向へ向く際の回転速度です。"));
+            "回転速度",
+            "目標方向へ向く際の回転速度です。");
 
         EditorGUILayout.EndVertical();
     }
 
     /// <summary>
-    /// 突進状態のパラメータを表示します。
+    /// 狙い確定状態のパラメータを描画します。
+    /// </summary>
+    private void DrawTargetLockSection()
+    {
+        EditorGUILayout.BeginVertical(
+            EditorStyles.helpBox);
+
+        EditorGUILayout.LabelField(
+            "2. 狙い確定",
+            EditorStyles.boldLabel);
+
+        EditorGUILayout.LabelField(
+            "回転完了時の方向を固定し、その方向を向いたまま待機します。",
+            EditorStyles.wordWrappedMiniLabel);
+
+        EditorGUILayout.Space();
+
+        DrawProperty(
+            m_targetLockDurationProperty,
+            "狙い確定時間",
+            "方向を固定してから突進を開始するまでの待機時間です。");
+
+        EditorGUILayout.EndVertical();
+    }
+
+    /// <summary>
+    /// 突進状態のパラメータを描画します。
     /// </summary>
     private void DrawChargeSection()
     {
@@ -181,39 +242,78 @@ public sealed class BossChargeAttackParameterAssetEditor : Editor
             EditorStyles.helpBox);
 
         EditorGUILayout.LabelField(
-            "2. 突進状態",
+            "3. 突進",
             EditorStyles.boldLabel);
 
         EditorGUILayout.LabelField(
-            "回転終了時に向いている方向へ直線突進します。",
-            EditorStyles.miniLabel);
+            "狙い確定で固定した方向へ直線突進します。",
+            EditorStyles.wordWrappedMiniLabel);
 
         EditorGUILayout.Space();
 
-        EditorGUILayout.PropertyField(
+        EditorGUILayout.LabelField(
+            "移動",
+            EditorStyles.boldLabel);
+
+        DrawProperty(
             m_chargeSpeedProperty,
-            new GUIContent(
-                "突進速度",
-                "突進中の移動速度です。"));
+            "最高速度",
+            "突進中の最高移動速度です。");
 
-        EditorGUILayout.PropertyField(
+        DrawProperty(
             m_maxChargeDistanceProperty,
-            new GUIContent(
-                "最大突進距離",
-                "1回の突進で移動できる最大距離です。"));
+            "最大突進距離",
+            "1回の突進で移動できる最大距離です。");
 
-        EditorGUILayout.PropertyField(
+        DrawProperty(
+            m_targetOverrunDistanceProperty,
+            "対象超過距離",
+            "目標位置を越えて進ませる追加距離です。");
+
+        DrawProperty(
             m_stopMarginProperty,
-            new GUIContent(
-                "停止余白",
-                "障害物や移動可能範囲の境界手前で" +
-                "停止するための余白です。"));
+            "NavMesh停止余白",
+            "NavMesh境界の手前で停止するために確保する距離です。");
+
+        EditorGUILayout.Space(
+            SECTION_SPACE);
+
+        EditorGUILayout.LabelField(
+            "加速",
+            EditorStyles.boldLabel);
+
+        DrawProperty(
+            m_accelerationDurationProperty,
+            "加速時間",
+            "突進開始から最高速度へ到達するまでの時間です。");
+
+        DrawProperty(
+            m_accelerationCurveProperty,
+            "加速イージング",
+            "加速時間0～1に対する速度進行率です。");
+
+        EditorGUILayout.Space(
+            SECTION_SPACE);
+
+        EditorGUILayout.LabelField(
+            "減速",
+            EditorStyles.boldLabel);
+
+        DrawProperty(
+            m_decelerationDistanceProperty,
+            "減速開始距離",
+            "停止地点の何m手前から減速を開始するか指定します。");
+
+        DrawProperty(
+            m_decelerationCurveProperty,
+            "減速イージング",
+            "減速区間0～1に対する速度倍率です。");
 
         EditorGUILayout.EndVertical();
     }
 
     /// <summary>
-    /// 終了状態のパラメータを表示します。
+    /// 終了動作のパラメータを描画します。
     /// </summary>
     private void DrawEndSection()
     {
@@ -221,20 +321,19 @@ public sealed class BossChargeAttackParameterAssetEditor : Editor
             EditorStyles.helpBox);
 
         EditorGUILayout.LabelField(
-            "3. 終了状態",
+            "4. 終了動作",
             EditorStyles.boldLabel);
 
         EditorGUILayout.LabelField(
             "突進を停止し、次の行動へ移るまで待機します。",
-            EditorStyles.miniLabel);
+            EditorStyles.wordWrappedMiniLabel);
 
         EditorGUILayout.Space();
 
-        EditorGUILayout.PropertyField(
+        DrawProperty(
             m_endDurationProperty,
-            new GUIContent(
-                "終了硬直時間",
-                "突進終了後に次の行動へ移るまでの時間です。"));
+            "終了硬直時間",
+            "突進終了後に次の行動へ移るまでの時間です。");
 
         EditorGUILayout.EndVertical();
     }
@@ -242,98 +341,87 @@ public sealed class BossChargeAttackParameterAssetEditor : Editor
     /// <summary>
     /// 状態間の遷移を表示します。
     /// </summary>
-    /// <param name="description">
-    /// 遷移内容。
-    /// </param>
     private void DrawTransitionLabel(
         string description)
     {
-        GUIStyle centeredLabel =
-            new GUIStyle(EditorStyles.boldLabel)
+        GUIStyle arrowStyle =
+            new GUIStyle(
+                EditorStyles.boldLabel)
             {
-                alignment = TextAnchor.MiddleCenter
+                alignment =
+                    TextAnchor.MiddleCenter,
+                fontSize =
+                    16
             };
 
-        GUIStyle centeredMiniLabel =
-            new GUIStyle(EditorStyles.miniLabel)
+        GUIStyle descriptionStyle =
+            new GUIStyle(
+                EditorStyles.miniLabel)
             {
-                alignment = TextAnchor.MiddleCenter
+                alignment =
+                    TextAnchor.MiddleCenter
             };
 
         EditorGUILayout.Space();
 
         EditorGUILayout.LabelField(
             "↓",
-            centeredLabel);
+            arrowStyle);
 
         EditorGUILayout.LabelField(
             description,
-            centeredMiniLabel);
+            descriptionStyle);
 
         EditorGUILayout.Space();
     }
 
     /// <summary>
-    /// 突進攻撃の調整結果を表示します。
+    /// Animatorへ渡される行動フェーズを表示します。
     /// </summary>
-    private void DrawChargePreview()
+    private void DrawAnimationPhasePreview()
     {
         EditorGUILayout.BeginVertical(
             EditorStyles.helpBox);
 
         EditorGUILayout.LabelField(
-            "突進攻撃確認",
+            "Animation Phase",
             EditorStyles.boldLabel);
 
-        float preparationDuration =
-            m_preparationDurationProperty.floatValue;
+        EditorGUILayout.LabelField(
+            "0  PREPARATION",
+            "回転");
 
-        float chargeSpeed =
-            m_chargeSpeedProperty.floatValue;
+        EditorGUILayout.LabelField(
+            "1  TARGET_LOCK",
+            "狙い確定");
 
-        float maxChargeDistance =
-            m_maxChargeDistanceProperty.floatValue;
+        EditorGUILayout.LabelField(
+            "2  EXECUTION",
+            "突進");
 
-        float endDuration =
-            m_endDurationProperty.floatValue;
-
-        float maxChargeDuration = 0.0f;
-
-        if (chargeSpeed > 0.0f)
-        {
-            maxChargeDuration =
-                maxChargeDistance /
-                chargeSpeed;
-        }
-
-        float maxTotalDuration =
-            preparationDuration +
-            maxChargeDuration +
-            endDuration;
-
-        DrawReadOnlyFloat(
-            "最大突進移動時間",
-            maxChargeDuration,
-            " 秒");
-
-        DrawReadOnlyFloat(
-            "最大攻撃時間",
-            maxTotalDuration,
-            " 秒");
+        EditorGUILayout.LabelField(
+            "3  RECOVERY",
+            "終了動作");
 
         EditorGUILayout.Space();
 
         EditorGUILayout.LabelField(
-            "状態遷移",
-            $"回転 {preparationDuration:F2}秒" +
-            $" → 突進 最大{maxChargeDuration:F2}秒" +
-            $" → 終了 {endDuration:F2}秒");
+            "Turn Direction",
+            EditorStyles.boldLabel);
+
+        EditorGUILayout.LabelField(
+            "-1  LEFT",
+            "左旋回");
+
+        EditorGUILayout.LabelField(
+            " 1  RIGHT",
+            "右旋回");
 
         EditorGUILayout.EndVertical();
     }
 
     /// <summary>
-    /// プログラマ向けシステム設定を表示します。
+    /// プログラマ向けシステム設定を描画します。
     /// </summary>
     private void DrawSystemParameters()
     {
@@ -351,98 +439,87 @@ public sealed class BossChargeAttackParameterAssetEditor : Editor
         EditorGUILayout.BeginVertical(
             EditorStyles.helpBox);
 
-        EditorGUILayout.HelpBox(
-            "以下は攻撃機構との紐付けに使用する設定です。" +
-            "通常のバランス調整では変更しません。",
-            MessageType.Info);
+        DrawProperty(
+            m_animationActiveBoolNameProperty,
+            "Active Bool",
+            "突進攻撃全体が実行中であることを示すAnimator Bool名です。");
 
-        EditorGUILayout.LabelField(
-            "回転状態",
-            EditorStyles.boldLabel);
+        DrawProperty(
+            m_animationPhaseIntNameProperty,
+            "Phase Int",
+            "回転・狙い確定・突進・終了動作を示すAnimator Int名です。");
 
-        EditorGUILayout.PropertyField(
-            m_preparationAnimationBoolNameProperty,
-            new GUIContent(
-                "Animation Bool",
-                "回転状態で有効にするAnimator Bool名です。"));
+        DrawProperty(
+            m_animationTurnDirectionIntNameProperty,
+            "Turn Direction Int",
+            "LEFT=-1、RIGHT=1として左右旋回を示すAnimator Int名です。");
 
-        EditorGUILayout.Space();
-
-        EditorGUILayout.LabelField(
-            "突進状態",
-            EditorStyles.boldLabel);
-
-        EditorGUILayout.PropertyField(
-            m_chargeAnimationBoolNameProperty,
-            new GUIContent(
-                "Animation Bool",
-                "突進状態で有効にするAnimator Bool名です。"));
-
-        EditorGUILayout.PropertyField(
+        DrawProperty(
             m_attackIdentifierProperty,
-            new GUIContent(
-                "Attack Identifier",
-                "突進中に有効化する攻撃判定です。"));
-
-        EditorGUILayout.Space();
-
-        EditorGUILayout.LabelField(
-            "終了状態",
-            EditorStyles.boldLabel);
-
-        EditorGUILayout.PropertyField(
-            m_endAnimationBoolNameProperty,
-            new GUIContent(
-                "Animation Bool",
-                "終了状態で有効にするAnimator Bool名です。"));
+            "Attack Identifier",
+            "突進中に有効化する攻撃判定の識別子です。");
 
         EditorGUILayout.EndVertical();
     }
 
     /// <summary>
-    /// パラメータ設定に問題がある場合に警告を表示します。
+    /// パラメータ設定の警告を表示します。
     /// </summary>
-    private void DrawParameterWarnings()
+    private void DrawWarnings()
     {
-        if (m_chargeSpeedProperty.floatValue <= 0.0f)
+        if (m_decelerationDistanceProperty != null &&
+            m_maxChargeDistanceProperty != null &&
+            m_decelerationDistanceProperty.floatValue >
+            m_maxChargeDistanceProperty.floatValue)
         {
             EditorGUILayout.HelpBox(
-                "突進速度が0以下のため、突進を実行できません。",
-                MessageType.Error);
-        }
-
-        if (m_maxChargeDistanceProperty.floatValue <= 0.0f)
-        {
-            EditorGUILayout.HelpBox(
-                "最大突進距離が0以下のため、突進できません。",
-                MessageType.Error);
-        }
-
-        if (m_attackIdentifierProperty.objectReferenceValue == null)
-        {
-            EditorGUILayout.HelpBox(
-                "Attack Identifierが設定されていません。" +
-                "突進中の攻撃判定が有効化されません。",
+                "減速開始距離が最大突進距離を上回っています。" +
+                "突進開始直後から減速する可能性があります。",
                 MessageType.Warning);
+        }
+
+        if (m_attackIdentifierProperty != null &&
+            m_attackIdentifierProperty.objectReferenceValue == null)
+        {
+            EditorGUILayout.HelpBox(
+                "Attack Identifierが設定されていません。",
+                MessageType.Warning);
+        }
+
+        if (m_targetLockDurationProperty == null)
+        {
+            EditorGUILayout.HelpBox(
+                "m_targetLockDurationが見つかりません。" +
+                "S1BossChargeAttackParameterAssetを4段階仕様へ更新してください。",
+                MessageType.Error);
+        }
+
+        if (m_animationTurnDirectionIntNameProperty == null)
+        {
+            EditorGUILayout.HelpBox(
+                "m_animationTurnDirectionIntNameが見つかりません。" +
+                "左右旋回用Animator IntをParameterAssetへ追加してください。",
+                MessageType.Error);
         }
     }
 
     /// <summary>
-    /// 読み取り専用の数値を表示します。
+    /// SerializedPropertyを描画します。
     /// </summary>
-    /// <param name="label">表示名。</param>
-    /// <param name="value">表示する値。</param>
-    /// <param name="suffix">単位。</param>
-    private void DrawReadOnlyFloat(
+    private static void DrawProperty(
+        SerializedProperty property,
         string label,
-        float value,
-        string suffix)
+        string tooltip)
     {
-        using (new EditorGUI.DisabledScope(true))
+        if (property == null)
         {
-            EditorGUILayout.TextField(
-                label,
-                $"{value:F2}{suffix}");
+            return;
         }
+
+        EditorGUILayout.PropertyField(
+            property,
+            new GUIContent(
+                label,
+                tooltip));
     }
 }

@@ -26,6 +26,10 @@ public sealed class SaveDataController : MonoBehaviour
     /// <summary>セーブ状態変更イベント</summary>
     private SaveChangedEvent m_saveChangedEvent;
 
+    [SerializeField]
+    /// <summary>ゲーム設定変更イベント</summary>
+    private GameSettingsChangedEvent m_gameSettingsChangedEvent;
+
     /// <summary>未保存の変更があるかどうか</summary>
     private bool m_isDirty = false;
 
@@ -43,12 +47,18 @@ public sealed class SaveDataController : MonoBehaviour
     /// <summary>
     /// ゲーム進行データを取得します。
     /// </summary>
-    public GameProgressSaveData Progress => m_runtimeSaveData != null ? m_runtimeSaveData.Progress : null;
+    public GameProgressSaveData Progress =>
+        m_runtimeSaveData != null
+            ? m_runtimeSaveData.Progress
+            : null;
 
     /// <summary>
     /// ゲーム設定データを取得します。
     /// </summary>
-    public GameSettingsSaveData Settings => m_runtimeSaveData != null ? m_runtimeSaveData.Settings : null;
+    public GameSettingsSaveData Settings =>
+        m_runtimeSaveData != null
+            ? m_runtimeSaveData.Settings
+            : null;
 
     /// <summary>
     /// セーブファイル名を取得します。
@@ -69,7 +79,8 @@ public sealed class SaveDataController : MonoBehaviour
     {
         if (m_saveRequestEvent != null)
         {
-            m_saveRequestEvent.RegisterListener(OnSaveRequested);
+            m_saveRequestEvent.RegisterListener(
+                OnSaveRequested);
         }
     }
 
@@ -80,14 +91,22 @@ public sealed class SaveDataController : MonoBehaviour
             return;
         }
 
-        RaiseSaveChangedEvent(m_hasLoadedSaveFile ? SaveChangedEventType.LOADED : SaveChangedEventType.INITIALIZED);
+        RaiseSaveChangedEvent(
+            m_hasLoadedSaveFile
+                ? SaveChangedEventType.LOADED
+                : SaveChangedEventType.INITIALIZED);
+
+        // 起動時にロード済みの全設定をゲーム側へ反映
+        RaiseGameSettingsChangedEvent(
+            GameSettingsChangeType.ALL);
     }
 
     private void OnDisable()
     {
         if (m_saveRequestEvent != null)
         {
-            m_saveRequestEvent.UnregisterListener(OnSaveRequested);
+            m_saveRequestEvent.UnregisterListener(
+                OnSaveRequested);
         }
     }
 
@@ -116,13 +135,17 @@ public sealed class SaveDataController : MonoBehaviour
             return false;
         }
 
-        if (!SaveSystem.TrySave(m_runtimeSaveData, m_saveFileName))
+        if (!SaveSystem.TrySave(
+            m_runtimeSaveData,
+            m_saveFileName))
         {
             return false;
         }
 
         m_isDirty = false;
-        RaiseSaveChangedEvent(SaveChangedEventType.SAVED);
+
+        RaiseSaveChangedEvent(
+            SaveChangedEventType.SAVED);
 
         return true;
     }
@@ -154,14 +177,102 @@ public sealed class SaveDataController : MonoBehaviour
     /// </returns>
     public bool MarkStageCleared(int stageNumber)
     {
-        if (!EnsureInitialized()) return false;
+        if (!EnsureInitialized())
+        {
+            return false;
+        }
 
-        if (!m_runtimeSaveData.Progress.MarkStageCleared(stageNumber))
+        if (!m_runtimeSaveData.Progress.MarkStageCleared(
+            stageNumber))
         {
             return false;
         }
 
         MarkDirty();
+
+        return Save();
+    }
+
+    /// <summary>
+    /// ステージリザルトを反映し、セーブデータへ保存します。
+    /// </summary>
+    /// <param name="stageNumber">対象のステージ番号。</param>
+    /// <param name="rank">今回獲得したランク。</param>
+    /// <param name="clearTime">今回のクリアタイム（秒）。</param>
+    /// <returns>
+    /// true：更新または保存処理に成功しました。
+    /// false：入力値または初期化に問題があります。
+    /// </returns>
+    public bool SaveStageResult(
+        int stageNumber,
+        int rank,
+        int clearTime)
+    {
+        if (!EnsureInitialized()
+            || stageNumber <= 0
+            || rank < 0
+            || clearTime < 0)
+        {
+            return false;
+        }
+
+        GameProgressSaveData progress =
+            m_runtimeSaveData.Progress;
+
+        bool hasChanged =
+            false;
+
+        // ステージクリア状態を更新
+        if (progress.MarkStageCleared(
+            stageNumber))
+        {
+            hasChanged =
+                true;
+        }
+
+        /*
+         * ランク値は
+         * C = 0, B = 1, A = 2, S = 3, S+ = 4
+         * のため、既存ランクより高い場合のみ更新する。
+         */
+        bool shouldUpdateRank =
+            true;
+
+        if (progress.TryGetStageData(
+            stageNumber,
+            out GameProgressSaveData.StageData stageData))
+        {
+            shouldUpdateRank =
+                stageData.Rank < rank;
+        }
+
+        if (shouldUpdateRank
+            && progress.SetStageRank(
+                stageNumber,
+                rank))
+        {
+            hasChanged =
+                true;
+        }
+
+        // ベストタイムはGameProgressSaveData側で最速時のみ更新される
+        if (progress.UpdateStageBestTime(
+            stageNumber,
+            clearTime))
+        {
+            hasChanged =
+                true;
+        }
+
+        // 更新がなければ既存の保存内容がそのまま有効
+        if (!hasChanged)
+        {
+            return true;
+        }
+
+        MarkDirty();
+
+        // リザルト確定時に1回だけ保存
         return Save();
     }
 
@@ -174,7 +285,10 @@ public sealed class SaveDataController : MonoBehaviour
     /// </returns>
     public bool MarkOpeningWatched()
     {
-        if (!EnsureInitialized()) return false;
+        if (!EnsureInitialized())
+        {
+            return false;
+        }
 
         if (!m_runtimeSaveData.Progress.MarkOpeningWatched())
         {
@@ -182,6 +296,7 @@ public sealed class SaveDataController : MonoBehaviour
         }
 
         MarkDirty();
+
         return Save();
     }
 
@@ -191,11 +306,14 @@ public sealed class SaveDataController : MonoBehaviour
     /// <param name="volume">設定するBGM音量。</param>
     /// <returns>
     /// true：更新に成功しました。
-    /// false：初期化エラーなどで失敗しました。
+    /// false：初期化エラー、または値が変更されませんでした。
     /// </returns>
     public bool SetBgmVolume(float volume)
     {
-        if (!EnsureInitialized()) return false;
+        if (!EnsureInitialized())
+        {
+            return false;
+        }
 
         if (!m_runtimeSaveData.Settings.SetBgmVolume(volume))
         {
@@ -203,6 +321,10 @@ public sealed class SaveDataController : MonoBehaviour
         }
 
         MarkDirty();
+
+        RaiseGameSettingsChangedEvent(
+            GameSettingsChangeType.BGM_VOLUME);
+
         return true;
     }
 
@@ -212,11 +334,14 @@ public sealed class SaveDataController : MonoBehaviour
     /// <param name="volume">設定するSE音量。</param>
     /// <returns>
     /// true：更新に成功しました。
-    /// false：初期化エラーなどで失敗しました。
+    /// false：初期化エラー、または値が変更されませんでした。
     /// </returns>
     public bool SetSeVolume(float volume)
     {
-        if (!EnsureInitialized()) return false;
+        if (!EnsureInitialized())
+        {
+            return false;
+        }
 
         if (!m_runtimeSaveData.Settings.SetSeVolume(volume))
         {
@@ -224,6 +349,10 @@ public sealed class SaveDataController : MonoBehaviour
         }
 
         MarkDirty();
+
+        RaiseGameSettingsChangedEvent(
+            GameSettingsChangeType.SE_VOLUME);
+
         return true;
     }
 
@@ -233,11 +362,14 @@ public sealed class SaveDataController : MonoBehaviour
     /// <param name="volume">設定するマスター音量。</param>
     /// <returns>
     /// true：更新に成功しました。
-    /// false：初期化エラーなどで失敗しました。
+    /// false：初期化エラー、または値が変更されませんでした。
     /// </returns>
     public bool SetMasterVolume(float volume)
     {
-        if (!EnsureInitialized()) return false;
+        if (!EnsureInitialized())
+        {
+            return false;
+        }
 
         if (!m_runtimeSaveData.Settings.SetMasterVolume(volume))
         {
@@ -245,6 +377,10 @@ public sealed class SaveDataController : MonoBehaviour
         }
 
         MarkDirty();
+
+        RaiseGameSettingsChangedEvent(
+            GameSettingsChangeType.MASTER_VOLUME);
+
         return true;
     }
 
@@ -254,11 +390,14 @@ public sealed class SaveDataController : MonoBehaviour
     /// <param name="screenSize">設定する画面サイズのインデックス。</param>
     /// <returns>
     /// true：更新に成功しました。
-    /// false：初期化エラーなどで失敗しました。
+    /// false：初期化エラー、または値が変更されませんでした。
     /// </returns>
     public bool SetScreenSize(int screenSize)
     {
-        if (!EnsureInitialized()) return false;
+        if (!EnsureInitialized())
+        {
+            return false;
+        }
 
         if (!m_runtimeSaveData.Settings.SetScreenSize(screenSize))
         {
@@ -266,6 +405,10 @@ public sealed class SaveDataController : MonoBehaviour
         }
 
         MarkDirty();
+
+        RaiseGameSettingsChangedEvent(
+            GameSettingsChangeType.SCREEN_SIZE);
+
         return true;
     }
 
@@ -275,40 +418,70 @@ public sealed class SaveDataController : MonoBehaviour
     /// <param name="sensitivity">設定するカメラ感度。</param>
     /// <returns>
     /// true：更新に成功しました。
-    /// false：初期化エラーなどで失敗しました。
+    /// false：初期化エラー、または値が変更されませんでした。
     /// </returns>
     public bool SetCameraSensitivity(float sensitivity)
     {
-        if (!EnsureInitialized()) return false;
+        if (!EnsureInitialized())
+        {
+            return false;
+        }
 
-        if (!m_runtimeSaveData.Settings.SetCameraSensitivity(sensitivity))
+        if (!m_runtimeSaveData.Settings.SetCameraSensitivity(
+            sensitivity))
         {
             return false;
         }
 
         MarkDirty();
+
+        RaiseGameSettingsChangedEvent(
+            GameSettingsChangeType.CAMERA_SENSITIVITY);
+
         return true;
     }
+
     /// <summary>
     /// カメラの反転設定を更新します。
     /// </summary>
     /// <param name="isReverse">反転させるかどうか。</param>
     /// <returns>
     /// true：更新に成功しました。
-    /// false：初期化エラーなどで失敗しました。
+    /// false：初期化エラー、または値が変更されませんでした。
     /// </returns>
     public bool SetCameraReverse(bool isReverse)
     {
-        if (!EnsureInitialized()) return false;
+        if (!EnsureInitialized())
+        {
+            return false;
+        }
 
-        // 直接代入するのではなく、設定クラス側のメソッドを呼び出す
-        if (!m_runtimeSaveData.Settings.SetCameraReverse(isReverse))
+        if (!m_runtimeSaveData.Settings.SetCameraReverse(
+            isReverse))
         {
             return false;
         }
 
         MarkDirty();
+
+        RaiseGameSettingsChangedEvent(
+            GameSettingsChangeType.CAMERA_REVERSE);
+
         return true;
+    }
+
+    /// <summary>
+    /// 現在保持しているゲーム設定をすべて通知します。
+    /// </summary>
+    public void NotifyCurrentGameSettings()
+    {
+        if (!EnsureInitialized())
+        {
+            return;
+        }
+
+        RaiseGameSettingsChangedEvent(
+            GameSettingsChangeType.ALL);
     }
 
     /// <summary>
@@ -319,17 +492,31 @@ public sealed class SaveDataController : MonoBehaviour
     /// true：リセット処理に成功しました。
     /// false：初期化エラーなどで失敗しました。
     /// </returns>
-    public bool ResetSaveData(bool saveImmediately = true)
+    public bool ResetSaveData(
+        bool saveImmediately = true)
     {
-        if (!EnsureInitialized()) return false;
+        if (!EnsureInitialized())
+        {
+            return false;
+        }
 
-        string defaultJson = JsonUtility.ToJson(m_defaultSaveData);
-        JsonUtility.FromJsonOverwrite(defaultJson, m_runtimeSaveData);
+        string defaultJson =
+            JsonUtility.ToJson(m_defaultSaveData);
+
+        JsonUtility.FromJsonOverwrite(
+            defaultJson,
+            m_runtimeSaveData);
 
         m_runtimeSaveData.EnsureInitialized();
 
         MarkDirty();
-        RaiseSaveChangedEvent(SaveChangedEventType.RESET);
+
+        RaiseSaveChangedEvent(
+            SaveChangedEventType.RESET);
+
+        // リセット後の設定値をゲーム側へ再反映
+        RaiseGameSettingsChangedEvent(
+            GameSettingsChangeType.ALL);
 
         if (!saveImmediately)
         {
@@ -348,21 +535,34 @@ public sealed class SaveDataController : MonoBehaviour
     /// </returns>
     private bool InitializeSaveData()
     {
-        if (m_isInitialized) return true;
+        if (m_isInitialized)
+        {
+            return true;
+        }
 
         if (m_defaultSaveData == null)
         {
-            Debug.LogError($"{nameof(SaveData)} が設定されていません。", this);
+            Debug.LogError(
+                $"{nameof(SaveData)} が設定されていません。",
+                this);
+
             return false;
         }
 
         // 元Assetを変更しないようランタイム用に複製
-        m_runtimeSaveData = Instantiate(m_defaultSaveData);
-        m_runtimeSaveData.name = $"{m_defaultSaveData.name}_Runtime";
+        m_runtimeSaveData =
+            Instantiate(m_defaultSaveData);
+
+        m_runtimeSaveData.name =
+            $"{m_defaultSaveData.name}_Runtime";
+
         m_runtimeSaveData.EnsureInitialized();
 
         // JSONがあればランタイムデータへ上書き
-        m_hasLoadedSaveFile = SaveSystem.TryLoadOverwrite(m_runtimeSaveData, m_saveFileName);
+        m_hasLoadedSaveFile =
+            SaveSystem.TryLoadOverwrite(
+                m_runtimeSaveData,
+                m_saveFileName);
 
         m_isDirty = false;
         m_isInitialized = true;
@@ -379,7 +579,10 @@ public sealed class SaveDataController : MonoBehaviour
     /// </returns>
     private bool EnsureInitialized()
     {
-        if (m_isInitialized) return true;
+        if (m_isInitialized)
+        {
+            return true;
+        }
 
         return InitializeSaveData();
     }
@@ -404,11 +607,41 @@ public sealed class SaveDataController : MonoBehaviour
     /// セーブ状態変更を通知します。
     /// </summary>
     /// <param name="eventType">発生したイベントのタイプ。</param>
-    private void RaiseSaveChangedEvent(SaveChangedEventType eventType)
+    private void RaiseSaveChangedEvent(
+        SaveChangedEventType eventType)
     {
-        if (m_saveChangedEvent == null) return;
+        if (m_saveChangedEvent == null)
+        {
+            return;
+        }
 
-        SaveChangedEventData eventData = new SaveChangedEventData(eventType, m_isDirty);
+        SaveChangedEventData eventData =
+            new SaveChangedEventData(
+                eventType,
+                m_isDirty);
+
         m_saveChangedEvent.Raise(eventData);
+    }
+
+    /// <summary>
+    /// ゲーム設定変更を通知します。
+    /// </summary>
+    /// <param name="changeType">変更された設定種別。</param>
+    private void RaiseGameSettingsChangedEvent(
+        GameSettingsChangeType changeType)
+    {
+        if (m_gameSettingsChangedEvent == null
+            || m_runtimeSaveData == null
+            || m_runtimeSaveData.Settings == null)
+        {
+            return;
+        }
+
+        GameSettingsChangedEventData eventData =
+            new GameSettingsChangedEventData(
+                changeType,
+                m_runtimeSaveData.Settings);
+
+        m_gameSettingsChangedEvent.Raise(eventData);
     }
 }

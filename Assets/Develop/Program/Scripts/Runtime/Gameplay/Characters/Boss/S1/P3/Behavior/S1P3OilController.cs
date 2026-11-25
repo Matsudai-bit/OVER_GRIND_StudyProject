@@ -8,6 +8,11 @@ using UnityEngine;
 public sealed class S1P3OilController :
     MonoBehaviour
 {
+    [SerializeField]
+    private SequentialAudioPlayer m_sequentialAudioPlayer;
+    [SerializeField]
+    private AudioOneShotAsset m_dropSound;
+
     // 着地点探索の最大試行回数
     private const int LANDING_POSITION_SEARCH_COUNT = 8;
 
@@ -580,6 +585,9 @@ public sealed class S1P3OilController :
 
         // 着弾痕を生成する
         CreateOilDecal();
+
+        // 音を鳴らす
+        m_sequentialAudioPlayer.PlayOneShotAt(m_dropSound, transform.position);
 
         /*
          * Stateへ着弾を通知します。

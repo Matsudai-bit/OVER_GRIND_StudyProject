@@ -1,51 +1,73 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
 /// <summary>
-/// ƒXƒe[ƒW1ƒtƒF[ƒY2‚ÌˆÚ“®‚µ‚È‚ª‚çs‚¤
-/// ƒ~ƒTƒCƒ‹UŒ‚‚ğÀs‚µ‚Ü‚·B
+/// ã‚¹ãƒ†ãƒ¼ã‚¸1ãƒ•ã‚§ãƒ¼ã‚º2ã®ç§»å‹•ã—ãªãŒã‚‰è¡Œã†
+/// ãƒŸã‚µã‚¤ãƒ«æ”»æ’ƒã‚’å®Ÿè¡Œã—ã¾ã™ã€‚
 /// </summary>
 public sealed class S1P2BossMoveMissileState :
     StateBase<BossController>
 {
-    // S1P2ŒÅ—LQÆ
+    // Stateä¸­ã«ä½¿ç”¨ã™ã‚‹Animation Timelineç®¡ç†
+    private AnimationTimelineController m_animationTimelineController;
+
+    // è¤‡åˆå‡¦ç†å¾…æ©Ÿã«ã‚ˆã‚‹æ°¸ä¹…åœæ­¢ã‚’é˜²ãä¸Šé™æ™‚é–“
+    private const float MAX_STATE_DURATION = 30.0f;
+
+    // S1P2å›ºæœ‰å‚ç…§
     private S1P2BossReferences m_references;
 
-    // ‹¤’ÊƒtƒF[ƒYQÆ
+    // å…±é€šãƒ•ã‚§ãƒ¼ã‚ºå‚ç…§
     private BossPhaseReferences m_commonReferences;
 
-    // ˆÚ“®QÆ
+    // ç§»å‹•å‚ç…§
     private S1P2MoveStateReferences m_moveReferences;
 
-    // ƒ~ƒTƒCƒ‹QÆ
+    // ãƒŸã‚µã‚¤ãƒ«å‚ç…§
     private S1BossMissileReferences m_missileReferences;
 
-    // ƒ~ƒTƒCƒ‹ƒpƒ‰ƒ[ƒ^
+    // ãƒŸã‚µã‚¤ãƒ«ãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿
     private S1P2BossMissileStateParameters m_missileParameters;
 
+    // ç§»å‹•ãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿
     private S1P2BossMoveStateParameters m_moveParameters;
 
-    // ˆÚ“®§Œä
+    // ç§»å‹•åˆ¶å¾¡
     private S1P2BossMoveController m_moveController;
 
-    // ƒ~ƒTƒCƒ‹§Œä
+    // ãƒŸã‚µã‚¤ãƒ«åˆ¶å¾¡
     private S1P2BossMissileExecutor m_missileExecutor;
 
-    // ê—pAnimation Trigger ID
+    // å°‚ç”¨Animation Trigger ID
     private int m_animationTriggerID;
 
-    // ˆÚ“®Š®—¹
+    // AnimationEventå—ä¿¡
+    private AnimationEventReceiver m_animationEventReceiver;
+
+    // ç§»å‹•å®Œäº†
     private bool m_isMoveCompleted;
 
-    // ƒ~ƒTƒCƒ‹Š®—¹
+    // ãƒŸã‚µã‚¤ãƒ«ç™ºå°„é–‹å§‹æ¸ˆã¿
+    private bool m_hasStartedMissileLaunch;
+
+    // ãƒŸã‚µã‚¤ãƒ«ç™ºå°„å®Œäº†
     private bool m_isMissileCompleted;
 
+    // Animationå®Œäº†
+    private bool m_isAnimationCompleted;
+
+    private EffectHandle m_effectHandle;
+
+    // Stateé–‹å§‹ã‹ã‚‰ã®çµŒéæ™‚é–“
+    private float m_stateElapsedTime;
+
     /// <summary>
-    /// ˆÚ“®ƒ~ƒTƒCƒ‹UŒ‚‚ğŠJn‚µ‚Ü‚·B
+    /// ç§»å‹•ãƒŸã‚µã‚¤ãƒ«æ”»æ’ƒã‚’é–‹å§‹ã—ã¾ã™ã€‚
     /// </summary>
     protected override void OnStartState()
     {
-        m_isMoveCompleted = false;
-        m_isMissileCompleted = false;
+        CacheAnimationTimelineController();
+
+        ResetRuntimeState();
 
         if (!TryGetReferences())
         {
@@ -54,24 +76,28 @@ public sealed class S1P2BossMoveMissileState :
             return;
         }
 
-        // æ‚ÉŒo˜H‚ğ¶¬‚·‚é
         if (!m_moveReferences.RoutePlanner.TryCreateRoute(
                 m_moveParameters,
                 out BossMoveRoute route))
         {
-            Debug.LogError(
-                "ˆÚ“®ƒ~ƒTƒCƒ‹UŒ‚—p‚ÌŒo˜H‚ğ¶¬‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½B");
+            Debug.LogWarning(
+                $"[{nameof(S1P2BossMoveMissileState)}] " +
+                "ç§»å‹•çµŒè·¯ã‚’ç”Ÿæˆã§ãã¾ã›ã‚“ã§ã—ãŸã€‚");
 
             SetFailed();
 
             return;
         }
 
-        // ê—pAnimation‚ğæ“¾‚·‚é
+        /*
+         * Triggerã‚’ç™ºç«ã™ã‚‹å‰ã«
+         * AnimationEventã‚’è³¼èª­ã—ã¾ã™ã€‚
+         */
         if (!TryGetAnimationSetting())
         {
             Debug.LogError(
-                "ˆÚ“®ƒ~ƒTƒCƒ‹UŒ‚—pAnimation‚ğæ“¾‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½B");
+                $"[{nameof(S1P2BossMoveMissileState)}] " +
+                "Animationè¨­å®šã‚’å–å¾—ã§ãã¾ã›ã‚“ã§ã—ãŸã€‚");
 
             SetFailed();
 
@@ -81,27 +107,82 @@ public sealed class S1P2BossMoveMissileState :
         m_moveController =
             m_moveReferences.MoveController;
 
-        // ˆÚ“®‚ğ€”õEŠJn
         if (!m_moveController.StartMove(
                 route,
                 m_moveParameters))
         {
             Debug.LogError(
-                "ˆÚ“®ƒ~ƒTƒCƒ‹UŒ‚‚ÌˆÚ“®‚ğŠJn‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½B");
+                $"[{nameof(S1P2BossMoveMissileState)}] " +
+                "ç§»å‹•ã‚’é–‹å§‹ã§ãã¾ã›ã‚“ã§ã—ãŸã€‚");
 
             SetFailed();
 
             return;
         }
+        if (m_commonReferences?.EffectEmitter != null)
+        {
+            m_effectHandle =
+                m_commonReferences.EffectEmitter.Play(
+                    EffectId.S1P2_BOSS_SMOKE);
+        }
 
-        // ƒ~ƒTƒCƒ‹UŒ‚‚ğ€”õ
+        /*
+         * ãƒŸã‚µã‚¤ãƒ«ã¯ã“ã“ã§ã¯æº–å‚™ã®ã¿è¡Œã„ã¾ã™ã€‚
+         * å®Ÿéš›ã®ç™ºå°„é–‹å§‹ã¯AnimationEventã‚’å¾…ã¡ã¾ã™ã€‚
+         */
         if (!m_missileExecutor.PrepareAttack(
                 m_missileReferences,
                 m_missileParameters,
                 m_commonReferences.PlayerTransform))
         {
             Debug.LogError(
-                "ˆÚ“®ƒ~ƒTƒCƒ‹UŒ‚‚Ìƒ~ƒTƒCƒ‹‚ğ€”õ‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½B");
+                $"[{nameof(S1P2BossMoveMissileState)}] " +
+                "ãƒŸã‚µã‚¤ãƒ«æ”»æ’ƒã‚’æº–å‚™ã§ãã¾ã›ã‚“ã§ã—ãŸã€‚");
+
+            SetFailed();
+
+            return;
+        }
+
+        Owner.SetStateExecutionStatus(
+            StateExecutionStatus.RUNNING);
+
+        Owner.AnimationController.SetTrigger(
+            m_animationTriggerID);
+
+        // ç§»å‹•éŸ³ã®å†ç”Ÿ
+        m_commonReferences?.AudioEmitter?.PlaySequence(
+                AudioCueId.MOVE_0);
+        
+    }
+
+    /// <summary>
+    /// ãƒŸã‚µã‚¤ãƒ«é€£ç¶šç™ºå°„ã‚’æ›´æ–°ã—ã¾ã™ã€‚
+    /// </summary>
+    /// <param name="deltaTime">
+    /// å‰ãƒ•ãƒ¬ãƒ¼ãƒ ã‹ã‚‰ã®çµŒéæ™‚é–“ã€‚
+    /// </param>
+    protected override void OnUpdate(
+        float deltaTime)
+    {
+        if (Owner == null ||
+            Owner.GetStateExecutionStatus() !=
+                StateExecutionStatus.RUNNING)
+        {
+            return;
+        }
+
+        m_stateElapsedTime +=
+            Mathf.Max(
+                0.0f,
+                deltaTime);
+
+        if (m_stateElapsedTime >=
+            MAX_STATE_DURATION)
+        {
+            Debug.LogError(
+                $"[{nameof(S1P2BossMoveMissileState)}] " +
+                "ç§»å‹•ãƒŸã‚µã‚¤ãƒ«æ”»æ’ƒãŒã‚¿ã‚¤ãƒ ã‚¢ã‚¦ãƒˆã—ã¾ã—ãŸã€‚");
 
             SetFailed();
 
@@ -109,47 +190,11 @@ public sealed class S1P2BossMoveMissileState :
         }
 
         /*
-         * ê—pAnimation‚Æƒ~ƒTƒCƒ‹”­Ë‚ğ
-         * ˆÚ“®ŠJn‚Æ“¯ˆêStateŠJnƒtƒŒ[ƒ€‚ÅÀs‚·‚éB
+         * AnimationEventã§ç™ºå°„ãŒè¨±å¯ã•ã‚Œã‚‹ã¾ã§ã¯
+         * Executorã‚’æ›´æ–°ã—ã¾ã›ã‚“ã€‚
          */
-        Owner.AnimationController.SetTrigger(
-            m_animationTriggerID);
-
-        if (!m_missileExecutor.BeginLaunch())
-        {
-            Debug.LogError(
-                "ˆÚ“®ƒ~ƒTƒCƒ‹UŒ‚‚Ì”­Ë‚ğŠJn‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½B");
-
-            SetFailed();
-
-            return;
-        }
-
-        m_isMissileCompleted =
-            m_missileExecutor.IsCompleted;
-
-        Owner.SetStateExecutionStatus(
-            StateExecutionStatus.RUNNING);
-
-        TryCompleteState();
-    }
-
-    /// <summary>
-    /// ƒ~ƒTƒCƒ‹˜A‘±”­Ë‚ğXV‚µ‚Ü‚·B
-    /// </summary>
-    /// <param name="deltaTime">
-    /// ‘OƒtƒŒ[ƒ€‚©‚ç‚ÌŒo‰ßŠÔB
-    /// </param>
-    protected override void OnUpdate(
-        float deltaTime)
-    {
-        if (Owner.GetStateExecutionStatus() !=
-            StateExecutionStatus.RUNNING)
-        {
-            return;
-        }
-
-        if (m_isMissileCompleted)
+        if (!m_hasStartedMissileLaunch ||
+            m_isMissileCompleted)
         {
             return;
         }
@@ -176,19 +221,20 @@ public sealed class S1P2BossMoveMissileState :
             return;
         }
 
-        // ƒ~ƒTƒCƒ‹‚¾‚¯I—¹‚µ‚½ê‡AˆÚ“®‚Í~‚ß‚È‚¢
-        m_isMissileCompleted = true;
+        m_isMissileCompleted =
+            true;
 
         TryCompleteState();
     }
 
     /// <summary>
-    /// Œo˜HˆÚ“®‚ğXV‚µ‚Ü‚·B
+    /// çµŒè·¯ç§»å‹•ã‚’æ›´æ–°ã—ã¾ã™ã€‚
     /// </summary>
     protected override void OnFixedUpdate()
     {
-        if (Owner.GetStateExecutionStatus() !=
-            StateExecutionStatus.RUNNING)
+        if (Owner == null ||
+            Owner.GetStateExecutionStatus() !=
+                StateExecutionStatus.RUNNING)
         {
             return;
         }
@@ -221,69 +267,200 @@ public sealed class S1P2BossMoveMissileState :
         }
 
         /*
-         * ˆÚ“®‚¾‚¯æ‚ÉI—¹‚µ‚½ê‡‚ÍBoss‚ğ’â~‚·‚éB
-         * ƒ~ƒTƒCƒ‹UŒ‚‚ÍOnUpdate‚Å‚»‚Ì‚Ü‚ÜŒp‘±‚·‚éB
+         * ç§»å‹•ã®ã¿çµ‚äº†ã•ã›ã¾ã™ã€‚
+         * ãƒŸã‚µã‚¤ãƒ«ç™ºå°„ã‚„Animationã¯ç¶™ç¶šã—ã¾ã™ã€‚
          */
-        m_isMoveCompleted = true;
+        m_isMoveCompleted =
+            true;
 
-        Owner.Motor?.StopHorizontalMovement();
+        Owner.Motor?
+            .StopHorizontalMovement();
+
+        m_effectHandle.Stop();
 
         TryCompleteState();
     }
 
     /// <summary>
-    /// ˆÚ“®ƒ~ƒTƒCƒ‹UŒ‚‚ğI—¹‚µ‚Ü‚·B
+    /// ç§»å‹•ãƒŸã‚µã‚¤ãƒ«æ”»æ’ƒã‚’çµ‚äº†ã—ã¾ã™ã€‚
     /// </summary>
     protected override void OnExitState()
     {
+        StopAnimationTimelines();
+
+        UnregisterAnimationEvent();
+
         m_moveController?.Cancel();
 
         m_missileExecutor?.Cancel();
 
-        Owner.Motor?.StopHorizontalMovement();
+        Owner?.Motor?
+            .StopHorizontalMovement();
 
-        if (Owner.GetStateExecutionStatus() ==
-            StateExecutionStatus.RUNNING)
+        m_effectHandle.Stop();
+
+        m_commonReferences?.AudioEmitter?.StopSequence(
+                AudioCueId.MOVE_0);
+
+        if (Owner != null &&
+            Owner.GetStateExecutionStatus() ==
+                StateExecutionStatus.RUNNING)
         {
             Owner.SetStateExecutionStatus(
                 StateExecutionStatus.FAILED);
         }
 
-        m_references = null;
-        m_commonReferences = null;
+        m_references =
+            null;
 
-        m_moveReferences = null;
-        m_missileReferences = null;
-        m_missileParameters = null;
+        m_commonReferences =
+            null;
 
-        m_moveController = null;
-        m_missileExecutor = null;
+        m_moveReferences =
+            null;
+
+        m_missileReferences =
+            null;
+
+        m_missileParameters =
+            null;
+
+        m_moveParameters =
+            null;
+
+        m_moveController =
+            null;
+
+        m_missileExecutor =
+            null;
+
+        m_animationEventReceiver =
+            null;
     }
 
     /// <summary>
-    /// ˆÚ“®‚Æƒ~ƒTƒCƒ‹‚Ì—¼•û‚ªI—¹‚µ‚½ê‡‚É
-    /// State‚ğ³íI—¹‚µ‚Ü‚·B
+    /// æ”»æ’ƒAnimationEventã‚’å‡¦ç†ã—ã¾ã™ã€‚
     /// </summary>
-    private void TryCompleteState()
+    /// <param name="attackEventData">
+    /// æ”»æ’ƒã‚¤ãƒ™ãƒ³ãƒˆæƒ…å ±ã€‚
+    /// </param>
+    private void HandleAttackEvent(
+        AttackEventData attackEventData)
     {
-        if (!m_isMoveCompleted ||
-            !m_isMissileCompleted)
+        if (attackEventData == null ||
+            Owner == null ||
+            Owner.GetStateExecutionStatus() !=
+                StateExecutionStatus.RUNNING)
         {
             return;
         }
 
-        Owner.Motor?.StopHorizontalMovement();
+        switch (attackEventData.AttackEventType)
+        {
+            case AttackEventType.HITBOX_ENABLE:
+                StartMissileLaunch();
+                break;
+
+            case AttackEventType.HITBOX_DISABLE:
+                break;
+
+            case AttackEventType.ANIMATION_END:
+                HandleAnimationEnd();
+                break;
+        }
+    }
+
+    /// <summary>
+    /// AnimationEventã‚’èµ·ç‚¹ã«
+    /// å…¨ãƒŸã‚µã‚¤ãƒ«ã®é€£ç¶šç™ºå°„ã‚’é–‹å§‹ã—ã¾ã™ã€‚
+    /// </summary>
+    private void StartMissileLaunch()
+    {
+        /*
+         * HITBOX_ENABLEãŒè¤‡æ•°å›ç™ºç”Ÿã—ã¦ã‚‚
+         * ç™ºå°„å‡¦ç†ã¯1å›ã—ã‹é–‹å§‹ã—ã¾ã›ã‚“ã€‚
+         */
+        if (m_hasStartedMissileLaunch)
+        {
+            return;
+        }
+
+        if (m_missileExecutor == null)
+        {
+            SetFailed();
+
+            return;
+        }
+
+        if (!m_missileExecutor.BeginLaunch())
+        {
+            SetFailed();
+
+            return;
+        }
+
+        m_hasStartedMissileLaunch =
+            true;
+
+        /*
+         * LaunchSiteãŒ1ã¤ã ã‘ã®å ´åˆãªã©ã€
+         * BeginLaunchç›´å¾Œã«å®Œäº†ã™ã‚‹å ´åˆã«ã‚‚å¯¾å¿œã—ã¾ã™ã€‚
+         */
+        if (!m_missileExecutor.IsCompleted)
+        {
+            return;
+        }
+
+        m_isMissileCompleted =
+            true;
+
+        TryCompleteState();
+    }
+
+    /// <summary>
+    /// æ”»æ’ƒAnimationçµ‚äº†ã‚’å‡¦ç†ã—ã¾ã™ã€‚
+    /// </summary>
+    private void HandleAnimationEnd()
+    {
+        m_isAnimationCompleted =
+            true;
+
+        TryCompleteState();
+    }
+    /// <summary>
+    /// ç§»å‹•ãƒ»ãƒŸã‚µã‚¤ãƒ«ãƒ»AnimationãŒ
+    /// ã™ã¹ã¦çµ‚äº†ã—ãŸå ´åˆã«Stateã‚’å®Œäº†ã—ã¾ã™ã€‚
+    /// </summary>
+    private void TryCompleteState()
+    {
+        if (!m_isMoveCompleted ||
+            !m_isMissileCompleted ||
+            !m_isAnimationCompleted)
+        {
+            return;
+        }
+
+        m_commonReferences?.AudioEmitter?.StopSequence(
+                AudioCueId.MOVE_0);
+
+        Owner.Motor?
+            .StopHorizontalMovement();
+
+        /*
+         * SUCCEEDEDã¸å¤‰æ›´ã™ã‚‹å‰ã«
+         * å¿…ãšã‚¯ãƒ¼ãƒ«ã‚¿ã‚¤ãƒ ã‚’é–‹å§‹ã—ã¾ã™ã€‚
+         */
+        StartMissileCoolTime();
 
         Owner.SetStateExecutionStatus(
             StateExecutionStatus.SUCCEEDED);
     }
-
     /// <summary>
-    /// •K—v‚ÈQÆ‚Æƒpƒ‰ƒ[ƒ^‚ğæ“¾‚µ‚Ü‚·B
+    /// å¿…è¦ãªå‚ç…§ã¨ãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿ã‚’å–å¾—ã—ã¾ã™ã€‚
     /// </summary>
     /// <returns>
-    /// trueFæ“¾‚Å‚«‚Ü‚µ‚½B
-    /// falseFæ“¾‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½B
+    /// trueï¼šå–å¾—ã§ãã¾ã—ãŸã€‚
+    /// falseï¼šå–å¾—ã§ãã¾ã›ã‚“ã§ã—ãŸã€‚
     /// </returns>
     private bool TryGetReferences()
     {
@@ -294,28 +471,41 @@ public sealed class S1P2BossMoveMissileState :
             return false;
         }
 
-        if (!Owner.PhaseController.TryGetCurrentPhaseComponent(
-                out m_references))
+        if (!Owner.PhaseController
+                .TryGetCurrentPhaseComponent(
+                    out m_references))
         {
             return false;
         }
 
-        if (!Owner.PhaseController.TryGetCurrentPhaseComponent(
-                out m_commonReferences))
+        if (!Owner.PhaseController
+                .TryGetCurrentPhaseComponent(
+                    out m_commonReferences))
         {
             return false;
         }
 
-        // ˆÚ“®
+        if (m_references.StateParameterAsset == null)
+        {
+            return false;
+        }
+
+        /*
+         * ç§»å‹•
+         */
         m_moveReferences =
             m_references.MoveStateReferences;
 
-        if (!m_references.StateParameterAsset.TryGetMoveMissileParameters(out S1P2BossMoveMissileStateParameters  moveMissileStateParameters))
+        if (!m_references.StateParameterAsset
+                .TryGetMoveMissileParameters(
+                    out S1P2BossMoveMissileStateParameters
+                        moveMissileParameters))
         {
             return false;
         }
 
-        m_moveParameters = moveMissileStateParameters.Move;
+        m_moveParameters =
+            moveMissileParameters.Move;
 
         if (m_moveReferences == null ||
             m_moveParameters == null ||
@@ -325,25 +515,18 @@ public sealed class S1P2BossMoveMissileState :
             return false;
         }
 
-        // ƒ~ƒTƒCƒ‹
+        /*
+         * ãƒŸã‚µã‚¤ãƒ«
+         */
         m_missileReferences =
             m_references.MissileReferences;
 
+        m_missileParameters =
+            moveMissileParameters.Missile;
+
         if (m_missileReferences == null ||
-            !m_missileReferences.HasRequiredReferences())
-        {
-            return false;
-        }
-
-        if (m_references.StateParameterAsset == null ||
-            !m_references.StateParameterAsset.HasRequiredParameters())
-        {
-            return false;
-        }
-
-        m_missileParameters = moveMissileStateParameters.Missile;
-
-        if (m_missileParameters == null ||
+            !m_missileReferences.HasRequiredReferences() ||
+            m_missileParameters == null ||
             !m_missileParameters.HasRequiredParameters())
         {
             return false;
@@ -357,20 +540,15 @@ public sealed class S1P2BossMoveMissileState :
         m_missileExecutor =
             m_references.MissileExecutor;
 
-        if (m_missileExecutor == null)
-        {
-            return false;
-        }
-
-        return true;
+        return m_missileExecutor != null;
     }
 
     /// <summary>
-    /// ˆÚ“®ƒ~ƒTƒCƒ‹ê—pAnimationİ’è‚ğæ“¾‚µ‚Ü‚·B
+    /// ç§»å‹•ãƒŸã‚µã‚¤ãƒ«å°‚ç”¨Animationè¨­å®šã‚’å–å¾—ã—ã¾ã™ã€‚
     /// </summary>
     /// <returns>
-    /// trueFæ“¾‚Å‚«‚Ü‚µ‚½B
-    /// falseFæ“¾‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½B
+    /// trueï¼šå–å¾—ã§ãã¾ã—ãŸã€‚
+    /// falseï¼šå–å¾—ã§ãã¾ã›ã‚“ã§ã—ãŸã€‚
     /// </returns>
     private bool TryGetAnimationSetting()
     {
@@ -403,15 +581,65 @@ public sealed class S1P2BossMoveMissileState :
             return false;
         }
 
+        m_animationEventReceiver =
+            Owner.AnimationController
+                .CurrentAnimationEventReceiver;
+
+        if (m_animationEventReceiver == null)
+        {
+            return false;
+        }
+
         m_animationTriggerID =
             Animator.StringToHash(
                 animationTriggerName);
+
+        /*
+         * Triggerã‚ˆã‚Šå…ˆã«AnimationEventã‚’è³¼èª­ã—ã¾ã™ã€‚
+         */
+        m_animationEventReceiver.AttackEventReceived +=
+            HandleAttackEvent;
 
         return true;
     }
 
     /// <summary>
-    /// State‚ğ¸”sI—¹‚µ‚Ü‚·B
+    /// AnimationEventã®è³¼èª­ã‚’è§£é™¤ã—ã¾ã™ã€‚
+    /// </summary>
+    private void UnregisterAnimationEvent()
+    {
+        if (m_animationEventReceiver == null)
+        {
+            return;
+        }
+
+        m_animationEventReceiver.AttackEventReceived -=
+            HandleAttackEvent;
+    }
+
+    /// <summary>
+    /// RuntimeçŠ¶æ…‹ã‚’åˆæœŸåŒ–ã—ã¾ã™ã€‚
+    /// </summary>
+    private void ResetRuntimeState()
+    {
+        m_isMoveCompleted =
+            false;
+
+        m_hasStartedMissileLaunch =
+            false;
+
+        m_isMissileCompleted =
+            false;
+
+        m_isAnimationCompleted =
+            false;
+
+        m_stateElapsedTime =
+            0.0f;
+    }
+
+    /// <summary>
+    /// Stateã‚’å¤±æ•—çµ‚äº†ã—ã¾ã™ã€‚
     /// </summary>
     private void SetFailed()
     {
@@ -419,7 +647,13 @@ public sealed class S1P2BossMoveMissileState :
 
         m_missileExecutor?.Cancel();
 
-        Owner?.Motor?.StopHorizontalMovement();
+        Owner?.Motor?
+            .StopHorizontalMovement();
+
+        m_effectHandle.Stop();
+
+        m_commonReferences?.AudioEmitter?.StopSequence(
+                AudioCueId.MOVE_0);
 
         if (Owner == null)
         {
@@ -428,5 +662,64 @@ public sealed class S1P2BossMoveMissileState :
 
         Owner.SetStateExecutionStatus(
             StateExecutionStatus.FAILED);
+    }
+    /// <summary>
+    /// ç§»å‹•ãƒŸã‚µã‚¤ãƒ«æ”»æ’ƒã§ä½¿ç”¨ã—ãŸ
+    /// ãƒŸã‚µã‚¤ãƒ«æ”»æ’ƒã®ã‚¯ãƒ¼ãƒ«ã‚¿ã‚¤ãƒ ã‚’é–‹å§‹ã—ã¾ã™ã€‚
+    /// </summary>
+    private void StartMissileCoolTime()
+    {
+        if (Owner == null ||
+            m_references == null ||
+            m_references.DecisionParameterAsset == null)
+        {
+            return;
+        }
+
+        BossStateCoolTimeManager coolTimeManager =
+            Owner.GetComponent<
+                BossStateCoolTimeManager>();
+
+        if (coolTimeManager == null)
+        {
+            return;
+        }
+
+        coolTimeManager
+            .StartCoolTime<S1P2BossMissileState>(
+                m_references
+                    .DecisionParameterAsset
+                    .Missile
+                    .CoolTime);
+    }
+
+    /// <summary>
+    /// ç¾åœ¨ãƒ•ã‚§ãƒ¼ã‚ºã®Animation Timelineç®¡ç†ã‚’ä¿æŒã—ã¾ã™ã€‚
+    /// </summary>
+    private void CacheAnimationTimelineController()
+    {
+        m_animationTimelineController =
+            null;
+
+        if (Owner?.PhaseController == null)
+        {
+            return;
+        }
+
+        Owner.PhaseController
+            .TryGetCurrentPhaseComponent(
+                out m_animationTimelineController);
+    }
+
+    /// <summary>
+    /// Stateä¸­ã«å†ç”Ÿã•ã‚ŒãŸAnimation Timelineã‚’åœæ­¢ã—ã¾ã™ã€‚
+    /// </summary>
+    private void StopAnimationTimelines()
+    {
+        m_animationTimelineController?
+            .StopAll();
+
+        m_animationTimelineController =
+            null;
     }
 }

@@ -31,6 +31,12 @@ public sealed class S1P2BossMoveController :
     // 初期旋回中か
     private bool m_isInitialTurning;
 
+    // 移動を強制終了するまでの最大時間
+    private const float MAX_MOVE_DURATION = 10.0f;
+
+    // 移動開始からの経過時間
+    private float m_moveElapsedTime;
+
     /// <summary>
     /// 移動が完了したか取得します。
     /// </summary>
@@ -118,13 +124,14 @@ public sealed class S1P2BossMoveController :
 
         return true;
     }
-
     /// <summary>
     /// 経路移動を物理更新します。
     /// </summary>
-    /// <param name="deltaTime">物理フレームの経過時間。</param>
+    /// <param name="deltaTime">
+    /// 物理フレームの経過時間。
+    /// </param>
     public void FixedUpdateMove(
-     float deltaTime)
+        float deltaTime)
     {
         if (!m_isMoving ||
             IsCompleted ||
@@ -136,6 +143,24 @@ public sealed class S1P2BossMoveController :
         if (!ValidateRuntimeState())
         {
             FailMove();
+
+            return;
+        }
+
+        /*
+         * 移動開始からの時間を計測します。
+         * 経路追従が何らかの理由で完了しない場合でも、
+         * 最大時間を超えたら移動を強制完了します。
+         */
+        m_moveElapsedTime +=
+            Mathf.Max(
+                0.0f,
+                deltaTime);
+
+        if (m_moveElapsedTime >=
+            MAX_MOVE_DURATION)
+        {
+            CompleteMove();
 
             return;
         }
@@ -480,16 +505,29 @@ public sealed class S1P2BossMoveController :
     /// </summary>
     private void ResetRuntimeState()
     {
-        m_route = null;
-        m_parameters = null;
+        m_route =
+            null;
 
-        m_currentSampleIndex = 0;
+        m_parameters =
+            null;
 
-        m_isMoving = false;
-        m_isInitialTurning = false;
+        m_currentSampleIndex =
+            0;
 
-        IsCompleted = false;
-        HasFailed = false;
+        m_moveElapsedTime =
+            0.0f;
+
+        m_isMoving =
+            false;
+
+        m_isInitialTurning =
+            false;
+
+        IsCompleted =
+            false;
+
+        HasFailed =
+            false;
     }
 
     /// <summary>

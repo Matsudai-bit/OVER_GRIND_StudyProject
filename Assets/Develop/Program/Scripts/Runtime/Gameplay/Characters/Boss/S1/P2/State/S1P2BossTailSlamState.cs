@@ -1,124 +1,199 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
 /// <summary>
-/// ƒXƒe[ƒW1ƒtƒF[ƒY2‚ÌK”ö’@‚«‚Â‚¯UŒ‚‚ğÀs‚µ‚Ü‚·B
+/// ã‚¹ãƒ†ãƒ¼ã‚¸1ãƒ•ã‚§ãƒ¼ã‚º2ã®å°»å°¾å©ãã¤ã‘æ”»æ’ƒã‚’
+/// å˜ç‹¬ã®Stateã¨ã—ã¦å®Ÿè¡Œã—ã¾ã™ã€‚
 /// </summary>
 public sealed class S1P2BossTailSlamState :
     StateBase<BossController>
 {
-    // K”ö’@‚«‚Â‚¯UŒ‚‚ÌƒN[ƒ‹ƒ^ƒCƒ€
-    private const float COOLDOWN_DURATION = 2.0f;
+    // Stateä¸­ã«ä½¿ç”¨ã™ã‚‹Animation Timelineç®¡ç†
+    private AnimationTimelineController m_animationTimelineController;
 
-    // K”ö’@‚«‚Â‚¯UŒ‚ID
-    private AttackIdentifier m_tailSlamAttackIdentifier;
+    // Executorå¾…æ©Ÿã«ã‚ˆã‚‹æ°¸ä¹…åœæ­¢ã‚’é˜²ãä¸Šé™æ™‚é–“
+    private const float MAX_STATE_DURATION = 15.0f;
 
-    // ÕŒ‚”gUŒ‚ID
-    //private AttackIdentifier m_impactAttackIdentifier;
-
-    // Animator Trigger ID
-    private int m_animationTriggerID;
-
-    // Ÿ‚ÉUŒ‚‰Â”\‚É‚È‚é
-    private float m_cooldownEndTime;
-
-    // AnimationEvent‚ğw“Ç‚µ‚Ä‚¢‚é‚©
-    private bool m_isAnimationEventSubscribed;
-
-    // ’n–ÊÕ“ËƒCƒxƒ“ƒg‚ğw“Ç‚µ‚Ä‚¢‚é‚©
-    private bool m_isGroundCollisionSubscribed;
-
-    // ƒtƒF[ƒYŒÅ—LQÆ
+    // ãƒ•ã‚§ãƒ¼ã‚º2å›ºæœ‰å‚ç…§
     private S1P2BossReferences m_references;
 
-    // K”ö‚Ì’n–ÊÕ“ËŒŸ’m
-    private CollisionSensor m_groundCollisionSensor;
+    // å°»å°¾å©ãã¤ã‘æ”»æ’ƒå®Ÿè¡Œåˆ¶å¾¡
+    private S1P2BossTailSlamExecutor m_tailSlamExecutor;
 
-    // ’n–ÊÕ“ËÏ‚İ‚©
-    private bool m_hasGroundCollision;
+    // Stateé–‹å§‹ã‹ã‚‰ã®çµŒéæ™‚é–“
+    private float m_stateElapsedTime;
 
     /// <summary>
-    /// K”ö’@‚«‚Â‚¯UŒ‚‚ğŠJn‚µ‚Ü‚·B
+    /// å°»å°¾å©ãã¤ã‘æ”»æ’ƒã‚’é–‹å§‹ã—ã¾ã™ã€‚
     /// </summary>
     protected override void OnStartState()
     {
-        m_hasGroundCollision = false;
+        CacheAnimationTimelineController();
+
+        m_stateElapsedTime =
+            0.0f;
 
         if (!TryGetReferences())
         {
-            Owner.SetStateExecutionStatus(
-                StateExecutionStatus.FAILED);
+            SetFailed();
 
             return;
         }
 
-        if (IsCooldown())
-        {
-            Owner.SetStateExecutionStatus(
-                StateExecutionStatus.FAILED);
+        /*
+         * å˜ç‹¬ã®å°»å°¾æ”»æ’ƒStateã§ã¯
+         * æ”»æ’ƒä¸­ã®Bossç§»å‹•ã‚’åœæ­¢ã—ã¾ã™ã€‚
+         *
+         * MoveStateã‹ã‚‰Executorã‚’ä½¿ç”¨ã™ã‚‹å ´åˆã¯ã€
+         * MoveStateå´ãŒç§»å‹•ã‚’ç¶™ç¶šã™ã‚‹ãŸã‚ã€
+         * Executorè‡ªèº«ã¯ç§»å‹•ã‚’åœæ­¢ã—ã¾ã›ã‚“ã€‚
+         */
+        Owner.Motor?
+            .StopHorizontalMovement();
 
-            return;
-        }
-
-        // UŒ‚’†‚ÍˆÚ“®‚ğ’â~‚·‚é
-        Owner.Motor?.StopHorizontalMovement();
-
-        if (!ApplyAttackSetting())
-        {
-            Debug.LogError(
-                "K”ö’@‚«‚Â‚¯UŒ‚‚ğŠJn‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½B");
-
-            Owner.SetStateExecutionStatus(
-                StateExecutionStatus.FAILED);
-
-            return;
-        }
+        m_tailSlamExecutor =
+            new S1P2BossTailSlamExecutor(
+                Owner);
 
         Owner.SetStateExecutionStatus(
             StateExecutionStatus.RUNNING);
+
+        if (m_tailSlamExecutor.Start(
+                m_references))
+        {
+            return;
+        }
+
+        Debug.LogError(
+            $"[{nameof(S1P2BossTailSlamState)}] " +
+            "å°»å°¾å©ãã¤ã‘æ”»æ’ƒã‚’é–‹å§‹ã§ãã¾ã›ã‚“ã§ã—ãŸ.");
+
+        SetFailed();
     }
 
     /// <summary>
-    /// K”ö’@‚«‚Â‚¯UŒ‚‚ğI—¹‚µ‚Ü‚·B
+    /// å°»å°¾å©ãã¤ã‘æ”»æ’ƒã®å®Œäº†çŠ¶æ…‹ã‚’ç›£è¦–ã—ã¾ã™ã€‚
+    /// </summary>
+    /// <param name="deltaTime">
+    /// å‰ãƒ•ãƒ¬ãƒ¼ãƒ ã‹ã‚‰ã®çµŒéæ™‚é–“ã€‚
+    /// </param>
+    protected override void OnUpdate(
+        float deltaTime)
+    {
+        if (Owner == null ||
+            Owner.GetStateExecutionStatus() !=
+                StateExecutionStatus.RUNNING)
+        {
+            return;
+        }
+
+        m_stateElapsedTime +=
+            Mathf.Max(
+                0.0f,
+                deltaTime);
+
+        if (m_stateElapsedTime >=
+            MAX_STATE_DURATION)
+        {
+            Debug.LogError(
+                $"[{nameof(S1P2BossTailSlamState)}] " +
+                "å°»å°¾å©ãã¤ã‘æ”»æ’ƒãŒã‚¿ã‚¤ãƒ ã‚¢ã‚¦ãƒˆã—ã¾ã—ãŸã€‚");
+
+            SetFailed();
+
+            return;
+        }
+
+        if (m_tailSlamExecutor == null)
+        {
+            SetFailed();
+
+            return;
+        }
+
+        if (m_tailSlamExecutor.HasFailed)
+        {
+            SetFailed();
+
+            return;
+        }
+
+        if (!m_tailSlamExecutor.IsCompleted)
+        {
+            return;
+        }
+
+        CompleteTailSlam();
+    }
+
+    /// <summary>
+    /// å°»å°¾å©ãã¤ã‘æ”»æ’ƒã‚’çµ‚äº†ã—ã¾ã™ã€‚
     /// </summary>
     protected override void OnExitState()
     {
-        UnsubscribeAnimationEvent();
-        UnsubscribeGroundCollision();
+        StopAnimationTimelines();
 
-        // State“r’†I—¹‚É‚àUŒ‚”»’è‚ğc‚³‚È‚¢
-        if (m_tailSlamAttackIdentifier != null)
-        {
-            Owner.AttackHitboxRegistry?.DisableHitboxes(
-                m_tailSlamAttackIdentifier);
-        }
+        m_tailSlamExecutor?.Cancel();
 
-        //if (m_impactAttackIdentifier != null)
-        //{
-        //    Owner.AttackHitboxRegistry?.DisableHitboxes(
-        //        m_impactAttackIdentifier);
-        //}
+        Owner?.Motor?
+            .StopHorizontalMovement();
 
-        if (Owner.GetStateExecutionStatus() ==
-            StateExecutionStatus.RUNNING)
+        if (Owner != null &&
+            Owner.GetStateExecutionStatus() ==
+                StateExecutionStatus.RUNNING)
         {
             Owner.SetStateExecutionStatus(
                 StateExecutionStatus.FAILED);
         }
 
-        m_references = null;
-        m_groundCollisionSensor = null;
+        m_tailSlamExecutor =
+            null;
+
+        m_references =
+            null;
     }
 
     /// <summary>
-    /// ƒtƒF[ƒYŒÅ—LQÆ‚ğæ“¾‚µ‚Ü‚·B
+    /// æ­£å¸¸çµ‚äº†ã—ãŸå°»å°¾å©ãã¤ã‘æ”»æ’ƒã®
+    /// ã‚¯ãƒ¼ãƒ«ã‚¿ã‚¤ãƒ ã‚’é–‹å§‹ã—ã¾ã™ã€‚
+    /// </summary>
+    private void StartCoolTime()
+    {
+        if (Owner == null ||
+            m_references?.DecisionParameterAsset == null)
+        {
+            return;
+        }
+
+        BossStateCoolTimeManager coolTimeManager =
+            Owner.GetComponent<
+                BossStateCoolTimeManager>();
+
+        if (coolTimeManager == null)
+        {
+            return;
+        }
+
+        coolTimeManager
+            .StartCoolTime<S1P2BossTailSlamState>(
+                m_references
+                    .DecisionParameterAsset
+                    .TailSlam
+                    .CoolTime);
+    }
+
+    /// <summary>
+    /// ãƒ•ã‚§ãƒ¼ã‚º2å›ºæœ‰å‚ç…§ã‚’å–å¾—ã—ã¾ã™ã€‚
     /// </summary>
     /// <returns>
-    /// trueF•K—v‚ÈQÆ‚ğæ“¾‚Å‚«‚Ü‚µ‚½B
-    /// falseFæ“¾‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½B
+    /// trueï¼šå¿…è¦ãªå‚ç…§ã‚’å–å¾—ã§ãã¾ã—ãŸã€‚
+    /// falseï¼šå‚ç…§ãŒä¸è¶³ã—ã¦ã„ã¾ã™ã€‚
     /// </returns>
     private bool TryGetReferences()
     {
-        if (Owner.PhaseController == null)
+        if (Owner == null ||
+            Owner.PhaseController == null ||
+            Owner.Motor == null ||
+            Owner.AnimationController == null)
         {
             return false;
         }
@@ -127,16 +202,31 @@ public sealed class S1P2BossTailSlamState :
                 .TryGetCurrentPhaseComponent(
                     out m_references))
         {
+            Debug.LogError(
+                $"[{nameof(S1P2BossTailSlamState)}] " +
+                $"{nameof(S1P2BossReferences)}ã‚’" +
+                "å–å¾—ã§ãã¾ã›ã‚“ã§ã—ãŸ.");
+
             return false;
         }
 
-        m_groundCollisionSensor =
-            m_references.TailSlamReference.TailGroundCollisionSensor;
-
-        if (m_groundCollisionSensor == null)
+        if (m_references.TailSlamReference == null)
         {
             Debug.LogError(
-                $"{nameof(CollisionSensor)}‚ªİ’è‚³‚ê‚Ä‚¢‚Ü‚¹‚ñB");
+                $"[{nameof(S1P2BossTailSlamState)}] " +
+                $"{nameof(S1P2BossTailSlamReference)}ãŒ" +
+                "è¨­å®šã•ã‚Œã¦ã„ã¾ã›ã‚“.");
+
+            return false;
+        }
+
+        if (m_references
+                .TailSlamReference
+                .TailGroundCollisionSensor == null)
+        {
+            Debug.LogError(
+                $"[{nameof(S1P2BossTailSlamState)}] " +
+                "å°»å°¾ã®æ¥åœ°åˆ¤å®šSensorãŒè¨­å®šã•ã‚Œã¦ã„ã¾ã›ã‚“.");
 
             return false;
         }
@@ -145,246 +235,75 @@ public sealed class S1P2BossTailSlamState :
     }
 
     /// <summary>
-    /// K”ö‚ª’n–Ê‚ÉÕ“Ë‚µ‚½Û‚Ìˆ—‚ğÀs‚µ‚Ü‚·B
+    /// å°»å°¾å©ãã¤ã‘æ”»æ’ƒã‚’æ­£å¸¸çµ‚äº†ã—ã¾ã™ã€‚
     /// </summary>
-    /// <param name="contactPosition">’n–Ê‚Æ‚ÌÚGˆÊ’uB</param>
-    private void HandleTailGroundCollisionDetected(
-        Vector3 contactPosition)
+    private void CompleteTailSlam()
     {
-        if (m_hasGroundCollision)
+        if (Owner == null ||
+            Owner.GetStateExecutionStatus() !=
+                StateExecutionStatus.RUNNING)
         {
             return;
         }
 
-        m_hasGroundCollision = true;
+        Owner.Motor?
+            .StopHorizontalMovement();
 
-        // K”ö–{‘Ì‚ÌUŒ‚”»’è‚ğI—¹‚·‚é
-        Owner.AttackHitboxRegistry?.DisableHitboxes(
-            m_tailSlamAttackIdentifier);
-
-        //// ÕŒ‚”g‚ğŠJn‚·‚é
-        Object.Instantiate(m_references.TailSlamReference.ImpactEffect, contactPosition, Owner.transform.rotation);
-
-        Debug.Log(
-            $"K”ö‚ª’n–Ê‚ÉÕ“Ë‚µ‚Ü‚µ‚½BˆÊ’u: {contactPosition}");
-
-        // ˆê“xŒŸ’m‚µ‚½‚ç‚»‚êˆÈ~‚Ì’n–ÊÕ“Ë‚Í•s—v
-        UnsubscribeGroundCollision();
-    }
-
-    /// <summary>
-    /// UŒ‚İ’è‚ğ“K—p‚µ‚Ü‚·B
-    /// </summary>
-    /// <returns>
-    /// trueFİ’è‚Å‚«‚Ü‚µ‚½B
-    /// falseFİ’è‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½B
-    /// </returns>
-    private bool ApplyAttackSetting()
-    {
-        S1P2BossAttackSettings attackSettings =
-            Owner.GetComponentInChildren<
-                S1P2BossAttackSettings>(true);
-
-        if (attackSettings == null)
-        {
-            Debug.LogError(
-                $"{nameof(S1P2BossAttackSettings)}‚ªŒ©‚Â‚©‚è‚Ü‚¹‚ñB");
-
-            return false;
-        }
-
-        // K”ö’@‚«‚Â‚¯UŒ‚
-        if (!attackSettings.TryGetAttackSetting(
-                S1P2BossAttackType.TAIL_SLAM,
-                out m_tailSlamAttackIdentifier,
-                out string animationTriggerName))
-        {
-            Debug.LogError(
-                $"{S1P2BossAttackType.TAIL_SLAM}" +
-                "‚ÌUŒ‚İ’è‚ª‚ ‚è‚Ü‚¹‚ñB");
-
-            return false;
-        }
-
-        // ÕŒ‚”gUŒ‚
-        //if (!attackSettings.TryGetAttackSetting(
-        //        S1P2BossAttackType.TAIL_SLAM_IMPACT,
-        //        out m_impactAttackIdentifier,
-        //        out _))
-        //{
-        //    Debug.LogError(
-        //        $"{S1P2BossAttackType.TAIL_SLAM_IMPACT}" +
-        //        "‚ÌUŒ‚İ’è‚ª‚ ‚è‚Ü‚¹‚ñB");
-
-        //    return false;
-        //}
-
-        if (m_tailSlamAttackIdentifier == null ||
-            //m_impactAttackIdentifier == null ||
-            string.IsNullOrEmpty(animationTriggerName) ||
-            Owner.AnimationController == null ||
-            Owner.AnimationController
-                .CurrentAnimationEventReceiver == null)
-        {
-            return false;
-        }
-
-        m_animationTriggerID =
-            Animator.StringToHash(
-                animationTriggerName);
-
-        SubscribeAnimationEvent();
-
-        Owner.AnimationController.SetTrigger(
-            m_animationTriggerID);
-
-        return true;
-    }
-
-    /// <summary>
-    /// UŒ‚AnimationEvent‚ğˆ—‚µ‚Ü‚·B
-    /// </summary>
-    /// <param name="attackEventData">UŒ‚ƒCƒxƒ“ƒgî•ñB</param>
-    private void HandleAttackEvent(
-        AttackEventData attackEventData)
-    {
-        switch (attackEventData.AttackEventType)
-        {
-            case AttackEventType.ANIMATION_START:
-                SubscribeGroundCollision();
-                break;
-
-            case AttackEventType.HITBOX_ENABLE:
-                Owner.EnableAttackHitboxes(
-                    m_tailSlamAttackIdentifier);
-                break;
-
-            case AttackEventType.HITBOX_DISABLE:
-                Owner.AttackHitboxRegistry?.DisableHitboxes(
-                    m_tailSlamAttackIdentifier);
-                break;
-
-            case AttackEventType.IMPACT_START:
-                //Owner.AttackHitboxRegistry?.DisableHitboxes(
-                //    m_impactAttackIdentifier);
-                break;
-
-            case AttackEventType.ANIMATION_END:
-                FinishAttack();
-                break;
-        }
-    }
-
-    /// <summary>
-    /// K”ö’@‚«‚Â‚¯UŒ‚‚ğ³íI—¹‚µ‚Ü‚·B
-    /// </summary>
-    private void FinishAttack()
-    {
-        UnsubscribeGroundCollision();
-
-        Owner.AttackHitboxRegistry?.DisableHitboxes(
-            m_tailSlamAttackIdentifier);
-
-        //Owner.AttackHitboxRegistry?.DisableHitboxes(
-        //    m_impactAttackIdentifier);
-
-        StartCooldown();
+        /*
+         * SUCCEEDEDã¸å¤‰æ›´ã™ã‚‹å‰ã«ã‚¯ãƒ¼ãƒ«ã‚¿ã‚¤ãƒ ã‚’ç™»éŒ²ã—ã¾ã™ã€‚
+         */
+        StartCoolTime();
 
         Owner.SetStateExecutionStatus(
             StateExecutionStatus.SUCCEEDED);
     }
 
     /// <summary>
-    /// ƒN[ƒ‹ƒ^ƒCƒ€‚ğŠJn‚µ‚Ü‚·B
+    /// Stateã‚’å¤±æ•—çµ‚äº†ã—ã¾ã™ã€‚
     /// </summary>
-    private void StartCooldown()
+    private void SetFailed()
     {
-        m_cooldownEndTime =
-            Time.time + COOLDOWN_DURATION;
-    }
+        m_tailSlamExecutor?.Cancel();
 
-    /// <summary>
-    /// ƒN[ƒ‹ƒ^ƒCƒ€’†‚©Šm”F‚µ‚Ü‚·B
-    /// </summary>
-    /// <returns>
-    /// trueFƒN[ƒ‹ƒ^ƒCƒ€’†‚Å‚·B
-    /// falseFUŒ‚‰Â”\‚Å‚·B
-    /// </returns>
-    private bool IsCooldown()
-    {
-        return Time.time < m_cooldownEndTime;
-    }
+        Owner?.Motor?
+            .StopHorizontalMovement();
 
-    /// <summary>
-    /// AnimationEvent‚ğw“Ç‚µ‚Ü‚·B
-    /// </summary>
-    private void SubscribeAnimationEvent()
-    {
-        if (m_isAnimationEventSubscribed)
+        if (Owner == null)
         {
             return;
         }
 
-        Owner.AnimationController
-            .CurrentAnimationEventReceiver
-            .AttackEventReceived +=
-            HandleAttackEvent;
-
-        m_isAnimationEventSubscribed = true;
+        Owner.SetStateExecutionStatus(
+            StateExecutionStatus.FAILED);
     }
 
     /// <summary>
-    /// AnimationEvent‚Ìw“Ç‚ğ‰ğœ‚µ‚Ü‚·B
+    /// ç¾åœ¨ãƒ•ã‚§ãƒ¼ã‚ºã®Animation Timelineç®¡ç†ã‚’ä¿æŒã—ã¾ã™ã€‚
     /// </summary>
-    private void UnsubscribeAnimationEvent()
+    private void CacheAnimationTimelineController()
     {
-        if (!m_isAnimationEventSubscribed ||
-            Owner.AnimationController == null ||
-            Owner.AnimationController
-                .CurrentAnimationEventReceiver == null)
+        m_animationTimelineController =
+            null;
+
+        if (Owner?.PhaseController == null)
         {
             return;
         }
 
-        Owner.AnimationController
-            .CurrentAnimationEventReceiver
-            .AttackEventReceived -=
-            HandleAttackEvent;
-
-        m_isAnimationEventSubscribed = false;
+        Owner.PhaseController
+            .TryGetCurrentPhaseComponent(
+                out m_animationTimelineController);
     }
 
     /// <summary>
-    /// ’n–ÊÕ“ËƒCƒxƒ“ƒg‚ğw“Ç‚µ‚Ü‚·B
+    /// Stateä¸­ã«å†ç”Ÿã•ã‚ŒãŸAnimation Timelineã‚’åœæ­¢ã—ã¾ã™ã€‚
     /// </summary>
-    private void SubscribeGroundCollision()
+    private void StopAnimationTimelines()
     {
-        if (m_isGroundCollisionSubscribed ||
-            m_groundCollisionSensor == null)
-        {
-            return;
-        }
+        m_animationTimelineController?
+            .StopAll();
 
-        m_groundCollisionSensor.CollisionDetected +=
-            HandleTailGroundCollisionDetected;
-
-        m_isGroundCollisionSubscribed = true;
-    }
-
-    /// <summary>
-    /// ’n–ÊÕ“ËƒCƒxƒ“ƒg‚Ìw“Ç‚ğ‰ğœ‚µ‚Ü‚·B
-    /// </summary>
-    private void UnsubscribeGroundCollision()
-    {
-        if (!m_isGroundCollisionSubscribed ||
-            m_groundCollisionSensor == null)
-        {
-            return;
-        }
-
-        m_groundCollisionSensor.CollisionDetected -=
-            HandleTailGroundCollisionDetected;
-
-        m_isGroundCollisionSubscribed = false;
+        m_animationTimelineController =
+            null;
     }
 }

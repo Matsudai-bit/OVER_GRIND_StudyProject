@@ -1,29 +1,78 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 /// <summary>
-/// �X�e�[�W1�t�F�[�Y2�̌o�H�ړ������s���܂��B
+/// ステージ1フェーズ2の経路移動を実行します。
+/// 移動中は接触攻撃判定を有効化し、
+/// 条件成立時には尻尾叩きつけ攻撃を並行して実行します。
 /// </summary>
 public sealed class S1P2BossMoveState :
     StateBase<BossController>
 {
-    // S1P2�ŗL�Q��
+    // State中に使用するAnimation Timeline管理
+    private AnimationTimelineController m_animationTimelineController;
+
+    // 移動・追加攻撃待機による永久停止を防ぐ上限時間
+    private const float MAX_STATE_DURATION = 20.0f;
+
+    // S1P2固有参照
     private S1P2BossReferences m_references;
 
-    // �ړ���ԎQ��
+    // 移動状態参照
     private S1P2MoveStateReferences m_moveReferences;
 
-    // �ړ�����
+    // 移動制御
     private S1P2BossMoveController m_moveController;
 
+    // 移動パラメータ
     private S1P2BossMoveStateParameters m_parameter;
 
+    // 尻尾攻撃実行制御
+    private S1P2BossTailSlamExecutor m_tailSlamExecutor;
+
+    // 移動中の攻撃ID
+    private AttackIdentifier m_moveAttackIdentifier;
+
+    // 移動完了
+    private bool m_isMoveCompleted;
+
+    // 今回の移動で尻尾攻撃を行うか
+    private bool m_shouldExecuteTailSlam;
+
+    // 尻尾攻撃完了
+    private bool m_isTailSlamCompleted;
+
+    // 移動攻撃判定が有効か
+    private bool m_isMoveAttackEnabled;
+
+    private EffectHandle m_effectHandle;
+
+    private BossPhaseReferences m_commonReferences;
+
+    // State開始からの経過時間
+    private float m_stateElapsedTime;
+
     /// <summary>
-    /// �o�H�ړ����J�n���܂��B
+    /// 経路移動を開始します。
     /// </summary>
     protected override void OnStartState()
     {
+        CacheAnimationTimelineController();
+
+        ResetRuntimeState();
+
         if (!TryGetReferences())
         {
+            SetFailed();
+
+            return;
+        }
+
+        if (!ApplyMoveAttackSetting())
+        {
+            Debug.LogError(
+                $"[{nameof(S1P2BossMoveState)}] " +
+                "移動中の攻撃設定を取得できませんでした。");
+
             SetFailed();
 
             return;
@@ -33,8 +82,9 @@ public sealed class S1P2BossMoveState :
                 m_parameter,
                 out BossMoveRoute route))
         {
-            Debug.LogError(
-                "S1P2�{�X�̈ړ��o�H�𐶐��ł��܂���ł����B");
+            Debug.LogWarning(
+                $"[{nameof(S1P2BossMoveState)}] " +
+                "移動経路を生成できませんでした。");
 
             SetFailed();
 
@@ -49,24 +99,128 @@ public sealed class S1P2BossMoveState :
                 m_parameter))
         {
             Debug.LogError(
-                "S1P2�{�X�̌o�H�ړ����J�n�ł��܂���ł����B");
+                $"[{nameof(S1P2BossMoveState)}] " +
+                "経路移動を開始できませんでした。");
+
+            SetFailed();
+
+            return;
+        }
+        
+        if (m_commonReferences?.EffectEmitter != null)
+        {
+            m_effectHandle =
+                m_commonReferences.EffectEmitter.Play(
+                    EffectId.S1P2_BOSS_SMOKE);
+        }
+
+        m_commonReferences?.AudioEmitter?.PlaySequence(
+                AudioCueId.MOVE_0);
+
+
+        /*
+         * MoveState開始時に一度だけ
+         * 尻尾攻撃を実行するか判定します。
+         */
+        m_shouldExecuteTailSlam =
+            ShouldExecuteTailSlam();
+
+        m_isTailSlamCompleted =
+            !m_shouldExecuteTailSlam;
+
+        Owner.SetStateExecutionStatus(
+            StateExecutionStatus.RUNNING);
+
+        /*
+         * 接触攻撃判定は実速度に応じて有効化します。
+         * State開始直後の停止中に1フレームだけ判定が出ることを防ぎます。
+         */
+        UpdateMoveAttackState();
+
+        if (m_shouldExecuteTailSlam)
+        {
+            StartTailSlam();
+        }
+    }
+
+    /// <summary>
+    /// 移動中の追加攻撃を更新します。
+    /// </summary>
+    /// <param name="deltaTime">
+    /// 前フレームからの経過時間。
+    /// </param>
+    protected override void OnUpdate(
+        float deltaTime)
+    {
+        if (Owner == null ||
+            Owner.GetStateExecutionStatus() !=
+                StateExecutionStatus.RUNNING)
+        {
+            return;
+        }
+
+        m_stateElapsedTime +=
+            Mathf.Max(
+                0.0f,
+                deltaTime);
+
+        if (m_stateElapsedTime >=
+            MAX_STATE_DURATION)
+        {
+            Debug.LogError(
+                $"[{nameof(S1P2BossMoveState)}] " +
+                "経路移動状態がタイムアウトしました。");
 
             SetFailed();
 
             return;
         }
 
-        Owner.SetStateExecutionStatus(
-            StateExecutionStatus.RUNNING);
+        if (!m_shouldExecuteTailSlam ||
+            m_isTailSlamCompleted)
+        {
+            return;
+        }
+
+        if (m_tailSlamExecutor == null)
+        {
+            SetFailed();
+
+            return;
+        }
+
+        if (m_tailSlamExecutor.HasFailed)
+        {
+            SetFailed();
+
+            return;
+        }
+
+        if (!m_tailSlamExecutor.IsCompleted)
+        {
+            return;
+        }
+        m_isTailSlamCompleted =
+            true;
+
+        StartTailSlamCoolTime();
+
+        TryCompleteState();
     }
 
     /// <summary>
-    /// �o�H�ړ��𕨗��X�V���܂��B
+    /// 経路移動を物理更新します。
     /// </summary>
     protected override void OnFixedUpdate()
     {
-        if (Owner.GetStateExecutionStatus() !=
-            StateExecutionStatus.RUNNING)
+        if (Owner == null ||
+            Owner.GetStateExecutionStatus() !=
+                StateExecutionStatus.RUNNING)
+        {
+            return;
+        }
+
+        if (m_isMoveCompleted)
         {
             return;
         }
@@ -79,7 +233,9 @@ public sealed class S1P2BossMoveState :
         }
 
         m_moveController.FixedUpdateMove(
-            Time.fixedDeltaTime);
+          Time.fixedDeltaTime);
+
+        UpdateMoveAttackState();
 
         if (m_moveController.HasFailed)
         {
@@ -93,39 +249,282 @@ public sealed class S1P2BossMoveState :
             return;
         }
 
-        Owner.Motor?.StopHorizontalMovement();
+        m_isMoveCompleted =
+            true;
+
+        Owner.Motor?
+            .StopHorizontalMovement();
+
+        m_effectHandle.Stop();
+
+        /*
+         * 尻尾攻撃の完了監視は
+         * OnUpdate側で行います。
+         */
+        TryCompleteState();
+    }
+
+    /// <summary>
+    /// 移動状態を終了します。
+    /// </summary>
+    protected override void OnExitState()
+    {
+        StopAnimationTimelines();
+
+        /*
+         * State終了時には必ず
+         * 移動中の攻撃判定を無効化します。
+         */
+        DisableMoveAttack();
+
+        m_moveController?.Cancel();
+
+        m_tailSlamExecutor?.Cancel();
+
+        Owner?.Motor?
+            .StopHorizontalMovement();
+
+        m_effectHandle.Stop();
+
+        m_commonReferences?.AudioEmitter?.StopSequence(
+                AudioCueId.MOVE_0);
+
+        if (Owner != null &&
+            Owner.GetStateExecutionStatus() ==
+                StateExecutionStatus.RUNNING)
+        {
+            Owner.SetStateExecutionStatus(
+                StateExecutionStatus.FAILED);
+        }
+
+        m_moveAttackIdentifier =
+            null;
+
+        m_tailSlamExecutor =
+            null;
+
+        m_moveController =
+            null;
+
+        m_moveReferences =
+            null;
+
+        m_parameter =
+            null;
+
+        m_references =
+            null;
+
+        m_commonReferences =
+            null;
+    }
+
+    /// <summary>
+    /// 今回の移動中に尻尾叩きつけ攻撃を
+    /// 実行するか判定します。
+    /// </summary>
+    /// <returns>
+    /// true：実行します。
+    /// false：実行しません。
+    /// </returns>
+    private bool ShouldExecuteTailSlam()
+    {
+        if (m_parameter == null ||
+            !m_parameter.EnableTailSlam ||
+            m_references == null ||
+            m_references.DecisionParameterAsset == null)
+        {
+            return false;
+        }
+
+        return S1P2TailSlamDecisionEvaluator
+            .ShouldExecute(
+                Owner,
+                m_references.DecisionParameterAsset);
+    }
+
+    /// <summary>
+    /// 尻尾叩きつけ攻撃を開始します。
+    /// </summary>
+    private void StartTailSlam()
+    {
+        m_tailSlamExecutor =
+            new S1P2BossTailSlamExecutor(
+                Owner);
+
+        if (m_tailSlamExecutor.Start(
+                m_references))
+        {
+            return;
+        }
+
+        Debug.LogError(
+            $"[{nameof(S1P2BossMoveState)}] " +
+            "移動中の尻尾叩きつけ攻撃を開始できませんでした。");
+
+        SetFailed();
+    }
+
+    /// <summary>
+    /// 移動中に実行した尻尾攻撃の
+    /// クールタイムを開始します。
+    /// </summary>
+    private void StartTailSlamCoolTime()
+    {
+        if (Owner == null ||
+            m_references?.DecisionParameterAsset == null)
+        {
+            return;
+        }
+
+        BossStateCoolTimeManager coolTimeManager =
+            Owner.GetComponent<
+                BossStateCoolTimeManager>();
+
+        if (coolTimeManager == null)
+        {
+            return;
+        }
+
+        /*
+         * 単独TailSlamStateと同じキーを使用することで、
+         * Move中の尻尾攻撃とクールタイムを共有します。
+         */
+        coolTimeManager
+            .StartCoolTime<S1P2BossTailSlamState>(
+                m_references
+                    .DecisionParameterAsset
+                    .TailSlam
+                    .CoolTime);
+    }
+
+    /// <summary>
+    /// 移動中の攻撃設定を取得します。
+    /// </summary>
+    /// <returns>
+    /// true：取得できました。
+    /// false：取得できませんでした。
+    /// </returns>
+    private bool ApplyMoveAttackSetting()
+    {
+        if (Owner == null)
+        {
+            return false;
+        }
+
+        S1P2BossAttackSettings attackSettings =
+            Owner.GetComponentInChildren<
+                S1P2BossAttackSettings>(
+                    true);
+
+        if (attackSettings == null)
+        {
+            Debug.LogError(
+                $"[{nameof(S1P2BossMoveState)}] " +
+                $"{nameof(S1P2BossAttackSettings)}が" +
+                "見つかりません。");
+
+            return false;
+        }
+
+        if (!attackSettings.TryGetAttackSetting(
+                S1P2BossAttackType.MOVE,
+                out m_moveAttackIdentifier,
+                out _))
+        {
+            Debug.LogError(
+                $"[{nameof(S1P2BossMoveState)}] " +
+                $"{S1P2BossAttackType.MOVE}の" +
+                "攻撃設定がありません。");
+
+            return false;
+        }
+
+        if (m_moveAttackIdentifier == null)
+        {
+            Debug.LogError(
+                $"[{nameof(S1P2BossMoveState)}] " +
+                "移動用AttackIdentifierが設定されていません。");
+
+            return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// 移動中の攻撃判定を有効化します。
+    /// </summary>
+    private void EnableMoveAttack()
+    {
+        if (Owner == null ||
+            m_moveAttackIdentifier == null ||
+            m_isMoveAttackEnabled)
+        {
+            return;
+        }
+
+        Owner.EnableAttackHitboxes(
+            m_moveAttackIdentifier);
+
+        m_isMoveAttackEnabled =
+            true;
+    }
+
+    /// <summary>
+    /// 移動中の攻撃判定を無効化します。
+    /// </summary>
+    private void DisableMoveAttack()
+    {
+        if (Owner == null ||
+            m_moveAttackIdentifier == null ||
+            !m_isMoveAttackEnabled)
+        {
+            return;
+        }
+
+        Owner.AttackHitboxRegistry?
+            .DisableHitboxes(
+                m_moveAttackIdentifier);
+
+        m_isMoveAttackEnabled =
+            false;
+    }
+
+    /// <summary>
+    /// 移動と追加攻撃が完了した場合に
+    /// Stateを正常終了します。
+    /// </summary>
+    private void TryCompleteState()
+    {
+        if (!m_isMoveCompleted ||
+            !m_isTailSlamCompleted)
+        {
+            return;
+        }
+
+        m_commonReferences?.AudioEmitter?.StopSequence(
+                AudioCueId.MOVE_0);
+
+        /*
+         * 正常終了が確定した時点で
+         * 移動中の攻撃判定を停止します。
+         */
+        DisableMoveAttack();
+
+        Owner.Motor?
+            .StopHorizontalMovement();
 
         Owner.SetStateExecutionStatus(
             StateExecutionStatus.SUCCEEDED);
     }
 
     /// <summary>
-    /// �o�H�ړ����I�����܂��B
-    /// </summary>
-    protected override void OnExitState()
-    {
-        m_moveController?.Cancel();
-
-        Owner.Motor?.StopHorizontalMovement();
-
-        if (Owner.GetStateExecutionStatus() ==
-            StateExecutionStatus.RUNNING)
-        {
-            Owner.SetStateExecutionStatus(
-                StateExecutionStatus.FAILED);
-        }
-
-        m_moveController = null;
-        m_moveReferences = null;
-        m_references = null;
-    }
-
-    /// <summary>
-    /// �ړ���ԂɕK�v�ȎQ�Ƃ��擾���܂��B
+    /// 移動状態に必要な参照を取得します。
     /// </summary>
     /// <returns>
-    /// true�F�擾���܂����B
-    /// false�F�擾�ł��܂���ł����B
+    /// true：取得できました。
+    /// false：取得できませんでした。
     /// </returns>
     private bool TryGetReferences()
     {
@@ -141,9 +540,28 @@ public sealed class S1P2BossMoveState :
                     out m_references))
         {
             Debug.LogError(
-                $"{nameof(S1P2BossReferences)}��" +
-                "�擾�ł��܂���ł����B");
+                $"[{nameof(S1P2BossMoveState)}] " +
+                $"{nameof(S1P2BossReferences)}を" +
+                "取得できませんでした。");
 
+            return false;
+        }
+
+        if (!Owner.PhaseController
+                .TryGetCurrentPhaseComponent(
+                    out m_commonReferences))
+        {
+            Debug.LogError(
+                $"[{nameof(S1P2BossMoveState)}] " +
+                $"{nameof(BossPhaseReferences)}を" +
+                "取得できませんでした。");
+
+            return false;
+        }
+
+        if (m_references == null ||
+            m_references.StateParameterAsset == null)
+        {
             return false;
         }
 
@@ -153,20 +571,9 @@ public sealed class S1P2BossMoveState :
         if (m_moveReferences == null)
         {
             Debug.LogError(
-                $"{nameof(S1P2MoveStateReferences)}��" +
-                "�ݒ肳��Ă��܂���B");
-
-            return false;
-        }
-
-
-        m_parameter = m_references.StateParameterAsset.Move;
-
-        if (m_parameter == null)
-        {
-            Debug.LogError(
-                $"{nameof(S1P2BossMoveStateParameters)}��" +
-                "�ݒ肳��Ă��܂���B");
+                $"[{nameof(S1P2BossMoveState)}] " +
+                $"{nameof(S1P2MoveStateReferences)}が" +
+                "設定されていません。");
 
             return false;
         }
@@ -174,8 +581,9 @@ public sealed class S1P2BossMoveState :
         if (m_moveReferences.RoutePlanner == null)
         {
             Debug.LogError(
-                $"{nameof(S1P2BossMoveRoutePlanner)}��" +
-                "�ݒ肳��Ă��܂���B");
+                $"[{nameof(S1P2BossMoveState)}] " +
+                $"{nameof(S1P2BossMoveRoutePlanner)}が" +
+                "設定されていません。");
 
             return false;
         }
@@ -183,23 +591,111 @@ public sealed class S1P2BossMoveState :
         if (m_moveReferences.MoveController == null)
         {
             Debug.LogError(
-                $"{nameof(S1P2BossMoveController)}��" +
-                "�ݒ肳��Ă��܂���B");
+                $"[{nameof(S1P2BossMoveState)}] " +
+                $"{nameof(S1P2BossMoveController)}が" +
+                "設定されていません。");
 
             return false;
+        }
+
+        m_parameter =
+            m_references
+                .StateParameterAsset
+                .Move;
+
+        if (m_parameter == null)
+        {
+            Debug.LogError(
+                $"[{nameof(S1P2BossMoveState)}] " +
+                $"{nameof(S1P2BossMoveStateParameters)}が" +
+                "設定されていません。");
+
+            return false;
+        }
+
+        /*
+         * 尻尾攻撃を使用するときだけ
+         * TailSlam関連参照を必須にします。
+         */
+        if (m_parameter.EnableTailSlam)
+        {
+            if (m_references.TailSlamReference == null)
+            {
+                Debug.LogError(
+                    $"[{nameof(S1P2BossMoveState)}] " +
+                    $"{nameof(S1P2BossTailSlamReference)}が" +
+                    "設定されていません。");
+
+                return false;
+            }
+
+            if (m_references.TailTransform == null)
+            {
+                Debug.LogError(
+                    $"[{nameof(S1P2BossMoveState)}] " +
+                    "TailTransformが設定されていません。");
+
+                return false;
+            }
+
+            if (m_references.DecisionParameterAsset == null)
+            {
+                Debug.LogError(
+                    $"[{nameof(S1P2BossMoveState)}] " +
+                    $"{nameof(S1P2BossDecisionParameterAsset)}が" +
+                    "設定されていません。");
+
+                return false;
+            }
         }
 
         return true;
     }
 
     /// <summary>
-    /// State�����s�I�����܂��B
+    /// Runtime状態を初期化します。
+    /// </summary>
+    private void ResetRuntimeState()
+    {
+        m_moveAttackIdentifier =
+            null;
+
+        m_tailSlamExecutor =
+            null;
+
+        m_isMoveCompleted =
+            false;
+
+        m_shouldExecuteTailSlam =
+            false;
+
+        m_isTailSlamCompleted =
+            true;
+        m_isMoveAttackEnabled =
+             false;
+
+        m_stateElapsedTime =
+            0.0f;
+    }
+
+    /// <summary>
+    /// Stateを失敗終了します。
     /// </summary>
     private void SetFailed()
     {
+        DisableMoveAttack();
+
         m_moveController?.Cancel();
 
-        Owner?.Motor?.StopHorizontalMovement();
+        m_tailSlamExecutor?.Cancel();
+
+        Owner?.Motor?
+            .StopHorizontalMovement();
+
+        m_effectHandle.Stop();
+
+        m_commonReferences?.AudioEmitter?.StopSequence(
+                AudioCueId.MOVE_0);
 
         if (Owner == null)
         {
@@ -208,5 +704,61 @@ public sealed class S1P2BossMoveState :
 
         Owner.SetStateExecutionStatus(
             StateExecutionStatus.FAILED);
+    }
+    /// <summary>
+    /// 移動速度に応じて接触攻撃判定を更新します。
+    /// </summary>
+    private void UpdateMoveAttackState()
+    {
+        if (Owner?.Motor == null ||
+            m_moveAttackIdentifier == null)
+        {
+            return;
+        }
+
+        float currentSpeed =
+            Owner.Motor.HorizontalSpeed;
+
+        if (currentSpeed >=
+            m_parameter.AttackEnableSpeed)
+        {
+            EnableMoveAttack();
+
+            return;
+        }
+
+        DisableMoveAttack();
+    }
+
+
+
+    /// <summary>
+    /// 現在フェーズのAnimation Timeline管理を保持します。
+    /// </summary>
+    private void CacheAnimationTimelineController()
+    {
+        m_animationTimelineController =
+            null;
+
+        if (Owner?.PhaseController == null)
+        {
+            return;
+        }
+
+        Owner.PhaseController
+            .TryGetCurrentPhaseComponent(
+                out m_animationTimelineController);
+    }
+
+    /// <summary>
+    /// State中に再生されたAnimation Timelineを停止します。
+    /// </summary>
+    private void StopAnimationTimelines()
+    {
+        m_animationTimelineController?
+            .StopAll();
+
+        m_animationTimelineController =
+            null;
     }
 }

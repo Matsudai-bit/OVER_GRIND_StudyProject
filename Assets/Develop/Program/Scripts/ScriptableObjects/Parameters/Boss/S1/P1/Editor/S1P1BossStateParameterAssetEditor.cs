@@ -105,9 +105,15 @@ public sealed class S1P1BossStateParameterAssetEditor : Editor
 
         DrawRelativeProperty(
             m_walkProperty,
-            "m_walkDuration",
-            "歩行時間",
-            "歩行状態を継続する時間です。");
+            "m_walkAnimationClip",
+            "歩行Animation",
+            "歩行状態で再生するAnimationClipです。再生時間を移動イージングの基準時間として使用します。");
+
+        DrawRelativeProperty(
+            m_walkProperty,
+            "m_moveEasingCurve",
+            "移動イージング",
+            "Animation進行率0～1に対する移動速度倍率です。");
 
         DrawRelativeProperty(
             m_walkProperty,
@@ -142,9 +148,21 @@ public sealed class S1P1BossStateParameterAssetEditor : Editor
 
         DrawRelativeProperty(
             m_turnProperty,
-            "m_rotationSpeed",
-            "回転速度",
-            "方向転換時の回転速度です。単位は度/秒です。");
+            "m_rightTurnAnimationClip",
+            "右回転Animation",
+            "右方向へ旋回するときに再生するAnimationClipです。再生時間を回転イージングの基準時間として使用します。");
+
+        DrawRelativeProperty(
+            m_turnProperty,
+            "m_leftTurnAnimationClip",
+            "左回転Animation",
+            "左方向へ旋回するときに再生するAnimationClipです。再生時間を回転イージングの基準時間として使用します。");
+
+        DrawRelativeProperty(
+            m_turnProperty,
+            "m_rotationEasingCurve",
+            "回転イージング",
+            "Animation進行率0～1に対する回転進行率です。0で開始回転、1で目標回転になります。");
 
         EditorGUILayout.EndVertical();
     }
@@ -185,9 +203,9 @@ public sealed class S1P1BossStateParameterAssetEditor : Editor
 
         DrawRelativeProperty(
             m_missileProperty,
-            "m_launchInterval",
-            "発射間隔",
-            "次のミサイルを発射するまでの間隔です。");
+            "m_launchCount",
+            "発射数",
+            "1回のミサイル攻撃で発射するミサイルの総数です。");
 
         DrawRelativeProperty(
             m_missileProperty,
@@ -199,7 +217,7 @@ public sealed class S1P1BossStateParameterAssetEditor : Editor
             m_missileProperty,
             "m_idleDuration",
             "攻撃終了後の停止時間",
-            "全ミサイル発射後の停止状態の継続時間です。");
+            "すべてのミサイル発射後の停止状態の継続時間です。");
 
         SerializedProperty missileParameterAssetProperty =
             m_missileProperty?.FindPropertyRelative(
@@ -343,17 +361,65 @@ public sealed class S1P1BossStateParameterAssetEditor : Editor
 
     private void DrawValidationMessages()
     {
-        SerializedProperty rotationSpeed =
-            m_turnProperty?.FindPropertyRelative(
-                "m_rotationSpeed");
+        SerializedProperty walkAnimationClip =
+            m_walkProperty?.FindPropertyRelative(
+                "m_walkAnimationClip");
 
-        if (rotationSpeed != null &&
-            Mathf.Approximately(
-                rotationSpeed.floatValue,
-                0.0f))
+        if (walkAnimationClip != null &&
+            walkAnimationClip.objectReferenceValue == null)
         {
             EditorGUILayout.HelpBox(
-                "回転速度が0のため、方向転換状態を完了できません。",
+                "歩行Animationが設定されていません。",
+                MessageType.Warning);
+        }
+
+        SerializedProperty moveEasingCurve =
+            m_walkProperty?.FindPropertyRelative(
+                "m_moveEasingCurve");
+
+        if (moveEasingCurve != null &&
+            (moveEasingCurve.animationCurveValue == null ||
+             moveEasingCurve.animationCurveValue.length == 0))
+        {
+            EditorGUILayout.HelpBox(
+                "歩行の移動イージングが設定されていません。",
+                MessageType.Warning);
+        }
+
+        SerializedProperty rightTurnAnimationClip =
+            m_turnProperty?.FindPropertyRelative(
+                "m_rightTurnAnimationClip");
+
+        if (rightTurnAnimationClip != null &&
+            rightTurnAnimationClip.objectReferenceValue == null)
+        {
+            EditorGUILayout.HelpBox(
+                "右回転Animationが設定されていません。",
+                MessageType.Warning);
+        }
+
+        SerializedProperty leftTurnAnimationClip =
+            m_turnProperty?.FindPropertyRelative(
+                "m_leftTurnAnimationClip");
+
+        if (leftTurnAnimationClip != null &&
+            leftTurnAnimationClip.objectReferenceValue == null)
+        {
+            EditorGUILayout.HelpBox(
+                "左回転Animationが設定されていません。",
+                MessageType.Warning);
+        }
+
+        SerializedProperty rotationEasingCurve =
+            m_turnProperty?.FindPropertyRelative(
+                "m_rotationEasingCurve");
+
+        if (rotationEasingCurve != null &&
+            (rotationEasingCurve.animationCurveValue == null ||
+             rotationEasingCurve.animationCurveValue.length == 0))
+        {
+            EditorGUILayout.HelpBox(
+                "方向転換の回転イージングが設定されていません。",
                 MessageType.Warning);
         }
     }

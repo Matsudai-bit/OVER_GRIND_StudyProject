@@ -26,6 +26,13 @@ public sealed class PlayerHitState : StateBase<PlayerStateMachineComponent>
     /// <summary>攻撃やグラインドを中断し、攻撃中心から離れる速度を適用します。</summary>
     protected override void OnStartState()
     {
+        // 被弾は現在の行動を強制中断するため、
+        // 継続中のPlayer行動音を終了音なしで停止します。
+        PlayerAudioActionUtility
+            .StopAllGameplaySequentialImmediate(
+                Owner);
+
+
         if (Owner.GrindController.IsGrinding)
         {
             Owner.GrindController.StopGrind();
@@ -38,10 +45,17 @@ public sealed class PlayerHitState : StateBase<PlayerStateMachineComponent>
         Owner.VGaugePlaceModel.SetGaugeRate(0.0f);
 
         Owner.InputReader.DiscardInput();
-        Owner.AnimationPresenter.PlayHitAnimation();
+        int type = 0;
+        if (m_horizontalSpeed >= 1.0f)
+        {
+            type = 1;
+        }
+
+        Owner.AnimationPresenter.PlayHitAnimation(type);
         Owner.Motor.ApplyKnockback(m_attackCenter, m_horizontalSpeed, m_liftSpeed);
         // 倍率0でも被弾・無敵・復帰待機は発生させ、吹き飛びだけを省略します。
         m_isRecovering = m_horizontalSpeed <= 0.0f && m_liftSpeed <= 0.0f;
+        Owner.Motor.AlignFacingToDirection((m_attackCenter - Owner.transform.position).normalized);
     }
 
     /// <summary>被弾中の入力を破棄し、復帰後への先行入力を防ぎます。</summary>
@@ -59,6 +73,7 @@ public sealed class PlayerHitState : StateBase<PlayerStateMachineComponent>
             bool hasLanded = Owner.Monitor.IsGrounded && Owner.Motor.VerticalVelocity <= 0.0f;
             if (!hasLanded && !Owner.HasHitEnvironment && m_elapsedTime < m_duration)
             {
+             
                 return;
             }
 
@@ -71,14 +86,24 @@ public sealed class PlayerHitState : StateBase<PlayerStateMachineComponent>
         m_recoveryElapsedTime += Time.fixedDeltaTime;
         if (m_recoveryElapsedTime >= m_recoveryDuration)
         {
-            Machine.ChangeState<PlayerIdlingState>();
+
+            Owner.NotifyDownStateEntered();
+
+            if (Owner.Monitor.IsGrounded) Machine.ChangeState<PlayerIdlingState>();
+            else Machine.ChangeState<PlayerJumpAirborneState>();
         }
+
+      
     }
 
     /// <summary>被弾中の先行入力と無敵状態を解除します。</summary>
     protected override void OnExitState()
     {
+        Owner.GrindController.RestoreBoardingAfterHit();
         Owner.InputReader.DiscardInput();
         Owner.EndHitReaction();
+        Owner.AnimationPresenter.StopHitAnimation();
+        // PlayerHitStateをダウン状態として扱い、
+        // HPが0の場合のみPlayer死亡イベントを発火します。
     }
 }

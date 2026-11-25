@@ -497,6 +497,17 @@ PrefabInstance:
       insertIndex: -1
       addedObject: {fileID: 1984468872}
   m_SourcePrefab: {fileID: 100100000, guid: 016b3ff8389d7784dadef11d7d2540ed, type: 3}
+--- !u!114 &500424101 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 1368627769983438401, guid: 016b3ff8389d7784dadef11d7d2540ed, type: 3}
+  m_PrefabInstance: {fileID: 500424100}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0259de8252a8d764c9464a8621c557e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::OptionPageManager
 --- !u!1 &614842258
 GameObject:
   m_ObjectHideFlags: 0
@@ -833,6 +844,10 @@ MonoBehaviour:
       m_Calls: []
     m_ActionId: a9a15e80-d210-40b8-b842-9be6d8cbc9f5
     m_ActionName: 'TitleUI/OpenMenu[/Keyboard/escape,/XInputControllerWindows/start]'
+  - m_PersistentCalls:
+      m_Calls: []
+    m_ActionId: 9943594e-7250-439d-b2f9-bdb9d1f4f475
+    m_ActionName: 'InGame_System/Pause[/Keyboard/escape]'
   m_NeverAutoSwitchControlSchemes: 0
   m_DefaultControlScheme: 
   m_DefaultActionMap: UI
@@ -850,6 +865,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7c5fdac65394c0c4cae84b0bb3ec8039, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MenuController
+  m_menuOpenContext: {fileID: 11400000, guid: b0c88a8365d180447aba5923c37702f4, type: 2}
+  userSupportManager: {fileID: 500424101}
   m_uIOverlayScene: {fileID: 1829968084}
 --- !u!4 &1905773381
 Transform:
@@ -900,7 +917,19 @@ MonoBehaviour:
       m_Calls: []
   m_onOpened:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 1905773380}
+        m_TargetAssemblyTypeName: MenuController, Assembly-CSharp
+        m_MethodName: StartMenu
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
   m_onClosed:
     m_PersistentCalls:
       m_Calls: []

@@ -75,7 +75,9 @@ public sealed class BossPhaseController : MonoBehaviour
         public BossPhaseAttackSettingsProvider AttackDamageProvider =>
             m_attackDamageProvider;
     }
-
+    // フェーズ変更イベントチャネル
+    [SerializeField, Header("イベント")]
+    private BossPhaseEventChannel m_phaseEventChannel;
     // 初期フェーズ
     [SerializeField, Header("フェーズ設定")]
     private BossPhaseID m_initialPhase =
@@ -175,6 +177,10 @@ public sealed class BossPhaseController : MonoBehaviour
             initialPhaseIndex;
 
         ApplyCurrentPhase();
+
+        // 初期フェーズを通知
+        m_phaseEventChannel?.RaiseInitialPhase(
+            CurrentPhase);
     }
 
     /// <summary>
@@ -200,10 +206,14 @@ public sealed class BossPhaseController : MonoBehaviour
         int nextPhaseIndex =
             m_currentPhaseIndex + 1;
 
-        if (!IsValidPhaseIndex(nextPhaseIndex))
+        if (!IsValidPhaseIndex(
+                nextPhaseIndex))
         {
             return false;
         }
+
+        BossPhaseID previousPhase =
+            CurrentPhase;
 
         m_currentPhaseIndex =
             nextPhaseIndex;
@@ -212,8 +222,15 @@ public sealed class BossPhaseController : MonoBehaviour
 
         ApplyCurrentPhase();
 
+        BossPhaseID currentPhase =
+            CurrentPhase;
+
         PhaseChanged?.Invoke(
-            CurrentPhase);
+            currentPhase);
+
+        m_phaseEventChannel?.RaisePhaseChanged(
+            previousPhase,
+            currentPhase);
 
         return true;
     }
@@ -227,7 +244,7 @@ public sealed class BossPhaseController : MonoBehaviour
     /// false：対象フェーズがありません。
     /// </returns>
     public bool SetPhase(
-        BossPhaseID phaseID)
+     BossPhaseID phaseID)
     {
         if (!TryFindPhaseIndex(
                 phaseID,
@@ -236,6 +253,9 @@ public sealed class BossPhaseController : MonoBehaviour
             return false;
         }
 
+        BossPhaseID previousPhase =
+            CurrentPhase;
+
         m_currentPhaseIndex =
             phaseIndex;
 
@@ -243,8 +263,15 @@ public sealed class BossPhaseController : MonoBehaviour
 
         ApplyCurrentPhase();
 
+        BossPhaseID currentPhase =
+            CurrentPhase;
+
         PhaseChanged?.Invoke(
-            CurrentPhase);
+            currentPhase);
+
+        m_phaseEventChannel?.RaisePhaseChanged(
+            previousPhase,
+            currentPhase);
 
         return true;
     }

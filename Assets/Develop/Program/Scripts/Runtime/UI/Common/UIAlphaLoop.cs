@@ -33,6 +33,7 @@ public sealed class UIAlphaLoop : MonoBehaviour
     // çƒê∂íÜÇ©Ç«Ç§Ç©
     private bool m_isPlaying = false;
 
+    private float m_speed = 1.0f;
     private void Awake()
     {
         m_canvasGroup = GetComponent<CanvasGroup>();
@@ -66,7 +67,7 @@ public sealed class UIAlphaLoop : MonoBehaviour
 
         // PingPongÇ≈0Å`1ÇâùïúÇ≥ÇπÇÈ
         float t = Mathf.PingPong(
-            m_elapsedTime / m_duration,
+            m_elapsedTime / (m_duration * m_speed),
             1.0f);
 
         t = Mathf.SmoothStep(0.0f, 1.0f, t);
@@ -75,6 +76,11 @@ public sealed class UIAlphaLoop : MonoBehaviour
             m_minAlpha,
             m_maxAlpha,
             t);
+    }
+
+    public void SetSpeed(float speed)
+    {
+        m_speed = speed;
     }
 
     /// <summary>

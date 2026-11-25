@@ -8,7 +8,8 @@ public sealed class PlayerChainsawShoeTrail : MonoBehaviour
     [SerializeField] private Transform m_rightShoe;
     [SerializeField] private PlayerMonitor m_monitor;
     [SerializeField] private PlayerStateMachineComponent m_stateMachine;
-    [SerializeField] private Material m_material;
+    [SerializeField, Tooltip("地面の痕に描画するMaterial。M_ChainsawShoeTrail_Customなど、UV2の生成時刻と_TrailTime・_Lifetime・_FadeStartRatioに対応するShaderを使用してください。")]
+    private Material m_material;
     [SerializeField] private LayerMask m_groundLayers = 8;
     [SerializeField, Min(0.01f)] private float m_contactDistance = 0.25f;
     [SerializeField, Min(0.01f)] private float m_sampleSpacing = 0.08f;
@@ -62,6 +63,7 @@ public sealed class PlayerChainsawShoeTrail : MonoBehaviour
         bool isMovingOnGround = m_monitor.IsGrounded && !m_monitor.IsRailed &&
             (m_stateMachine.IsCurrentState<PlayerWalkingState>() ||
              m_stateMachine.IsCurrentState<PlayerVRunningState>() ||
+             m_stateMachine.IsCurrentState<PlayerBoostDashingState>() ||
              m_stateMachine.IsCurrentState<PlayerBoostChargingState>() ||
              m_stateMachine.IsCurrentState<PlayerIdlingState>()) &&
             displacement > MIN_MOVE_SPEED * Time.deltaTime &&

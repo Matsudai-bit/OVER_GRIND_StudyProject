@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 /// <summary>
 /// ステージ1フェーズ2の突進攻撃を実行します。
@@ -6,6 +6,12 @@ using UnityEngine;
 public sealed class S1P2BossChargingAttackState :
     StateBase<BossController>
 {
+    // State中に使用するAnimation Timeline管理
+    private AnimationTimelineController m_animationTimelineController;
+
+    // 物理移動停止などによる永久待機を防ぐ上限時間
+    private const float MAX_STATE_DURATION = 30.0f;
+
     // プレイヤー
     private Transform m_playerTransform;
 
@@ -15,26 +21,56 @@ public sealed class S1P2BossChargingAttackState :
     // S1P2固有参照
     private S1P2BossReferences m_references;
 
+    // フェーズ共通参照
+    private BossPhaseReferences m_commonReferences;
+
+    // 突進攻撃パラメータ
+    private S1BossChargeAttackParameters
+        m_chargeParameters;
+
+    // 突進攻撃中Bool ID
+    private int m_animationActiveBoolID;
+
+    // 突進攻撃フェーズInt ID
+    private int m_animationPhaseIntID;
+
+    // Animation設定を初期化済みか
+    private bool m_isAnimationInitialized;
+
+    // State開始からの経過時間
+    private float m_stateElapsedTime;
+
     /// <summary>
     /// 突進攻撃を開始します。
     /// </summary>
     protected override void OnStartState()
     {
+        CacheAnimationTimelineController();
+
+        m_stateElapsedTime =
+            0.0f;
+
         if (Owner == null ||
             Owner.PhaseController == null)
         {
             SetFailed();
+
             return;
         }
 
-        if (!Owner.PhaseController.TryGetCurrentPhaseComponent(
-                out m_references))
+        if (!Owner.PhaseController
+                .TryGetCurrentPhaseComponent(
+                    out m_references) ||
+            !Owner.PhaseController
+                .TryGetCurrentPhaseComponent(
+                    out m_commonReferences) ||
+            m_commonReferences?.PlayerTransform == null)
         {
             SetFailed();
+
             return;
         }
 
-        // 現在フェーズの突進パラメータを取得する
         BossPhaseParameters phaseParameters =
             Owner.PhaseParameters;
 
@@ -46,31 +82,47 @@ public sealed class S1P2BossChargingAttackState :
                 "突進攻撃パラメータを取得できませんでした。");
 
             SetFailed();
+
             return;
         }
 
-        S1BossChargeAttackParameters chargeParameters =
+        m_chargeParameters =
             phaseParameters.ChargeAttack;
 
-        GameObject player =
-            GameObject.FindGameObjectWithTag("Player");
-
-        if (player == null)
+        if (!InitializeAnimationParameters())
         {
+            Debug.LogError(
+                $"[{nameof(S1P2BossChargingAttackState)}] " +
+                "Animation設定を初期化できませんでした。");
+
             SetFailed();
+
             return;
         }
 
-        m_playerTransform = player.transform;
+        m_playerTransform =
+            m_commonReferences.PlayerTransform;
+
         m_chargeExecutor =
-            new StraightChargeExecutor(Owner);
+            new StraightChargeExecutor(
+                Owner);
+
+        m_chargeExecutor.PhaseChanged +=
+            HandleChargePhaseChanged;
+
+        SetAnimationPhase(
+            BossActionPhase.PREPARATION);
+
+        Owner.AnimationController.SetBool(
+            m_animationActiveBoolID,
+            true);
 
         Owner.SetStateExecutionStatus(
             StateExecutionStatus.RUNNING);
 
         if (!m_chargeExecutor.Start(
-                chargeParameters,
-                () => m_playerTransform.position))
+                m_chargeParameters,
+                GetPlayerPosition))
         {
             SetFailed();
         }
@@ -81,9 +133,32 @@ public sealed class S1P2BossChargingAttackState :
     /// </summary>
     protected override void OnFixedUpdate()
     {
+        if (Owner == null ||
+            Owner.GetStateExecutionStatus() !=
+                StateExecutionStatus.RUNNING)
+        {
+            return;
+        }
+
+        m_stateElapsedTime +=
+            Time.fixedDeltaTime;
+
+        if (m_stateElapsedTime >=
+            MAX_STATE_DURATION)
+        {
+            Debug.LogError(
+                $"[{nameof(S1P2BossChargingAttackState)}] " +
+                "突進攻撃がタイムアウトしました。");
+
+            SetFailed();
+
+            return;
+        }
+
         if (m_chargeExecutor == null)
         {
             SetFailed();
+
             return;
         }
 
@@ -93,6 +168,7 @@ public sealed class S1P2BossChargingAttackState :
         if (m_chargeExecutor.HasFailed)
         {
             SetFailed();
+
             return;
         }
 
@@ -100,6 +176,10 @@ public sealed class S1P2BossChargingAttackState :
         {
             return;
         }
+        /*
+         * SUCCEEDEDへ変更する前にクールタイムを登録します。
+         */
+        StartCoolTime();
 
         Owner.SetStateExecutionStatus(
             StateExecutionStatus.SUCCEEDED);
@@ -110,17 +190,27 @@ public sealed class S1P2BossChargingAttackState :
     /// </summary>
     protected override void OnExitState()
     {
-        StartCoolTimeIfSucceeded();
+        StopAnimationTimelines();
 
-        m_chargeExecutor?.Cancel();
+        ReleaseChargeExecutor();
 
-        m_chargeExecutor = null;
-        m_playerTransform = null;
-        m_references = null;
+        ResetAnimationParameters();
+
+        m_chargeParameters =
+            null;
+
+        m_playerTransform =
+            null;
+
+        m_references =
+            null;
+
+        m_commonReferences =
+            null;
 
         if (Owner != null &&
             Owner.GetStateExecutionStatus() ==
-            StateExecutionStatus.RUNNING)
+                StateExecutionStatus.RUNNING)
         {
             Owner.SetStateExecutionStatus(
                 StateExecutionStatus.FAILED);
@@ -128,29 +218,152 @@ public sealed class S1P2BossChargingAttackState :
     }
 
     /// <summary>
+    /// Executorの行動フェーズ変更を処理します。
+    /// </summary>
+    private void HandleChargePhaseChanged(
+        BossActionPhase phase)
+    {
+        SetAnimationPhase(
+            phase);
+    }
+
+    /// <summary>
+    /// Animatorへ行動フェーズを設定します。
+    /// </summary>
+    private void SetAnimationPhase(
+        BossActionPhase phase)
+    {
+        if (!m_isAnimationInitialized ||
+            Owner?.AnimationController == null)
+        {
+            return;
+        }
+
+        Owner.AnimationController.SetInteger(
+            m_animationPhaseIntID,
+            (int)phase);
+    }
+
+    /// <summary>
+    /// Animationパラメータを初期化します。
+    /// </summary>
+    private bool InitializeAnimationParameters()
+    {
+        m_isAnimationInitialized =
+            false;
+
+        if (Owner.AnimationController == null ||
+            m_chargeParameters == null ||
+            string.IsNullOrEmpty(
+                m_chargeParameters
+                    .AnimationActiveBoolName) ||
+            string.IsNullOrEmpty(
+                m_chargeParameters
+                    .AnimationPhaseIntName))
+        {
+            return false;
+        }
+
+        m_animationActiveBoolID =
+            Animator.StringToHash(
+                m_chargeParameters
+                    .AnimationActiveBoolName);
+
+        m_animationPhaseIntID =
+            Animator.StringToHash(
+                m_chargeParameters
+                    .AnimationPhaseIntName);
+
+        m_isAnimationInitialized =
+            true;
+
+        return true;
+    }
+
+    /// <summary>
+    /// 突進Animationパラメータを初期状態へ戻します。
+    /// </summary>
+    private void ResetAnimationParameters()
+    {
+        if (!m_isAnimationInitialized ||
+            Owner?.AnimationController == null)
+        {
+            return;
+        }
+
+        Owner.AnimationController.SetInteger(
+            m_animationPhaseIntID,
+            (int)BossActionPhase.PREPARATION);
+
+        Owner.AnimationController.SetBool(
+            m_animationActiveBoolID,
+            false);
+
+        m_isAnimationInitialized =
+            false;
+    }
+
+    /// <summary>
+    /// Playerの現在位置を取得します。
+    /// </summary>
+    private Vector3 GetPlayerPosition()
+    {
+        if (m_playerTransform == null)
+        {
+            return Owner.transform.position;
+        }
+
+        return m_playerTransform.position;
+    }
+
+    /// <summary>
+    /// Executorとの接続を解除します。
+    /// </summary>
+    private void ReleaseChargeExecutor()
+    {
+        if (m_chargeExecutor == null)
+        {
+            return;
+        }
+
+        m_chargeExecutor.PhaseChanged -=
+            HandleChargePhaseChanged;
+
+        m_chargeExecutor.Cancel();
+
+        m_chargeExecutor =
+            null;
+    }
+
+    /// <summary>
     /// 正常終了した突進攻撃のクールタイムを開始します。
     /// </summary>
-    private void StartCoolTimeIfSucceeded()
+    private void StartCoolTime()
     {
         if (Owner == null ||
-            Owner.GetStateExecutionStatus() !=
-            StateExecutionStatus.SUCCEEDED ||
             m_references == null ||
-            m_references.DecisionParameterAsset == null)
+            m_references.DecisionParameterAsset ==
+                null)
         {
             return;
         }
 
         BossStateCoolTimeManager coolTimeManager =
-            Owner.GetComponent<BossStateCoolTimeManager>();
+            Owner.GetComponent<
+                BossStateCoolTimeManager>();
 
         if (coolTimeManager == null)
         {
             return;
         }
 
-        coolTimeManager.StartCoolTime<S1P2BossChargingAttackState>(
-            m_references.DecisionParameterAsset.Charge.CoolTime);
+        coolTimeManager
+            .StartCoolTime<
+                S1P2BossChargingAttackState>(
+                m_references
+                    .DecisionParameterAsset
+                    .Charge
+                    .CoolTime);
     }
 
     /// <summary>
@@ -158,14 +371,46 @@ public sealed class S1P2BossChargingAttackState :
     /// </summary>
     private void SetFailed()
     {
+        ReleaseChargeExecutor();
+
+        ResetAnimationParameters();
+
         if (Owner == null)
         {
             return;
         }
 
-        m_chargeExecutor?.Cancel();
-
         Owner.SetStateExecutionStatus(
             StateExecutionStatus.FAILED);
+    }
+
+    /// <summary>
+    /// 現在フェーズのAnimation Timeline管理を保持します。
+    /// </summary>
+    private void CacheAnimationTimelineController()
+    {
+        m_animationTimelineController =
+            null;
+
+        if (Owner?.PhaseController == null)
+        {
+            return;
+        }
+
+        Owner.PhaseController
+            .TryGetCurrentPhaseComponent(
+                out m_animationTimelineController);
+    }
+
+    /// <summary>
+    /// State中に再生されたAnimation Timelineを停止します。
+    /// </summary>
+    private void StopAnimationTimelines()
+    {
+        m_animationTimelineController?
+            .StopAll();
+
+        m_animationTimelineController =
+            null;
     }
 }

@@ -1,3 +1,4 @@
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -5,6 +6,9 @@ public class TitleController : MonoBehaviour
 {
     [SerializeField]
     private string m_nextSceneName;
+
+    [SerializeField]
+    private SaveDataController saveDataController;
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
@@ -18,9 +22,43 @@ public class TitleController : MonoBehaviour
         
     }
 
+    public void MarkOpeningWatched()
+    {
+        if (!saveDataController.MarkOpeningWatched())
+        {
+            Debug.LogError("オープニング視聴済みにできない");
+            return;
+        }
+        Debug.Log("オープニング視聴済みにした");
+    }
+
 
     public void OnClickStartButton()
     {
         SceneManager.LoadScene(m_nextSceneName);
+    }
+
+    public void ExitGame()
+    {
+        GameApplication.QuitGame();
+    }
+
+}
+
+/// <summary>
+/// ゲーム終了処理を提供します。
+/// </summary>
+public static class GameApplication
+{
+    /// <summary>
+    /// ゲームを終了します。
+    /// </summary>
+    public static void QuitGame()
+    {
+#if UNITY_EDITOR
+        EditorApplication.isPlaying = false;
+#else
+        Application.Quit();
+#endif
     }
 }

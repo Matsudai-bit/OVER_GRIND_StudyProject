@@ -9,8 +9,14 @@ using Unity.Mathematics;
 
 public class SplineGrindController : MonoBehaviour
 {
+    private const float SLOPED_RAIL_VERTICAL_COMPONENT_THRESHOLD = 0.01f;
     [SerializeField, Header("Parameter Asset")]
     private SplineGrindControllerParameterAsset m_parameterAsset;
+
+    [SerializeField] private PlayerRailGrindChargeParameterAsset m_chargeParameterAsset;
+
+    /// <summary>レールチャージの設定を取得します。</summary>
+    public PlayerRailGrindChargeParameterAsset ChargeParameterAsset => m_chargeParameterAsset;
 
     [Header("Movement Settings")]
     [SerializeField] private float baseGrindSpeed = 15f; // 基本速度
@@ -24,6 +30,10 @@ public class SplineGrindController : MonoBehaviour
 
     [SerializeField, Min(0f)] private float collisionExitLandingDelay = 0.15f;
 
+    // レール離脱後にCollision Ignoreを最低維持する時間
+    [SerializeField, Min(0.0f), Tooltip("レール離脱後、離脱元レールとの衝突Ignoreを最低維持する時間（秒）。")]
+    private float railCollisionReleaseDelay = 0.2f;
+
     [SerializeField, Min(0f), Tooltip("衝突地点から横へ離れるまで移動を補助する距離（m）です。")]
     private float collisionExitSideDistance = 2f;
     [SerializeField, Min(0f), Tooltip("壁などで離脱できない場合に、移動補助を終了する上限時間（秒）です。")]
@@ -35,6 +45,10 @@ public class SplineGrindController : MonoBehaviour
     private float collisionExitAssistElapsed;
 
     public bool IsCollisionExiting { get; private set; }
+    /// <summary>Whether the most recent grind ended at the rail endpoint.</summary>
+    public bool DidReachRailEnd { get; private set; }
+    /// <summary>Whether the last rail endpoint has a vertical tangent.</summary>
+    public bool DidReachSlopedRailEnd { get; private set; }
     public bool IsCollisionExitSeparating => IsCollisionExiting &&
         collisionExitAssistElapsed < collisionExitAssistDuration &&
         Vector3.Dot(transform.position - collisionExitStartPosition, collisionExitSideDirection) <
@@ -47,6 +61,14 @@ public class SplineGrindController : MonoBehaviour
     public void FinishCollisionExit()
     {
         IsCollisionExiting = false;
+    }
+
+    /// <summary>被弾から復帰した際、レール離脱中の再搭乗制限と衝突無視を解除します。</summary>
+    public void RestoreBoardingAfterHit()
+    {
+        FinishCollisionExit();
+        collisionExitRail = null;
+        m_motor?.RestoreRailCollisions();
     }
 
     // 現在の状態管理
@@ -73,6 +95,26 @@ public class SplineGrindController : MonoBehaviour
     public int Direction => directionFactor;
     /// <summary>ジャンプへ引き継ぐ滑走速度を取得します。</summary>
     public float CurrentSpeed => currentSpeed;
+
+    /// <summary>レール上の移動速度を更新します。</summary>
+    /// <param name="speed">新しい移動速度。</param>
+    public void SetGrindSpeed(float speed)
+    {
+        if (IsGrinding) currentSpeed = Mathf.Max(0.0f, speed);
+    }
+
+    /// <summary>現在のレール接線に沿った進行方向を取得します。</summary>
+    /// <returns>進行方向。レールが無効ならプレイヤーの前方。</returns>
+    public Vector3 GetTravelDirection()
+    {
+        if (currentRail == null || currentRail.Container == null)
+            return transform.forward;
+
+        Vector3 tangent = currentRail.Container.EvaluateTangent(Mathf.Clamp01(currentT));
+        return tangent.sqrMagnitude > 0.0001f
+            ? tangent.normalized * directionFactor
+            : transform.forward;
+    }
     /// <summary>レールからプレイヤー原点までの高さを取得します。</summary>
     public float RideHeight => Mathf.Max(0f, rideHeight);
     private PlayerMonitor m_monitor;
@@ -85,9 +127,37 @@ public class SplineGrindController : MonoBehaviour
     /// </summary>
     public bool CanStartGrind(SplineRailInfo rail)
     {
-        return isActiveAndEnabled && !IsCollisionExiting && rail != null &&
-            rail.isActiveAndEnabled && rail != collisionExitRail && rail.Container != null &&
-            rail.Container.Splines.Count > 0 && rail.Container.Splines[0].Count >= 2;
+        if (!CanUseRail(rail) ||
+            IsCollisionExiting ||
+            rail == collisionExitRail)
+        {
+            return false;
+        }
+
+        // 離脱元RailとのCollision Ignoreが残っている間は、
+        // PlayerMonitorが検出しても通常搭乗させない。
+        if (m_motor != null &&
+            m_motor.IsRailCollisionIgnored(
+                rail))
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// レールデータ自体がグラインドに使用可能か確認します。
+    /// </summary>
+    private bool CanUseRail(
+        SplineRailInfo rail)
+    {
+        return isActiveAndEnabled &&
+               rail != null &&
+               rail.isActiveAndEnabled &&
+               rail.Container != null &&
+               rail.Container.Splines.Count > 0 &&
+               rail.Container.Splines[0].Count >= 2;
     }
 
     [DebugParameterField]
@@ -138,21 +208,88 @@ public class SplineGrindController : MonoBehaviour
             // プレイヤー原点の高さを引き、坂でも搭乗位置を前方へずらしません。
             Vector3 railPosition = m_rb.position - Vector3.up * RideHeight;
             SplineUtility.GetNearestPoint(spline, (float3)railPosition, out _, out float nearestT);
-            Vector3 tangent = spline.EvaluateTangent(nearestT);
-            int direction = Vector3.Dot(tangent, m_rb.rotation * Vector3.forward) >= 0f ? 1 : -1;
-            StartGrindAt(rail, nearestT, direction, baseGrindSpeed * rail.SpeedMultiplier);
+            Vector3 tangent =
+        spline.EvaluateTangent(
+            nearestT);
+
+            int direction;
+
+            if (rail.LockBoardingDirection)
+            {
+                /*
+                 * 搭乗した向きには関係なく、
+                 * レール側で指定した方向へ進ませます。
+                 */
+                direction =
+                    rail.UseReverseDirection
+                        ? -1
+                        : 1;
+            }
+            else
+            {
+                Vector3 playerForward =
+                    m_rb.rotation *
+                    Vector3.forward;
+
+                direction =
+                    Vector3.Dot(
+                        tangent,
+                        playerForward) >= 0.0f
+                        ? 1
+                        : -1;
+            }
+
+            StartGrindAt(
+                rail,
+                nearestT,
+                direction,
+                baseGrindSpeed *
+                rail.SpeedMultiplier);
         }
     }
 
     /// <summary>着地済みのレール上の位置・方向・速度から滑走を再開します。</summary>
-    public void StartGrindAt(SplineRailInfo rail, float positionT, int direction, float speed)
+    public void StartGrindAt(
+        SplineRailInfo rail,
+        float positionT,
+        int direction,
+        float speed)
     {
-        if (!CanStartGrind(rail) || m_motor == null || !m_motor.IsInitialized) return;
+        if (!CanUseRail(rail) ||
+            m_motor == null ||
+            !m_motor.IsInitialized)
+        {
+            return;
+        }
+
+        // 通常搭乗・Rail Jump復帰のどちらでも、
+        // 搭乗中は対象RailとのCollision Ignoreを保持する。
+        if (!m_motor.BeginRailCollisionIgnore(
+                rail))
+        {
+            return;
+        }
+
         currentRail = rail;
-        currentT = Mathf.Clamp01(positionT);
-        directionFactor = direction >= 0 ? 1 : -1;
-        currentSpeed = Mathf.Max(0f, speed);
+
+        currentT =
+            Mathf.Clamp01(
+                positionT);
+
+        directionFactor =
+            direction >= 0
+                ? 1
+                : -1;
+
+        currentSpeed =
+            Mathf.Max(
+                0.0f,
+                speed);
+
         IsGrinding = true;
+        DidReachRailEnd = false;
+        DidReachSlopedRailEnd = false;
+
         m_motor.BeginRailMotion();
     }
 
@@ -199,11 +336,10 @@ public class SplineGrindController : MonoBehaviour
                 ExitGrind(true);
                 return;
             }
-
             currentT = nextT;
             Vector3 forward = ((Vector3)spline.EvaluateTangent(currentT)).normalized * directionFactor;
             if (!m_motor.TryMoveAlongRail(nextPosition + Vector3.up * RideHeight, forward,
-                deltaTime, out RaycastHit obstacle))
+                deltaTime, currentRail.ForcesEscape, out RaycastHit obstacle))
                 ExitGrindOnCollision(obstacle.normal);
         }
     }
@@ -253,7 +389,7 @@ public class SplineGrindController : MonoBehaviour
     /// </summary>
     private void HandleGrindCollision(Collision collision)
     {
-        if (!IsGrinding) return;
+        if (!IsGrinding || !currentRail.ForcesEscape) return;
 
         // 複合コライダーでは接触点ごとに相手を確認し、レールの接触点を除外します。
         for (int i = 0; i < collision.contactCount; i++)
@@ -325,24 +461,90 @@ public class SplineGrindController : MonoBehaviour
     /// <summary>
     /// レールからの離脱処理
     /// </summary>
-    private void ExitGrind(bool isEndOfRail)
+    private void ExitGrind(
+        bool isEndOfRail)
     {
-        if (!IsGrinding) return;
-        Vector3 exitVelocity = m_motor != null ? m_motor.RailVelocity : Vector3.zero;
-        if (currentRail != null && currentRail.Container != null &&
-            currentRail.Container.Splines.Count > 0 && currentRail.Container.Splines[0].Count >= 2)
+        if (!IsGrinding)
         {
-            Vector3 tangent = currentRail.Container.EvaluateTangent(Mathf.Clamp01(currentT));
-            exitVelocity = tangent.normalized * currentSpeed * directionFactor;
-            if (currentRail.IsBoostRail) exitVelocity *= exitSpeedScale;
+            return;
         }
 
-        // 終端付近で毎フレーム再搭乗して位置が戻ることを防ぎます。
-        if (isEndOfRail) collisionExitRail = currentRail;
+        SplineRailInfo exitingRail =
+            currentRail;
+
+        Vector3 exitVelocity =
+            m_motor != null
+                ? m_motor.RailVelocity
+                : Vector3.zero;
+        bool isSlopedRailEnd = false;
+
+        if (exitingRail != null &&
+            exitingRail.Container != null &&
+            exitingRail.Container.Splines.Count > 0 &&
+            exitingRail.Container.Splines[0].Count >= 2)
+        {
+            Vector3 tangent =
+                exitingRail.Container.EvaluateTangent(
+                    Mathf.Clamp01(
+                        currentT));
+
+            exitVelocity =
+                tangent.normalized *
+                currentSpeed *
+                directionFactor;
+            isSlopedRailEnd =
+                Mathf.Abs(tangent.normalized.y) >
+                SLOPED_RAIL_VERTICAL_COMPONENT_THRESHOLD;
+
+            Debug.Log(
+    $"[RailExit] " +
+    $"T={currentT:F3}, " +
+    $"DirectionFactor={directionFactor}, " +
+    $"Tangent={tangent.normalized:F3}, " +
+    $"Speed={currentSpeed:F3}, " +
+    $"ExitVelocity={exitVelocity:F3}");
+
+            Debug.DrawRay(
+    transform.position,
+    tangent.normalized
+    * 5.0f,
+    Color.blue,
+    3.0f);
+
+            Debug.DrawRay(
+                transform.position,
+                exitVelocity.normalized * 5.0f,
+                Color.red,
+                3.0f);
+        }
+
+        if (isEndOfRail)
+        {
+            collisionExitRail =
+                exitingRail;
+        }
+
+        DidReachRailEnd = isEndOfRail;
+        DidReachSlopedRailEnd = isEndOfRail && isSlopedRailEnd;
         IsGrinding = false;
         currentRail = null;
-        if (m_motor != null) m_motor.EndRailMotion(exitVelocity);
+
+        if (m_motor == null)
+        {
+            return;
+        }
+
+        // RailとのCollision Ignoreは保持したまま通常物理へ戻す。
+        m_motor.EndRailMotion(
+            exitVelocity);
+
+        // 次のPhysics Simulation以降で分離確認を開始する。
+        m_motor.RequestRailCollisionRelease(
+            railCollisionReleaseDelay);
     }
+    // railCollisionReleaseDelay は専用の離脱Collision設定です。
+    // ParameterAssetへ移行する場合は対応プロパティを追加してください。
+
     /// <summary>Applies the assigned parameter asset.</summary>
     private void ApplyParameterAsset()
     {

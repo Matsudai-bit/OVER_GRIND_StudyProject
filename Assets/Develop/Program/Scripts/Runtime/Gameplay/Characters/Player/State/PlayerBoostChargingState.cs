@@ -1,22 +1,15 @@
 
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// プレイヤーのブーストチャージ状態を管理します。
-///
-    /// チャージ中は現在の移動方向を維持しながら、
-    /// 入力角度で固定速度の直進と左右ドリフトを切り替えます。
-    /// 固定した旋回方向への通常入力と、低倍率の逆入力を別に扱います。
-///
-/// 移動中開始のチャージでは、実際のPlayer本体は回転させず、
-/// ModelTransformのみを移動方向に対して横向きにします。
-/// これにより、移動処理へ影響を与えずにドリフト中の見た目を表現します。
+/// 停止チャージと移動チャージに共通するゲージ、入力、演出の状態を管理します。
 /// </summary>
-public sealed class PlayerBoostChargingState
+public abstract class PlayerBoostChargingState
     : StateBase<PlayerStateMachineComponent>
 {
     // 使用するパラメータアセット
-    private PlayerBoostChargingParameterAsset m_parameterAsset;
+    protected PlayerBoostChargingParameterAsset m_parameterAsset;
 
     // チャージ経過時間
     private float m_chargeTime;
@@ -25,21 +18,18 @@ public sealed class PlayerBoostChargingState
     private float m_speedLogElapsedTime;
 
     // チャージ開始時の実速度へ設定倍率を掛けた固定速度
-    private float m_chargeSpeed;
+    protected float m_chargeSpeed;
 
     // 現在のチャージ中の移動方向
-    private Vector3 m_currentVelocityDirection;
-
-    // 移動中チャージ開始時の進行方向。自由旋回範囲の基準として使用します。
-    private Vector3 m_chargeStartDirection;
+    protected Vector3 m_currentVelocityDirection;
 
     // 現在のプレイヤーの向き
     // 実際のPlayer本体は回転させず、移動方向・カメラ等の基準として使用します。
-    private Vector3 m_currentFacingDirection;
+    protected Vector3 m_currentFacingDirection;
 
     // チャージ中のモデルの見た目の向き
     // 実際の移動方向とは独立して、ドリフト中の見た目を表現するために使用します。
-    private Vector3 m_currentModelFacingDirection;
+    protected Vector3 m_currentModelFacingDirection;
 
     // チャージ開始前のモデルのローカル回転
     // チャージ終了時に、Prefabで設定された本来の姿勢へ正確に戻すために保持する。
@@ -51,22 +41,33 @@ public sealed class PlayerBoostChargingState
     // 現在使用している最大チャージ時間
     private float m_currentMaxChargeTime;
 
-    // 最初に確定した旋回方向。チャージが終わるまで変更しません。
-    private int m_driftSide;
+    protected bool m_isDashRequested;
 
-    // 入力の急変を緩和した旋回量と、モデルの横滑り角度。
-    private float m_currentDriftSteering;
-    private float m_modelSlipAngle;
-    private float m_driftElapsedTime;
-    private bool m_isDashRequested;
+    // 現在のロックオン対象を参照するターゲット制御
+    private PlayerTargetingController m_targetingController;
 
-    // Animator更新後にモデルの向きを反映するPresenter
-    private PlayerChargeFacingPresenter m_chargeFacingPresenter;
+    // Vチャージエフェクトの段階ごとの継続時間（今後アセットへ移行する想定）
+    private const float CHARGE_V0_DURATION_SECONDS = 1.0f;
+    private const float CHARGE_V1_DURATION_SECONDS = 2.0f;
+    private const float CHARGE_V2_DURATION_SECONDS = 3.0f;
+
+    // Vチャージ中に発生させたエフェクトを、状態終了時にまとめて停止します。
+    private readonly Dictionary<EffectId, EffectHandle> m_effectMap = new();
+
+    // 段階ごとの継続時間
+    private readonly Dictionary<EffectId, float> m_vUpGradeIntervalTimeMap = new();
+
+    // 現在のエフェクト段階と、その段階の経過時間
+    private EffectId m_currentEffect = EffectId.NONE;
+    private float m_intervalTime;
+
+    // 状態遷移後の遅延コールバックによる誤更新を防止します。
+    private bool m_isChargeEffectActive;
 
     /// <summary>
     /// 現在のチャージ割合を取得します。
     /// </summary>
-    private float ChargeRate =>
+    protected float ChargeRate =>
         Mathf.Clamp01(
             m_chargeTime /
             m_currentMaxChargeTime);
@@ -74,8 +75,54 @@ public sealed class PlayerBoostChargingState
     /// <summary>
     /// 状態開始時に呼ばれます。
     /// </summary>
+    /// <summary>停止開始チャージの場合はtrueを返します。</summary>
+    protected abstract bool IsStaticCharge { get; }
+
+    /// <summary>開始形態に対応するアニメーションを再生します。</summary>
+    protected abstract void PlayChargeAnimation();
+
+    /// <summary>開始形態に対応するアニメーションを停止します。</summary>
+    protected abstract void StopChargeAnimation();
+
+    /// <summary>開始形態に対応する向きと移動を更新します。</summary>
+    protected abstract void UpdateChargeMode(Vector2 input, float turnSpeed, Transform target);
+
+    /// <summary>移動方向をAnimatorへ反映します。</summary>
+    protected abstract void UpdateChargeDirectionAnimation(Vector2 input);
+
+    /// <summary>開始形態ごとの方向計算を初期化します。</summary>
+    protected abstract void InitializeChargeMode();
+
+    /// <summary>終了時に必要な向きの調整を行います。</summary>
+    protected abstract void AlignFacingOnExit();
+
     protected override void OnStartState()
     {
+        // 通常移動音からチャージ音へ切り替えるため、
+        // 移動側の終了音は鳴らさず即時停止します。
+        PlayerAudioActionUtility.StopSequential(
+            Owner,
+            PlayerAudioActionID.WALKING,
+            true);
+
+
+
+        // Stateの再入時もID登録が重複しないように初期化します。
+        m_effectMap.Clear();
+        m_vUpGradeIntervalTimeMap.Clear();
+
+        m_vUpGradeIntervalTimeMap.Add(
+            EffectId.PLAYER_SP_VCharge_L_V0, CHARGE_V0_DURATION_SECONDS);
+        m_vUpGradeIntervalTimeMap.Add(
+            EffectId.PLAYER_SP_VCharge_L_V1, CHARGE_V1_DURATION_SECONDS);
+        m_vUpGradeIntervalTimeMap.Add(
+            EffectId.PLAYER_SP_VCharge_L_V2, CHARGE_V2_DURATION_SECONDS);
+        m_currentEffect = EffectId.NONE;
+        m_intervalTime = 0.0f;
+        m_isChargeEffectActive = true;
+        // 前回の移動チャージ方向がAnimatorへ残らないよう初期化する。
+        Owner.AnimationPresenter.ResetMoveChargeDirection();
+
         Owner.InputReader.ConsumeVBoostStarted();
 
         m_parameterAsset =
@@ -91,11 +138,10 @@ public sealed class PlayerBoostChargingState
         Owner.CarriedBoostGaugeRate =
             inheritedChargeRate;
         m_speedLogElapsedTime = 0.0f;
-        m_driftSide = 0;
-        m_currentDriftSteering = 0.0f;
-        m_modelSlipAngle = 0.0f;
-        m_driftElapsedTime = 0.0f;
         m_isDashRequested = false;
+
+        m_targetingController =
+            Owner.GetComponent<PlayerTargetingController>();
 
 
 
@@ -103,8 +149,7 @@ public sealed class PlayerBoostChargingState
             Owner.Motor.HorizontalSpeed;
 
         // チャージ開始時に停止していたか判定
-        m_startedFromStationary =
-            Owner.Motor.IsHorizontallyStopped;
+        m_startedFromStationary = IsStaticCharge;
 
         // 開始状態に応じてチャージ時間を選択
         m_currentMaxChargeTime =
@@ -120,6 +165,9 @@ public sealed class PlayerBoostChargingState
             currentSpeedAtChargeStart *
             m_parameterAsset.ChargeMoveSpeedRate;
 
+        PlayerAudioActionUtility.PlaySequential(
+    Owner,
+     PlayerAudioActionUtility.GetChargeActionID(m_startedFromStationary));
         // --------------------------------------------------------
         // チャージ開始時の移動方向を取得
         // --------------------------------------------------------
@@ -139,8 +187,7 @@ public sealed class PlayerBoostChargingState
 
         m_currentVelocityDirection.Normalize();
 
-        m_chargeStartDirection =
-            m_currentVelocityDirection;
+        InitializeChargeMode();
 
         // --------------------------------------------------------
         // プレイヤーの向きを初期化
@@ -160,17 +207,18 @@ public sealed class PlayerBoostChargingState
             m_defaultModelLocalRotation =
                 Owner.ModelTransform.localRotation;
 
-            m_chargeFacingPresenter =
-                Owner.ModelTransform.GetComponent<PlayerChargeFacingPresenter>();
+            // チャージ開始前に表示されていた角度を補間開始位置として使用し、
+            // 開始フレームで進行方向へスナップすることを防ぐ。
+            Vector3 currentModelDirection =
+                Owner.ModelTransform.forward;
+            currentModelDirection.y = 0.0f;
 
-            if (m_chargeFacingPresenter == null)
+            if (currentModelDirection.sqrMagnitude > 0.0001f)
             {
-                m_chargeFacingPresenter =
-                    Owner.ModelTransform.gameObject.AddComponent<PlayerChargeFacingPresenter>();
+                m_currentModelFacingDirection =
+                    currentModelDirection.normalized;
             }
 
-            m_chargeFacingPresenter.BeginFacingOverride(
-                m_currentModelFacingDirection);
         }
 
         Debug.Log(
@@ -183,25 +231,148 @@ public sealed class PlayerBoostChargingState
             Owner);
 
         Owner.VGaugePlaceModel.SetGaugeRate(ChargeRate);
-        if (Owner.PlayerCamera != null)
-        {
-            Owner.PlayerCamera.BeginDriftLookOverride(
-                m_chargeStartDirection,
-                m_startedFromStationary
-                    ? m_parameterAsset.CameraDriftLookBlendRate
-                    : 1.0f);
-        }
 
         // チャージ開始時の状態に応じてアニメーションを切り替える
-        if (m_startedFromStationary)
+        PlayChargeAnimation();
+        // 最初のワンショットエフェクトの自然終了を待ってV1へ移行します。
+        m_currentEffect = EffectId.PLAYER_SP_VCharge_L_V0;
+        ApplyNextEffect(m_currentEffect);
+    }
+
+    /// <summary>
+    /// V0の自然終了を受け取り、V1へ進めます。
+    /// </summary>
+    /// <param name="reason">終了理由。</param>
+    private void OnInitialChargeEffectCompleted(EffectCompletionReason reason)
+    {
+        if (!m_isChargeEffectActive ||
+            m_currentEffect != EffectId.PLAYER_SP_VCharge_L_V0 ||
+            reason != EffectCompletionReason.COMPLETED)
         {
-            Owner.AnimationPresenter
-                .PlayStationaryBoostChargingAnimation();
+            return;
         }
-        else
+
+        ApplyNextEffect(EffectId.PLAYER_SP_VCharge_L_V0);
+    }
+
+    /// <summary>
+    /// V1・V2の継続時間を計測し、次のエフェクトへ進めます。
+    /// </summary>
+    /// <param name="deltaTime">経過秒数。</param>
+    private void UpdateChargeEffects(float deltaTime)
+    {
+        if (!m_isChargeEffectActive ||
+            !m_vUpGradeIntervalTimeMap.TryGetValue(
+                m_currentEffect, out float requiredTime))
         {
-            Owner.AnimationPresenter.PlayWalkAnimation();
+            return;
         }
+
+        m_intervalTime += deltaTime;
+        if (m_intervalTime >= requiredTime)
+        {
+            ApplyNextEffect(m_currentEffect);
+        }
+    }
+
+
+    EffectId GetEffectForV(int vValue)
+    {
+        switch (vValue)
+        {
+            case 0:
+                return EffectId.PLAYER_SP_VCharge_L_V0;
+
+            case 1:
+                return EffectId.PLAYER_SP_VCharge_L_V1;
+
+            case 2:
+                return EffectId.PLAYER_SP_VCharge_L_V2;
+
+            case 3:
+                return EffectId.PLAYER_SP_VCharge_L_V3;
+
+        }
+        return EffectId.NONE;
+    }
+
+    /// <summary>
+    /// 現在の段階と一致する場合だけ、次のエフェクトを開始します。
+    /// </summary>
+    /// <param name="effectId">遷移前のエフェクトID。</param>
+    private void ApplyNextEffect(EffectId effectId)
+    {
+        if (!m_isChargeEffectActive || m_currentEffect != effectId)
+        {
+            return;
+        }
+
+        EffectId nextEffect;
+        switch (effectId)
+        {
+            case EffectId.PLAYER_SP_VCharge_L_V0:
+                nextEffect = EffectId.PLAYER_SP_VCharge_L_V1;
+                break;
+            case EffectId.PLAYER_SP_VCharge_L_V1:
+                nextEffect = EffectId.PLAYER_SP_VCharge_L_V2;
+                break;
+            case EffectId.PLAYER_SP_VCharge_L_V2:
+                nextEffect = EffectId.PLAYER_SP_VCharge_L_V3;
+                break;
+            default:
+                return;
+        }
+
+        EffectHandle nextHandle = Owner.EffectEmitter.Play(nextEffect);
+        if (!nextHandle.IsValid)
+        {
+            Debug.LogWarning(
+                $"[PlayerBoostChargingState] エフェクト再生失敗: {nextEffect}",
+                Owner);
+            return;
+        }
+
+        // 既存の段階のエフェクトは重ねて再生し、State終了時にまとめて停止します。
+        m_effectMap[nextEffect] = nextHandle;
+        m_currentEffect = nextEffect;
+        m_intervalTime = 0.0f;
+    }
+
+    /// <summary>
+    /// チャージ状態から離れるとき、終了通知を解除してエフェクトを停止します。
+    /// </summary>
+    private void StopChargeEffects()
+    {
+        // 停止中のイベント経由で次の段階へ遷移しないよう先に無効化します。
+        m_isChargeEffectActive = false;
+
+        if (m_effectMap.TryGetValue(
+            EffectId.PLAYER_SP_VCharge_L_V0, out EffectHandle initialHandle))
+        {
+            initialHandle.UnregisterCompletedCallback(OnInitialChargeEffectCompleted);
+        }
+
+        foreach (EffectHandle handle in m_effectMap.Values)
+        {
+            handle.Stop(EffectStopMode.GRACEFUL);
+        }
+
+        m_effectMap.Clear();
+        m_currentEffect = EffectId.NONE;
+        m_intervalTime = 0.0f;
+    }
+
+    /// <summary>
+    /// AnimatorとConstraintが評価される前に、
+    /// チャージ中のモデル向きを反映します。
+    /// </summary>
+    /// <param name="deltaTime">
+    /// 前フレームからの経過時間。
+    /// </param>
+    protected override void OnUpdate(
+        float deltaTime)
+    {
+        ApplyModelFacing();
     }
 
     /// <summary>
@@ -209,8 +380,14 @@ public sealed class PlayerBoostChargingState
     /// </summary>
     protected override void OnFixedUpdate()
     {
-        // Updateで遷移するまで、解除時に確定した向きとダッシュ方向を保持します。
-        if (m_isDashRequested) return;
+        // 遷移要求が成立した場合は、移動入力をそれ以上更新しません。
+        if (m_isDashRequested)
+        {
+            return;
+        }
+
+        // StateBaseの更新経路を使用してエフェクト段階を進めます。
+        UpdateChargeEffects(Time.fixedDeltaTime);
 
         // チャージ中の攻撃入力は破棄し、チャージ状態を継続します。
         Owner.InputReader.ConsumeAttackInput();
@@ -269,6 +446,10 @@ public sealed class PlayerBoostChargingState
                 Owner.InputReader.MoveInput,
                 1.0f);
 
+        // 移動チャージ中だけ横入力方向をAnimatorへ渡す。
+        // -1：左、0：正面・入力なし、1：右。
+        UpdateChargeDirectionAnimation(normalizedInput);
+
         // --------------------------------------------------------
         // チャージ率に応じた、現在の曲がりやすさを計算
         // --------------------------------------------------------
@@ -279,65 +460,16 @@ public sealed class PlayerBoostChargingState
                 m_parameterAsset.DriftTurnSpeedAtFullCharge,
                 ChargeRate);
 
+        Transform targetTransform =
+            m_targetingController != null
+                ? m_targetingController.GetCurrentTargetTransform()
+                : null;
+
         // --------------------------------------------------------
         // チャージ中の移動方向を更新
         // --------------------------------------------------------
 
-        if (!m_startedFromStationary)
-        {
-            // 移動中開始の場合はドリフトする
-            UpdateDriftVelocityDirection(
-                normalizedInput,
-                currentDriftTurnSpeed);
-
-            // Player本体の回転方向を内部情報として更新するだけで、
-            // Owner.transform自体は回転させません。
-            UpdateFacingDirection();
-
-            // 通常入力・逆入力に応じた体の横滑り方向を更新する
-            UpdateModelSidewaysFacing(normalizedInput);
-        }
-        else
-        {
-            // 停止中開始の場合は左右入力によってその場で回転する
-            UpdateStationaryChargeRotation(normalizedInput);
-        }
-
-        // --------------------------------------------------------
-        // チャージ中の移動
-        // --------------------------------------------------------
-
-        // チャージ開始時に確定した速度を、チャージ終了まで固定して使用します。
-        // 停止中開始の場合は移動しない
-        if (!m_startedFromStationary)
-        {
-            Vector3 movementDirection =
-                GetChargeMovementDirection(normalizedInput);
-
-            // 移動方向と体の方向を分け、旋回中の横滑り姿勢を表示します。
-            m_chargeFacingPresenter?.SetFacingDirection(
-                m_currentModelFacingDirection);
-
-            Owner.Motor.MoveWithDriftAtFixedSpeed(
-                movementDirection,
-                m_chargeSpeed,
-                m_currentFacingDirection,
-                m_parameterAsset.FacingRotationSpeed,
-                Time.fixedDeltaTime,
-                true,
-                false);
-        }
-        else
-        {
-            m_chargeFacingPresenter?.SetFacingDirection(
-                m_currentFacingDirection);
-        }
-
-        // --------------------------------------------------------
-        // カメラをチャージ中の入力側へ追従
-        // --------------------------------------------------------
-
-        UpdateChargeCamera();
+        UpdateChargeMode(normalizedInput, currentDriftTurnSpeed, targetTransform);
 
         // --------------------------------------------------------
         // ゲージ更新
@@ -369,264 +501,103 @@ public sealed class PlayerBoostChargingState
         }
     }
 
-    /// <summary>現在の体の向きと開始時のカメラ方向を補間した角度へカメラを向けます。</summary>
-    private void UpdateChargeCamera()
-    {
-        if (Owner.PlayerCamera == null) return;
-
-        Owner.PlayerCamera.UpdateDriftLookTarget(
-            m_currentModelFacingDirection,
-            m_startedFromStationary ? m_parameterAsset.CameraDriftLookBlendRate : 1.0f);
-
-        if (!m_startedFromStationary)
-        {
-            Owner.PlayerCamera.UpdateDriftLookDirectionOverTime(
-                m_parameterAsset.MovingChargeCameraLookDuration, Time.fixedDeltaTime);
-            return;
-        }
-
-        Owner.PlayerCamera.UpdateDriftLookDirection(
-            m_parameterAsset.CameraDriftLookTurnSpeed, Time.fixedDeltaTime);
-    }
-
     /// <summary>
-    /// 停止中チャージ時の回転処理を行います。
-    ///
-    /// 最初に確定した左右入力に応じてプレイヤーをその場で回転させます。
-    /// 回転速度はチャージ率によって変化せず、常に一定です。
+    /// ターゲット中のモデルとプレイヤーの向きを対象へ合わせます。
+    /// 高低差による傾きを防ぐため、水平方向だけを使用します。
     /// </summary>
-    /// <param name="input">正規化された移動入力。</param>
-    private void UpdateStationaryChargeRotation(
-        Vector2 input)
+    /// <param name="targetTransform">現在のターゲット。</param>
+    protected void UpdateTargetFacingDirection(Transform targetTransform)
     {
-        // 停止中はドリフト用の旋回方向固定を使わず、左右入力をそのまま反映する。
-        // これにより、チャージ中でも任意のタイミングで左右へ切り返せる。
-        float steeringInput =
-            m_parameterAsset.GetSmoothedSteeringInput(input);
-
-        if (Mathf.Approximately(steeringInput, 0.0f))
+        if (targetTransform == null)
         {
             return;
         }
 
-        float rotationAmount =
-            steeringInput *
-            m_parameterAsset.StationaryChargeRotationSpeed *
-            Time.fixedDeltaTime;
+        Vector3 targetDirection =
+            targetTransform.position - Owner.transform.position;
+        targetDirection.y = 0.0f;
 
-        Owner.transform.Rotate(
-            0.0f,
-            rotationAmount,
-            0.0f,
-            Space.World);
-
-        m_currentFacingDirection =
-            Owner.transform.forward;
-
-        m_currentFacingDirection.y = 0.0f;
-
-        if (m_currentFacingDirection.sqrMagnitude >
-            0.0001f)
+        if (targetDirection.sqrMagnitude <= 0.0001f)
         {
-            m_currentFacingDirection.Normalize();
+            return;
         }
 
-        m_currentVelocityDirection =
-            m_currentFacingDirection;
+        targetDirection.Normalize();
 
-        // 停止中開始ではPlayer本体を回転させる既存仕様を維持するため、
-        // モデルもPlayer本体の正面へ合わせます。
-        m_currentModelFacingDirection =
-            m_currentFacingDirection;
-
-    }
-
-    /// <summary>現在のスティック横入力の左右を判定します。</summary>
-    /// <param name="input">スティック入力。</param>
-    /// <returns>左は-1、右は1、正面・後方・ニュートラルは0。</returns>
-    private int ClassifyChargeInput(Vector2 input)
-    {
-        float steeringInput =
-            m_parameterAsset.GetSmoothedSteeringInput(input);
-
-        if (Mathf.Approximately(steeringInput, 0.0f))
-        {
-            return 0;
-        }
-
-        return steeringInput > 0.0f ? 1 : -1;
-    }
-
-    /// <summary>自由旋回中は左右入力を直接返し、角度超過後は最初の有効な方向へ固定します。</summary>
-    /// <param name="input">スティック入力。</param>
-    /// <returns>旋回方向と倍率を反映した符号付き入力。</returns>
-    private float GetLockedSteeringInput(Vector2 input)
-    {
-        int inputSide = ClassifyChargeInput(input);
-        if (m_driftSide == 0)
-        {
-            float currentAngleFromStart =
-                Vector3.SignedAngle(
-                    m_chargeStartDirection,
-                    m_currentVelocityDirection,
-                    Vector3.up);
-
-            if (Mathf.Abs(currentAngleFromStart) <
-                m_parameterAsset.FreeSteeringAngle)
-            {
-                return GetFreeSteeringInput(input);
-            }
-
-            m_driftSide = currentAngleFromStart > 0.0f ? 1 : -1;
-            m_driftElapsedTime = 0.0f;
-            m_currentDriftSteering = 0.0f;
-        }
-
-        if (inputSide == m_driftSide)
-        {
-            return m_driftSide *
-                input.magnitude *
-                m_parameterAsset.DriftForwardTurnRate;
-        }
-
-        if (inputSide == -m_driftSide)
-        {
-            // 逆入力でも確定済みの旋回方向は維持し、旋回量だけを弱めます。
-            return m_driftSide *
-                input.magnitude *
-                m_parameterAsset.DriftCounterTurnRate;
-        }
-
-        // 無入力では、従来の逆入力・無入力共通だった内向きの緩い旋回を維持します。
-        return m_driftSide *
-            m_parameterAsset.DriftNeutralTurnRate;
-    }
-
-    /// <summary>方向固定前の範囲内で、スティックの横方向傾斜に応じた自由旋回入力を取得します。</summary>
-    /// <param name="input">スティック入力。</param>
-    /// <returns>左は負、右は正となる自由旋回入力。</returns>
-    private float GetFreeSteeringInput(Vector2 input)
-    {
-        return
-            m_parameterAsset.GetSmoothedSteeringInput(input) *
-            m_parameterAsset.DriftForwardTurnRate;
-    }
-
-    /// <summary>入力と反対側へ膨らんだ後、入力側へ旋回する軌道を計算します。</summary>
-    /// <param name="input">スティック入力。</param>
-    /// <param name="turnSpeedDegreesPerSecond">最大旋回速度（度/秒）。</param>
-    private void UpdateDriftVelocityDirection(Vector2 input, float turnSpeedDegreesPerSecond)
-    {
-        float steeringInput = GetLockedSteeringInput(input);
-        if (Mathf.Approximately(steeringInput, 0.0f))
-        {
-            m_currentDriftSteering = 0.0f;
-        }
-        else
-        {
-            m_currentDriftSteering = Mathf.MoveTowards(m_currentDriftSteering, steeringInput,
-                Time.fixedDeltaTime / m_parameterAsset.DriftSteeringResponseTime);
-        }
-
-        // 自由旋回中は入力方向へ直接曲がり、方向固定後のみ従来の膨らむ軌道を使用します。
-        float turnRate = 1.0f;
-        if (m_driftSide != 0)
-        {
-            float progress = Mathf.Clamp01(
-                m_driftElapsedTime / m_parameterAsset.DriftOutwardDuration);
-            turnRate = Mathf.Lerp(
-                -m_parameterAsset.DriftOutwardTurnRate,
-                1.0f,
-                Mathf.SmoothStep(0.0f, 1.0f, progress));
-            m_driftElapsedTime += Time.fixedDeltaTime;
-        }
-
-        float turnInput = m_currentDriftSteering;
-        float turnAngle = turnInput * turnSpeedDegreesPerSecond * turnRate * Time.fixedDeltaTime;
-        m_currentVelocityDirection = (Quaternion.AngleAxis(turnAngle, Vector3.up)
-            * m_currentVelocityDirection).normalized;
-    }
-
-    /// <summary>
-    /// 入力状態に応じたチャージ中の実移動方向を取得します。
-    /// 逆入力中は旋回方向を変えず、移動方向だけを旋回外側へ傾けます。
-    /// </summary>
-    /// <param name="input">正規化された移動入力。</param>
-    /// <returns>チャージ中の実移動に使用する正規化済み方向。</returns>
-    private Vector3 GetChargeMovementDirection(Vector2 input)
-    {
-        int inputSide = ClassifyChargeInput(input);
-        bool isCounterSteering =
-            m_driftSide != 0 &&
-            inputSide == -m_driftSide;
-
-        if (!isCounterSteering)
-        {
-            return m_currentVelocityDirection;
-        }
-
-        // 右旋回中は左、左旋回中は右へ傾け、常にカーブ外側へ大きく移動させます。
-        float outwardAngle =
-            -m_driftSide *
-            m_parameterAsset.CounterInputMovementAngle;
-
-        return (Quaternion.AngleAxis(outwardAngle, Vector3.up) *
-            m_currentVelocityDirection).normalized;
-    }
-
-    /// <summary>
-    /// プレイヤーの向きを現在の移動方向へ徐々に変更するための
-    /// 内部向き情報を更新します。
-    ///
-    /// 実際のPlayer本体のTransformは回転させません。
-    /// </summary>
-    private void UpdateFacingDirection()
-    {
         float maxRadiansDelta =
             m_parameterAsset.FacingRotationSpeed *
             Mathf.Deg2Rad *
             Time.fixedDeltaTime;
 
+        // 現在の角度からターゲット方向へ徐々に回転させる。
         m_currentFacingDirection =
             Vector3.RotateTowards(
                 m_currentFacingDirection,
-                m_currentVelocityDirection,
+                targetDirection,
                 maxRadiansDelta,
-                0.0f);
+                0.0f).normalized;
 
-        m_currentFacingDirection.y = 0.0f;
-
-        if (m_currentFacingDirection.sqrMagnitude >
-            0.0001f)
-        {
-            m_currentFacingDirection.Normalize();
-        }
+        m_currentModelFacingDirection =
+            Vector3.RotateTowards(
+                m_currentModelFacingDirection,
+                targetDirection,
+                maxRadiansDelta,
+                0.0f).normalized;
     }
 
-    /// <summary>旋回の強さに応じた横滑り角度へ、モデルを滑らかに傾けます。</summary>
-    private void UpdateModelSidewaysFacing(Vector2 input)
+    /// <summary>
+    /// モデルの現在姿勢を維持したまま、
+    /// 水平方向の向きだけを目標方向へ合わせます。
+    /// </summary>
+    private void ApplyModelFacing()
     {
-        if (m_driftSide == 0)
+        Transform modelTransform =
+            Owner.ModelTransform;
+
+        if (modelTransform == null)
         {
-            float freeTargetAngle =
-                m_currentDriftSteering *
-                m_parameterAsset.MovingChargeSidewaysLookAngle;
-            m_modelSlipAngle = Mathf.MoveTowards(m_modelSlipAngle, freeTargetAngle,
-                m_parameterAsset.FacingRotationSpeed * Time.fixedDeltaTime);
-            m_currentModelFacingDirection = Quaternion.AngleAxis(m_modelSlipAngle, Vector3.up)
-                * m_currentVelocityDirection;
             return;
         }
 
-        // 旋回の弱さと体の横向き角度を分離し、逆入力・無入力でも姿勢を残します。
-        float lookRate = ClassifyChargeInput(input) == m_driftSide
-            ? input.magnitude
-            : m_parameterAsset.CounterSteeringLookRate;
-        float targetAngle = m_driftSide * lookRate * m_parameterAsset.MovingChargeSidewaysLookAngle;
-        m_modelSlipAngle = Mathf.MoveTowards(m_modelSlipAngle, targetAngle,
-            m_parameterAsset.FacingRotationSpeed * Time.fixedDeltaTime);
-        m_currentModelFacingDirection = Quaternion.AngleAxis(m_modelSlipAngle, Vector3.up)
-            * m_currentVelocityDirection;
+        Vector3 targetDirection =
+            m_currentModelFacingDirection;
+
+        targetDirection.y = 0.0f;
+
+        if (targetDirection.sqrMagnitude <=
+            0.0001f)
+        {
+            return;
+        }
+
+        targetDirection.Normalize();
+
+        Vector3 currentDirection =
+            modelTransform.forward;
+
+        currentDirection.y = 0.0f;
+
+        if (currentDirection.sqrMagnitude <=
+            0.0001f)
+        {
+            return;
+        }
+
+        currentDirection.Normalize();
+
+        float yawDelta =
+            Vector3.SignedAngle(
+                currentDirection,
+                targetDirection,
+                Vector3.up);
+
+        // Quaternion.LookRotationでPrefab固有の軸補正を上書きせず、
+        // 現在姿勢へYaw差分だけを加えます。
+        modelTransform.rotation =
+            Quaternion.AngleAxis(
+                yawDelta,
+                Vector3.up) *
+            modelTransform.rotation;
     }
 
     /// <summary>
@@ -634,50 +605,43 @@ public sealed class PlayerBoostChargingState
     /// </summary>
     protected override void OnExitState()
     {
+        // チャージ継続音を終了音へ遷移させます。
+        PlayerAudioActionUtility.StopSequential(
+            Owner,
+            PlayerAudioActionUtility.GetChargeActionID(m_startedFromStationary));
+
+        // State終了後にエフェクトの終了通知で次段階へ進まないよう解除します。
+        StopChargeEffects();
+
+        // State終了時は移動チャージ状態と方向を必ず初期化する。
+        Owner.AnimationPresenter.StopChargeMovingAnimation();
+        Owner.AnimationPresenter.ResetMoveChargeDirection();
+
         Debug.Log(
             "[PlayerBoostChargingState] チャージ状態終了",
             Owner);
 
-        if (Owner.PlayerCamera != null)
-        {
-            Owner.PlayerCamera.EndDriftLookOverride();
-        }
-
         // 移動開始チャージの場合のみ、
         // 終了時の進行方向へ本体を合わせる
-        if (!m_startedFromStationary)
-        {
-            Owner.Motor.AlignFacingToDirection(
-                m_isDashRequested
-                    ? Owner.BoostDashDirection
-                    : m_currentVelocityDirection);
-        }
+        AlignFacingOnExit();
 
-        // モデルを元の姿勢へ戻す
+        // チャージ中だけ適用していたモデル向きを解除し、
+        // Prefabで設定された基準姿勢へ戻します。
         if (Owner.ModelTransform != null)
         {
-            m_chargeFacingPresenter?.EndFacingOverride();
             Owner.ModelTransform.localRotation =
                 m_defaultModelLocalRotation;
         }
 
         // 開始状態に対応したアニメーションを停止
-        if (m_startedFromStationary)
-        {
-            Owner.AnimationPresenter
-                .StopStationaryBoostChargingAnimation();
-        }
-        else
-        {
-            Owner.AnimationPresenter.StopWalkAnimation();
-        }
+        StopChargeAnimation();
     }
 
     /// <summary>
     /// チャージを解除したときの遷移を行います。
     ///
     /// ダッシュ可能なチャージ量の場合は、
-    /// チャージ終了時点の実際の進行方向を
+    /// チャージ終了時点のプレイヤーの正面方向を
     /// ダッシュ方向として使用します。
     /// </summary>
     private void ReleaseCharge()
@@ -685,9 +649,11 @@ public sealed class PlayerBoostChargingState
         if (ChargeRate >=
             m_parameterAsset.MinBoostChargeRate)
         {
-            // 解除直前に表示されている体の正面をダッシュ方向として確定します。
+            // PresenterがLateUpdateで表示する向きと同じ論理値を使用する。
+            // ModelTransform.forwardはAnimatorの更新順やPrefabの初期回転に左右されるため、
+            // 統合先のモデル階層でも見た目とダッシュ方向がずれないようにする。
             Vector3 dashDirection =
-                Owner.ModelTransform != null ? Owner.ModelTransform.forward : m_currentModelFacingDirection;
+                m_currentModelFacingDirection;
 
             dashDirection.y = 0.0f;
 
@@ -710,7 +676,7 @@ public sealed class PlayerBoostChargingState
             Owner.CarriedBoostGaugeRate =
                 ChargeRate;
 
-            Machine.ChangeState<PlayerVRunningState>();
+            Machine.ChangeState<PlayerBoostDashingState>();
             return;
         }
 

@@ -5,7 +5,8 @@ using UnityEngine;
 /// S1P2BossStateParameterAssetを調整しやすく表示します。
 /// </summary>
 [CustomEditor(typeof(S1P2BossStateParameterAsset))]
-public sealed class S1P2BossStateParameterAssetEditor : Editor
+public sealed class S1P2BossStateParameterAssetEditor :
+    Editor
 {
     // 移動状態のパラメータ
     private SerializedProperty m_moveProperty;
@@ -78,16 +79,24 @@ public sealed class S1P2BossStateParameterAssetEditor : Editor
         serializedObject.Update();
 
         DrawMoveParameters();
-        EditorGUILayout.Space(6.0f);
+
+        EditorGUILayout.Space(
+            6.0f);
 
         DrawMissileParameters();
-        EditorGUILayout.Space(6.0f);
+
+        EditorGUILayout.Space(
+            6.0f);
 
         DrawMoveMissileParameters();
-        EditorGUILayout.Space(6.0f);
+
+        EditorGUILayout.Space(
+            6.0f);
 
         DrawHeatVentParameters();
-        EditorGUILayout.Space(6.0f);
+
+        EditorGUILayout.Space(
+            6.0f);
 
         DrawValidationMessages();
 
@@ -113,8 +122,11 @@ public sealed class S1P2BossStateParameterAssetEditor : Editor
         EditorGUILayout.BeginVertical(
             EditorStyles.helpBox);
 
-        DrawMoveParameterFields(
-            m_moveProperty);
+        DrawRelativeProperty(
+            m_moveProperty,
+            "m_attackEnableSpeed",
+            "攻撃判定有効速度",
+            "この速度以上で移動中の接触攻撃判定を有効化します。");
 
         EditorGUILayout.EndVertical();
     }
@@ -200,23 +212,27 @@ public sealed class S1P2BossStateParameterAssetEditor : Editor
             useSharedMoveProperty,
             new GUIContent(
                 "移動パラメータを共通で使用",
-                "ONの場合は通常の「移動」状態と同じパラメータを使用します。"));
+                "ONの場合は通常の「移動」状態と" +
+                "同じパラメータを使用します。"));
 
         EditorGUILayout.PropertyField(
             useSharedMissileProperty,
             new GUIContent(
                 "ミサイルパラメータを共通で使用",
-                "ONの場合は通常の「ミサイル」状態と同じパラメータを使用します。"));
+                "ONの場合は通常の「ミサイル」状態と" +
+                "同じパラメータを使用します。"));
 
         EditorGUILayout.EndVertical();
 
-        EditorGUILayout.Space(4.0f);
+        EditorGUILayout.Space(
+            4.0f);
 
         DrawMoveMissileMoveSection(
             useSharedMoveProperty,
             overrideMoveProperty);
 
-        EditorGUILayout.Space(4.0f);
+        EditorGUILayout.Space(
+            4.0f);
 
         DrawMoveMissileMissileSection(
             useSharedMissileProperty,
@@ -226,8 +242,12 @@ public sealed class S1P2BossStateParameterAssetEditor : Editor
     /// <summary>
     /// 移動ミサイル状態の移動パラメータを描画します。
     /// </summary>
-    /// <param name="useSharedProperty">共通使用フラグ。</param>
-    /// <param name="overrideProperty">専用パラメータ。</param>
+    /// <param name="useSharedProperty">
+    /// 共通使用フラグ。
+    /// </param>
+    /// <param name="overrideProperty">
+    /// 専用パラメータ。
+    /// </param>
     private void DrawMoveMissileMoveSection(
         SerializedProperty useSharedProperty,
         SerializedProperty overrideProperty)
@@ -243,15 +263,18 @@ public sealed class S1P2BossStateParameterAssetEditor : Editor
             useSharedProperty.boolValue)
         {
             EditorGUILayout.HelpBox(
-                "通常の「移動」状態で設定したパラメータを使用します。",
+                "通常の「移動」状態で設定した" +
+                "パラメータを使用します。",
                 MessageType.Info);
 
             EditorGUILayout.EndVertical();
+
             return;
         }
 
         EditorGUILayout.HelpBox(
-            "移動ミサイル状態専用の移動パラメータを使用します。",
+            "移動ミサイル状態専用の" +
+            "移動パラメータを使用します。",
             MessageType.Info);
 
         DrawMoveParameterFields(
@@ -263,8 +286,12 @@ public sealed class S1P2BossStateParameterAssetEditor : Editor
     /// <summary>
     /// 移動ミサイル状態のミサイルパラメータを描画します。
     /// </summary>
-    /// <param name="useSharedProperty">共通使用フラグ。</param>
-    /// <param name="overrideProperty">専用パラメータ。</param>
+    /// <param name="useSharedProperty">
+    /// 共通使用フラグ。
+    /// </param>
+    /// <param name="overrideProperty">
+    /// 専用パラメータ。
+    /// </param>
     private void DrawMoveMissileMissileSection(
         SerializedProperty useSharedProperty,
         SerializedProperty overrideProperty)
@@ -280,17 +307,20 @@ public sealed class S1P2BossStateParameterAssetEditor : Editor
             useSharedProperty.boolValue)
         {
             EditorGUILayout.HelpBox(
-                "通常の「ミサイル」状態で設定したパラメータを使用します。",
+                "通常の「ミサイル」状態で設定した" +
+                "パラメータを使用します。",
                 MessageType.Info);
 
             EditorGUILayout.EndVertical();
 
             ReleaseOverrideMissileParameterEditor();
+
             return;
         }
 
         EditorGUILayout.HelpBox(
-            "移動ミサイル状態専用のミサイルパラメータを使用します。",
+            "移動ミサイル状態専用の" +
+            "ミサイルパラメータを使用します。",
             MessageType.Info);
 
         SerializedProperty missileParameterAssetProperty =
@@ -324,14 +354,17 @@ public sealed class S1P2BossStateParameterAssetEditor : Editor
         }
 
         EditorGUILayout.HelpBox(
-            "現在、S1P2の排熱状態に固有の調整パラメータはありません。",
+            "現在、S1P2の排熱状態に" +
+            "固有の調整パラメータはありません。",
             MessageType.Info);
     }
 
     /// <summary>
     /// 移動パラメータ一式を描画します。
     /// </summary>
-    /// <param name="moveProperty">移動パラメータ。</param>
+    /// <param name="moveProperty">
+    /// 移動パラメータ。
+    /// </param>
     private void DrawMoveParameterFields(
         SerializedProperty moveProperty)
     {
@@ -372,7 +405,8 @@ public sealed class S1P2BossStateParameterAssetEditor : Editor
             moveProperty,
             "m_routeSampleInterval",
             "経路サンプル間隔",
-            "経路を生成・検証するときのサンプル間隔です。");
+            "経路を生成・検証するときの" +
+            "サンプル間隔です。");
 
         DrawRelativeProperty(
             moveProperty,
@@ -380,7 +414,8 @@ public sealed class S1P2BossStateParameterAssetEditor : Editor
             "開始方向ガイド距離",
             "開始時の進行方向を曲線へ反映する距離です。");
 
-        EditorGUILayout.Space(4.0f);
+        EditorGUILayout.Space(
+            4.0f);
 
         EditorGUILayout.LabelField(
             "経路形状",
@@ -398,7 +433,8 @@ public sealed class S1P2BossStateParameterAssetEditor : Editor
             "最大旋回角度",
             "経路地点で許容する最大旋回角度です。");
 
-        EditorGUILayout.Space(4.0f);
+        EditorGUILayout.Space(
+            4.0f);
 
         EditorGUILayout.LabelField(
             "移動",
@@ -428,7 +464,8 @@ public sealed class S1P2BossStateParameterAssetEditor : Editor
             "回転速度",
             "1秒間に回転できる最大角度です。");
 
-        EditorGUILayout.Space(4.0f);
+        EditorGUILayout.Space(
+            4.0f);
 
         EditorGUILayout.LabelField(
             "旋回",
@@ -446,7 +483,8 @@ public sealed class S1P2BossStateParameterAssetEditor : Editor
             "その場旋回角度",
             "その場旋回へ切り替える角度です。");
 
-        EditorGUILayout.Space(4.0f);
+        EditorGUILayout.Space(
+            4.0f);
 
         EditorGUILayout.LabelField(
             "経路追従",
@@ -456,20 +494,54 @@ public sealed class S1P2BossStateParameterAssetEditor : Editor
             moveProperty,
             "m_lookAheadDistance",
             "先読み距離",
-            "経路上で移動方向を決めるために先読みする距離です。");
+            "経路上で移動方向を決めるために" +
+            "先読みする距離です。");
 
         DrawRelativeProperty(
             moveProperty,
             "m_arrivalDistance",
             "到着判定距離",
             "最終地点へ到着したと判定する距離です。");
+
+        EditorGUILayout.Space(
+            4.0f);
+
+        EditorGUILayout.LabelField(
+            "移動中追加攻撃",
+            EditorStyles.boldLabel);
+
+        DrawRelativeProperty(
+            moveProperty,
+            "m_enableTailSlam",
+            "尻尾叩きつけを使用",
+            "ONの場合、移動開始時に尻尾叩きつけ攻撃の" +
+            "行動選択条件を評価します。");
+
+        SerializedProperty enableTailSlamProperty =
+            moveProperty.FindPropertyRelative(
+                "m_enableTailSlam");
+
+        if (enableTailSlamProperty != null &&
+            enableTailSlamProperty.boolValue)
+        {
+            EditorGUILayout.HelpBox(
+                "判定条件はS1P2BossDecisionParameterAssetの" +
+                "「尻尾叩きつけ」を使用します。\n" +
+                "Playerが尻尾周辺ならNearProbability、" +
+                "範囲外ならDefaultProbabilityで抽選します。",
+                MessageType.Info);
+        }
     }
 
     /// <summary>
     /// ミサイルパラメータ一式を描画します。
     /// </summary>
-    /// <param name="missileProperty">ミサイルパラメータ。</param>
-    /// <returns>ミサイル本体パラメータのSerializedProperty。</returns>
+    /// <param name="missileProperty">
+    /// ミサイルパラメータ。
+    /// </param>
+    /// <returns>
+    /// ミサイル本体パラメータのSerializedProperty。
+    /// </returns>
     private SerializedProperty DrawMissileParameterFields(
         SerializedProperty missileProperty)
     {
@@ -477,6 +549,12 @@ public sealed class S1P2BossStateParameterAssetEditor : Editor
         {
             return null;
         }
+
+        DrawRelativeProperty(
+            missileProperty,
+            "m_launchCount",
+            "発射数",
+            "1回の攻撃で発射するミサイルの総数です。");
 
         DrawRelativeProperty(
             missileProperty,
@@ -488,19 +566,14 @@ public sealed class S1P2BossStateParameterAssetEditor : Editor
             missileProperty,
             "m_missileUpwardDuration",
             "上昇時間",
-            "発射直後に上方向へ進んでからホーミングへ移行するまでの時間です。");
+            "発射直後に上方向へ進んでから" +
+            "ホーミングへ移行するまでの時間です。");
 
         DrawRelativeProperty(
             missileProperty,
             "m_idleDuration",
             "攻撃終了後の停止時間",
             "全ミサイル発射後の停止状態の継続時間です。");
-
-        DrawRelativeProperty(
-            missileProperty,
-            "m_volleyCount",
-            "連続発射周回数",
-            "LaunchSitesを何周してミサイルを発射するか指定します。");
 
         SerializedProperty missileParameterAssetProperty =
             missileProperty.FindPropertyRelative(
@@ -512,22 +585,32 @@ public sealed class S1P2BossStateParameterAssetEditor : Editor
                 missileParameterAssetProperty,
                 new GUIContent(
                     "ミサイル本体パラメータ",
-                    "MissileMotorとMissileSteeringで使用するパラメータです。"));
+                    "MissileMotorとMissileSteeringで" +
+                    "使用するパラメータです。"));
         }
 
         return missileParameterAssetProperty;
     }
 
     /// <summary>
-    /// ミサイル本体のParameterAssetをInspector内へ展開します。
+    /// ミサイル本体のParameterAssetを
+    /// Inspector内へ展開します。
     /// </summary>
     /// <param name="missileParameterAssetProperty">
     /// ミサイル本体ParameterAsset。
     /// </param>
-    /// <param name="isExpanded">表示状態。</param>
-    /// <param name="cachedEditor">キャッシュするEditor。</param>
-    /// <param name="currentAsset">現在の対象Asset。</param>
-    /// <param name="foldoutLabel">Foldoutの表示名。</param>
+    /// <param name="isExpanded">
+    /// 表示状態。
+    /// </param>
+    /// <param name="cachedEditor">
+    /// キャッシュするEditor。
+    /// </param>
+    /// <param name="currentAsset">
+    /// 現在の対象Asset。
+    /// </param>
+    /// <param name="foldoutLabel">
+    /// Foldoutの表示名。
+    /// </param>
     private void DrawMissileBodyParameterEditor(
         SerializedProperty missileParameterAssetProperty,
         ref bool isExpanded,
@@ -573,7 +656,8 @@ public sealed class S1P2BossStateParameterAssetEditor : Editor
         EditorGUILayout.BeginVertical(
             EditorStyles.helpBox);
 
-        cachedEditor?.OnInspectorGUI();
+        cachedEditor?
+            .OnInspectorGUI();
 
         EditorGUILayout.EndVertical();
 
@@ -583,9 +667,15 @@ public sealed class S1P2BossStateParameterAssetEditor : Editor
     /// <summary>
     /// ミサイルパラメータ用Editorを準備します。
     /// </summary>
-    /// <param name="missileParameterAsset">編集するAsset。</param>
-    /// <param name="cachedEditor">キャッシュするEditor。</param>
-    /// <param name="currentAsset">現在の対象Asset。</param>
+    /// <param name="missileParameterAsset">
+    /// 編集するAsset。
+    /// </param>
+    /// <param name="cachedEditor">
+    /// キャッシュするEditor。
+    /// </param>
+    /// <param name="currentAsset">
+    /// 現在の対象Asset。
+    /// </param>
     private void EnsureMissileParameterEditor(
         MissileParameterAsset missileParameterAsset,
         ref Editor cachedEditor,
@@ -634,8 +724,12 @@ public sealed class S1P2BossStateParameterAssetEditor : Editor
     /// <summary>
     /// ミサイルパラメータ用Editorを破棄します。
     /// </summary>
-    /// <param name="cachedEditor">破棄するEditor。</param>
-    /// <param name="currentAsset">現在の対象Asset。</param>
+    /// <param name="cachedEditor">
+    /// 破棄するEditor。
+    /// </param>
+    /// <param name="currentAsset">
+    /// 現在の対象Asset。
+    /// </param>
     private void ReleaseMissileParameterEditor(
         ref Editor cachedEditor,
         ref MissileParameterAsset currentAsset)
@@ -645,10 +739,12 @@ public sealed class S1P2BossStateParameterAssetEditor : Editor
             DestroyImmediate(
                 cachedEditor);
 
-            cachedEditor = null;
+            cachedEditor =
+                null;
         }
 
-        currentAsset = null;
+        currentAsset =
+            null;
     }
 
     /// <summary>
@@ -685,8 +781,12 @@ public sealed class S1P2BossStateParameterAssetEditor : Editor
     /// <summary>
     /// 移動パラメータの設定内容を確認します。
     /// </summary>
-    /// <param name="moveProperty">確認する移動パラメータ。</param>
-    /// <param name="displayName">警告に表示する名称。</param>
+    /// <param name="moveProperty">
+    /// 確認する移動パラメータ。
+    /// </param>
+    /// <param name="displayName">
+    /// 警告に表示する名称。
+    /// </param>
     private void ValidateMoveParameters(
         SerializedProperty moveProperty,
         string displayName)
@@ -710,7 +810,8 @@ public sealed class S1P2BossStateParameterAssetEditor : Editor
             maxRoutePointCountProperty.intValue)
         {
             EditorGUILayout.HelpBox(
-                $"{displayName}：最小経路地点数が最大経路地点数を上回っています。",
+                $"{displayName}：" +
+                "最小経路地点数が最大経路地点数を上回っています。",
                 MessageType.Warning);
         }
 
@@ -728,7 +829,9 @@ public sealed class S1P2BossStateParameterAssetEditor : Editor
             turnInPlaceAngleProperty.floatValue)
         {
             EditorGUILayout.HelpBox(
-                $"{displayName}：旋回減速開始角度が、その場旋回角度を上回っています。",
+                $"{displayName}：" +
+                "旋回減速開始角度が、" +
+                "その場旋回角度を上回っています。",
                 MessageType.Warning);
         }
     }
@@ -736,10 +839,18 @@ public sealed class S1P2BossStateParameterAssetEditor : Editor
     /// <summary>
     /// 子プロパティを描画します。
     /// </summary>
-    /// <param name="parentProperty">親プロパティ。</param>
-    /// <param name="propertyName">子プロパティ名。</param>
-    /// <param name="label">表示名。</param>
-    /// <param name="tooltip">説明。</param>
+    /// <param name="parentProperty">
+    /// 親プロパティ。
+    /// </param>
+    /// <param name="propertyName">
+    /// 子プロパティ名。
+    /// </param>
+    /// <param name="label">
+    /// 表示名。
+    /// </param>
+    /// <param name="tooltip">
+    /// 説明。
+    /// </param>
     private void DrawRelativeProperty(
         SerializedProperty parentProperty,
         string propertyName,

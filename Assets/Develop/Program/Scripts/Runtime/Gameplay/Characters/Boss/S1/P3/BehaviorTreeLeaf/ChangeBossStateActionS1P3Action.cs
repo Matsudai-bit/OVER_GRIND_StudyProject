@@ -17,7 +17,7 @@ using Action = Unity.Behavior.Action;
 public partial class ChangeBossStateAction_S1P3 : Action
 {
     // ‘Ò‹@ŠÔ
-    private const float IDLE_DURATION = 10.0f;
+    private const float IDLE_DURATION = 3.0f;
 
     // ‘€ì‘ÎÛ‚Ìƒ{ƒX
     [SerializeReference]

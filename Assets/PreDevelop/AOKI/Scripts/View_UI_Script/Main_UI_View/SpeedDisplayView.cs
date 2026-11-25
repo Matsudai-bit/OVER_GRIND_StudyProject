@@ -10,11 +10,24 @@ public class SpeedDisplayView : MonoBehaviour
     private const int NUMBER_SPRITE_COUNT = 10;
 
     /// <summary>デフォルトの最高速度 (km/h)</summary>
-    private const float DEFAULT_MAX_SPEED = 40f;
+    private const float DEFAULT_MAX_SPEED = 40f * 2.0f;
 
-    /// <summary>数字スプライト素材 (0～9)</summary>
-    [Header("数字スプライト素材 (0～9)")]
+    /// <summary>通常時の数字スプライト素材 (0～9)</summary>
+    [Header("通常時の数字スプライト素材 (0～9)")]
     [SerializeField] private Sprite[] m_numberSprites = new Sprite[NUMBER_SPRITE_COUNT];
+
+    /// <summary>赤文字切り替え機能の有効化フラグ</summary>
+    [Header("赤色になる速度設定")]
+    [Tooltip("指定速度以上で数字を赤くする機能を有効にするか")]
+    [SerializeField] private bool m_enableRedNumberThreshold = true;
+
+    /// <summary>赤色になる速度設定</summary>
+    [Tooltip("この速度(表示速度)以上になったら赤い数字になります")]
+    [SerializeField] private float m_redSpeedThreshold = 40f;
+
+    /// <summary>赤い数字スプライト素材 (0～9)</summary>
+    [Header("赤い数字スプライト素材 (0～9)")]
+    [SerializeField] private Sprite[] m_redNumberSprites = new Sprite[NUMBER_SPRITE_COUNT];
 
     /// <summary>速度の10の位表示用Image</summary>
     [Header("スピード表示用Image")]
@@ -139,7 +152,6 @@ public class SpeedDisplayView : MonoBehaviour
             m_tiltRoots = new RectTransform[] { GetComponent<RectTransform>() };
         }
 
-        // 初期描画位置の保存
         m_basePositions = new Vector3[m_tiltRoots.Length];
         for (int i = 0; i < m_tiltRoots.Length; i++)
         {
@@ -151,7 +163,6 @@ public class SpeedDisplayView : MonoBehaviour
 
         m_currentRotation = m_zeroSpeedRotation;
         m_targetRotation = m_zeroSpeedRotation;
-
         m_currentPosOffset = m_zeroSpeedPositionOffset;
         m_targetPosOffset = m_zeroSpeedPositionOffset;
     }
@@ -161,13 +172,8 @@ public class SpeedDisplayView : MonoBehaviour
     /// </summary>
     private void Update()
     {
-        //ゲージ画像の連番アニメーション更新
         AnimateGaugeSprite();
-
-        //ゲージのY軸位置（水位）更新
         UpdateGaugePosition();
-
-        //3D回転および描画位置オフセットの補間更新
         UpdateTransformEffects();
     }
 
@@ -176,10 +182,7 @@ public class SpeedDisplayView : MonoBehaviour
     /// </summary>
     private void AnimateGaugeSprite()
     {
-        if (m_gaugeFillImage == null || m_gaugeSprites == null || m_gaugeSprites.Length == 0)
-        {
-            return;
-        }
+        if (m_gaugeFillImage == null || m_gaugeSprites == null || m_gaugeSprites.Length == 0) return;
 
         m_animTimer += Time.deltaTime;
         if (m_animTimer >= (1f / m_animationFps))
@@ -195,19 +198,13 @@ public class SpeedDisplayView : MonoBehaviour
     /// </summary>
     private void UpdateGaugePosition()
     {
-        if (m_gaugeRectTransform == null)
-        {
-            return;
-        }
+        if (m_gaugeRectTransform == null) return;
 
         m_currentGaugeRatio = Mathf.MoveTowards(
-            m_currentGaugeRatio,
-            m_targetGaugeRatio,
-            m_moveSmoothSpeed * Time.deltaTime
+            m_currentGaugeRatio, m_targetGaugeRatio, m_moveSmoothSpeed * Time.deltaTime
         );
 
         float targetY = Mathf.Lerp(m_minYPosition, m_maxYPosition, m_currentGaugeRatio);
-
         Vector2 pos = m_gaugeRectTransform.anchoredPosition;
         pos.y = targetY;
         m_gaugeRectTransform.anchoredPosition = pos;
@@ -218,23 +215,13 @@ public class SpeedDisplayView : MonoBehaviour
     /// </summary>
     private void UpdateTransformEffects()
     {
-        if (m_tiltRoots == null)
-        {
-            return;
-        }
+        if (m_tiltRoots == null) return;
 
-        // 回転補間
         m_currentRotation = Vector3.Lerp(
-            m_currentRotation,
-            m_targetRotation,
-            Time.deltaTime * m_tiltSmoothSpeed
+            m_currentRotation, m_targetRotation, Time.deltaTime * m_tiltSmoothSpeed
         );
-
-        // 描画位置オフセット補間
         m_currentPosOffset = Vector3.Lerp(
-            m_currentPosOffset,
-            m_targetPosOffset,
-            Time.deltaTime * m_positionSmoothSpeed
+            m_currentPosOffset, m_targetPosOffset, Time.deltaTime * m_positionSmoothSpeed
         );
 
         Quaternion targetQuaternion = Quaternion.Euler(m_currentRotation);
@@ -244,10 +231,7 @@ public class SpeedDisplayView : MonoBehaviour
             RectTransform root = m_tiltRoots[i];
             if (root != null)
             {
-                // 回転の反映
                 root.localRotation = targetQuaternion;
-
-                // 描画位置の更新 
                 root.anchoredPosition3D = m_basePositions[i] + m_currentPosOffset;
             }
         }
@@ -261,8 +245,15 @@ public class SpeedDisplayView : MonoBehaviour
     /// <param name="turnInput">左右ステアリング入力 (-1.0 ～ 1.0)。</param>
     public void UpdateSpeed(float speed, float maxSpeed = DEFAULT_MAX_SPEED, float turnInput = 0f)
     {
-        // 数字スプライトの更新
-        if (m_numberSprites != null && m_numberSprites.Length >= NUMBER_SPRITE_COUNT)
+        // 画面に表示する用の速度計算
+        speed *= 3.5f;
+        if (speed >= 99.9f) speed = 99.9f;
+
+        // 赤文字機能がON（True）で、かつ指定速度以上の時のみ赤い画像セットを使用する
+        Sprite[] activeSprites = (m_enableRedNumberThreshold && speed >= m_redSpeedThreshold) ? m_redNumberSprites : m_numberSprites;
+
+        // 数字画像の適用
+        if (activeSprites != null && activeSprites.Length >= NUMBER_SPRITE_COUNT)
         {
             int speedInt = Mathf.FloorToInt(speed);
             int digit10 = (speedInt / 10) % 10;
@@ -272,31 +263,20 @@ public class SpeedDisplayView : MonoBehaviour
             if (m_digit10Image != null)
             {
                 m_digit10Image.enabled = true;
-                m_digit10Image.sprite = m_numberSprites[digit10];
+                m_digit10Image.sprite = activeSprites[digit10];
             }
-            if (m_digit1Image != null)
-            {
-                m_digit1Image.sprite = m_numberSprites[digit1];
-            }
-            if (m_digitDecimalImage != null)
-            {
-                m_digitDecimalImage.sprite = m_numberSprites[digitDecimal];
-            }
+            if (m_digit1Image != null) m_digit1Image.sprite = activeSprites[digit1];
+            if (m_digitDecimalImage != null) m_digitDecimalImage.sprite = activeSprites[digitDecimal];
         }
 
-        // 速度比率の計算
+        // TiltやPosition演出の計算
         float rawRatio = Mathf.Clamp01(speed / maxSpeed);
-
-        // イージングカーブ適用
         float tiltRatio = (m_tiltCurve != null) ? m_tiltCurve.Evaluate(rawRatio) : rawRatio;
         float posRatio = (m_positionCurve != null) ? m_positionCurve.Evaluate(rawRatio) : rawRatio;
 
-        // 目標回転の計算
         Vector3 rot = Vector3.Lerp(m_zeroSpeedRotation, m_maxSpeedRotation, tiltRatio);
         rot.z += Mathf.Clamp(turnInput, -1f, 1f) * m_maxTurnAngleZ;
         m_targetRotation = rot;
-
-        // 目標描画位置オフセットの計算 (X, Y, Z)
         m_targetPosOffset = Vector3.Lerp(m_zeroSpeedPositionOffset, m_maxSpeedPositionOffset, posRatio);
     }
 

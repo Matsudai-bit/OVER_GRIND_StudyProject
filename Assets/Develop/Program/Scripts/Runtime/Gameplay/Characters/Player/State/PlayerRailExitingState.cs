@@ -8,7 +8,8 @@ public sealed class PlayerRailExitingState
 {
     private readonly bool m_startAirAttack;
     private float m_elapsedTime;
-    private PlayerContinuousAttack m_airAttack;
+    private PlayerAirAttackingState m_airAttack;
+    private bool m_hasStartedAttackWhileHeld;
 
     /// <summary>Creates a rail exit state for collision departure.</summary>
     public PlayerRailExitingState()
@@ -29,11 +30,11 @@ public sealed class PlayerRailExitingState
     protected override void OnStartState()
     {
         m_elapsedTime = 0f;
-        Owner.AnimationPresenter.PlayJumpAnimation();
+        m_airAttack = new PlayerAirAttackingState(Owner);
+        Owner.AnimationPresenter.PlayJumpAnimation(PlayerJumpAnimationType.RAIL);
         if (m_startAirAttack && Owner.InputReader.IsAttackHeld)
         {
-            m_airAttack = new PlayerContinuousAttack(Owner, true);
-            m_airAttack.StartAttack();
+            StartAirAttack();
         }
     }
 
@@ -44,7 +45,17 @@ public sealed class PlayerRailExitingState
     {
         m_elapsedTime += Time.fixedDeltaTime;
         Owner.GrindController.UpdateCollisionExit(Time.fixedDeltaTime);
-        if (m_airAttack != null && !m_airAttack.UpdateAttack(Time.fixedDeltaTime))
+        Owner.InputReader.ConsumeAttackInput();
+        if (!Owner.InputReader.IsAttackHeld)
+        {
+            m_hasStartedAttackWhileHeld = false;
+        }
+        else if (!m_hasStartedAttackWhileHeld &&
+                 !m_airAttack.IsActive && !Owner.Monitor.IsGrounded)
+        {
+            StartAirAttack();
+        }
+        if (m_airAttack.IsActive && !m_airAttack.UpdateAttack(Time.fixedDeltaTime))
         {
             StopAirAttack();
         }
@@ -54,11 +65,19 @@ public sealed class PlayerRailExitingState
         if (!Owner.GrindController.IsCollisionExitSeparating &&
             m_elapsedTime >= Owner.GrindController.CollisionExitLandingDelay &&
             Owner.Motor.VerticalVelocity <= 0f && Owner.Monitor.IsGrounded &&
-            (m_airAttack == null || !m_airAttack.IsAirHitStopping))
+            !m_airAttack.IsAirHitStopping)
         {
             StopAirAttack();
             Machine.ChangeState<PlayerIdlingState>();
         }
+    }
+
+    /// <summary>レール離脱中の空中攻撃を開始します。</summary>
+    private void StartAirAttack()
+    {
+        m_hasStartedAttackWhileHeld = true;
+
+        m_airAttack.StartAttack();
     }
 
     /// <summary>
@@ -69,13 +88,12 @@ public sealed class PlayerRailExitingState
         Owner.GrindController.FinishCollisionExit();
         StopAirAttack();
         Owner.AnimationPresenter.StopJumpAnimation();
+        Owner.AnimationPresenter.StopAerialAttackingAnimation();
     }
 
     /// <summary>Stops the air attack and clears its hitboxes.</summary>
     private void StopAirAttack()
     {
-        if (m_airAttack == null) return;
-        m_airAttack.StopAttack();
-        m_airAttack = null;
+        m_airAttack?.StopAttack();
     }
 }

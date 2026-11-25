@@ -24,6 +24,9 @@ public sealed class ConstraintAutoBinder : MonoBehaviour
         [SerializeField]
         private string m_boneName;
 
+        [SerializeField]
+        private string m_bonePath;
+
         /// <summary>
         /// Constraintコンポーネントを取得します。
         /// </summary>
@@ -40,16 +43,23 @@ public sealed class ConstraintAutoBinder : MonoBehaviour
         public string BoneName => m_boneName;
 
         /// <summary>
+        /// BoneRootからの相対パスを取得します。
+        /// </summary>
+        public string BonePath => m_bonePath;
+
+        /// <summary>
         /// バインド情報を設定します。
         /// </summary>
         public void Set(
             Component constraintComponent,
             int sourceIndex,
-            string boneName)
+            string boneName,
+            string bonePath)
         {
             m_constraintComponent = constraintComponent;
             m_sourceIndex = sourceIndex;
             m_boneName = boneName;
+            m_bonePath = bonePath;
         }
     }
 
@@ -71,8 +81,15 @@ public sealed class ConstraintAutoBinder : MonoBehaviour
     /// </summary>
     public void CaptureBindings()
     {
+        if (!ValidateBoneRoot())
+        {
+            return;
+        }
+
         Transform constraintRoot =
-            m_constraintRoot != null ? m_constraintRoot : transform;
+            m_constraintRoot != null
+                ? m_constraintRoot
+                : transform;
 
         Component[] components =
             constraintRoot.GetComponentsInChildren<Component>(true);
@@ -86,7 +103,9 @@ public sealed class ConstraintAutoBinder : MonoBehaviour
                 continue;
             }
 
-            CaptureConstraintSources(component, constraint);
+            CaptureConstraintSources(
+                component,
+                constraint);
         }
 
         Debug.Log(
@@ -101,17 +120,24 @@ public sealed class ConstraintAutoBinder : MonoBehaviour
     /// </summary>
     public void BindAll()
     {
-        if (m_boneRoot == null)
+        if (!ValidateBoneRoot())
         {
-            Debug.LogError(
+            return;
+        }
+
+        if (m_bindings.Count == 0)
+        {
+            Debug.LogWarning(
                 $"{nameof(ConstraintAutoBinder)}: " +
-                $"{nameof(m_boneRoot)} が設定されていません。",
+                "バインド情報がありません。" +
+                "先にCapture Bindingsを実行してください。",
                 this);
 
             return;
         }
 
-        Dictionary<string, Transform> boneMap = CreateBoneMap();
+        Dictionary<string, List<Transform>> boneMap =
+            CreateBoneMap();
 
         int successCount = 0;
         int failedCount = 0;
@@ -121,17 +147,34 @@ public sealed class ConstraintAutoBinder : MonoBehaviour
             if (TryBind(binding, boneMap))
             {
                 successCount++;
+                continue;
             }
-            else
-            {
-                failedCount++;
-            }
+
+            failedCount++;
         }
 
         Debug.Log(
             $"{nameof(ConstraintAutoBinder)}: " +
             $"バインド完了 成功:{successCount} / 失敗:{failedCount}",
             this);
+    }
+
+    /// <summary>
+    /// BoneRootが設定されているか確認します。
+    /// </summary>
+    private bool ValidateBoneRoot()
+    {
+        if (m_boneRoot != null)
+        {
+            return true;
+        }
+
+        Debug.LogError(
+            $"{nameof(ConstraintAutoBinder)}: " +
+            $"{nameof(m_boneRoot)} が設定されていません。",
+            this);
+
+        return false;
     }
 
     /// <summary>
@@ -148,11 +191,28 @@ public sealed class ConstraintAutoBinder : MonoBehaviour
             ConstraintSource source =
                 constraint.GetSource(sourceIndex);
 
-            if (source.sourceTransform == null)
+            Transform sourceTransform =
+                source.sourceTransform;
+
+            if (sourceTransform == null)
             {
                 Debug.LogWarning(
                     $"{component.name}: " +
                     $"Source[{sourceIndex}] が設定されていないため保存できません。",
+                    component);
+
+                continue;
+            }
+
+            if (!TryGetRelativeBonePath(
+                    sourceTransform,
+                    out string bonePath))
+            {
+                Debug.LogWarning(
+                    $"{component.name}: " +
+                    $"Source[{sourceIndex}] のTransform " +
+                    $"「{sourceTransform.name}」は、" +
+                    $"BoneRoot「{m_boneRoot.name}」配下ではありません。",
                     component);
 
                 continue;
@@ -163,7 +223,8 @@ public sealed class ConstraintAutoBinder : MonoBehaviour
             binding.Set(
                 component,
                 sourceIndex,
-                source.sourceTransform.name);
+                sourceTransform.name,
+                bonePath);
 
             m_bindings.Add(binding);
         }
@@ -174,9 +235,10 @@ public sealed class ConstraintAutoBinder : MonoBehaviour
     /// </summary>
     private bool TryBind(
         ConstraintBinding binding,
-        IReadOnlyDictionary<string, Transform> boneMap)
+        IReadOnlyDictionary<string, List<Transform>> boneMap)
     {
-        Component component = binding.ConstraintComponent;
+        Component component =
+            binding.ConstraintComponent;
 
         if (component == null)
         {
@@ -192,19 +254,22 @@ public sealed class ConstraintAutoBinder : MonoBehaviour
         {
             Debug.LogWarning(
                 $"{component.name}: " +
-                "IConstraintではありません。",
+                "IConstraintを実装しているコンポーネントではありません。",
                 component);
 
             return false;
         }
 
-        if (!boneMap.TryGetValue(
-                binding.BoneName,
-                out Transform boneTransform))
+        Transform boneTransform =
+            FindBone(binding, boneMap);
+
+        if (boneTransform == null)
         {
             Debug.LogWarning(
                 $"{component.name}: " +
-                $"ボーン「{binding.BoneName}」が見つかりません。",
+                $"対象ボーンを特定できません。" +
+                $" Name = {binding.BoneName}," +
+                $" Path = {binding.BonePath}",
                 component);
 
             return false;
@@ -224,7 +289,7 @@ public sealed class ConstraintAutoBinder : MonoBehaviour
         ConstraintSource source =
             constraint.GetSource(binding.SourceIndex);
 
-        // Weightなど既存設定はそのまま維持し、
+        // Weightなどの既存設定は維持し、
         // Transformのみ新しいボーンへ差し替えます。
         source.sourceTransform = boneTransform;
 
@@ -236,34 +301,125 @@ public sealed class ConstraintAutoBinder : MonoBehaviour
     }
 
     /// <summary>
-    /// BoneRoot以下のTransformをボーン名から取得できる辞書に変換します。
+    /// 保存されている名前とパスから対象ボーンを取得します。
     /// </summary>
-    private Dictionary<string, Transform> CreateBoneMap()
+    private Transform FindBone(
+        ConstraintBinding binding,
+        IReadOnlyDictionary<string, List<Transform>> boneMap)
     {
-        Dictionary<string, Transform> boneMap = new();
+        if (!boneMap.TryGetValue(
+                binding.BoneName,
+                out List<Transform> sameNameBones))
+        {
+            return null;
+        }
+
+        // 名前が一意なら階層パスを確認せず採用する。
+        if (sameNameBones.Count == 1)
+        {
+            return sameNameBones[0];
+        }
+
+        // 同名ボーンが存在する場合のみ、
+        // 保存している相対パスから正しいボーンを特定する。
+        foreach (Transform bone in sameNameBones)
+        {
+            if (!TryGetRelativeBonePath(
+                    bone,
+                    out string bonePath))
+            {
+                continue;
+            }
+
+            if (bonePath == binding.BonePath)
+            {
+                return bone;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// BoneRoot以下のTransformを名前ごとに分類します。
+    /// 同名Transformは同じリストに格納します。
+    /// </summary>
+    private Dictionary<string, List<Transform>> CreateBoneMap()
+    {
+        Dictionary<string, List<Transform>> boneMap = new();
 
         Transform[] transforms =
             m_boneRoot.GetComponentsInChildren<Transform>(true);
 
         foreach (Transform targetTransform in transforms)
         {
-            string boneName = targetTransform.name;
+            string boneName =
+                targetTransform.name;
 
-            if (boneMap.ContainsKey(boneName))
+            if (!boneMap.TryGetValue(
+                    boneName,
+                    out List<Transform> sameNameBones))
             {
-                Debug.LogWarning(
-                    $"{nameof(ConstraintAutoBinder)}: " +
-                    $"同名Transform「{boneName}」が複数存在します。",
-                    targetTransform);
+                sameNameBones = new List<Transform>();
 
-                continue;
+                boneMap.Add(
+                    boneName,
+                    sameNameBones);
             }
 
-            boneMap.Add(
-                boneName,
+            sameNameBones.Add(
                 targetTransform);
         }
 
         return boneMap;
+    }
+
+    /// <summary>
+    /// BoneRootから指定Transformまでの相対パスを取得します。
+    /// </summary>
+    private bool TryGetRelativeBonePath(
+        Transform targetTransform,
+        out string bonePath)
+    {
+        bonePath = string.Empty;
+
+        if (targetTransform == null ||
+            m_boneRoot == null)
+        {
+            return false;
+        }
+
+        // BoneRoot自身の場合は空文字列をパスとして扱う。
+        if (targetTransform == m_boneRoot)
+        {
+            return true;
+        }
+
+        if (!targetTransform.IsChildOf(m_boneRoot))
+        {
+            return false;
+        }
+
+        Stack<string> pathElements = new();
+
+        Transform currentTransform =
+            targetTransform;
+
+        while (currentTransform != null &&
+               currentTransform != m_boneRoot)
+        {
+            pathElements.Push(
+                currentTransform.name);
+
+            currentTransform =
+                currentTransform.parent;
+        }
+
+        bonePath =
+            string.Join(
+                "/",
+                pathElements);
+
+        return true;
     }
 }

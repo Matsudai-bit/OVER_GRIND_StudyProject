@@ -1,8 +1,15 @@
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
 public class MenuController : MonoBehaviour
 {
+    [SerializeField]
+    private MenuOpenContext m_menuOpenContext;
+    [SerializeField]
+    private UserSupportManager userSupportManager;
+    [SerializeField]
+    private SaveDataController m_saveDataController;
     private void Awake()
     {
         InputSystem.onActionChange += (obj, change) => {
@@ -17,11 +24,26 @@ public class MenuController : MonoBehaviour
         };
     }
 
+    private void Start()
+    {
+
+    }
+
+    public void StartMenu()
+    {
+        userSupportManager.Initialize(m_menuOpenContext.ConsumeOpenTarget());
+    }
+
     [SerializeField]
     UIOverlaySceneRoot m_uIOverlayScene;
     public void OnCloseMenu(InputAction.CallbackContext context)
     {
         Debug.Log("ƒƒjƒ…[‚ğ•Â‚¶‚Ü‚·");
         m_uIOverlayScene.RequestClose();
+    }
+
+    public void Save()
+    {
+        m_saveDataController.SaveIfDirty();
     }
 }

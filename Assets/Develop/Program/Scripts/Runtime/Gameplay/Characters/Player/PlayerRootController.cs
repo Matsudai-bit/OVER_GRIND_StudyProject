@@ -8,10 +8,12 @@ using UnityEngine;
 [RequireComponent(typeof(PlayerInputReader))]
 [RequireComponent(typeof(PlayerMonitor))]
 [RequireComponent(typeof(PlayerMotor))]
+[RequireComponent(typeof(PlayerStatusProvider))]
 [RequireComponent(typeof(PlayerAnimationPresenter))]
 [RequireComponent(typeof(PlayerStateMachineComponent))]
 [RequireComponent(typeof(PlayerAttackController))]
 [RequireComponent(typeof(SplineGrindController))]
+[RequireComponent(typeof(Health))]
 public sealed class PlayerRootController : MonoBehaviour
 {
     [SerializeField, Header("Parameter Asset")]
@@ -48,6 +50,10 @@ public sealed class PlayerRootController : MonoBehaviour
     [SerializeField]
     private PlayerMotor m_motor;
 
+    // プレイヤー状況提供機能
+    [SerializeField]
+    private PlayerStatusProvider m_statusProvider;
+
     // プレイヤーアニメーション表示機能
     [SerializeField]
     private PlayerAnimationPresenter m_animationPresenter;
@@ -65,13 +71,18 @@ public sealed class PlayerRootController : MonoBehaviour
     [SerializeField]
     private SplineGrindController m_splineGrindController;
 
-    // Vゲージ表示機能
     [SerializeField]
-    private VGaugeUI m_vGaugeUI;
+    private EffectEmitter m_effectEmitter;
 
-    // 速度表示機能
+    // Playerのシーケンス音声を再生・停止するController
+    [SerializeField, Header("Audio")]
+    private AnimationAudioSequentialController
+        m_audioSequentialController;
+
+    // PlayerAudioActionIDとAudioSequentialAssetの対応表
     [SerializeField]
-    private VSpeedUI m_vSpeedUI;
+    private PlayerAudioSequentialTableAsset
+        m_audioSequentialTableAsset;
 
     // Scene内のParameterModelに付いているコンポーネントを設定します。
     [SerializeField, Header("Parameter Model")]
@@ -91,6 +102,19 @@ public sealed class PlayerRootController : MonoBehaviour
 
     // 初期化されているか
     private bool m_isInitialized;
+
+    [SerializeField]
+    private Health m_health;
+
+    // プレイヤー死亡通知イベント
+    [SerializeField, Header("Event")]
+    private PlayerDiedEvent m_playerDiedEvent;
+
+    /// <summary>
+    /// プレイヤー状況提供機能を取得します。
+    /// </summary>
+    public PlayerStatusProvider StatusProvider =>
+        m_statusProvider;
 
     /// <summary>
     /// プレイヤーを初期化します。
@@ -121,9 +145,8 @@ public sealed class PlayerRootController : MonoBehaviour
             return;
         }
 
-        m_animationPresenter.Initialize(
-            m_monitor,
-            m_motor);
+
+
 
         m_stateMachineComponent.Initialize(
     m_inputReader,
@@ -135,15 +158,38 @@ public sealed class PlayerRootController : MonoBehaviour
     m_movementParameterAsset,
     m_vBoostMovementParameterAsset,
     m_boostChargingParameterAsset,
-    m_vGaugeUI,
-    m_vSpeedUI,
     m_playerCamera,
     m_modelTransform,
     m_vGaugePlaceModel,
-    m_speedPlaceModel);
+    m_speedPlaceModel,
+    m_statusProvider,
+    m_effectEmitter,
+    m_audioSequentialController,
+    m_audioSequentialTableAsset,
+    m_health,
+    m_playerDiedEvent);
+        m_statusProvider.Initialize(
+       m_monitor,
+       m_motor,
+       m_stateMachineComponent);
+
+        if (!m_statusProvider.IsInitialized)
+        {
+            m_isInitialized = false;
+            enabled = false;
+
+            return;
+        }
+
+        m_animationPresenter.Initialize(
+            m_statusProvider);
+        // StateMachine初期化後の状態を即座にStatusへ反映する。
+        // PlayerAnimationPresenterもStatusUpdated経由で初期値を受け取ります。
+        m_statusProvider.RefreshStatus();
 
         m_isInitialized =
             m_motor.IsInitialized &&
+            m_statusProvider.IsInitialized &&
             m_stateMachineComponent.IsInitialized &&
             m_animationPresenter.IsInitialized;
     }
@@ -229,6 +275,12 @@ public sealed class PlayerRootController : MonoBehaviour
                 GetComponent<PlayerMotor>();
         }
 
+        if (m_statusProvider == null)
+        {
+            m_statusProvider =
+                GetComponent<PlayerStatusProvider>();
+        }
+
         if (m_animationPresenter == null)
         {
             m_animationPresenter =
@@ -251,6 +303,19 @@ public sealed class PlayerRootController : MonoBehaviour
         {
             m_splineGrindController =
                 GetComponent<SplineGrindController>();
+        }
+
+        if (m_audioSequentialController == null)
+        {
+            m_audioSequentialController =
+                GetComponent<
+                    AnimationAudioSequentialController>();
+        }
+
+        if (m_health == null)
+        {
+            m_health =
+                GetComponent<Health>();
         }
 
         ResolveParameterModels();
@@ -365,6 +430,16 @@ public sealed class PlayerRootController : MonoBehaviour
             isValid = false;
         }
 
+        if (m_statusProvider == null)
+        {
+            Debug.LogError(
+                $"[{nameof(PlayerRootController)}] " +
+                "PlayerStatusProviderが見つかりません。",
+                this);
+
+            isValid = false;
+        }
+
         if (m_animationPresenter == null)
         {
             Debug.LogError(
@@ -403,6 +478,47 @@ public sealed class PlayerRootController : MonoBehaviour
                 this);
 
             isValid = false;
+        }
+
+        if (m_health == null)
+        {
+            Debug.LogError(
+                $"[{nameof(PlayerRootController)}] " +
+                $"{nameof(Health)}が見つかりません。",
+                this);
+
+            isValid = false;
+        }
+
+        if (m_playerDiedEvent == null)
+        {
+            Debug.LogWarning(
+                $"[{nameof(PlayerRootController)}] " +
+                $"{nameof(PlayerDiedEvent)}が設定されていません。" +
+                "プレイヤー死亡通知は発火しません。",
+                this);
+        }
+
+        // Audioはゲーム進行に必須ではないため、
+        // 未設定でもPlayer自体の初期化は継続します。
+        if (m_audioSequentialController == null)
+        {
+            Debug.LogWarning(
+                $"[{nameof(PlayerRootController)}] " +
+                $"{nameof(AnimationAudioSequentialController)}" +
+                "が見つかりません。" +
+                "Player Stateのシーケンス音声は再生されません。",
+                this);
+        }
+
+        if (m_audioSequentialTableAsset == null)
+        {
+            Debug.LogWarning(
+                $"[{nameof(PlayerRootController)}] " +
+                $"{nameof(PlayerAudioSequentialTableAsset)}" +
+                "が設定されていません。" +
+                "ActionIDから音声データを取得できません。",
+                this);
         }
 
         return isValid;

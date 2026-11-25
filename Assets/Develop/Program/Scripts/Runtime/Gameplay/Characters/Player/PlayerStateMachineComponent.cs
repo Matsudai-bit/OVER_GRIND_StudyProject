@@ -46,7 +46,7 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
     // ============================================================
     // 参照
     // ============================================================
-
+    private PlayerStatusProvider m_statusProvider;
     // プレイヤー入力
     private PlayerInputReader m_inputReader;
 
@@ -75,6 +75,8 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
     /// <summary>毎フレーム更新する速度モデルを取得します。</summary>
     public SpeedPlaceModel SpeedPlaceModel => m_speedPlaceModel;
 
+    public PlayerStatusProvider StatusProvider => m_statusProvider;
+
     // プレイヤーカメラ機能
     private PlayerCamera m_playerCamera;
 
@@ -98,8 +100,125 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
     private StateMachine<PlayerStateMachineComponent>
         m_stateMachine;
 
+    // プレイヤーのHP
+    private Health m_health;
+
+    // プレイヤー死亡通知イベント
+    private PlayerDiedEvent m_playerDiedEvent;
+
+    // 同一死亡中のイベント多重発火を防止する
+    private bool m_hasRaisedPlayerDiedEvent;
+
     // 初期化されているか
     private bool m_isInitialized;
+
+    // GameObject / Componentの破棄処理中か
+    private bool m_isDestroying;
+
+    private EffectEmitter m_effectEmitter;
+
+    // Playerのシーケンス音声を再生・停止するController
+    private AnimationAudioSequentialController
+        m_audioSequentialController;
+
+    // PlayerAudioActionIDとAudioSequentialAssetの対応表
+    private PlayerAudioSequentialTableAsset
+        m_audioSequentialTableAsset;
+
+    // --------------------------------------------------------
+    // Attack Hit Audio
+    // --------------------------------------------------------
+
+    // 多段攻撃でヒットSEが過密にならないよう制限する最小再生間隔
+    [SerializeField, Header("Attack Hit Audio"), Min(0.0f)]
+    [Tooltip(
+        "HIT_ACTIVEのOneShotを再生できる最小間隔[秒]。"
+        + "0で命中通知ごとに再生します。")]
+    private float m_attackHitAudioInterval = 0.05f;
+
+    // 最後にHIT_ACTIVEを再生した時刻
+    private float m_lastAttackHitAudioTime =
+        float.NegativeInfinity;
+
+    /// <summary>
+    /// エフェクト発生機能を取得します。
+    /// </summary>
+    public EffectEmitter EffectEmitter =>
+        m_effectEmitter;
+
+    /// <summary>
+    /// Player用のシーケンス音声Controllerを取得します。
+    /// 各StateはOwner経由でこのControllerへアクセスできます。
+    /// </summary>
+    public AnimationAudioSequentialController
+        AudioSequentialController =>
+            m_audioSequentialController;
+
+    /// <summary>
+    /// Player用のシーケンス音声対応表を取得します。
+    /// </summary>
+    public PlayerAudioSequentialTableAsset
+        AudioSequentialTableAsset =>
+            m_audioSequentialTableAsset;
+
+    /// <summary>
+    /// ActionIDに対応するシーケンス音声データを取得します。
+    /// </summary>
+    /// <param name="actionID">Playerの行動ID。</param>
+    /// <param name="audioSequentialAsset">
+    /// 対応するシーケンス音声データ。
+    /// </param>
+    /// <returns>
+    /// true：対応するデータがあります。
+    /// false：対応表またはデータがありません。
+    /// </returns>
+    public bool TryGetAudioSequentialAsset(
+        PlayerAudioActionID actionID,
+        out AudioSequentialAsset audioSequentialAsset)
+    {
+        audioSequentialAsset = null;
+
+        if (m_audioSequentialTableAsset == null)
+        {
+            return false;
+        }
+
+        return m_audioSequentialTableAsset
+            .TryGetAudioSequentialAsset(
+                actionID,
+                out audioSequentialAsset);
+    }
+
+    /// <summary>
+    /// ActionIDに対応する単発再生用音声データを取得します。
+    /// </summary>
+    /// <param name="actionID">Playerの行動ID。</param>
+    /// <param name="audioOneShotAsset">
+    /// 対応する単発再生用音声データ。
+    /// </param>
+    /// <returns>
+    /// true：対応するデータがあります。
+    /// false：対応表またはデータがありません。
+    /// </returns>
+    public bool TryGetAudioOneShotAsset(
+        PlayerAudioActionID actionID,
+        out AudioOneShotAsset audioOneShotAsset)
+    {
+        audioOneShotAsset = null;
+
+        if (m_audioSequentialTableAsset == null)
+        {
+            return false;
+        }
+
+        return m_audioSequentialTableAsset
+            .TryGetAudioOneShotAsset(
+                actionID,
+                out audioOneShotAsset);
+    }
+
+    public Health Health => m_health;
+
 
     /// <summary>
     /// プレイヤー入力を取得します。
@@ -307,12 +426,18 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
             vBoostMovementParameterAsset,
         PlayerBoostChargingParameterAsset
             boostChargingParameterAsset,
-        VGaugeUI vGaugeUI,
-        VSpeedUI vSpeedUI,
         PlayerCamera playerCamera,
         Transform modelTransform,
         VGaugePlaceModel vGaugePlaceModel,
-        SpeedPlaceModel speedPlaceModel)
+        SpeedPlaceModel speedPlaceModel,
+        PlayerStatusProvider statusProvider,
+        EffectEmitter effectEmitter,
+        AnimationAudioSequentialController
+            audioSequentialController,
+        PlayerAudioSequentialTableAsset
+            audioSequentialTableAsset,
+        Health health,
+        PlayerDiedEvent playerDiedEvent)
     {
         ApplyParameterAsset();
 
@@ -326,7 +451,9 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
             vBoostMovementParameterAsset == null ||
             boostChargingParameterAsset == null ||
             vGaugePlaceModel == null ||
-            speedPlaceModel == null)
+            speedPlaceModel == null ||
+            statusProvider == null ||
+            health == null)
         {
             Debug.LogError(
                 $"[{nameof(PlayerStateMachineComponent)}] " +
@@ -335,26 +462,6 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
 
             m_isInitialized = false;
             return;
-        }
-
-        // VGaugeUI・VSpeedUI・PlayerCamera・ModelTransformはUI/演出側の用途のため、
-        // 未設定でも初期化失敗とはしない
-        if (vGaugeUI == null)
-        {
-            Debug.LogWarning(
-                $"[{nameof(PlayerStateMachineComponent)}] " +
-                $"{nameof(VGaugeUI)}が設定されていません。" +
-                "ゲージ演出は行われません。",
-                this);
-        }
-
-        if (vSpeedUI == null)
-        {
-            Debug.LogWarning(
-                $"[{nameof(PlayerStateMachineComponent)}] " +
-                $"{nameof(VSpeedUI)}が設定されていません。" +
-                "速度表示は行われません。",
-                this);
         }
 
         if (playerCamera == null)
@@ -374,6 +481,39 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
                 "モデルの向きを個別制御する演出は行われません。",
                 this);
         }
+
+        if (audioSequentialController == null)
+        {
+            Debug.LogWarning(
+                $"[{nameof(PlayerStateMachineComponent)}] " +
+                $"{nameof(AnimationAudioSequentialController)}" +
+                "が設定されていません。" +
+                "Stateからシーケンス音声を再生できません。",
+                this);
+        }
+
+        if (audioSequentialTableAsset == null)
+        {
+            Debug.LogWarning(
+                $"[{nameof(PlayerStateMachineComponent)}] " +
+                $"{nameof(PlayerAudioSequentialTableAsset)}" +
+                "が設定されていません。" +
+                "ActionIDから音声データを取得できません。",
+                this);
+        }
+
+        if (playerDiedEvent == null)
+        {
+            Debug.LogWarning(
+                $"[{nameof(PlayerStateMachineComponent)}] " +
+                $"{nameof(PlayerDiedEvent)}が設定されていません。" +
+                "HP0かつダウン状態になっても死亡通知は発火しません。",
+                this);
+        }
+
+        // 再初期化時に旧イベント購読を残さない
+        UnsubscribeAttackHitAudio();
+        UnsubscribeHealthEvents();
 
         m_stateMachine?.Dispose();
 
@@ -404,6 +544,19 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
         m_speedPlaceModel = speedPlaceModel;
         m_vGaugePlaceModel.ResetGauge();
         m_speedPlaceModel.ResetSpeed();
+        m_effectEmitter = effectEmitter;
+        m_statusProvider = statusProvider;
+        m_audioSequentialController =
+            audioSequentialController;
+        m_audioSequentialTableAsset =
+            audioSequentialTableAsset;
+
+        m_health = health;
+        m_playerDiedEvent = playerDiedEvent;
+        m_hasRaisedPlayerDiedEvent = false;
+
+        SubscribeAttackHitAudio();
+        SubscribeHealthEvents();
 
         m_stateMachine =
             new StateMachine<PlayerStateMachineComponent>(
@@ -470,6 +623,8 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
             m_stateMachine.IsCurrentState<PlayerGrindingState>() &&
             m_splineGrindController.IsGrinding && m_inputReader.ConsumeJumpPress())
         {
+            PlayerGrindingState grindingState = m_stateMachine.GetNowState() as PlayerGrindingState;
+            grindingState?.CancelChargeForRailJump();
             RequestRailStateChange<PlayerRailJumpingState>(m_inputReader.MoveInput);
         }
 
@@ -504,6 +659,7 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
     {
         bool isConsumingGauge =
             IsCurrentState<PlayerVRunningState>() ||
+            IsCurrentState<PlayerBoostDashingState>() ||
             m_isBoostSuspended;
 
         if (!isConsumingGauge)
@@ -513,13 +669,200 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
 
         m_vGaugePlaceModel.ConsumeBoostGauge(Time.fixedDeltaTime);
 
-        // 中断中にゲージを使い切った場合も、
-        // 復帰しようがないため中断状態を解除しておく
+        // 中断中にゲージを使い切った場合は、
+        // PlayerVRunningStateへ戻らないため、この場でVブースト音を終了します。
         if (SuspendedBoostGaugeRate <= 0.0f &&
             m_isBoostSuspended)
         {
+            PlayerAudioActionUtility.StopSequential(
+                this,
+                PlayerAudioActionID.V_RUNNING);
+
             m_isBoostSuspended = false;
         }
+    }
+
+
+    // ============================================================
+    // Player Death
+    // ============================================================
+
+    /// <summary>
+    /// Playerがダウン状態へ入ったことを通知します。
+    /// HPが0の場合のみ死亡イベントを発火します。
+    /// </summary>
+    public void NotifyDownStateEntered()
+    {
+        TryRaisePlayerDiedEvent();
+    }
+
+    /// <summary>
+    /// Healthのイベントを購読します。
+    /// </summary>
+    private void SubscribeHealthEvents()
+    {
+        if (m_health == null)
+        {
+            return;
+        }
+
+        m_health.Died -=
+            HandleHealthDied;
+
+        m_health.Died +=
+            HandleHealthDied;
+
+        m_health.HealthChanged -=
+            HandleHealthChanged;
+
+        m_health.HealthChanged +=
+            HandleHealthChanged;
+    }
+
+    /// <summary>
+    /// Healthのイベント購読を解除します。
+    /// </summary>
+    private void UnsubscribeHealthEvents()
+    {
+        if (m_health == null)
+        {
+            return;
+        }
+
+        m_health.Died -=
+            HandleHealthDied;
+
+        m_health.HealthChanged -=
+            HandleHealthChanged;
+    }
+
+    /// <summary>
+    /// HPが0になった際に、ダウン状態なら死亡イベントを発火します。
+    /// </summary>
+    private void HandleHealthDied()
+    {
+        TryRaisePlayerDiedEvent();
+    }
+
+    /// <summary>
+    /// HP回復後に死亡イベントの発火済み状態を解除します。
+    /// </summary>
+    /// <param name="currentHealth">現在のHP。</param>
+    /// <param name="maxHealth">最大HP。</param>
+    private void HandleHealthChanged(
+        int currentHealth,
+        int maxHealth)
+    {
+        if (currentHealth > 0)
+        {
+            m_hasRaisedPlayerDiedEvent = false;
+        }
+    }
+
+    /// <summary>
+    /// HP0かつPlayerHitState中の場合のみ死亡イベントを発火します。
+    /// </summary>
+    private void TryRaisePlayerDiedEvent()
+    {
+        if (m_hasRaisedPlayerDiedEvent ||
+            m_health == null ||
+            !m_health.IsDead ||
+            m_stateMachine == null ||
+            !m_stateMachine.IsCurrentState<PlayerHitState>())
+        {
+            return;
+        }
+
+        if (m_playerDiedEvent == null)
+        {
+            return;
+        }
+
+        m_hasRaisedPlayerDiedEvent = true;
+        m_playerDiedEvent.Raise();
+    }
+
+
+    // ============================================================
+    // Attack Hit Audio
+    // ============================================================
+
+    /// <summary>
+    /// PlayerAttackControllerの命中通知を購読します。
+    /// </summary>
+    private void SubscribeAttackHitAudio()
+    {
+        if (m_attackController == null)
+        {
+            return;
+        }
+
+        m_attackController.ContinuousAttackHit -=
+            HandleContinuousAttackHitAudio;
+
+        m_attackController.ContinuousAttackHit +=
+            HandleContinuousAttackHitAudio;
+
+        m_lastAttackHitAudioTime =
+            float.NegativeInfinity;
+    }
+
+    /// <summary>
+    /// PlayerAttackControllerの命中通知購読を解除します。
+    /// </summary>
+    private void UnsubscribeAttackHitAudio()
+    {
+        if (m_attackController == null)
+        {
+            return;
+        }
+
+        m_attackController.ContinuousAttackHit -=
+            HandleContinuousAttackHitAudio;
+    }
+
+    /// <summary>
+    /// Player自身の攻撃でダメージが成立した時に、
+    /// HIT_ACTIVEのOneShotを再生します。
+    /// </summary>
+    /// <param name="target">
+    /// ダメージを与えた対象。
+    /// </param>
+    private void HandleContinuousAttackHitAudio(
+        IDamageable target)
+    {
+        if (target == null ||
+            m_audioSequentialController == null ||
+            m_audioSequentialTableAsset == null)
+        {
+            return;
+        }
+
+        float currentTime =
+            Time.time;
+
+        // 多段攻撃は高頻度で命中通知されるため、
+        // OneShotが過密にならないよう最小再生間隔を設けます。
+        if (m_attackHitAudioInterval > 0.0f &&
+            currentTime -
+            m_lastAttackHitAudioTime <
+            m_attackHitAudioInterval)
+        {
+            return;
+        }
+
+        bool hasPlayed =
+            PlayerAudioActionUtility.PlayOneShot(
+                this,
+                PlayerAudioActionID.HIT_ACTIVE);
+
+        if (!hasPlayed)
+        {
+            return;
+        }
+
+        m_lastAttackHitAudioTime =
+            currentTime;
     }
 
 
@@ -532,11 +875,20 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
     /// </summary>
     private void OnDestroy()
     {
+        /*
+         * Dispose()では現在StateのOnExitState()が呼ばれるため、
+         * 先に破棄中フラグを立ててゲームプレイ用の終了処理を抑止します。
+         */
+        m_isDestroying = true;
+        m_isInitialized = false;
+
+        UnsubscribeAttackHitAudio();
+        UnsubscribeHealthEvents();
+
         m_stateMachine?.Dispose();
 
         m_pendingRailStateChange = null;
         m_stateMachine = null;
-        m_isInitialized = false;
     }
     [SerializeField, Header("被弾ノックバック"), Min(0.0f)]
     private float m_knockbackSpeed = 12.0f;
@@ -628,12 +980,37 @@ public sealed class PlayerStateMachineComponent : MonoBehaviour
     {
         IsHitReacting = false;
         HasHitEnvironment = false;
+
+        /*
+         * OnDestroy()からStateMachine.Dispose()された場合も
+         * PlayerHitState.OnExitState()経由でここへ到達します。
+         * 破棄中は通常プレイ用の被弾後無敵処理を開始しません。
+         */
+        if (m_isDestroying)
+        {
+            return;
+        }
+
         StartPostHitInvincibility();
     }
 
     /// <summary>被弾状態終了後の無敵時間を開始します。</summary>
     private void StartPostHitInvincibility()
     {
+        /*
+         * 非アクティブ化・無効化されたMonoBehaviourでは
+         * Coroutineを開始できないため、ここでも防御します。
+         */
+        if (m_isDestroying
+            || !isActiveAndEnabled
+            || !gameObject.activeInHierarchy)
+        {
+            m_isPostHitInvincible = false;
+            m_postHitInvincibilityCoroutine = null;
+
+            return;
+        }
+
         if (m_postHitInvincibilityCoroutine != null)
         {
             StopCoroutine(m_postHitInvincibilityCoroutine);
