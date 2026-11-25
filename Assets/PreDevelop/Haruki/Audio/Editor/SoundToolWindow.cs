@@ -4,7 +4,7 @@ using UnityEditor;
 using UnityEngine;
 
 /// <summary>
-/// サウンドの音量調整・検索・試聴・ID 管理をまとめた Editor ウィンドウです。
+/// サウンドの音量調整・縦型ミキサー卓・リアルタイム解析・ID 管理をまとめた Editor ウィンドウです。
 /// </summary>
 public sealed class SoundToolWindow : EditorWindow
 {
@@ -18,7 +18,7 @@ public sealed class SoundToolWindow : EditorWindow
     private const float WINDOW_MIN_HEIGHT = 720.0f;
 
     // タブ全体の幅
-    private const float TAB_TOOLBAR_WIDTH = 380.0f;
+    private const float TAB_TOOLBAR_WIDTH = 500.0f;
 
     // 保存ボタンの幅
     private const float SAVE_BUTTON_WIDTH = 50.0f;
@@ -26,20 +26,31 @@ public sealed class SoundToolWindow : EditorWindow
     // DB 表示ボタンの幅
     private const float PING_BUTTON_WIDTH = 80.0f;
 
-    // タブ：ミキサー
+    // タブ：ミキサー（一覧・詳細）
     private const int TAB_MIXER = 0;
 
+    // タブ：コンソール（縦ミキサー卓）
+    private const int TAB_CONSOLE = 1;
+
     // タブ：ID の追加・削除
-    private const int TAB_ID_MANAGE = 1;
+    private const int TAB_ID_MANAGE = 2;
 
     // タブの表示名
-    private static readonly string[] TAB_LABELS = { "ミキサー（音量・検索・試聴）", "ID の追加・削除" };
+    private static readonly string[] TAB_LABELS =
+    {
+        "ミキサー（一覧・詳細）",
+        "コンソール（縦ミキサー卓）",
+        "ID の追加・削除"
+    };
 
     // 選択中のタブ（スクリプト再読み込み後も保持する）
     [SerializeField] private int m_tabIndex = TAB_MIXER;
 
     // ミキサー画面
     private SoundToolMixerView m_mixerView;
+
+    // コンソール（縦ミキサー卓）画面
+    private SoundToolConsoleView m_consoleView;
 
     // ID 管理画面
     private SoundToolIdManageView m_idManageView;
@@ -56,11 +67,12 @@ public sealed class SoundToolWindow : EditorWindow
 
     private void OnEnable()
     {
-        // 再描画コールバック付きで各画面を生成する
+        // 各画面を生成する
         m_mixerView = new SoundToolMixerView(Repaint);
+        m_consoleView = new SoundToolConsoleView();
         m_idManageView = new SoundToolIdManageView(Repaint);
 
-        // 試聴プレイヤーの状態更新時にも画面を再描画する
+        // 試聴およびアナライザー更新時に滑らかに再描画する
         SoundToolPreviewPlayer.OnStateChanged += Repaint;
 
         // ID 追加直後ならミキサーへ切り替え、追加した ID を選択状態にする
@@ -83,17 +95,8 @@ public sealed class SoundToolWindow : EditorWindow
 
     private void OnLostFocus()
     {
-        // フォーカスを失うタイミングで保存する（操作中のラグを防ぐため毎クリック保存はしない）
+        // フォーカスを失うタイミングで保存する
         SoundToolDatabaseProvider.SaveIfNeeded();
-    }
-
-    private void OnInspectorUpdate()
-    {
-        // 試聴中はシークバーや再生状態の表示を更新する
-        if (SoundToolPreviewPlayer.HasActivePreview())
-        {
-            Repaint();
-        }
     }
 
     private void OnGUI()
@@ -102,6 +105,10 @@ public sealed class SoundToolWindow : EditorWindow
 
         switch (m_tabIndex)
         {
+            case TAB_CONSOLE:
+                m_consoleView.Draw();
+                break;
+
             case TAB_ID_MANAGE:
                 m_idManageView.Draw();
                 break;
@@ -138,7 +145,6 @@ public sealed class SoundToolWindow : EditorWindow
 
         GUILayout.FlexibleSpace();
 
-        // 保存状態
         string statusText = SoundToolDatabaseProvider.HasUnsavedChanges ? "● 未保存" : "保存済み";
         GUILayout.Label(statusText, EditorStyles.miniLabel);
 

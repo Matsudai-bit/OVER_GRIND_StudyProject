@@ -29,7 +29,7 @@ public enum DetailTabMode
 }
 
 /// <summary>
-/// 検索・試聴・音量調整・I/L/O 一連編集を行うミキサー画面です。
+/// 検索・試聴・音量調整・リアルタイム解析・I/L/O 一連編集を行うミキサー画面です。
 /// </summary>
 public sealed class SoundToolMixerView
 {
@@ -38,6 +38,9 @@ public sealed class SoundToolMixerView
 
     // グループ展開時の子行の高さ
     private const float CHILD_ROW_HEIGHT = 28.0f;
+
+    // リアルタイムアナライザーパネルの高さ
+    private const float ANALYZER_HEIGHT = 96.0f;
 
     // 選択チェックの幅
     private const float SELECT_TOGGLE_WIDTH = 18.0f;
@@ -251,6 +254,9 @@ public sealed class SoundToolMixerView
     // 行クリック・矢印移動時に即再生するか（デフォルト ON）
     private bool m_autoPlayOnSelect = true;
 
+    // リアルタイム・スペクトラム＆メーターを表示するか（デフォルト ON）
+    private bool m_showAnalyzer = true;
+
     // 一連再生時にループ1周で自動 Outro 移行するか
     private bool m_autoOutroOnSequence = false;
 
@@ -351,13 +357,20 @@ public sealed class SoundToolMixerView
         // 表示行リストを構築する
         BuildVisibleRows(database);
 
-        // キーボード操作（矢印移動・Space再生・左右音量微調整・R比較）を処理する
+        // キーボード操作を処理する
         HandleKeyboardNavigation(database);
 
         DrawFilterBar();
         DrawSelectionBar();
         DrawVolumeToolBar(database);
         DrawPreviewTransportBar();
+
+        // リアルタイム・スペクトラム（EQ風）＆ステレオ L/R メーター
+        if (m_showAnalyzer)
+        {
+            SoundToolAnalyzerGui.DrawAnalyzerPanel(ANALYZER_HEIGHT);
+        }
+
         DrawChannelList(database);
         DrawDetailPanel(database);
     }
@@ -382,7 +395,6 @@ public sealed class SoundToolMixerView
             BuildFlatGroups(database.m_soundList, m_allGroups);
         }
 
-        // カテゴリー件数の集計（絞り込み前）とフィルター判定
         for (int i = 0; i < m_allGroups.Count; i++)
         {
             SoundToolSequenceHelper.SoundGroup group = m_allGroups[i];
@@ -406,10 +418,8 @@ public sealed class SoundToolMixerView
             }
         }
 
-        // 並べ替え
         SortFilteredGroups();
 
-        // 表示行へ展開する
         for (int i = 0; i < m_filteredGroups.Count; i++)
         {
             SoundToolSequenceHelper.SoundGroup group = m_filteredGroups[i];
@@ -434,7 +444,6 @@ public sealed class SoundToolMixerView
                 continue;
             }
 
-            // シーケンスグループ親行
             m_visibleRows.Add(new VisibleRow
             {
                 RowKey = group.GroupKey,
@@ -445,7 +454,6 @@ public sealed class SoundToolMixerView
                 PartType = SoundPartType.PART_SINGLE
             });
 
-            // 展開中なら子行（I / L / O）を追加する
             if (m_expandedGroupKeys.Contains(group.GroupKey))
             {
                 AddChildRowIfExists(group, group.IntroData, SoundPartType.PART_INTRO);
@@ -454,7 +462,6 @@ public sealed class SoundToolMixerView
             }
         }
 
-        // フォーカス中のグループ参照を最新のグループオブジェクトに同期する
         RefreshFocusedReferences();
     }
 
@@ -793,11 +800,30 @@ public sealed class SoundToolMixerView
 
             if (shouldPlay)
             {
-                SoundToolPreviewPlayer.PlaySingle(row.Data);
+                SoundToolPreviewPlayer.PlaySingle(row.Data, GetReferenceAudioId());
             }
         }
 
         m_requestRepaint?.Invoke();
+    }
+
+    /// <summary>
+    /// 現在のリファレンス AudioID を取得します。
+    /// </summary>
+    private AudioID GetReferenceAudioId()
+    {
+        return m_referenceData != null ? m_referenceData.m_id : AudioID.None;
+    }
+
+    /// <summary>
+    /// リファレンス音源を設定または解除し、アナライザー側へ通知します。
+    /// </summary>
+    private void SetReferenceData(SoundDatabase.SoundData data)
+    {
+        m_referenceData = data;
+        AudioID refId = GetReferenceAudioId();
+        SoundToolPreviewPlayer.SetReferenceId(refId);
+        SoundToolAudioAnalyzer.ClearReferenceLevel();
     }
 
     /// <summary>
@@ -917,7 +943,7 @@ public sealed class SoundToolMixerView
 
                 if (row.Data != null)
                 {
-                    SoundToolPreviewPlayer.PlaySingle(row.Data);
+                    SoundToolPreviewPlayer.PlaySingle(row.Data, GetReferenceAudioId());
                     return;
                 }
             }
@@ -926,7 +952,7 @@ public sealed class SoundToolMixerView
             return;
         }
 
-        SoundToolPreviewPlayer.PlaySingle(m_referenceData);
+        SoundToolPreviewPlayer.PlaySingle(m_referenceData, GetReferenceAudioId());
     }
 
     /// <summary>
@@ -936,7 +962,6 @@ public sealed class SoundToolMixerView
     {
         EditorGUILayout.BeginVertical(EditorStyles.helpBox);
 
-        // 1段目：検索と並べ替え
         EditorGUILayout.BeginHorizontal();
         GUILayout.Label("検索", GUILayout.Width(32.0f));
         m_searchText = EditorGUILayout.TextField(m_searchText, EditorStyles.toolbarSearchField);
@@ -953,7 +978,6 @@ public sealed class SoundToolMixerView
 
         EditorGUILayout.EndHorizontal();
 
-        // 2段目：カテゴリータブ（件数付き）
         m_categoryTabIndex = Mathf.Clamp(m_categoryTabIndex, 0, m_categoryTabLabels.Length - 1);
         m_categoryTabLabels[CATEGORY_TAB_ALL] = $"すべて ({m_categoryCounts[CATEGORY_TAB_ALL]})";
 
@@ -964,20 +988,19 @@ public sealed class SoundToolMixerView
 
         m_categoryTabIndex = GUILayout.Toolbar(m_categoryTabIndex, m_categoryTabLabels, EditorStyles.miniButton);
 
-        // 3段目：表示条件・即再生・I/L/O まとめ・比較試聴
         EditorGUILayout.BeginHorizontal();
 
-        m_groupIloView = GUILayout.Toggle(m_groupIloView, "I/L/O まとめ", EditorStyles.miniButton, GUILayout.Width(96.0f));
-        m_autoPlayOnSelect = GUILayout.Toggle(m_autoPlayOnSelect, "クリック即再生", EditorStyles.miniButton, GUILayout.Width(100.0f));
-        m_showSelectedOnly = GUILayout.Toggle(m_showSelectedOnly, "選択中のみ", EditorStyles.miniButton, GUILayout.Width(76.0f));
-        m_showMissingClipOnly = GUILayout.Toggle(m_showMissingClipOnly, "Clip 未設定", EditorStyles.miniButton, GUILayout.Width(82.0f));
+        m_showAnalyzer = GUILayout.Toggle(m_showAnalyzer, "アナライザー(EQ)", EditorStyles.miniButton, GUILayout.Width(104.0f));
+        m_groupIloView = GUILayout.Toggle(m_groupIloView, "I/L/O まとめ", EditorStyles.miniButton, GUILayout.Width(86.0f));
+        m_autoPlayOnSelect = GUILayout.Toggle(m_autoPlayOnSelect, "クリック即再生", EditorStyles.miniButton, GUILayout.Width(96.0f));
+        m_showSelectedOnly = GUILayout.Toggle(m_showSelectedOnly, "選択中のみ", EditorStyles.miniButton, GUILayout.Width(72.0f));
+        m_showMissingClipOnly = GUILayout.Toggle(m_showMissingClipOnly, "Clip 未設定", EditorStyles.miniButton, GUILayout.Width(76.0f));
 
         GUILayout.FlexibleSpace();
 
-        // リファレンス比較ボタン
         using (new EditorGUI.DisabledScope(m_referenceData == null))
         {
-            string refLabel = m_referenceData != null ? $"Ref比較 (R): {m_referenceData.m_id}" : "Ref未設定 (R)";
+            string refLabel = m_referenceData != null ? $"Ref比較(R): {m_referenceData.m_id}" : "Ref未設定(R)";
             Color prevBg = GUI.backgroundColor;
 
             if (m_referenceData != null && SoundToolPreviewPlayer.IsPlaying(m_referenceData.m_id))
@@ -985,7 +1008,7 @@ public sealed class SoundToolMixerView
                 GUI.backgroundColor = REF_ACTIVE_COLOR;
             }
 
-            if (GUILayout.Button(refLabel, EditorStyles.miniButton, GUILayout.MaxWidth(210.0f)))
+            if (GUILayout.Button(refLabel, EditorStyles.miniButton, GUILayout.MaxWidth(185.0f)))
             {
                 ToggleReferenceComparison();
             }
@@ -997,9 +1020,9 @@ public sealed class SoundToolMixerView
             SoundToolPreviewPlayer.UseVolume,
             "音量反映",
             EditorStyles.miniButton,
-            GUILayout.Width(68.0f));
+            GUILayout.Width(64.0f));
 
-        if (GUILayout.Button("■ 停止", EditorStyles.miniButton, GUILayout.Width(58.0f)))
+        if (GUILayout.Button("■ 停止", EditorStyles.miniButton, GUILayout.Width(54.0f)))
         {
             SoundToolPreviewPlayer.Stop();
         }
@@ -1283,7 +1306,7 @@ public sealed class SoundToolMixerView
 
         if (!isPlaying || currentData == null)
         {
-            GUILayout.Label("試聴待機中：行をクリック（または矢印キー）で即試聴できます", EditorStyles.miniLabel);
+            GUILayout.Label("試聴待機中：行をクリック（または矢印キー）で即試聴＆アナライズできます", EditorStyles.miniLabel);
 
             bool newAutoOutro = GUILayout.Toggle(
                 m_autoOutroOnSequence,
@@ -1677,7 +1700,7 @@ public sealed class SoundToolMixerView
 
         if (GUILayout.Button("Ref", EditorStyles.miniButton, GUILayout.Width(REF_BUTTON_WIDTH)))
         {
-            m_referenceData = isRef ? null : data;
+            SetReferenceData(isRef ? null : data);
         }
 
         GUI.backgroundColor = prevBg;
@@ -1950,7 +1973,7 @@ public sealed class SoundToolMixerView
     /// <summary>
     /// 単体サウンドの試聴を切り替えます。
     /// </summary>
-    private static void ToggleSinglePreview(SoundDatabase.SoundData data)
+    private void ToggleSinglePreview(SoundDatabase.SoundData data)
     {
         if (data == null)
         {
@@ -1964,7 +1987,7 @@ public sealed class SoundToolMixerView
             return;
         }
 
-        SoundToolPreviewPlayer.PlaySingle(data);
+        SoundToolPreviewPlayer.PlaySingle(data, GetReferenceAudioId());
     }
 
     /// <summary>
@@ -2001,7 +2024,8 @@ public sealed class SoundToolMixerView
             group.IntroData,
             group.LoopData,
             group.OutroData,
-            m_autoOutroOnSequence);
+            m_autoOutroOnSequence,
+            GetReferenceAudioId());
     }
 
     /// <summary>
@@ -2377,7 +2401,7 @@ public sealed class SoundToolMixerView
 
         if (GUILayout.Button(isRef ? "Ref解除" : "Refに固定", EditorStyles.miniButton, GUILayout.Width(76.0f)))
         {
-            m_referenceData = isRef ? null : data;
+            SetReferenceData(isRef ? null : data);
         }
 
         if (GUILayout.Button(SoundToolPreviewPlayer.IsPlaying(data.m_id) ? "■ 停止" : "▶ 単体試聴", GUILayout.Width(84.0f)))
