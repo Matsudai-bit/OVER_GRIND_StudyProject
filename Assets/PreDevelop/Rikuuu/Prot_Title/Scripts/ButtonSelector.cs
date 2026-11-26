@@ -424,4 +424,12 @@ public class ButtonSelector : MonoBehaviour
         }
         return rect.TransformPoint(rect.rect.center);
     }
+
+    // ƒJ[ƒ\ƒ‹‚ÌRectTransform
+    public RectTransform CursorRect
+    {
+        get { return m_cursor != null ? m_cursor.rectTransform : null; }
+    }
+
+    public int SelectedIndex => m_selectButtonNumber;
 }

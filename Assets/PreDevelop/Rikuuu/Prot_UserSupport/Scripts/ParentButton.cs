@@ -35,6 +35,8 @@ public class ParentButton : MonoBehaviour
     // 展開前の位置（ローカル座標）
     private Vector3[] m_childOriginalPositions;
     private Vector3[] m_underOriginalPositions;
+    // 展開開始時のカーソル位置
+    private float m_cursorStartY;
 
     // 展開中かどうか
     private bool m_isExpanded;
@@ -54,8 +56,10 @@ public class ParentButton : MonoBehaviour
             return;
         }
 
+        bool wasCollapsing = m_isCollapsing;
+
         // 収縮中なら、非表示にするDelayedCallを止める
-        if (m_isCollapsing)
+        if (wasCollapsing)
         {
             DOTween.Kill(this);
             m_isCollapsing = false;
@@ -81,6 +85,20 @@ public class ParentButton : MonoBehaviour
         // 子ボタンを表示する
         SetChildActive(true);
 
+        RectTransform cursor = m_childButtonSelector.CursorRect;
+        if (cursor != null)
+        {
+            // セレクターによる座標更新を止める
+            m_childButtonSelector.LockCursorAnimation();
+            cursor.DOKill();
+
+            // 収縮途中からの再展開でなければ、親ボタンの下端から開始する
+            if (!wasCollapsing)
+            {
+                m_cursorStartY = cursor.position.y;
+            }
+        }
+
         if (m_childButtons.Length > 0)
         {
             Vector3 bottomWorld = m_parent.TransformPoint(
@@ -101,6 +119,18 @@ public class ParentButton : MonoBehaviour
 
                 Vector3 target = m_childOriginalPositions[i];
                 target.y = nextTop - child.rect.height * (1.0f - child.pivot.y);
+
+                if (cursor != null && i == m_childButtonSelector.SelectedIndex)
+                {
+                    // 子ボタンが目標位置に来たときの中心Y（ワールド座標）
+                    float centerY = target.y + child.rect.center.y * child.localScale.y;
+                    float targetWorldY = child.parent.TransformPoint(new Vector3(0.0f, centerY, 0.0f)).y;
+
+                    cursor.DOMoveY(targetWorldY, m_expandDuration)
+                        .SetEase(m_expandEase)
+                        .SetUpdate(true)
+                        .OnComplete(() => m_childButtonSelector.UnLockCursorAnimation());
+                }
 
                 // 親ボタンの位置から滑り出すようにしたい場合は、先に開始位置をセットする
                 // Vector3 start = target;
@@ -157,6 +187,19 @@ public class ParentButton : MonoBehaviour
             RectTransform child = m_childButtons[i].GetRectTransform();
             child.DOKill();
             child.DOLocalMove(m_childOriginalPositions[i], m_expandDuration)
+                .SetEase(m_expandEase)
+                .SetUpdate(true);
+        }
+
+        // カーソルを元の位置に戻す
+        RectTransform cursor = m_childButtonSelector.CursorRect;
+        if (cursor != null)
+        {
+            // 展開途中で閉じた場合もセレクターに上書きされないようにする
+            m_childButtonSelector.LockCursorAnimation();
+
+            cursor.DOKill();
+            cursor.DOMoveY(m_cursorStartY, m_expandDuration)
                 .SetEase(m_expandEase)
                 .SetUpdate(true);
         }
