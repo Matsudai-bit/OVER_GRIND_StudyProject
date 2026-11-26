@@ -4,7 +4,7 @@ using UnityEditor;
 using UnityEngine;
 
 /// <summary>
-/// サウンドの音量調整・縦型ミキサー卓・リアルタイム解析・ID 管理をまとめた Editor ウィンドウです。
+/// サウンドの音量調整・縦型ミキサー卓・2D/3D同時ミックス・リアルタイム解析・ID 管理をまとめた Editor ウィンドウです。
 /// </summary>
 public sealed class SoundToolWindow : EditorWindow
 {
@@ -12,13 +12,13 @@ public sealed class SoundToolWindow : EditorWindow
     private const string WINDOW_TITLE = "Sound ツール";
 
     // ウィンドウの最小幅
-    private const float WINDOW_MIN_WIDTH = 860.0f;
+    private const float WINDOW_MIN_WIDTH = 920.0f;
 
     // ウィンドウの最小高さ
     private const float WINDOW_MIN_HEIGHT = 720.0f;
 
     // タブ全体の幅
-    private const float TAB_TOOLBAR_WIDTH = 500.0f;
+    private const float TAB_TOOLBAR_WIDTH = 640.0f;
 
     // 保存ボタンの幅
     private const float SAVE_BUTTON_WIDTH = 50.0f;
@@ -32,14 +32,18 @@ public sealed class SoundToolWindow : EditorWindow
     // タブ：コンソール（縦ミキサー卓）
     private const int TAB_CONSOLE = 1;
 
+    // タブ：同時ミックス（2D/3D比較）
+    private const int TAB_MULTI_MIX = 2;
+
     // タブ：ID の追加・削除
-    private const int TAB_ID_MANAGE = 2;
+    private const int TAB_ID_MANAGE = 3;
 
     // タブの表示名
     private static readonly string[] TAB_LABELS =
     {
         "ミキサー（一覧・詳細）",
         "コンソール（縦ミキサー卓）",
+        "同時ミックス（2D/3D）",
         "ID の追加・削除"
     };
 
@@ -51,6 +55,9 @@ public sealed class SoundToolWindow : EditorWindow
 
     // コンソール（縦ミキサー卓）画面
     private SoundToolConsoleView m_consoleView;
+
+    // 複数トラック同時ミックス画面
+    private SoundToolMultiMixView m_multiMixView;
 
     // ID 管理画面
     private SoundToolIdManageView m_idManageView;
@@ -70,10 +77,12 @@ public sealed class SoundToolWindow : EditorWindow
         // 各画面を生成する
         m_mixerView = new SoundToolMixerView(Repaint);
         m_consoleView = new SoundToolConsoleView();
+        m_multiMixView = new SoundToolMultiMixView();
         m_idManageView = new SoundToolIdManageView(Repaint);
 
-        // 試聴およびアナライザー更新時に滑らかに再描画する
+        // 単体試聴およびマルチトラック試聴の更新時に再描画する
         SoundToolPreviewPlayer.OnStateChanged += Repaint;
+        SoundToolMultiPreviewPlayer.OnStateChanged += Repaint;
 
         // ID 追加直後ならミキサーへ切り替え、追加した ID を選択状態にする
         if (m_mixerView.SelectRecentAddedIds())
@@ -88,8 +97,10 @@ public sealed class SoundToolWindow : EditorWindow
     {
         Undo.undoRedoPerformed -= HandleUndoRedo;
         SoundToolPreviewPlayer.OnStateChanged -= Repaint;
+        SoundToolMultiPreviewPlayer.OnStateChanged -= Repaint;
 
         SoundToolPreviewPlayer.Stop();
+        SoundToolMultiPreviewPlayer.StopAll();
         SoundToolDatabaseProvider.SaveIfNeeded();
     }
 
@@ -107,6 +118,10 @@ public sealed class SoundToolWindow : EditorWindow
         {
             case TAB_CONSOLE:
                 m_consoleView.Draw();
+                break;
+
+            case TAB_MULTI_MIX:
+                m_multiMixView.Draw();
                 break;
 
             case TAB_ID_MANAGE:

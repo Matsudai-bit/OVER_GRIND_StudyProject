@@ -1,15 +1,34 @@
 #if UNITY_EDITOR
 
 using System;
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
 /// <summary>
-/// 試聴中の音声をリアルタイムに解析し、L/R レベル・波形・24バンド周波数スペクトラム（EQ風）を算出します。
-/// Edit Mode でも確実に動作するよう、AudioClip の PCM データと設定音量を直接解析します。
+/// 単体および複数トラック同時再生時の音声をリアルタイムに解析し、
+/// 合計出力の L/R レベル・クリッピング・波形・24バンド周波数スペクトラム（EQ風）を算出します。
 /// </summary>
 public static class SoundToolAudioAnalyzer
 {
+    /// <summary>
+    /// マルチトラック解析へ渡す1トラック分の入力情報です。
+    /// </summary>
+    public struct TrackAnalysisInput
+    {
+        // 再生中の AudioSource
+        public AudioSource m_source;
+
+        // 実効出力音量（設定音量 × 3D減衰 × ミュート/ソロ適用後）
+        public float m_effectiveVolume;
+
+        // ステレオパン（-1:左 ～ 0:中央 ～ +1:右）
+        public float m_panStereo;
+
+        // 解析対象として有効か
+        public bool m_isActive;
+    }
+
     // FFT 解析に使用するサンプル数（2のべき乗）
     private const int FFT_SIZE = 512;
 
@@ -43,6 +62,9 @@ public static class SoundToolAudioAnalyzer
     // アクティブ判定の微小しきい値
     private const float ACTIVE_THRESHOLD = 0.002f;
 
+    // クリッピング判定の線形振幅しきい値
+    private const float CLIP_THRESHOLD = 0.99f;
+
     // dB 変換係数
     private const float DECIBEL_MULTIPLIER = 20.0f;
 
@@ -57,6 +79,15 @@ public static class SoundToolAudioAnalyzer
 
     // モノラル合成後の生サンプル
     private static readonly float[] m_monoSamples = new float[FFT_SIZE];
+
+    // マルチトラック加算合成用の左チャンネルバッファ
+    private static readonly float[] m_mixLeftBuffer = new float[FFT_SIZE];
+
+    // マルチトラック加算合成用の右チャンネルバッファ
+    private static readonly float[] m_mixRightBuffer = new float[FFT_SIZE];
+
+    // フォールバック読み取り用バッファ
+    private static readonly float[] m_fallbackBuffer = new float[FFT_SIZE];
 
     // 正規化された各バンドの値（0～1）
     private static readonly float[] m_bandLevels = new float[SPECTRUM_BAND_COUNT];
@@ -106,8 +137,14 @@ public static class SoundToolAudioAnalyzer
     // 現在の平均 RMS（dB）
     private static float m_currentRmsDb = MIN_DISPLAY_DB;
 
+    // セッション中の最大ピーク保持値（dB）
+    private static float m_sessionMaxPeakDb = MIN_DISPLAY_DB;
+
     // クリッピング（0dB 以上）が発生しているか
     private static bool m_isClipping = false;
+
+    // セッション中に一度でもクリッピングが発生したか
+    private static bool m_hasClippedInSession = false;
 
     // 前回の更新時刻
     private static double m_lastUpdateTime = 0.0;
@@ -162,9 +199,19 @@ public static class SoundToolAudioAnalyzer
     public static float CurrentRmsDb => m_currentRmsDb;
 
     /// <summary>
+    /// リセット以降の最大ピーク値（dB）を取得します。
+    /// </summary>
+    public static float SessionMaxPeakDb => m_sessionMaxPeakDb;
+
+    /// <summary>
     /// クリッピングが発生しているかを取得します。
     /// </summary>
     public static bool IsClipping => m_isClipping;
+
+    /// <summary>
+    /// リセット以降にクリッピングが発生したかを取得します。
+    /// </summary>
+    public static bool HasClippedInSession => m_hasClippedInSession;
 
     /// <summary>
     /// リファレンス音源の記録済みピーク値（0～1、未記録時は負値）を取得します。
@@ -214,7 +261,16 @@ public static class SoundToolAudioAnalyzer
     }
 
     /// <summary>
-    /// 試聴中の AudioSource からリアルタイム解析を更新します。
+    /// セッション中の最大ピーク値とクリッピング警告フラグをリセットします。
+    /// </summary>
+    public static void ResetSessionPeakAndClip()
+    {
+        m_sessionMaxPeakDb = MIN_DISPLAY_DB;
+        m_hasClippedInSession = false;
+    }
+
+    /// <summary>
+    /// 単体試聴中の AudioSource からリアルタイム解析を更新します。
     /// </summary>
     /// <param name="source">再生中の AudioSource。</param>
     /// <param name="playingId">再生中の AudioID。</param>
@@ -222,10 +278,7 @@ public static class SoundToolAudioAnalyzer
     public static void UpdateAnalysis(AudioSource source, AudioID playingId, AudioID referenceId)
     {
         EnsureInitialized();
-
-        double now = EditorApplication.timeSinceStartup;
-        float deltaTime = m_lastUpdateTime > 0.0 ? Mathf.Clamp((float)(now - m_lastUpdateTime), 0.0f, 0.1f) : 0.016f;
-        m_lastUpdateTime = now;
+        float deltaTime = ComputeDeltaTime();
 
         if (referenceId == AudioID.None)
         {
@@ -238,56 +291,92 @@ public static class SoundToolAudioAnalyzer
             m_referenceRecordedId = referenceId;
         }
 
-        // 再生中でなければ滑らかにゼロへ減衰させる
         if (source == null || !source.isPlaying || source.clip == null)
         {
             DecayAllMeters(deltaTime);
             return;
         }
 
-        AudioClip clip = source.clip;
-        float volume = Mathf.Clamp01(source.volume);
+        Array.Clear(m_mixLeftBuffer, 0, FFT_SIZE);
+        Array.Clear(m_mixRightBuffer, 0, FFT_SIZE);
 
-        if (!TryReadAudioSamples(source, clip, volume, out float leftPeak, out float rightPeak, out float leftRms, out float rightRms))
+        TrackAnalysisInput singleInput = new TrackAnalysisInput
+        {
+            m_source = source,
+            m_effectiveVolume = Mathf.Clamp01(source.volume),
+            m_panStereo = source.panStereo,
+            m_isActive = true
+        };
+
+        if (!AccumulateTrackSamples(singleInput, out float _, out int sampleRate))
         {
             DecayAllMeters(deltaTime);
             return;
         }
 
-        // 線形振幅から dB および 0～1 正規化メーター値へ変換する
-        float maxPeakLinear = Mathf.Max(leftPeak, rightPeak);
-        float avgRmsLinear = (leftRms + rightRms) * 0.5f;
+        FinalizeMixedAnalysis(sampleRate, deltaTime, referenceId != AudioID.None && playingId == referenceId);
+    }
 
-        m_currentPeakDb = LinearToDecibel(maxPeakLinear);
-        m_currentRmsDb = LinearToDecibel(avgRmsLinear);
-        m_isClipping = maxPeakLinear >= 0.99f;
+    /// <summary>
+    /// 複数トラックの音声を加算合成してリアルタイム解析を更新します。
+    /// 各トラックの個別メーター値も同時に出力します。
+    /// </summary>
+    /// <param name="inputs">解析対象のトラック入力一覧。</param>
+    /// <param name="outTrackNormalizedPeaks">各トラックの正規化ピーク出力リスト。</param>
+    public static void UpdateMultiTrackAnalysis(
+        IReadOnlyList<TrackAnalysisInput> inputs,
+        List<float> outTrackNormalizedPeaks)
+    {
+        EnsureInitialized();
+        float deltaTime = ComputeDeltaTime();
 
-        float targetLeftPeak = DecibelToNormalized(LinearToDecibel(leftPeak));
-        float targetRightPeak = DecibelToNormalized(LinearToDecibel(rightPeak));
-        float targetLeftRms = DecibelToNormalized(LinearToDecibel(leftRms));
-        float targetRightRms = DecibelToNormalized(LinearToDecibel(rightRms));
+        Array.Clear(m_mixLeftBuffer, 0, FFT_SIZE);
+        Array.Clear(m_mixRightBuffer, 0, FFT_SIZE);
 
-        m_leftPeakNormalized = SmoothLevel(m_leftPeakNormalized, targetLeftPeak, LEVEL_FALL_SPEED * deltaTime);
-        m_rightPeakNormalized = SmoothLevel(m_rightPeakNormalized, targetRightPeak, LEVEL_FALL_SPEED * deltaTime);
-        m_leftRmsNormalized = SmoothLevel(m_leftRmsNormalized, targetLeftRms, LEVEL_FALL_SPEED * deltaTime);
-        m_rightRmsNormalized = SmoothLevel(m_rightRmsNormalized, targetRightRms, LEVEL_FALL_SPEED * deltaTime);
-
-        UpdatePeakHold(m_leftPeakNormalized, ref m_leftPeakHold, ref m_leftPeakTimer, deltaTime);
-        UpdatePeakHold(m_rightPeakNormalized, ref m_rightPeakHold, ref m_rightPeakTimer, deltaTime);
-
-        // リファレンス音源を再生している間、最大ピークを基準ラインとして記録する
-        if (referenceId != AudioID.None && playingId == referenceId)
+        if (outTrackNormalizedPeaks != null)
         {
-            float currentNorm = Mathf.Max(targetLeftPeak, targetRightPeak);
-            if (currentNorm > m_referencePeakNormalized)
+            outTrackNormalizedPeaks.Clear();
+        }
+
+        if (inputs == null || inputs.Count == 0)
+        {
+            DecayAllMeters(deltaTime);
+            return;
+        }
+
+        bool hasAnyActiveSample = false;
+        int primarySampleRate = 44100;
+
+        for (int i = 0; i < inputs.Count; i++)
+        {
+            TrackAnalysisInput input = inputs[i];
+            float trackPeakLinear = 0.0f;
+
+            if (input.m_isActive
+                && input.m_effectiveVolume > 0.0001f
+                && AccumulateTrackSamples(input, out trackPeakLinear, out int trackRate))
             {
-                m_referencePeakNormalized = currentNorm;
-                m_referencePeakDb = m_currentPeakDb;
+                hasAnyActiveSample = true;
+                if (trackRate > 0)
+                {
+                    primarySampleRate = trackRate;
+                }
+            }
+
+            if (outTrackNormalizedPeaks != null)
+            {
+                float normPeak = DecibelToNormalized(LinearToDecibel(trackPeakLinear));
+                outTrackNormalizedPeaks.Add(normPeak);
             }
         }
 
-        // FFT による 24 バンド・スペクトラム解析を実行する
-        ComputeSpectrumBands(clip.frequency, deltaTime);
+        if (!hasAnyActiveSample)
+        {
+            DecayAllMeters(deltaTime);
+            return;
+        }
+
+        FinalizeMixedAnalysis(primarySampleRate, deltaTime, false);
     }
 
     /// <summary>
@@ -360,29 +449,46 @@ public static class SoundToolAudioAnalyzer
     }
 
     /// <summary>
-    /// AudioClip（または AudioSource）から現在再生位置のサンプルを読み取り、L/R レベルと波形を抽出します。
+    /// 前回解析からの経過秒数を算出します。
     /// </summary>
-    private static bool TryReadAudioSamples(
-        AudioSource source,
-        AudioClip clip,
-        float volume,
-        out float leftPeak,
-        out float rightPeak,
-        out float leftRms,
-        out float rightRms)
+    private static float ComputeDeltaTime()
     {
-        leftPeak = 0.0f;
-        rightPeak = 0.0f;
-        leftRms = 0.0f;
-        rightRms = 0.0f;
+        double now = EditorApplication.timeSinceStartup;
+        float deltaTime = m_lastUpdateTime > 0.0 ? Mathf.Clamp((float)(now - m_lastUpdateTime), 0.0f, 0.1f) : 0.016f;
+        m_lastUpdateTime = now;
+        return deltaTime;
+    }
+
+    /// <summary>
+    /// 1トラック分の PCM サンプルを読み取り、ステレオパンと実効音量を適用して合成バッファへ加算します。
+    /// </summary>
+    private static bool AccumulateTrackSamples(
+        TrackAnalysisInput input,
+        out float trackPeakLinear,
+        out int sampleRate)
+    {
+        trackPeakLinear = 0.0f;
+        sampleRate = 44100;
+
+        AudioSource source = input.m_source;
+        if (source == null || !source.isPlaying || source.clip == null)
+        {
+            return false;
+        }
+
+        AudioClip clip = source.clip;
+        sampleRate = clip.frequency > 0 ? clip.frequency : 44100;
 
         int channels = Mathf.Max(1, clip.channels);
         int totalSamples = clip.samples;
-
         if (totalSamples <= 0)
         {
             return false;
         }
+
+        float pan = Mathf.Clamp(input.m_panStereo, -1.0f, 1.0f);
+        float leftGain = input.m_effectiveVolume * Mathf.Clamp01(1.0f - pan);
+        float rightGain = input.m_effectiveVolume * Mathf.Clamp01(1.0f + pan);
 
         int readCount = Mathf.Min(FFT_SIZE, totalSamples);
         int requiredLength = readCount * channels;
@@ -394,7 +500,6 @@ public static class SoundToolAudioAnalyzer
 
         bool isReadSuccess = false;
 
-        // Edit Mode でも確実に生波形を取るため AudioClip.GetData を優先する
         if (clip.loadState == AudioDataLoadState.Loaded && clip.loadType != AudioClipLoadType.Streaming)
         {
             try
@@ -413,47 +518,67 @@ public static class SoundToolAudioAnalyzer
             }
         }
 
-        // Streaming などで GetData が使えない場合は AudioSource.GetOutputData へフォールバックする
         if (!isReadSuccess)
         {
-            Array.Clear(m_monoSamples, 0, FFT_SIZE);
-            source.GetOutputData(m_monoSamples, 0);
-
-            float sumSq = 0.0f;
-            float peak = 0.0f;
+            Array.Clear(m_fallbackBuffer, 0, FFT_SIZE);
+            source.GetOutputData(m_fallbackBuffer, 0);
 
             for (int i = 0; i < FFT_SIZE; i++)
             {
-                float sample = m_monoSamples[i];
-                float abs = Mathf.Abs(sample);
-                if (abs > peak)
+                float sL = m_fallbackBuffer[i] * Mathf.Clamp01(1.0f - pan);
+                float sR = m_fallbackBuffer[i] * Mathf.Clamp01(1.0f + pan);
+                m_mixLeftBuffer[i] += sL;
+                m_mixRightBuffer[i] += sR;
+
+                float absMax = Mathf.Max(Mathf.Abs(sL), Mathf.Abs(sR));
+                if (absMax > trackPeakLinear)
                 {
-                    peak = abs;
+                    trackPeakLinear = absMax;
                 }
-                sumSq += sample * sample;
             }
 
-            leftPeak = peak;
-            rightPeak = peak;
-            leftRms = Mathf.Sqrt(sumSq / FFT_SIZE);
-            rightRms = leftRms;
-
-            FillWaveformPoints();
             return true;
         }
-
-        float sumSqL = 0.0f;
-        float sumSqR = 0.0f;
-        Array.Clear(m_monoSamples, 0, FFT_SIZE);
 
         for (int i = 0; i < readCount; i++)
         {
             int baseIndex = i * channels;
-            float sampleL = m_pcmBuffer[baseIndex] * volume;
-            float sampleR = channels > 1 ? m_pcmBuffer[baseIndex + 1] * volume : sampleL;
+            float rawL = m_pcmBuffer[baseIndex];
+            float rawR = channels > 1 ? m_pcmBuffer[baseIndex + 1] : rawL;
 
-            float absL = Mathf.Abs(sampleL);
-            float absR = Mathf.Abs(sampleR);
+            float sL = rawL * leftGain;
+            float sR = rawR * rightGain;
+
+            m_mixLeftBuffer[i] += sL;
+            m_mixRightBuffer[i] += sR;
+
+            float absMax = Mathf.Max(Mathf.Abs(sL), Mathf.Abs(sR));
+            if (absMax > trackPeakLinear)
+            {
+                trackPeakLinear = absMax;
+            }
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// 加算合成された L/R バッファからマスターのレベル・波形・24バンド FFT を算出します。
+    /// </summary>
+    private static void FinalizeMixedAnalysis(int sampleRate, float deltaTime, bool isRecordingReference)
+    {
+        float leftPeak = 0.0f;
+        float rightPeak = 0.0f;
+        float sumSqL = 0.0f;
+        float sumSqR = 0.0f;
+
+        for (int i = 0; i < FFT_SIZE; i++)
+        {
+            float sL = m_mixLeftBuffer[i];
+            float sR = m_mixRightBuffer[i];
+
+            float absL = Mathf.Abs(sL);
+            float absR = Mathf.Abs(sR);
 
             if (absL > leftPeak)
             {
@@ -465,17 +590,55 @@ public static class SoundToolAudioAnalyzer
                 rightPeak = absR;
             }
 
-            sumSqL += sampleL * sampleL;
-            sumSqR += sampleR * sampleR;
-
-            m_monoSamples[i] = (sampleL + sampleR) * 0.5f;
+            sumSqL += sL * sL;
+            sumSqR += sR * sR;
+            m_monoSamples[i] = (sL + sR) * 0.5f;
         }
 
-        leftRms = Mathf.Sqrt(sumSqL / readCount);
-        rightRms = Mathf.Sqrt(sumSqR / readCount);
+        float leftRms = Mathf.Sqrt(sumSqL / FFT_SIZE);
+        float rightRms = Mathf.Sqrt(sumSqR / FFT_SIZE);
+        float maxPeakLinear = Mathf.Max(leftPeak, rightPeak);
+        float avgRmsLinear = (leftRms + rightRms) * 0.5f;
+
+        m_currentPeakDb = LinearToDecibel(maxPeakLinear);
+        m_currentRmsDb = LinearToDecibel(avgRmsLinear);
+        m_isClipping = maxPeakLinear >= CLIP_THRESHOLD;
+
+        if (m_currentPeakDb > m_sessionMaxPeakDb)
+        {
+            m_sessionMaxPeakDb = m_currentPeakDb;
+        }
+
+        if (m_isClipping)
+        {
+            m_hasClippedInSession = true;
+        }
+
+        float targetLeftPeak = DecibelToNormalized(LinearToDecibel(leftPeak));
+        float targetRightPeak = DecibelToNormalized(LinearToDecibel(rightPeak));
+        float targetLeftRms = DecibelToNormalized(LinearToDecibel(leftRms));
+        float targetRightRms = DecibelToNormalized(LinearToDecibel(rightRms));
+
+        m_leftPeakNormalized = SmoothLevel(m_leftPeakNormalized, targetLeftPeak, LEVEL_FALL_SPEED * deltaTime);
+        m_rightPeakNormalized = SmoothLevel(m_rightPeakNormalized, targetRightPeak, LEVEL_FALL_SPEED * deltaTime);
+        m_leftRmsNormalized = SmoothLevel(m_leftRmsNormalized, targetLeftRms, LEVEL_FALL_SPEED * deltaTime);
+        m_rightRmsNormalized = SmoothLevel(m_rightRmsNormalized, targetRightRms, LEVEL_FALL_SPEED * deltaTime);
+
+        UpdatePeakHold(m_leftPeakNormalized, ref m_leftPeakHold, ref m_leftPeakTimer, deltaTime);
+        UpdatePeakHold(m_rightPeakNormalized, ref m_rightPeakHold, ref m_rightPeakTimer, deltaTime);
+
+        if (isRecordingReference)
+        {
+            float currentNorm = Mathf.Max(targetLeftPeak, targetRightPeak);
+            if (currentNorm > m_referencePeakNormalized)
+            {
+                m_referencePeakNormalized = currentNorm;
+                m_referencePeakDb = m_currentPeakDb;
+            }
+        }
 
         FillWaveformPoints();
-        return true;
+        ComputeSpectrumBands(sampleRate, deltaTime);
     }
 
     /// <summary>
@@ -497,7 +660,6 @@ public static class SoundToolAudioAnalyzer
     /// </summary>
     private static void ComputeSpectrumBands(int sampleRate, float deltaTime)
     {
-        // ハニング窓を適用して入力をセットする
         for (int i = 0; i < FFT_SIZE; i++)
         {
             m_fftReal[i] = m_monoSamples[i] * m_hannWindow[i];
@@ -537,7 +699,6 @@ public static class SoundToolAudioAnalyzer
                 }
             }
 
-            // 高域のエネルギー減衰を視覚的に見やすく補正して dB 正規化する
             float visualBoost = 1.0f + (t0 * 1.8f);
             float bandDb = LinearToDecibel(maxMagnitude * visualBoost * 2.2f);
             float targetValue = DecibelToNormalized(bandDb);
@@ -552,7 +713,6 @@ public static class SoundToolAudioAnalyzer
     /// </summary>
     private static void ExecuteRadix2Fft(float[] real, float[] imag, int n)
     {
-        // ビット反転による並び替え
         int j = 0;
         for (int i = 0; i < n; i++)
         {
@@ -576,7 +736,6 @@ public static class SoundToolAudioAnalyzer
             j |= bit;
         }
 
-        // バタフライ演算
         for (int len = 2; len <= n; len <<= 1)
         {
             float angle = -2.0f * Mathf.PI / len;
