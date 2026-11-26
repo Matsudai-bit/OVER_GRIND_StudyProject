@@ -396,6 +396,10 @@ public class SplineGrindController : MonoBehaviour
         {
             ContactPoint contact = collision.GetContact(i);
             if (!IsObstacle(contact.otherCollider)) continue;
+            AttackReactiveInteractObject dynamicObject =
+                contact.otherCollider.GetComponentInParent<AttackReactiveInteractObject>();
+            if (dynamicObject != null &&
+                dynamicObject.TryPushAlongRail(m_motor.RailVelocity)) continue;
             ExitGrindOnCollision(contact.normal);
             return;
         }

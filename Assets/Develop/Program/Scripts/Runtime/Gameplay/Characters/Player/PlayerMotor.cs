@@ -510,6 +510,16 @@ public sealed class PlayerMotor : MonoBehaviour
                 {
                     continue;
                 }
+
+                // 移動済みの動的オブジェクトは押し出してレールを進みます。
+                AttackReactiveInteractObject dynamicObject =
+                    hitCollider.GetComponentInParent<AttackReactiveInteractObject>();
+                if (dynamicObject != null &&
+                    dynamicObject.TryPushAlongRail(displacement / deltaTime))
+                {
+                    continue;
+                }
+
                 if (!isForcedExit)
                 {
                     continue;

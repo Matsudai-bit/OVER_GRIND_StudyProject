@@ -52,6 +52,10 @@ public sealed class AttackReactiveInteractObject : MonoBehaviour,
     [Tooltip("最初に吹き飛ぶまでは物理的に動かない状態にします。")]
     private bool m_startAsKinematic = true;
 
+    [SerializeField, Range(0.0f, 1.0f)]
+    [Tooltip("吹き飛び後の本体が通常移動中のPlayerとの衝突で得る水平速度の割合です。1は従来どおり、0は衝突による加速を抑えます。")]
+    private float m_playerContactPushMultiplier = 1.0f;
+
     [SerializeField]
     [Tooltip("親階層のTransform同期で物理移動が上書きされないよう、物理開始時に親から切り離します。")]
     private bool m_detachFromParentForPhysics = true;
@@ -121,6 +125,8 @@ public sealed class AttackReactiveInteractObject : MonoBehaviour,
     private int m_acceptedChargedAttackSessionId;
     private float m_settleTimer;
     private float m_lastGroundContactTime = float.NegativeInfinity;
+    private Vector3 m_velocityBeforePhysics;
+    private float m_lastPlayerPushFixedTime = float.NegativeInfinity;
     private Vector3 m_visualBaseLocalPosition;
     private Quaternion m_visualBaseLocalRotation;
     private Renderer[] m_visualRenderers;
@@ -135,6 +141,29 @@ public sealed class AttackReactiveInteractObject : MonoBehaviour,
 
     /// <summary>一度以上吹き飛ばされたか取得します。</summary>
     public bool HasBeenLaunched => m_hasBeenLaunched;
+
+    /// <summary>レール上のPlayerに接触したとき、移動済みの本体を進行方向へ押します。</summary>
+    /// <param name="railVelocity">Playerのレール上での移動速度。</param>
+    /// <returns>true：レール移動を妨げない対象。false：まだ押し出せない対象。</returns>
+    public bool TryPushAlongRail(Vector3 railVelocity)
+    {
+        if (!isActiveAndEnabled || !m_hasBeenLaunched ||
+            m_rigidbody == null || m_rigidbody.isKinematic)
+        {
+            return false;
+        }
+
+        float speed = railVelocity.magnitude;
+        if (speed > DIRECTION_EPSILON)
+        {
+            Vector3 direction = railVelocity / speed;
+            float additionalSpeed = Mathf.Max(
+                0.0f, speed - Vector3.Dot(m_rigidbody.linearVelocity, direction));
+            m_rigidbody.linearVelocity += direction * additionalSpeed;
+        }
+
+        return true;
+    }
 
     /// <summary>必要な参照を取得し、初期物理状態を設定します。</summary>
     private void Awake()
@@ -257,7 +286,13 @@ public sealed class AttackReactiveInteractObject : MonoBehaviour,
     /// <summary>吹き飛び後の停止状態を監視し、再攻撃待ちへ戻します。</summary>
     private void FixedUpdate()
     {
-        if (!m_isRecoveringFromLaunch || m_rigidbody == null)
+        if (m_rigidbody == null)
+        {
+            return;
+        }
+
+        m_velocityBeforePhysics = m_rigidbody.linearVelocity;
+        if (!m_isRecoveringFromLaunch)
         {
             return;
         }
@@ -349,10 +384,54 @@ public sealed class AttackReactiveInteractObject : MonoBehaviour,
     }
 
     /// <summary>着地した物理接触を記録します。</summary>
-    private void OnCollisionEnter(Collision collision) => RecordGroundContact(collision);
+    private void OnCollisionEnter(Collision collision)
+    {
+        RecordGroundContact(collision);
+        ApplyPlayerContactPushMultiplier(collision);
+    }
 
     /// <summary>接地中の物理接触を更新します。</summary>
-    private void OnCollisionStay(Collision collision) => RecordGroundContact(collision);
+    private void OnCollisionStay(Collision collision)
+    {
+        RecordGroundContact(collision);
+        ApplyPlayerContactPushMultiplier(collision);
+    }
+
+    /// <summary>吹き飛び後のPlayer衝突で増えた水平速度を、オブジェクトごとの設定に合わせます。</summary>
+    /// <param name="collision">Playerとの物理衝突情報。</param>
+    private void ApplyPlayerContactPushMultiplier(Collision collision)
+    {
+        if (!m_hasBeenLaunched ||
+            m_rigidbody == null || m_rigidbody.isKinematic ||
+            m_playerContactPushMultiplier >= 1.0f ||
+            m_lastPlayerPushFixedTime == Time.fixedTime ||
+            collision.collider == null || collision.rigidbody == null ||
+            collision.rigidbody.isKinematic ||
+            collision.collider.GetComponentInParent<PlayerMotor>() == null)
+        {
+            return;
+        }
+
+        Vector3 pushDirection = Vector3.ProjectOnPlane(
+            m_rigidbody.worldCenterOfMass - collision.rigidbody.worldCenterOfMass,
+            Vector3.up);
+        if (pushDirection.sqrMagnitude <= DIRECTION_EPSILON)
+        {
+            return;
+        }
+
+        pushDirection.Normalize();
+        Vector3 velocity = m_rigidbody.linearVelocity;
+        float gainedSpeed = Vector3.Dot(velocity - m_velocityBeforePhysics, pushDirection);
+        if (gainedSpeed <= 0.0f)
+        {
+            return;
+        }
+
+        velocity -= pushDirection * gainedSpeed * (1.0f - m_playerContactPushMultiplier);
+        m_rigidbody.linearVelocity = velocity;
+        m_lastPlayerPushFixedTime = Time.fixedTime;
+    }
 
     /// <summary>床レイヤーの上向き接触面を検出し、時刻を記録します。</summary>
     /// <param name="collision">物理衝突情報。</param>
@@ -733,6 +812,7 @@ public sealed class AttackReactiveInteractObject : MonoBehaviour,
             Mathf.Max(0.0f, m_launchImpulseMultiplier);
         m_playerFacingCorrectionRate =
             Mathf.Clamp01(m_playerFacingCorrectionRate);
+        m_playerContactPushMultiplier = Mathf.Clamp01(m_playerContactPushMultiplier);
         m_upwardDirectionRate = Mathf.Clamp01(m_upwardDirectionRate);
         m_settleDuration = Mathf.Max(0.0f, m_settleDuration);
         m_maxSettleLinearSpeed = Mathf.Max(0.0f, m_maxSettleLinearSpeed);
