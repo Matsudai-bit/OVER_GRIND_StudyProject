@@ -122,6 +122,9 @@ public sealed class PlayerMotor : MonoBehaviour
     private CollisionDetectionMode m_previousCollisionDetection;
     private Vector3 m_railVelocity;
     private readonly PlayerRailCollisionGuard m_railCollisionGuard = new PlayerRailCollisionGuard();
+    private float m_lastDynamicObjectContactTime = float.NegativeInfinity;
+    private float m_dynamicObjectContactMultiplier = 1.0f;
+    private Vector3 m_dynamicObjectContactDirection;
 
     // 物理演算前の速度を保持し、衝突応答だけで上向き速度が発生したか判定します。
     private float m_verticalVelocityBeforePhysics;
@@ -204,6 +207,7 @@ public sealed class PlayerMotor : MonoBehaviour
     private void OnCollisionEnter(Collision collision)
     {
         PreventUnintentionalCollisionLift(collision);
+        RecordDynamicObjectContact(collision);
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         RecordRailJumpContact(collision);
 #endif
@@ -214,9 +218,49 @@ public sealed class PlayerMotor : MonoBehaviour
     private void OnCollisionStay(Collision collision)
     {
         PreventUnintentionalCollisionLift(collision);
+        RecordDynamicObjectContact(collision);
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         RecordRailJumpContact(collision);
 #endif
+    }
+
+    /// <summary>次の物理更新でも押し込み速度を制限できるよう、接触中の動的オブジェクトを記録します。</summary>
+    /// <param name="collision">接触情報。</param>
+    private void RecordDynamicObjectContact(Collision collision)
+    {
+        if (!m_isInitialized || m_isRailMotionActive || collision.collider == null ||
+            collision.rigidbody == null)
+        {
+            return;
+        }
+
+        AttackReactiveInteractObject dynamicObject =
+            collision.collider.GetComponentInParent<AttackReactiveInteractObject>();
+        if (dynamicObject == null || dynamicObject.PlayerContactPushMultiplier >= 1.0f)
+        {
+            return;
+        }
+
+        Vector3 direction = Vector3.ProjectOnPlane(
+            collision.rigidbody.worldCenterOfMass - m_playerRigidbody.worldCenterOfMass,
+            Vector3.up);
+        if (direction.sqrMagnitude <= DIRECTION_SQR_THRESHOLD)
+        {
+            return;
+        }
+
+        if (m_lastDynamicObjectContactTime != Time.fixedTime)
+        {
+            m_dynamicObjectContactMultiplier = 1.0f;
+        }
+
+        if (dynamicObject.PlayerContactPushMultiplier < m_dynamicObjectContactMultiplier)
+        {
+            m_dynamicObjectContactMultiplier = dynamicObject.PlayerContactPushMultiplier;
+            m_dynamicObjectContactDirection = direction.normalized;
+        }
+
+        m_lastDynamicObjectContactTime = Time.fixedTime;
     }
 
     /// <summary>高速移動中の衝突が生成した、意図しない上向き速度を除去します。</summary>
@@ -1421,6 +1465,8 @@ public sealed class PlayerMotor : MonoBehaviour
                     deltaTime)
                 : alignedMoveVelocity;
 
+        nextMoveVelocity = LimitVelocityForDynamicObjects(nextMoveVelocity, deltaTime);
+
         Vector3 currentVelocity =
             m_playerRigidbody.linearVelocity;
 
@@ -2293,19 +2339,57 @@ public sealed class PlayerMotor : MonoBehaviour
         return true;
     }
 
+    /// <summary>移動済みの動的オブジェクトへ向かう速度を、そのオブジェクトの押し込み倍率で制限します。</summary>
+    /// <param name="velocity">適用予定の移動速度。</param>
+    /// <param name="deltaTime">物理更新時間。</param>
+    /// <returns>動的オブジェクトへの押し込みを考慮した速度。</returns>
+    private Vector3 LimitVelocityForDynamicObjects(Vector3 velocity, float deltaTime)
+    {
+        if (m_isRailMotionActive || m_playerRigidbody.isKinematic ||
+            deltaTime <= 0.0f || velocity.sqrMagnitude <= DIRECTION_SQR_THRESHOLD)
+        {
+            return velocity;
+        }
+
+        float multiplier = 1.0f;
+        if (Time.fixedTime - m_lastDynamicObjectContactTime <= deltaTime * 1.5f &&
+            Vector3.Dot(velocity, m_dynamicObjectContactDirection) > 0.0f)
+        {
+            multiplier = m_dynamicObjectContactMultiplier;
+        }
+
+        float speed = velocity.magnitude;
+        RaycastHit[] hits = m_playerRigidbody.SweepTestAll(
+            velocity / speed,
+            speed * deltaTime + m_obstacleSkinWidth,
+            QueryTriggerInteraction.Ignore);
+
+        foreach (RaycastHit hit in hits)
+        {
+            if (hit.collider == null ||
+                hit.collider.attachedRigidbody == m_playerRigidbody)
+            {
+                continue;
+            }
+
+            AttackReactiveInteractObject dynamicObject =
+                hit.collider.GetComponentInParent<AttackReactiveInteractObject>();
+            if (dynamicObject != null)
+            {
+                multiplier = Mathf.Min(multiplier, dynamicObject.PlayerContactPushMultiplier);
+            }
+        }
+
+        return velocity * multiplier;
+    }
+
     /// <summary>
     /// 進行方向に障害物がある場合、
     /// 実際の現在速度を基準に緩やかに減速させます。
     /// </summary>
-    /// <param name="horizontalVelocity">
-    /// 要求されている目標水平速度。
-    /// </param>
-    /// <param name="deltaTime">
-    /// この速度が適用される時間幅。
-    /// </param>
-    /// <returns>
-    /// 障害物を考慮した水平速度。
-    /// </returns>
+    /// <param name="horizontalVelocity">要求されている目標水平速度。</param>
+    /// <param name="deltaTime">この速度が適用される時間幅。</param>
+    /// <returns>障害物を考慮した水平速度。</returns>
     private Vector3 ClampVelocityForObstacles(
         Vector3 horizontalVelocity,
         float deltaTime)

@@ -53,7 +53,7 @@ public sealed class AttackReactiveInteractObject : MonoBehaviour,
     private bool m_startAsKinematic = true;
 
     [SerializeField, Range(0.0f, 1.0f)]
-    [Tooltip("吹き飛び後の本体が通常移動中のPlayerとの衝突で得る水平速度の割合です。1は従来どおり、0は衝突による加速を抑えます。")]
+    [Tooltip("吹き飛び後にPlayerが接触した際の、Playerの押し込み速度倍率です。1は従来どおり、0は移動入力による押し込みを止めます。")]
     private float m_playerContactPushMultiplier = 1.0f;
 
     [SerializeField]
@@ -125,8 +125,6 @@ public sealed class AttackReactiveInteractObject : MonoBehaviour,
     private int m_acceptedChargedAttackSessionId;
     private float m_settleTimer;
     private float m_lastGroundContactTime = float.NegativeInfinity;
-    private Vector3 m_velocityBeforePhysics;
-    private float m_lastPlayerPushFixedTime = float.NegativeInfinity;
     private Vector3 m_visualBaseLocalPosition;
     private Quaternion m_visualBaseLocalRotation;
     private Renderer[] m_visualRenderers;
@@ -141,6 +139,12 @@ public sealed class AttackReactiveInteractObject : MonoBehaviour,
 
     /// <summary>一度以上吹き飛ばされたか取得します。</summary>
     public bool HasBeenLaunched => m_hasBeenLaunched;
+
+    /// <summary>吹き飛び後のPlayer接触時に適用する移動速度倍率を取得します。</summary>
+    public float PlayerContactPushMultiplier =>
+        m_hasBeenLaunched && m_rigidbody != null && !m_rigidbody.isKinematic
+            ? m_playerContactPushMultiplier
+            : 1.0f;
 
     /// <summary>レール上のPlayerに接触したとき、移動済みの本体を進行方向へ押します。</summary>
     /// <param name="railVelocity">Playerのレール上での移動速度。</param>
@@ -286,13 +290,7 @@ public sealed class AttackReactiveInteractObject : MonoBehaviour,
     /// <summary>吹き飛び後の停止状態を監視し、再攻撃待ちへ戻します。</summary>
     private void FixedUpdate()
     {
-        if (m_rigidbody == null)
-        {
-            return;
-        }
-
-        m_velocityBeforePhysics = m_rigidbody.linearVelocity;
-        if (!m_isRecoveringFromLaunch)
+        if (!m_isRecoveringFromLaunch || m_rigidbody == null)
         {
             return;
         }
@@ -384,54 +382,10 @@ public sealed class AttackReactiveInteractObject : MonoBehaviour,
     }
 
     /// <summary>着地した物理接触を記録します。</summary>
-    private void OnCollisionEnter(Collision collision)
-    {
-        RecordGroundContact(collision);
-        ApplyPlayerContactPushMultiplier(collision);
-    }
+    private void OnCollisionEnter(Collision collision) => RecordGroundContact(collision);
 
     /// <summary>接地中の物理接触を更新します。</summary>
-    private void OnCollisionStay(Collision collision)
-    {
-        RecordGroundContact(collision);
-        ApplyPlayerContactPushMultiplier(collision);
-    }
-
-    /// <summary>吹き飛び後のPlayer衝突で増えた水平速度を、オブジェクトごとの設定に合わせます。</summary>
-    /// <param name="collision">Playerとの物理衝突情報。</param>
-    private void ApplyPlayerContactPushMultiplier(Collision collision)
-    {
-        if (!m_hasBeenLaunched ||
-            m_rigidbody == null || m_rigidbody.isKinematic ||
-            m_playerContactPushMultiplier >= 1.0f ||
-            m_lastPlayerPushFixedTime == Time.fixedTime ||
-            collision.collider == null || collision.rigidbody == null ||
-            collision.rigidbody.isKinematic ||
-            collision.collider.GetComponentInParent<PlayerMotor>() == null)
-        {
-            return;
-        }
-
-        Vector3 pushDirection = Vector3.ProjectOnPlane(
-            m_rigidbody.worldCenterOfMass - collision.rigidbody.worldCenterOfMass,
-            Vector3.up);
-        if (pushDirection.sqrMagnitude <= DIRECTION_EPSILON)
-        {
-            return;
-        }
-
-        pushDirection.Normalize();
-        Vector3 velocity = m_rigidbody.linearVelocity;
-        float gainedSpeed = Vector3.Dot(velocity - m_velocityBeforePhysics, pushDirection);
-        if (gainedSpeed <= 0.0f)
-        {
-            return;
-        }
-
-        velocity -= pushDirection * gainedSpeed * (1.0f - m_playerContactPushMultiplier);
-        m_rigidbody.linearVelocity = velocity;
-        m_lastPlayerPushFixedTime = Time.fixedTime;
-    }
+    private void OnCollisionStay(Collision collision) => RecordGroundContact(collision);
 
     /// <summary>床レイヤーの上向き接触面を検出し、時刻を記録します。</summary>
     /// <param name="collision">物理衝突情報。</param>
