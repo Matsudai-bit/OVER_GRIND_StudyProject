@@ -27,7 +27,13 @@ public class AudioManager : MonoBehaviour
     [SerializeField] private AudioMixerGroup m_bgmGroup;
     [SerializeField] private AudioMixerGroup m_seInGameGroup;
     [SerializeField] private AudioMixerGroup m_seSystemGroup;
+    [SerializeField] private AudioMixerGroup m_sePlayerGroup;
     [SerializeField] private AudioMixerGroup m_voiceGroup;
+    [SerializeField] private AudioMixerGroup m_id1;
+    [SerializeField] private AudioMixerGroup m_id2;
+    [SerializeField] private AudioMixerGroup m_id3;
+    [SerializeField] private AudioMixerGroup m_id4;
+    [SerializeField] private AudioMixerGroup m_id5;
 
     [Header("ポーズ中も再生する音声カテゴリ")]
     [SerializeField] private bool m_keepBgmPlayingDuringPause = true;
@@ -476,6 +482,12 @@ public class AudioManager : MonoBehaviour
             SoundCategory.BGM => m_bgmGroup,
             SoundCategory.SE_InGame => m_seInGameGroup,
             SoundCategory.Voice => m_voiceGroup,
+            SoundCategory.SE_InGame_Player => m_sePlayerGroup,
+            SoundCategory.ID_1 => m_id1,
+            SoundCategory.ID_2 => m_id2,
+            SoundCategory.ID_3 => m_id3,
+            SoundCategory.ID_4 => m_id4,
+            SoundCategory.ID_5 => m_id5,
             _ => m_seSystemGroup,
         };
     }
