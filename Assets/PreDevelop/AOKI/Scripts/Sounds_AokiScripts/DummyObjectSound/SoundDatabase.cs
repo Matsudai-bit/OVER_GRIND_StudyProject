@@ -10,7 +10,12 @@ public enum SoundCategory
     SE_InGame,  // バトル中などに鳴るSE（ポーズやシーン遷移等で止める対象）
     SE_System,  // UIなど常に鳴るSE
     Voice,
-    SE_InGame_Player
+    SE_InGame_Player,
+    ID_1,
+    ID_2,
+    ID_3,
+    ID_4,
+    ID_5,
 }
 
 
