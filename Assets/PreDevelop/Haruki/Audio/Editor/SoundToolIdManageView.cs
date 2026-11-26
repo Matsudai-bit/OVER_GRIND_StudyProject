@@ -11,20 +11,20 @@ using UnityEngine;
 /// </summary>
 public enum IdManageSubTab
 {
-    TAB_CATEGORY_EDIT,
+    TAB_CATEGORY_AND_BULK,
     TAB_ADD_ID,
     TAB_DELETE_ID
 }
 
 /// <summary>
-/// AudioID のカテゴリー変更・新規追加・削除を音源を試聴しながら行える画面です。
+/// AudioID のカテゴリー・3D音源・距離減衰の一括／個別変更、新規追加、削除を音源を試聴しながら行える画面です。
 /// </summary>
 public sealed class SoundToolIdManageView
 {
     // ドロップ領域の高さ
     private const float DROP_AREA_HEIGHT = 52.0f;
 
-    // 1行の標準高さ（カテゴリー変更・削除）
+    // 1行の標準高さ（一括編集・削除）
     private const float COMPACT_ROW_HEIGHT = 26.0f;
 
     // 行左端のカラー帯の幅
@@ -33,14 +33,20 @@ public sealed class SoundToolIdManageView
     // 行番号欄の幅
     private const float ROW_INDEX_WIDTH = 24.0f;
 
+    // 選択チェックボックスの幅
+    private const float SELECT_TOGGLE_WIDTH = 18.0f;
+
     // 試聴ボタンの幅
     private const float PREVIEW_BUTTON_WIDTH = 26.0f;
+
+    // 2D/3D 切り替えバッジの幅
+    private const float DIMENSION_BADGE_WIDTH = 34.0f;
 
     // 行削除ボタンの幅
     private const float REMOVE_BUTTON_WIDTH = 24.0f;
 
     // カテゴリー選択ドロップダウンの幅
-    private const float CATEGORY_POPUP_WIDTH = 136.0f;
+    private const float CATEGORY_POPUP_WIDTH = 128.0f;
 
     // 音量ラベルの幅
     private const float VOLUME_LABEL_WIDTH = 32.0f;
@@ -49,16 +55,25 @@ public sealed class SoundToolIdManageView
     private const float DETAIL_BUTTON_WIDTH = 56.0f;
 
     // カテゴリータグの幅
-    private const float CATEGORY_TAG_WIDTH = 98.0f;
+    private const float CATEGORY_TAG_WIDTH = 96.0f;
 
-    // ID 名表示欄の最小幅
-    private const float ID_NAME_WIDTH = 240.0f;
+    // ID 名表示欄の幅
+    private const float ID_NAME_WIDTH = 225.0f;
 
     // 確認ダイアログに表示する ID 名の最大件数
     private const int DIALOG_PREVIEW_COUNT = 8;
 
     // 「すべて」カテゴリータブのインデックス
     private const int CATEGORY_TAB_ALL = 0;
+
+    // 2D/3D フィルタ：すべて
+    private const int FILTER_DIM_ALL = 0;
+
+    // 2D/3D フィルタ：2D のみ
+    private const int FILTER_DIM_2D = 1;
+
+    // 2D/3D フィルタ：3D のみ
+    private const int FILTER_DIM_3D = 2;
 
     // 音量の最小値
     private const float MIN_VOLUME = 0.0f;
@@ -84,11 +99,26 @@ public sealed class SoundToolIdManageView
     // エラー表示の色
     private static readonly Color ERROR_COLOR = new Color(1.0f, 0.4f, 0.4f);
 
+    // 警告表示の色
+    private static readonly Color WARNING_COLOR = new Color(1.0f, 0.68f, 0.25f);
+
     // 補足表示の色
     private static readonly Color HINT_COLOR = new Color(0.7f, 0.7f, 0.7f);
 
+    // 選択中行の背景ハイライト色
+    private static readonly Color SELECTED_ROW_COLOR = new Color(0.28f, 0.58f, 0.96f, 0.20f);
+
     // 試聴中行の背景ハイライト色
     private static readonly Color PLAYING_ROW_COLOR = new Color(0.28f, 0.78f, 0.40f, 0.22f);
+
+    // 2D バッジの色
+    private static readonly Color BADGE_2D_COLOR = new Color(0.25f, 0.55f, 0.80f);
+
+    // 3D バッジの色
+    private static readonly Color BADGE_3D_COLOR = new Color(0.88f, 0.50f, 0.18f);
+
+    // 一括適用ボタンの色
+    private static readonly Color APPLY_BUTTON_COLOR = new Color(0.45f, 0.85f, 1.0f);
 
     // 削除ボタンの色
     private static readonly Color DELETE_BUTTON_COLOR = new Color(1.0f, 0.5f, 0.5f);
@@ -96,10 +126,16 @@ public sealed class SoundToolIdManageView
     // サブタブの表示ラベル
     private static readonly string[] SUB_TAB_LABELS =
     {
-        "カテゴリー変更（試聴）",
+        "一括・個別編集（カテゴリー / 3D / 試聴）",
         "ID の新規追加",
         "ID の削除"
     };
+
+    // 2D/3D フィルタの表示ラベル
+    private static readonly string[] DIMENSION_FILTER_LABELS = { "すべて", "2D", "3D" };
+
+    // 3D 音源 ON/OFF の選択ラベル
+    private static readonly string[] IS_3D_VALUE_LABELS = { "2D 音源 (OFF)", "3D 音源 (ON)" };
 
     // カテゴリー値一覧
     private static readonly SoundCategory[] CATEGORY_VALUES = (SoundCategory[])Enum.GetValues(typeof(SoundCategory));
@@ -142,8 +178,14 @@ public sealed class SoundToolIdManageView
     // 登録済みの ID 名（None を含む・重複確認用）
     private readonly HashSet<string> m_existingNames = new HashSet<string>(StringComparer.Ordinal);
 
+    // 一括編集対象に選択した AudioID
+    private readonly HashSet<AudioID> m_bulkSelectedIds = new HashSet<AudioID>();
+
     // 削除対象に選択した ID 名
     private readonly HashSet<string> m_deleteSelectedNames = new HashSet<string>(StringComparer.Ordinal);
+
+    // 一括適用する詳細設定（カテゴリー・3D・距離減衰・ループ・ピッチ）
+    private readonly SoundToolBulkSettings m_bulkSettings = new SoundToolBulkSettings();
 
     // カテゴリータブの表示名
     private readonly string[] m_categoryTabLabels = new string[CATEGORY_VALUES.Length + 1];
@@ -152,13 +194,13 @@ public sealed class SoundToolIdManageView
     private readonly int[] m_categoryCounts = new int[CATEGORY_VALUES.Length + 1];
 
     // 選択中のサブタブ
-    private IdManageSubTab m_subTab = IdManageSubTab.TAB_CATEGORY_EDIT;
+    private IdManageSubTab m_subTab = IdManageSubTab.TAB_CATEGORY_AND_BULK;
 
     // 追加時の初期カテゴリー
     private SoundCategory m_defaultCategory = SoundCategory.BGM;
 
-    // カテゴリー変更一覧のスクロール位置
-    private Vector2 m_categoryScrollPosition = Vector2.zero;
+    // 一括編集一覧のスクロール位置
+    private Vector2 m_bulkScrollPosition = Vector2.zero;
 
     // 追加予定一覧のスクロール位置
     private Vector2 m_addScrollPosition = Vector2.zero;
@@ -166,11 +208,20 @@ public sealed class SoundToolIdManageView
     // 削除一覧のスクロール位置
     private Vector2 m_deleteScrollPosition = Vector2.zero;
 
-    // カテゴリー変更一覧の検索文字列
-    private string m_categorySearchText = "";
+    // 一括編集一覧の検索文字列
+    private string m_editSearchText = "";
 
-    // カテゴリー変更一覧のフィルタタブ位置
+    // 一括編集一覧のカテゴリーフィルタ位置
     private int m_categoryFilterIndex = CATEGORY_TAB_ALL;
+
+    // 一括編集一覧の 2D/3D フィルタ
+    private int m_dimensionFilterIndex = FILTER_DIM_ALL;
+
+    // 下部の一括変更パネルを開いているか
+    private bool m_isBulkPanelOpen = true;
+
+    // 最後にチェック操作した行インデックス（Shift 範囲選択用）
+    private int m_lastBulkToggledIndex = -1;
 
     // 削除一覧の検索文字列
     private string m_deleteSearchText = "";
@@ -223,7 +274,6 @@ public sealed class SoundToolIdManageView
             return;
         }
 
-        // 上部固定：モード切替サブタブと試聴ステータスバー
         DrawSubTabBar();
         DrawPreviewStatusBar();
 
@@ -238,13 +288,13 @@ public sealed class SoundToolIdManageView
                 break;
 
             default:
-                DrawCategoryEditTab(database);
+                DrawCategoryAndBulkTab(database);
                 break;
         }
     }
 
     /// <summary>
-    /// 画面上部のサブタブ（カテゴリー変更・追加・削除）を描画します。
+    /// 画面上部のサブタブを描画します。
     /// </summary>
     private void DrawSubTabBar()
     {
@@ -269,7 +319,7 @@ public sealed class SoundToolIdManageView
         }
         else
         {
-            GUILayout.Label("各行の ▶ ボタンで音源を聴きながら操作できます。", EditorStyles.miniLabel);
+            GUILayout.Label("各行の ▶ で試聴、チェック選択（Shift範囲選択可）でカテゴリー・3D・距離減衰を一括変更できます。", EditorStyles.miniLabel);
         }
 
         GUILayout.FlexibleSpace();
@@ -292,30 +342,56 @@ public sealed class SoundToolIdManageView
     }
 
     /// <summary>
-    /// カテゴリー変更タブを描画します（上部フィルタ固定＋中央リスト全面スクロール）。
+    /// カテゴリー・3D・距離減衰の一括および個別編集タブを描画します。
     /// </summary>
-    private void DrawCategoryEditTab(SoundDatabase database)
+    private void DrawCategoryAndBulkTab(SoundDatabase database)
     {
-        List<SoundDatabase.SoundData> visibleList = BuildVisibleCategoryEditList(database);
+        List<SoundDatabase.SoundData> visibleList = BuildVisibleEditList(database);
 
-        // 上部固定：検索とカテゴリーフィルタ
+        // 上部固定：検索・2D/3Dフィルタ・カテゴリータブ・選択操作
+        DrawEditFilterAndSelectionHeader(visibleList);
+
+        // 中央スクロール領域：ID が増えても上下の UI が見切れない
+        m_bulkScrollPosition = EditorGUILayout.BeginScrollView(m_bulkScrollPosition, GUILayout.ExpandHeight(true));
+
+        if (visibleList.Count == 0)
+        {
+            EditorGUILayout.HelpBox("条件に一致する音源がありません。", MessageType.Info);
+        }
+
+        for (int i = 0; i < visibleList.Count; i++)
+        {
+            DrawEditRow(database, visibleList, visibleList[i], i);
+        }
+
+        EditorGUILayout.EndScrollView();
+
+        // 下部固定：選択中音源への一括変更パネル（カテゴリー / 3D音源 / 距離減衰 / ループ / ピッチ）
+        DrawBulkEditFooterPanel(database);
+    }
+
+    /// <summary>
+    /// 検索・2D/3D・カテゴリー絞り込み・選択操作のヘッダーを描画します。
+    /// </summary>
+    private void DrawEditFilterAndSelectionHeader(List<SoundDatabase.SoundData> visibleList)
+    {
         EditorGUILayout.BeginVertical(EditorStyles.helpBox);
 
         EditorGUILayout.BeginHorizontal();
         GUILayout.Label("検索", GUILayout.Width(32.0f));
-        m_categorySearchText = EditorGUILayout.TextField(m_categorySearchText, EditorStyles.toolbarSearchField);
+        m_editSearchText = EditorGUILayout.TextField(m_editSearchText, EditorStyles.toolbarSearchField);
 
         if (GUILayout.Button("クリア", EditorStyles.miniButton, GUILayout.Width(48.0f)))
         {
-            m_categorySearchText = "";
+            m_editSearchText = "";
             GUI.FocusControl(null);
         }
 
-        GUILayout.Space(6.0f);
-        GUILayout.Label($"表示 {visibleList.Count} 件", EditorStyles.miniBoldLabel, GUILayout.Width(74.0f));
+        GUILayout.Space(8.0f);
+        m_dimensionFilterIndex = GUILayout.Toolbar(m_dimensionFilterIndex, DIMENSION_FILTER_LABELS, EditorStyles.miniButton, GUILayout.Width(138.0f));
         EditorGUILayout.EndHorizontal();
 
-        // カテゴリー別件数タブ（横幅が狭い場合でも見切れないよう自動列数で表示）
+        // カテゴリー絞り込みタブ（横幅に応じて自動折り返し）
         m_categoryFilterIndex = Mathf.Clamp(m_categoryFilterIndex, 0, m_categoryTabLabels.Length - 1);
         m_categoryTabLabels[CATEGORY_TAB_ALL] = $"すべて ({m_categoryCounts[CATEGORY_TAB_ALL]})";
         for (int i = 0; i < CATEGORY_VALUES.Length; i++)
@@ -326,37 +402,65 @@ public sealed class SoundToolIdManageView
         int columns = EditorGUIUtility.currentViewWidth < 680.0f ? 3 : m_categoryTabLabels.Length;
         m_categoryFilterIndex = GUILayout.SelectionGrid(m_categoryFilterIndex, m_categoryTabLabels, columns, EditorStyles.miniButton);
 
-        EditorGUILayout.EndVertical();
-
-        // 中央スクロール領域：ID が増えてもウィンドウ高さに自動追従して見切れない
-        m_categoryScrollPosition = EditorGUILayout.BeginScrollView(m_categoryScrollPosition, GUILayout.ExpandHeight(true));
-
-        if (visibleList.Count == 0)
-        {
-            EditorGUILayout.HelpBox("条件に一致する音源がありません。", MessageType.Info);
-        }
-
+        // 選択操作バー
+        int visibleSelectedCount = 0;
         for (int i = 0; i < visibleList.Count; i++)
         {
-            DrawCategoryEditRow(database, visibleList[i]);
+            if (m_bulkSelectedIds.Contains(visibleList[i].m_id))
+            {
+                visibleSelectedCount++;
+            }
         }
 
-        EditorGUILayout.EndScrollView();
+        int hiddenSelectedCount = m_bulkSelectedIds.Count - visibleSelectedCount;
 
-        // 下部固定：操作ガイド
-        EditorGUILayout.BeginHorizontal(EditorStyles.helpBox);
-        GUILayout.Label("右端のドロップダウンからカテゴリーを即座に変更できます（Ctrl+Z で元に戻せます）。", EditorStyles.miniLabel);
+        EditorGUILayout.BeginHorizontal();
+        EditorGUILayout.LabelField($"表示 {visibleList.Count} 件 / 選択 {m_bulkSelectedIds.Count} 件", EditorStyles.miniBoldLabel, GUILayout.Width(165.0f));
+
+        if (hiddenSelectedCount > 0)
+        {
+            SoundToolGui.DrawColoredMiniLabel($"（非表示の選択が {hiddenSelectedCount} 件あります）", WARNING_COLOR);
+        }
+
+        GUILayout.FlexibleSpace();
+
+        if (GUILayout.Button("表示中を全選択", EditorStyles.miniButton, GUILayout.Width(96.0f)))
+        {
+            for (int i = 0; i < visibleList.Count; i++)
+            {
+                m_bulkSelectedIds.Add(visibleList[i].m_id);
+            }
+        }
+
+        if (GUILayout.Button("選択解除", EditorStyles.miniButton, GUILayout.Width(64.0f)))
+        {
+            m_bulkSelectedIds.Clear();
+        }
+
+        if (GUILayout.Button("選択反転", EditorStyles.miniButton, GUILayout.Width(64.0f)))
+        {
+            for (int i = 0; i < visibleList.Count; i++)
+            {
+                AudioID id = visibleList[i].m_id;
+                if (!m_bulkSelectedIds.Remove(id))
+                {
+                    m_bulkSelectedIds.Add(id);
+                }
+            }
+        }
+
         EditorGUILayout.EndHorizontal();
+        EditorGUILayout.EndVertical();
     }
 
     /// <summary>
-    /// 検索・カテゴリー条件に合致する SoundDatabase 内の音源一覧を構築します。
+    /// 検索・2D/3D・カテゴリー条件に合致する SoundDatabase 内の音源一覧を構築します。
     /// </summary>
-    private List<SoundDatabase.SoundData> BuildVisibleCategoryEditList(SoundDatabase database)
+    private List<SoundDatabase.SoundData> BuildVisibleEditList(SoundDatabase database)
     {
         List<SoundDatabase.SoundData> result = new List<SoundDatabase.SoundData>();
         Array.Clear(m_categoryCounts, 0, m_categoryCounts.Length);
-        string keyword = (m_categorySearchText ?? "").Trim();
+        string keyword = (m_editSearchText ?? "").Trim();
 
         for (int i = 0; i < database.m_soundList.Count; i++)
         {
@@ -374,6 +478,16 @@ public sealed class SoundToolIdManageView
             }
 
             if (m_categoryFilterIndex != CATEGORY_TAB_ALL && data.m_category != CATEGORY_VALUES[m_categoryFilterIndex - 1])
+            {
+                continue;
+            }
+
+            if (m_dimensionFilterIndex == FILTER_DIM_2D && data.m_is3D)
+            {
+                continue;
+            }
+
+            if (m_dimensionFilterIndex == FILTER_DIM_3D && !data.m_is3D)
             {
                 continue;
             }
@@ -398,10 +512,15 @@ public sealed class SoundToolIdManageView
     }
 
     /// <summary>
-    /// カテゴリー変更一覧の1行を描画します（カテゴリーごとの ID 色分け＆試聴ボタン付き）。
+    /// 一括・個別編集一覧の1行を描画します（チェック選択・試聴・2D/3D切替・色分けID・カテゴリー変更）。
     /// </summary>
-    private void DrawCategoryEditRow(SoundDatabase database, SoundDatabase.SoundData data)
+    private void DrawEditRow(
+        SoundDatabase database,
+        List<SoundDatabase.SoundData> visibleList,
+        SoundDatabase.SoundData data,
+        int rowIndex)
     {
+        bool isSelected = m_bulkSelectedIds.Contains(data.m_id);
         bool isPlaying = SoundToolPreviewPlayer.IsPlaying(data.m_id);
         Color categoryColor = SoundToolGui.GetCategoryColor(data.m_category);
 
@@ -409,18 +528,32 @@ public sealed class SoundToolIdManageView
 
         if (Event.current.type == EventType.Repaint)
         {
-            // 行背景（再生中は緑ハイライト、通常時はカテゴリー色の淡いティント）
-            Color bgColor = isPlaying
-                ? PLAYING_ROW_COLOR
-                : new Color(categoryColor.r, categoryColor.g, categoryColor.b, ROW_TINT_ALPHA);
-            EditorGUI.DrawRect(rowRect, bgColor);
+            Color bgColor;
+            if (isPlaying)
+            {
+                bgColor = PLAYING_ROW_COLOR;
+            }
+            else if (isSelected)
+            {
+                bgColor = SELECTED_ROW_COLOR;
+            }
+            else
+            {
+                bgColor = new Color(categoryColor.r, categoryColor.g, categoryColor.b, ROW_TINT_ALPHA);
+            }
 
-            // 左端にカテゴリー色の縦帯を描画する
-            Rect barRect = new Rect(rowRect.x, rowRect.y, COLOR_BAR_WIDTH, rowRect.height);
-            EditorGUI.DrawRect(barRect, categoryColor);
+            EditorGUI.DrawRect(rowRect, bgColor);
+            EditorGUI.DrawRect(new Rect(rowRect.x, rowRect.y, COLOR_BAR_WIDTH, rowRect.height), categoryColor);
         }
 
         GUILayout.Space(COLOR_BAR_WIDTH + 2.0f);
+
+        // 一括変更用の選択チェックボックス（Shift 範囲選択対応）
+        bool newSelected = EditorGUILayout.Toggle(isSelected, GUILayout.Width(SELECT_TOGGLE_WIDTH));
+        if (newSelected != isSelected)
+        {
+            UpdateBulkSelection(visibleList, rowIndex, data.m_id, newSelected);
+        }
 
         // 試聴ボタン
         using (new EditorGUI.DisabledScope(data.m_clip == null))
@@ -438,25 +571,38 @@ public sealed class SoundToolIdManageView
             }
         }
 
-        // カテゴリー色付きタグ
+        // 2D / 3D 状態バッジ（クリックで単体の 3D 設定を即切り替え可能）
+        Color prevBg = GUI.backgroundColor;
+        GUI.backgroundColor = data.m_is3D ? BADGE_3D_COLOR : BADGE_2D_COLOR;
+        if (GUILayout.Button(data.m_is3D ? "3D" : "2D", EditorStyles.miniButton, GUILayout.Width(DIMENSION_BADGE_WIDTH), GUILayout.Height(18.0f)))
+        {
+            Undo.RecordObject(database, "Toggle Sound 3D");
+            data.m_is3D = !data.m_is3D;
+            SoundToolDatabaseProvider.MarkDirty(database);
+        }
+        GUI.backgroundColor = prevBg;
+
+        // カテゴリータグ
         SoundToolGui.DrawCategoryTag(data.m_category, CATEGORY_TAG_WIDTH);
 
-        // カテゴリー別に色分けされた ID 名（長い名前でも自動クリップして崩れない）
-        string idText = data.m_id.ToString();
-        DrawColoredIdLabel(idText, categoryColor, ID_NAME_WIDTH);
+        // カテゴリー別に色分けされた ID 名
+        DrawColoredIdLabel(data.m_id.ToString(), categoryColor, ID_NAME_WIDTH);
 
-        // Clip 名（残り幅を自動調整し、右端のドロップダウンを押し出さない）
-        string clipText = data.m_clip != null ? data.m_clip.name : "Clip 未設定";
+        // Clip 名（3D時は距離範囲も小さく補足表示）
+        string clipBase = data.m_clip != null ? data.m_clip.name : "Clip 未設定";
+        string distanceInfo = data.m_is3D ? $"  [{data.m_rolloffMode} {data.m_minDistance:0.#}-{data.m_maxDistance:0.#}m]" : "";
+        string infoText = clipBase + distanceInfo;
+
         Color prevContent = GUI.contentColor;
         if (data.m_clip == null)
         {
             GUI.contentColor = ERROR_COLOR;
         }
         Rect clipRect = GUILayoutUtility.GetRect(GUIContent.none, GetClippedMiniLabelStyle(), GUILayout.ExpandWidth(true), GUILayout.MinWidth(60.0f));
-        GUI.Label(clipRect, new GUIContent(clipText, clipText), GetClippedMiniLabelStyle());
+        GUI.Label(clipRect, new GUIContent(infoText, infoText), GetClippedMiniLabelStyle());
         GUI.contentColor = prevContent;
 
-        // データベースのカテゴリー変更ドロップダウン
+        // 個別カテゴリー変更ドロップダウン
         SoundCategory newCategory = (SoundCategory)EditorGUILayout.EnumPopup(data.m_category, GUILayout.Width(CATEGORY_POPUP_WIDTH));
         if (newCategory != data.m_category)
         {
@@ -467,6 +613,171 @@ public sealed class SoundToolIdManageView
         }
 
         EditorGUILayout.EndHorizontal();
+    }
+
+    /// <summary>
+    /// 選択チェックの変更と Shift 範囲選択を処理します。
+    /// </summary>
+    private void UpdateBulkSelection(List<SoundDatabase.SoundData> visibleList, int rowIndex, AudioID id, bool isSelected)
+    {
+        bool isRange = Event.current.shift && m_lastBulkToggledIndex >= 0 && m_lastBulkToggledIndex < visibleList.Count;
+
+        if (isRange)
+        {
+            int start = Mathf.Min(m_lastBulkToggledIndex, rowIndex);
+            int end = Mathf.Max(m_lastBulkToggledIndex, rowIndex);
+
+            for (int i = start; i <= end; i++)
+            {
+                if (isSelected)
+                {
+                    m_bulkSelectedIds.Add(visibleList[i].m_id);
+                }
+                else
+                {
+                    m_bulkSelectedIds.Remove(visibleList[i].m_id);
+                }
+            }
+        }
+        else
+        {
+            if (isSelected)
+            {
+                m_bulkSelectedIds.Add(id);
+            }
+            else
+            {
+                m_bulkSelectedIds.Remove(id);
+            }
+        }
+
+        m_lastBulkToggledIndex = rowIndex;
+    }
+
+    /// <summary>
+    /// 下部固定の一括変更パネル（カテゴリー・3D音源・距離減衰・ループ・ピッチ）を描画します。
+    /// </summary>
+    private void DrawBulkEditFooterPanel(SoundDatabase database)
+    {
+        EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+
+        string headerText = $"一括変更パネル（選択中 {m_bulkSelectedIds.Count} 件：チェックした項目だけを反映）";
+        m_isBulkPanelOpen = EditorGUILayout.Foldout(m_isBulkPanelOpen, headerText, true, EditorStyles.foldoutHeader);
+
+        if (!m_isBulkPanelOpen)
+        {
+            EditorGUILayout.EndVertical();
+            return;
+        }
+
+        // 1行目：カテゴリー と 3D 音源 ON/OFF
+        EditorGUILayout.BeginHorizontal();
+
+        m_bulkSettings.ApplyCategory = EditorGUILayout.ToggleLeft("カテゴリー", m_bulkSettings.ApplyCategory, GUILayout.Width(86.0f));
+        using (new EditorGUI.DisabledScope(!m_bulkSettings.ApplyCategory))
+        {
+            m_bulkSettings.Values.m_category = (SoundCategory)EditorGUILayout.EnumPopup(m_bulkSettings.Values.m_category, GUILayout.Width(138.0f));
+        }
+
+        GUILayout.Space(12.0f);
+
+        m_bulkSettings.ApplyIs3D = EditorGUILayout.ToggleLeft("3D 音源", m_bulkSettings.ApplyIs3D, GUILayout.Width(74.0f));
+        using (new EditorGUI.DisabledScope(!m_bulkSettings.ApplyIs3D))
+        {
+            int current3DIndex = m_bulkSettings.Values.m_is3D ? 1 : 0;
+            int new3DIndex = GUILayout.Toolbar(current3DIndex, IS_3D_VALUE_LABELS, EditorStyles.miniButton, GUILayout.Width(210.0f));
+            bool newIs3D = new3DIndex == 1;
+
+            // 3D 音源を ON に切り替えたタイミングで距離減衰も設定しやすいよう連動チェックする
+            if (newIs3D && !m_bulkSettings.Values.m_is3D)
+            {
+                m_bulkSettings.ApplyRolloff = true;
+            }
+
+            m_bulkSettings.Values.m_is3D = newIs3D;
+        }
+
+        GUILayout.FlexibleSpace();
+        EditorGUILayout.EndHorizontal();
+
+        // 2行目：距離減衰（モード・最小距離・最大距離・カスタムカーブ）
+        m_bulkSettings.ApplyRolloff = EditorGUILayout.ToggleLeft(
+            "距離減衰を一括変更（モード / 最小距離 / 最大距離 / カスタムカーブ）",
+            m_bulkSettings.ApplyRolloff);
+
+        if (m_bulkSettings.ApplyRolloff)
+        {
+            EditorGUI.indentLevel++;
+            SoundToolGui.DrawRolloffFields(m_bulkSettings.Values);
+            EditorGUI.indentLevel--;
+        }
+
+        // 3行目：ループ と ピッチ
+        EditorGUILayout.BeginHorizontal();
+
+        m_bulkSettings.ApplyLoop = EditorGUILayout.ToggleLeft("ループ", m_bulkSettings.ApplyLoop, GUILayout.Width(70.0f));
+        using (new EditorGUI.DisabledScope(!m_bulkSettings.ApplyLoop))
+        {
+            m_bulkSettings.Values.m_loop = EditorGUILayout.Toggle(m_bulkSettings.Values.m_loop, GUILayout.Width(24.0f));
+        }
+
+        GUILayout.Space(12.0f);
+
+        m_bulkSettings.ApplyPitch = EditorGUILayout.ToggleLeft("ピッチ", m_bulkSettings.ApplyPitch, GUILayout.Width(68.0f));
+        using (new EditorGUI.DisabledScope(!m_bulkSettings.ApplyPitch))
+        {
+            m_bulkSettings.Values.m_pitch = EditorGUILayout.Slider(m_bulkSettings.Values.m_pitch, MIN_PITCH, MAX_PITCH);
+        }
+
+        EditorGUILayout.EndHorizontal();
+
+        EditorGUILayout.Space(2.0f);
+
+        // 一括適用ボタン
+        bool canApply = m_bulkSelectedIds.Count > 0 && m_bulkSettings.HasAnyOptionEnabled();
+        using (new EditorGUI.DisabledScope(!canApply))
+        {
+            Color prevBg = GUI.backgroundColor;
+            GUI.backgroundColor = APPLY_BUTTON_COLOR;
+
+            if (GUILayout.Button($"選択中の {m_bulkSelectedIds.Count} 件へ一括適用（Ctrl+Z で元に戻せます）", GUILayout.Height(28.0f)))
+            {
+                GUI.backgroundColor = prevBg;
+                ApplyBulkSettingsToSelected(database);
+            }
+
+            GUI.backgroundColor = prevBg;
+        }
+
+        EditorGUILayout.EndVertical();
+    }
+
+    /// <summary>
+    /// 選択中の全音源へ一括設定を適用します。
+    /// </summary>
+    private void ApplyBulkSettingsToSelected(SoundDatabase database)
+    {
+        if (database == null || m_bulkSelectedIds.Count == 0 || !m_bulkSettings.HasAnyOptionEnabled())
+        {
+            return;
+        }
+
+        Undo.RecordObject(database, "Bulk Edit Sound Settings");
+
+        int appliedCount = 0;
+        for (int i = 0; i < database.m_soundList.Count; i++)
+        {
+            SoundDatabase.SoundData data = database.m_soundList[i];
+            if (data != null && m_bulkSelectedIds.Contains(data.m_id))
+            {
+                m_bulkSettings.Apply(data);
+                appliedCount++;
+            }
+        }
+
+        SoundToolDatabaseProvider.MarkDirty(database);
+        Debug.Log($"[SoundTool] {appliedCount} 件のサウンド設定を一括変更しました。");
+        m_requestRepaint?.Invoke();
     }
 
     /// <summary>
@@ -493,7 +804,6 @@ public sealed class SoundToolIdManageView
     /// </summary>
     private void DrawAddTab(SoundDatabase database)
     {
-        // 上部固定：ドロップ領域と行操作
         DrawDropArea();
 
         EditorGUILayout.BeginHorizontal(EditorStyles.helpBox);
@@ -513,7 +823,6 @@ public sealed class SoundToolIdManageView
         }
         EditorGUILayout.EndHorizontal();
 
-        // 中央スクロール領域：追加予定行一覧
         m_addScrollPosition = EditorGUILayout.BeginScrollView(m_addScrollPosition, GUILayout.ExpandHeight(true));
 
         if (m_addList.Count == 0)
@@ -538,7 +847,6 @@ public sealed class SoundToolIdManageView
 
         EditorGUILayout.EndScrollView();
 
-        // 下部固定：一括追加ボタン（行が多くても絶対に見切れない）
         DrawRegisterButton(database);
     }
 
@@ -935,7 +1243,6 @@ public sealed class SoundToolIdManageView
     {
         List<SoundToolIdRegistry.IdEntry> visibleEntries = BuildVisibleDeleteEntries();
 
-        // 上部固定：検索と選択操作
         EditorGUILayout.BeginVertical(EditorStyles.helpBox);
 
         EditorGUILayout.BeginHorizontal();
@@ -970,10 +1277,7 @@ public sealed class SoundToolIdManageView
 
         EditorGUILayout.EndVertical();
 
-        // 中央スクロール領域
         DrawDeleteList(database, visibleEntries);
-
-        // 下部固定：削除実行ボタン
         DrawDeleteButton(database);
     }
 
@@ -1039,7 +1343,7 @@ public sealed class SoundToolIdManageView
             }
 
             bool isSelected = m_deleteSelectedNames.Contains(entry.Name);
-            bool newSelected = EditorGUILayout.Toggle(isSelected, GUILayout.Width(18.0f));
+            bool newSelected = EditorGUILayout.Toggle(isSelected, GUILayout.Width(SELECT_TOGGLE_WIDTH));
 
             if (newSelected != isSelected)
             {

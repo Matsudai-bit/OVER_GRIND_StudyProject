@@ -257,7 +257,7 @@ public static class SoundToolGui
     }
 
     /// <summary>
-    /// 3D 距離減衰の設定欄を描画します。
+    /// 3D 距離減衰の設定欄（モード・最小距離・最大距離・カスタムカーブ）を描画します。
     /// </summary>
     /// <param name="data">編集する設定。</param>
     public static void DrawRolloffFields(SoundDatabase.SoundData data)
@@ -267,22 +267,25 @@ public static class SoundToolGui
             return;
         }
 
-        data.m_rolloffMode = (AudioRolloffMode)EditorGUILayout.EnumPopup("距離減衰", data.m_rolloffMode);
+        data.m_rolloffMode = (AudioRolloffMode)EditorGUILayout.EnumPopup("距離減衰モード", data.m_rolloffMode);
 
+        EditorGUILayout.BeginHorizontal();
         data.m_minDistance = Mathf.Max(
             MIN_DISTANCE_LIMIT,
-            EditorGUILayout.FloatField("最小距離", data.m_minDistance));
+            EditorGUILayout.FloatField("最小距離 (Min)", data.m_minDistance));
 
-        // 対数減衰では最大距離を使わないため、それ以外のときだけ表示する
-        if (data.m_rolloffMode != AudioRolloffMode.Logarithmic)
-        {
-            data.m_maxDistance = Mathf.Max(
-                data.m_minDistance + DISTANCE_MARGIN,
-                EditorGUILayout.FloatField("最大距離", data.m_maxDistance));
-        }
+        data.m_maxDistance = Mathf.Max(
+            data.m_minDistance + DISTANCE_MARGIN,
+            EditorGUILayout.FloatField("最大距離 (Max)", data.m_maxDistance));
+        EditorGUILayout.EndHorizontal();
 
         if (data.m_rolloffMode == AudioRolloffMode.Custom)
         {
+            if (data.m_customRolloffCurve == null)
+            {
+                data.m_customRolloffCurve = AnimationCurve.Linear(0.0f, 1.0f, 1.0f, 0.0f);
+            }
+
             data.m_customRolloffCurve = EditorGUILayout.CurveField("カスタムカーブ", data.m_customRolloffCurve);
         }
     }
