@@ -14,11 +14,12 @@ public enum PreviewSequenceState
     PREVIEW_SINGLE,
     PREVIEW_INTRO,
     PREVIEW_LOOP,
-    PREVIEW_OUTRO
+    PREVIEW_OUTRO,
+    PREVIEW_DIRECT_CLIP
 }
 
 /// <summary>
-/// Editor 上でのサウンド試聴（単体再生・I/L/O 一連シーケンス再生）とリアルタイム解析連携を担当します。
+/// Editor 上でのサウンド試聴（単体再生・I/L/O 一連シーケンス再生・未登録 Clip 直接試聴）とリアルタイム解析連携を担当します。
 /// </summary>
 public static class SoundToolPreviewPlayer
 {
@@ -54,6 +55,9 @@ public static class SoundToolPreviewPlayer
 
     // 再生中のサウンド ID
     private static AudioID m_playingId = AudioID.None;
+
+    // 直接試聴中の AudioClip（追加予定行の試聴用）
+    private static AudioClip m_playingDirectClip;
 
     // 比較基準（Ref）に設定中のサウンド ID
     private static AudioID m_referenceId = AudioID.None;
@@ -142,6 +146,40 @@ public static class SoundToolPreviewPlayer
     public static void SetReferenceId(AudioID referenceId)
     {
         m_referenceId = referenceId;
+    }
+
+    /// <summary>
+    /// ID 未登録の AudioClip を直接試聴します（ID 追加欄の試聴用）。
+    /// </summary>
+    /// <param name="clip">試聴する AudioClip。</param>
+    /// <param name="volume">音量。</param>
+    /// <param name="pitch">ピッチ。</param>
+    /// <param name="loop">ループするか。</param>
+    public static void PlayClipDirect(AudioClip clip, float volume, float pitch, bool loop)
+    {
+        Stop(false);
+
+        if (clip == null)
+        {
+            return;
+        }
+
+        m_playingDirectClip = clip;
+        m_currentState = PreviewSequenceState.PREVIEW_DIRECT_CLIP;
+        m_playingId = AudioID.None;
+        m_playingGroupBaseName = "";
+
+        if (UseVolume)
+        {
+            PlayWithAudioSource(clip, volume, pitch, loop);
+        }
+        else
+        {
+            PlayWithAudioUtil(clip, loop);
+        }
+
+        StartUpdateLoop();
+        OnStateChanged?.Invoke();
     }
 
     /// <summary>
@@ -327,6 +365,24 @@ public static class SoundToolPreviewPlayer
     }
 
     /// <summary>
+    /// 指定 AudioClip が直接試聴中かを確認します。
+    /// </summary>
+    /// <param name="clip">確認する AudioClip。</param>
+    /// <returns>
+    /// true：このクリップを直接試聴中です。
+    /// false：試聴していません。
+    /// </returns>
+    public static bool IsPlayingDirectClip(AudioClip clip)
+    {
+        if (clip == null || m_currentState != PreviewSequenceState.PREVIEW_DIRECT_CLIP || m_playingDirectClip != clip)
+        {
+            return false;
+        }
+
+        return HasActivePreview();
+    }
+
+    /// <summary>
     /// 指定 ID が試聴中かを確認します。
     /// </summary>
     /// <param name="id">確認するサウンド ID。</param>
@@ -371,7 +427,12 @@ public static class SoundToolPreviewPlayer
     /// </returns>
     public static bool HasActivePreview()
     {
-        if (m_currentState == PreviewSequenceState.PREVIEW_IDLE || m_playingId == AudioID.None)
+        if (m_currentState == PreviewSequenceState.PREVIEW_IDLE)
+        {
+            return false;
+        }
+
+        if (m_currentState != PreviewSequenceState.PREVIEW_DIRECT_CLIP && m_playingId == AudioID.None)
         {
             return false;
         }
@@ -381,7 +442,9 @@ public static class SoundToolPreviewPlayer
             return true;
         }
 
-        if (m_currentState == PreviewSequenceState.PREVIEW_SINGLE || m_currentState == PreviewSequenceState.PREVIEW_OUTRO)
+        if (m_currentState == PreviewSequenceState.PREVIEW_SINGLE
+            || m_currentState == PreviewSequenceState.PREVIEW_OUTRO
+            || m_currentState == PreviewSequenceState.PREVIEW_DIRECT_CLIP)
         {
             Stop(true);
             return false;
@@ -391,7 +454,7 @@ public static class SoundToolPreviewPlayer
     }
 
     /// <summary>
-    /// 内部停止処理を行います。アナライザーの減衰演出を残すかを指定できます。
+    /// 内部停止処理を行います。
     /// </summary>
     private static void Stop(bool allowVisualDecay)
     {
@@ -406,6 +469,7 @@ public static class SoundToolPreviewPlayer
         bool wasPlaying = m_currentState != PreviewSequenceState.PREVIEW_IDLE;
 
         m_playingId = AudioID.None;
+        m_playingDirectClip = null;
         m_playingGroupBaseName = "";
         m_currentState = PreviewSequenceState.PREVIEW_IDLE;
         m_isUsingAudioSource = false;
@@ -460,7 +524,6 @@ public static class SoundToolPreviewPlayer
     {
         if (m_currentState == PreviewSequenceState.PREVIEW_IDLE)
         {
-            // 停止後はメーターとスペクトラムが完全にゼロへ落ちきるまで滑らかに減衰させる
             SoundToolAudioAnalyzer.UpdateAnalysis(null, AudioID.None, m_referenceId);
             OnStateChanged?.Invoke();
 
@@ -471,7 +534,6 @@ public static class SoundToolPreviewPlayer
             return;
         }
 
-        // 再生中の SoundData の音量・ピッチをリアルタイム反映する
         SoundDatabase.SoundData activeData = CurrentData;
 
         if (m_isUsingAudioSource && m_previewSource != null && activeData != null)
@@ -480,7 +542,6 @@ public static class SoundToolPreviewPlayer
             m_previewSource.pitch = activeData.m_pitch;
         }
 
-        // アナライザーへ最新の PCM 波形と音量を渡して更新する
         SoundToolAudioAnalyzer.UpdateAnalysis(m_isUsingAudioSource ? m_previewSource : null, m_playingId, m_referenceId);
         OnStateChanged?.Invoke();
 
@@ -489,7 +550,6 @@ public static class SoundToolPreviewPlayer
             return;
         }
 
-        // 再生が終わった場合の次パート遷移
         switch (m_currentState)
         {
             case PreviewSequenceState.PREVIEW_INTRO:

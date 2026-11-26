@@ -9,7 +9,7 @@ using UnityEditor;
 using UnityEngine;
 
 /// <summary>
-/// AudioID の enum ファイルの読み取りと生成を担当します。
+/// AudioID の enum ファイルの読み取り・生成およびリネーム時のスクリプト参照置換を担当します。
 /// </summary>
 public static class SoundToolIdRegistry
 {
@@ -29,6 +29,12 @@ public static class SoundToolIdRegistry
 
     // enum 内のインデント
     private const string ENUM_INDENT = "    ";
+
+    // スクリプト検索対象のルートフォルダ
+    private const string ASSETS_ROOT_FOLDER = "Assets";
+
+    // C# スクリプト検索パターン
+    private const string CS_SEARCH_PATTERN = "*.cs";
 
     /// <summary>
     /// AudioID の名前と固定整数値を保持します。
@@ -61,6 +67,18 @@ public static class SoundToolIdRegistry
             m_name = name;
             m_value = value;
         }
+    }
+
+    /// <summary>
+    /// スクリプト参照スキャンの結果を表します。
+    /// </summary>
+    public struct ReferenceScanResult
+    {
+        // 該当ファイル数
+        public int m_fileCount;
+
+        // 該当箇所の合計数
+        public int m_matchCount;
     }
 
     /// <summary>
@@ -155,6 +173,94 @@ public static class SoundToolIdRegistry
     }
 
     /// <summary>
+    /// リネーム対象の AudioID が Assets 内の C# スクリプトでどれだけ参照されているかをスキャンします。
+    /// </summary>
+    /// <param name="renameMap">旧ID名から新ID名への対応マップ。</param>
+    /// <returns>該当ファイル数と該当箇所数。</returns>
+    public static ReferenceScanResult ScanScriptReferences(IReadOnlyDictionary<string, string> renameMap)
+    {
+        ReferenceScanResult result = new ReferenceScanResult();
+
+        if (renameMap == null || renameMap.Count == 0)
+        {
+            return result;
+        }
+
+        Regex pattern = BuildReferenceRegex(renameMap);
+        string audioIdFullPath = Path.GetFullPath(GetFilePath());
+
+        foreach (string filePath in Directory.GetFiles(ASSETS_ROOT_FOLDER, CS_SEARCH_PATTERN, SearchOption.AllDirectories))
+        {
+            if (string.Equals(Path.GetFullPath(filePath), audioIdFullPath, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            string content = File.ReadAllText(filePath);
+            MatchCollection matches = pattern.Matches(content);
+
+            if (matches.Count > 0)
+            {
+                result.m_fileCount++;
+                result.m_matchCount += matches.Count;
+            }
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Assets 内の C# スクリプトに含まれる AudioID.旧名 の参照を一括で安全に置換します。
+    /// </summary>
+    /// <param name="renameMap">旧ID名から新ID名への対応マップ。</param>
+    /// <returns>置換したファイル数と置換箇所数。</returns>
+    public static ReferenceScanResult ReplaceScriptReferences(IReadOnlyDictionary<string, string> renameMap)
+    {
+        ReferenceScanResult result = new ReferenceScanResult();
+
+        if (renameMap == null || renameMap.Count == 0)
+        {
+            return result;
+        }
+
+        Regex pattern = BuildReferenceRegex(renameMap);
+        string audioIdFullPath = Path.GetFullPath(GetFilePath());
+
+        foreach (string filePath in Directory.GetFiles(ASSETS_ROOT_FOLDER, CS_SEARCH_PATTERN, SearchOption.AllDirectories))
+        {
+            if (string.Equals(Path.GetFullPath(filePath), audioIdFullPath, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            string content = File.ReadAllText(filePath);
+            int fileMatchCount = 0;
+
+            string replaced = pattern.Replace(content, match =>
+            {
+                string oldName = match.Groups[1].Value;
+                if (renameMap.TryGetValue(oldName, out string newName))
+                {
+                    fileMatchCount++;
+                    return $"{nameof(AudioID)}.{newName}";
+                }
+
+                return match.Value;
+            });
+
+            if (fileMatchCount > 0)
+            {
+                bool hasUtf8Bom = HasUtf8Bom(filePath);
+                File.WriteAllText(filePath, replaced, new UTF8Encoding(hasUtf8Bom));
+                result.m_fileCount++;
+                result.m_matchCount += fileMatchCount;
+            }
+        }
+
+        return result;
+    }
+
+    /// <summary>
     /// 入力文字列を AudioID 名として使える形に整えます。
     /// </summary>
     /// <param name="rawName">入力された文字列。</param>
@@ -199,6 +305,42 @@ public static class SoundToolIdRegistry
         }
 
         return true;
+    }
+
+    /// <summary>
+    /// スワップ変更にも対応できる1パス一括置換用の正規表現を構築します。
+    /// </summary>
+    private static Regex BuildReferenceRegex(IReadOnlyDictionary<string, string> renameMap)
+    {
+        List<string> escapedNames = new List<string>(renameMap.Count);
+
+        foreach (string oldName in renameMap.Keys)
+        {
+            escapedNames.Add(Regex.Escape(oldName));
+        }
+
+        // 長い名前から先に一致させるため文字長降順で並べる
+        escapedNames.Sort((a, b) => b.Length.CompareTo(a.Length));
+
+        string joinedNames = string.Join("|", escapedNames);
+        return new Regex($@"(?<![\w]){nameof(AudioID)}\.({joinedNames})(?![\w])", RegexOptions.Compiled);
+    }
+
+    /// <summary>
+    /// ファイルの先頭に UTF-8 BOM が付いているかを確認します。
+    /// </summary>
+    private static bool HasUtf8Bom(string filePath)
+    {
+        byte[] bom = new byte[3];
+        using (FileStream stream = File.OpenRead(filePath))
+        {
+            if (stream.Read(bom, 0, 3) < 3)
+            {
+                return false;
+            }
+        }
+
+        return bom[0] == 0xEF && bom[1] == 0xBB && bom[2] == 0xBF;
     }
 
     /// <summary>

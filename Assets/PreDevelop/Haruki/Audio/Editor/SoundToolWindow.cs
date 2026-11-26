@@ -18,7 +18,7 @@ public sealed class SoundToolWindow : EditorWindow
     private const float WINDOW_MIN_HEIGHT = 720.0f;
 
     // タブ全体の幅
-    private const float TAB_TOOLBAR_WIDTH = 640.0f;
+    private const float TAB_TOOLBAR_WIDTH = 660.0f;
 
     // 保存ボタンの幅
     private const float SAVE_BUTTON_WIDTH = 50.0f;
@@ -35,7 +35,7 @@ public sealed class SoundToolWindow : EditorWindow
     // タブ：同時ミックス（2D/3D比較）
     private const int TAB_MULTI_MIX = 2;
 
-    // タブ：ID の追加・削除
+    // タブ：ID の追加・変更・削除
     private const int TAB_ID_MANAGE = 3;
 
     // タブの表示名
@@ -44,7 +44,7 @@ public sealed class SoundToolWindow : EditorWindow
         "ミキサー（一覧・詳細）",
         "コンソール（縦ミキサー卓）",
         "同時ミックス（2D/3D）",
-        "ID の追加・削除"
+        "ID の追加・変更・削除"
     };
 
     // 選択中のタブ（スクリプト再読み込み後も保持する）
